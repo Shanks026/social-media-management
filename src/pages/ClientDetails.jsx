@@ -7,6 +7,7 @@ import { useHeader } from "@/components/misc/header-context";
 import { Button } from "@/components/ui/button";
 import DraftPostList from "./posts/DraftPostList";
 import CreateDraftPost from "./posts/CreateDraftPost";
+import { Badge } from "@/components/ui/badge";
 
 export default function ClientDetails() {
     const { clientId } = useParams();
@@ -54,12 +55,27 @@ export default function ClientDetails() {
 
     return (
         <div className="p-4 space-y-6">
-            <div className="flex items-center justify-between">
+            <div className="flex items-start justify-between">
                 <div>
-                    <StatusBadge status={client.status} />
-                    <h1 className="text-2xl font-semibold mt-2">
+                    <h1 className="text-2xl font-semibold mb-4">
                         {client.name}
                     </h1>
+                    <div className="flex gap-2 items-center">
+                        <StatusBadge status={client.status} />
+                        <Badge
+                            variant="secondary"
+                            className="text-xs tracking-normal rounded-md"
+                        >
+                            4 posts
+                        </Badge>
+                        <Badge
+                            variant="secondary"
+                            className="text-xs tracking-normal rounded-md"
+                        >
+                            3 Socials
+                        </Badge>
+                    </div>
+
                 </div>
 
                 <Button onClick={() => setCreateOpen(true)}>

@@ -12,7 +12,11 @@ function StatusBadge({ status }) {
         },
         INACTIVE: {
             label: "Inactive",
-            dotClass: "bg-muted-foreground",
+            dotClass: "bg-slate-500",
+        },
+        DRAFT: {
+            label: "Draft",
+            dotClass: "bg-blue-500",
         },
     };
 
