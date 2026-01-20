@@ -116,7 +116,7 @@ export default function DraftPostList({ clientId }) {
                 {data.map((post) => (
                     <Card
                         key={post.id}
-                        className="group flex flex-col overflow-hidden border-none shadow-sm hover:shadow-md transition-all duration-300 bg-card/50 hover:bg-card/70"
+                        className="group flex flex-col overflow-hidden border-none shadow-none transition-all duration-300 bg-gray-50 dark:bg-card/50 hover:bg-gray-100"
                     >
                         {/* Card Header */}
                         <CardHeader className="p-4 flex-row items-center justify-between space-y-0">

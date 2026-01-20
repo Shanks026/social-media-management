@@ -7,7 +7,7 @@ import { Outlet } from "react-router-dom";
 export function AppShell({ user }) {
   return (
     <HeaderProvider>
-      <div className="flex min-h-screen min-w-screen">
+      <div className="flex min-h-screen w-full">
         <AppSidebar user={user} />
 
         <div className="flex flex-1 flex-col w-full">

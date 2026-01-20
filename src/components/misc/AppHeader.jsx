@@ -13,7 +13,7 @@ export function AppHeader() {
   const { header } = useHeader();
 
   return (
-    <header className="flex h-16 items-center px-4 w-full">
+    <header className="flex h-16 items-center px-8 border-b w-full">
       <div className="flex flex-col gap-1">
         {header.breadcrumbs?.length > 0 && (
           <Breadcrumb>

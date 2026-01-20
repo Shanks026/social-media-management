@@ -29,13 +29,13 @@ function ClientCard({ client, onOpen, onEdit, onDelete }) {
           cursor-pointer
           p-0
           transition-colors
-          bg-card
+          bg-gray-50
           shadow-none
-          hover:shadow-sm
-          border
-          hover:bg-card/70
+          border-none
+          
+          hover:bg-gray-100
           dark:border-none
-          dark:bg-card/50
+          dark:bg-card/80
         "
       >
         <CardContent className="p-5 space-y-4">

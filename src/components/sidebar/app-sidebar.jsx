@@ -99,17 +99,17 @@ export function AppSidebar({ user }) {
 
   return (
     <>
-      <Sidebar className="border-r flex flex-col" collapsible="icon">
+      <Sidebar className="border-r flex flex-col" collapsible="icon" variant='custom'>
         <SidebarHeader>
           <SidebarMenu>
             <SidebarMenuItem>
               <SidebarMenuButton size="lg">
                 <div className="flex size-8 items-center justify-center rounded-md bg-primary text-primary-foreground font-semibold shrink-0">
-                  CD
+                  Sa
                 </div>
 
                 <div className="flex flex-col text-left min-w-0">
-                  <span className="text-sm font-bold truncate">Cadence</span>
+                  <span className="text-sm font-bold truncate">Saturn</span>
                   <span className="text-xs text-muted-foreground truncate">
                     Development
                   </span>
