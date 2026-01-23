@@ -17,7 +17,7 @@ export function AppHeader() {
       <div className="flex flex-col gap-1">
         {header.breadcrumbs?.length > 0 && (
           <Breadcrumb>
-            <BreadcrumbList>
+            <BreadcrumbList className="font-normal">
               {header.breadcrumbs.map((crumb, index) => {
                 const isLast = index === header.breadcrumbs.length - 1;
 
@@ -28,7 +28,7 @@ export function AppHeader() {
                         {crumb.label}
                       </BreadcrumbLink>
                     ) : (
-                      <BreadcrumbPage>{crumb.label}</BreadcrumbPage>
+                      <BreadcrumbPage className="font-medium">{crumb.label}</BreadcrumbPage>
                     )}
 
                     {!isLast && <BreadcrumbSeparator />}

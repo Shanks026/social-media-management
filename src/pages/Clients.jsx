@@ -89,7 +89,7 @@ export default function Clients() {
 
   if (isLoading) {
     return (
-      <div className="p-4 space-y-6">
+      <div className="p-8 space-y-6">
         <div className="flex items-center justify-between">
           <Skeleton className="h-6 w-32" />
           <Skeleton className="h-9 w-32" />
@@ -107,14 +107,14 @@ export default function Clients() {
 
   if (error) {
     return (
-      <div className="p-4 text-red-600">
+      <div className="p-8 text-red-600">
         Failed to load clients: {error.message}
       </div>
     );
   }
 
   return (
-    <div className="p-4 space-y-6">
+    <div className="p-8 space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Clients</h1>
         <Button onClick={() => setCreateOpen(true)}>

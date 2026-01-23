@@ -1,254 +1,376 @@
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { fetchDraftPostsByClient } from "@/api/posts";
-import StatusBadge from "@/components/StatusBadge";
-import { CalendarDays, MessageSquare, ExternalLink, MoreVertical, Edit2, Eye, Share2, Clipboard, X, Trash2, Folder, ArrowUpRightIcon } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { format } from "date-fns";
+import { useState, useEffect } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { fetchAllPostsByClient, deletePost } from '@/api/posts'
+import StatusBadge from '@/components/StatusBadge'
 import {
-    Card,
-    CardContent,
-    CardFooter,
-    CardHeader,
-} from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
+  MoreVertical,
+  Folder,
+  Eye,
+  Edit2,
+  Trash2,
+  ChevronLeft,
+  ChevronRight,
+  X,
+  AlertTriangle,
+} from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { format } from 'date-fns'
+import { Card, CardContent } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
 import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import {
-    Tooltip,
-    TooltipContent,
-    TooltipProvider,
-    TooltipTrigger,
-} from "@/components/ui/tooltip";
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog'
+import { TooltipProvider } from '@/components/ui/tooltip'
+import DraftPostForm from './DraftPostForm'
 import {
-    Dialog,
-    DialogContent,
-    DialogHeader,
-    DialogTitle,
-} from "@/components/ui/dialog";
-
-import {
-    Empty,
-    EmptyContent,
-    EmptyDescription,
-    EmptyHeader,
-    EmptyMedia,
-    EmptyTitle,
-} from "@/components/ui/empty"
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from '@/components/ui/empty'
+import { toast } from 'sonner'
+import { Navigate, useNavigate } from 'react-router-dom'
+import PlatformBadge from '@/components/PlatformBadge'
 
 export default function DraftPostList({ clientId }) {
-    const [previewPost, setPreviewPost] = useState(null);
-    const { data = [], isLoading } = useQuery({
-        queryKey: ["draft-posts", clientId],
-        queryFn: () => fetchDraftPostsByClient(clientId),
-    });
+  const queryClient = useQueryClient()
+  const navigate = useNavigate()
+  const [previewPost, setPreviewPost] = useState(null)
+  const [postToDelete, setPostToDelete] = useState(null)
+  const [postToEdit, setPostToEdit] = useState(null)
+  const [activeImageIndex, setActiveImageIndex] = useState(0)
 
-    if (isLoading) {
-        return (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {[1, 2, 3, 4, 5, 6].map((i) => (
-                    <Card key={i} className="overflow-hidden border-none shadow-sm bg-card/50">
-                        <CardHeader className="p-4 flex-row items-center justify-between space-y-0">
-                            <Skeleton className="h-5 w-20" />
-                            <Skeleton className="h-4 w-16" />
-                        </CardHeader>
-                        <div className="px-4">
-                            <Skeleton className="h-32 w-full rounded-md" />
-                        </div>
-                        <CardContent className="p-4 space-y-2">
-                            <Skeleton className="h-4 w-full" />
-                            <Skeleton className="h-4 w-5/6" />
-                        </CardContent>
-                        <CardFooter className="p-4 pt-0 border-t bg-muted/20 flex justify-between items-center">
-                            <Skeleton className="h-4 w-24" />
-                            <div className="flex gap-2">
-                                <Skeleton className="h-8 w-8 rounded-md" />
-                                <Skeleton className="h-8 w-8 rounded-md" />
-                            </div>
-                        </CardFooter>
-                    </Card>
-                ))}
-            </div>
-        );
+  const { data = [], isLoading } = useQuery({
+    queryKey: ['draft-posts', clientId],
+    queryFn: () => fetchAllPostsByClient(clientId),
+  })
+
+  // Delete Mutation
+  const deleteMutation = useMutation({
+    mutationFn: (postId) => deletePost(postId),
+    onSuccess: () => {
+      // FIX: Use the object format for invalidateQueries
+      queryClient.invalidateQueries({ queryKey: ['draft-posts', clientId] })
+      toast.success('Post and media deleted successfully')
+      setPostToDelete(null)
+    },
+    onError: (err) => {
+      console.error('Mutation Error:', err)
+      toast.error('Failed to delete post')
+    },
+  })
+
+  // Reset index when preview changes
+  useEffect(() => {
+    if (!previewPost) setActiveImageIndex(0)
+  }, [previewPost])
+
+  // Keyboard Navigation for Preview
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (!previewPost || previewPost.media_urls.length <= 1) return
+      if (e.key === 'ArrowLeft') handlePrev(e)
+      if (e.key === 'ArrowRight') handleNext(e)
     }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [previewPost, activeImageIndex])
 
-    if (data.length === 0) {
-        return (
-
-            <Empty>
-                <EmptyHeader>
-                    <EmptyMedia variant="icon">
-                        <Folder />
-                    </EmptyMedia>
-                    <EmptyTitle>No draft posts yet</EmptyTitle>
-                    <EmptyDescription>
-                        Start creating content by clicking the "Create Post" button. Your drafts will appear here.
-                    </EmptyDescription>
-                </EmptyHeader>
-                <EmptyContent>
-                    <div className="flex gap-2">
-                        <Button>Create Post</Button>
-
-                    </div>
-                </EmptyContent>
-                <Button
-                    variant="link"
-                    asChild
-                    className="text-muted-foreground"
-                    size="sm"
-                >
-                    <a href="#">
-                        Learn More <ArrowUpRightIcon />
-                    </a>
-                </Button>
-            </Empty>
-        );
-    }
-
+  const renderMediaGrid = (post) => {
+    const media = post.media_urls || []
+    const count = media.length
+    if (count === 0) return <div className="w-full h-full bg-muted/50" />
+    if (count === 1)
+      return (
+        <img src={media[0]} alt="" className="w-full h-full object-cover" />
+      )
+    if (count === 2)
+      return (
+        <div className="grid grid-cols-2 gap-1 w-full h-full">
+          {media.map((url, i) => (
+            <img
+              key={i}
+              src={url}
+              alt=""
+              className="w-full h-full object-cover"
+            />
+          ))}
+        </div>
+      )
     return (
-        <TooltipProvider>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {data.map((post) => (
-                    <Card
-                        key={post.id}
-                        className="group flex flex-col overflow-hidden border-none shadow-none transition-all duration-300 bg-gray-50 dark:bg-card/50 hover:bg-gray-100"
+      <div className="grid grid-cols-2 gap-1 w-full h-full">
+        <img src={media[0]} alt="" className="w-full h-full object-cover" />
+        <div className="grid grid-rows-2 gap-1 h-full overflow-hidden">
+          <img src={media[1]} alt="" className="w-full h-full object-cover" />
+          <div className="relative h-full w-full">
+            <img src={media[2]} alt="" className="w-full h-full object-cover" />
+            {count > 3 && (
+              <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                <span className="text-white font-bold text-lg">
+                  +{count - 3}
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  const handlePrev = (e) => {
+    e.stopPropagation()
+    setActiveImageIndex((prev) =>
+      prev === 0 ? previewPost.media_urls.length - 1 : prev - 1,
+    )
+  }
+
+  const handleNext = (e) => {
+    e.stopPropagation()
+    setActiveImageIndex((prev) =>
+      prev === previewPost.media_urls.length - 1 ? 0 : prev + 1,
+    )
+  }
+
+  if (isLoading) {
+    return (
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {[1, 2, 3].map((i) => (
+          <Skeleton key={i} className="h-[300px] w-full rounded-2xl" />
+        ))}
+      </div>
+    )
+  }
+
+  return (
+    <TooltipProvider>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {data.map((post) => (
+          <Card
+            key={post.id}
+            // The Main Navigation
+            onClick={() => navigate(`/clients/${clientId}/posts/${post.id}`)}
+            className="group flex flex-col border-none shadow-none bg-[#FCFCFC] cursor-pointer dark:bg-card/70 p-6 gap-4 rounded-2xl transition-colors duration-200 hover:bg-[#F5F5F5] dark:hover:bg-card"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                <StatusBadge status={post.status || 'DRAFT'} />
+                <div className="flex items-center gap-1.5">
+                  {Array.isArray(post.platform) && post.platform.length > 0 ? (
+                    <>
+                      {/* Always show only the first platform badge */}
+                      <PlatformBadge platform={post.platform[0]} />
+
+                      {/* Show the count for everything else (if 2 or more total) */}
+                      {post.platform.length > 1 && (
+                        <Badge
+                          variant="secondary"
+                          className="rounded-md px-2 py-1 border-none shadow-none text-xs font-bold text-muted-foreground"
+                        >
+                          +{post.platform.length - 1}
+                        </Badge>
+                      )}
+                    </>
+                  ) : (
+                    /* Fallback for single strings (legacy data) */
+                    <PlatformBadge platform={post.platform} />
+                  )}
+                </div>
+              </div>
+
+              {/* FIX 1: Stop propagation on the Dropdown Trigger */}
+              <div onClick={(e) => e.stopPropagation()}>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 text-muted-foreground hover:bg-transparent"
                     >
-                        {/* Card Header */}
-                        <CardHeader className="p-4 flex-row items-center justify-between space-y-0">
-                            <div className="flex items-center gap-2">
-                                <StatusBadge status="DRAFT" />
-                                <Badge
-                                    variant="secondary"
-                                    className="rounded-md capitalize px-2"
-                                >
-                                    {post.platform}
-                                </Badge>
-                            </div>
-
-                            {post.scheduled_at && (
-                                <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-medium">
-                                    <CalendarDays className="h-3.5 w-3.5" />
-                                    <span>
-                                        {format(new Date(post.scheduled_at), "MMM d, h:mm a")}
-                                    </span>
-                                </div>
-                            )}
-                        </CardHeader>
-
-                        {/* Media Preview - COMPACT with HOVER OVERLAY */}
-                        <div className="px-4">
-                            {post.media_urls?.[0] ? (
-                                <div
-                                    className="relative h-48 rounded-xl overflow-hidden border bg-muted group/media cursor-pointer"
-                                    onClick={() => setPreviewPost(post)}
-                                >
-                                    <img
-                                        src={post.media_urls[0]}
-                                        alt="Post media"
-                                        className="w-full h-full object-cover transition-transform duration-700 group-hover/media:scale-110"
-                                    />
-
-                                    {/* Hover Overlay - No Blur, Top-Right Button */}
-                                    <div className="absolute inset-0 bg-black/20 opacity-0 group-hover/media:opacity-100 transition-opacity duration-300 p-3 flex justify-end items-start">
-                                        <div className="bg-black/60 p-2 rounded-lg border border-white/10 shadow-lg transform translate-y-2 group-hover/media:translate-y-0 transition-all duration-300">
-                                            <Eye className="h-5 w-5 text-white" />
-                                        </div>
-                                    </div>
-
-                                    {post.media_urls.length > 1 && (
-                                        <Badge
-                                            variant="secondary"
-                                            className="absolute bottom-2 right-2 bg-black/60 text-white border-none backdrop-blur-sm px-1.5 py-0 text-[10px]"
-                                        >
-                                            +{post.media_urls.length - 1} more
-                                        </Badge>
-                                    )}
-                                </div>
-                            ) : (
-                                <div className="h-48 rounded-xl border-2 border-dashed flex flex-col items-center justify-center text-muted-foreground gap-1 bg-muted/30">
-                                    <MessageSquare className="h-5 w-5 opacity-30" />
-                                    <span className="text-[9px] font-medium uppercase tracking-tight">No Media</span>
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Content Preview - NORMAL TEXT */}
-                        <CardContent className="p-4 flex-grow">
-                            <p className="text-sm text-foreground/90 line-clamp-3 leading-relaxed">
-                                {post.content || "No content provided..."}
-                            </p>
-                        </CardContent>
-
-                        {/* Card Footer */}
-                        <CardFooter className="p-4 pt-0 mt-auto flex items-center justify-between border-t bg-muted/5">
-                            <div className="flex items-center gap-3">
-                                {post.comments !== undefined && (
-                                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                                        <MessageSquare className="h-3.5 w-3.5" />
-                                        <span className="font-semibold">{post.comments}</span>
-                                    </div>
-                                )}
-                                <span className="text-xs text-muted-foreground font-medium">
-                                    {format(new Date(post.created_at), "MMM d")}
-                                </span>
-                            </div>
-
-                            <div className="flex items-center">
-                                <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-8 w-8 rounded-full hover:bg-primary/10 transition-colors"
-                                        >
-                                            <MoreVertical className="h-4 w-4" />
-                                        </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end" className="w-48 p-1.5">
-                                        <DropdownMenuItem className="gap-2.5 cursor-pointer rounded-md">
-                                            <Edit2 className="h-4 w-4 text-muted-foreground" />
-                                            <span className="font-medium text-sm">Edit Post</span>
-                                        </DropdownMenuItem>
-                                        <DropdownMenuItem className="gap-2.5 cursor-pointer rounded-md">
-                                            <Share2 className="h-4 w-4 text-muted-foreground" />
-                                            <span className="font-medium text-sm">Duplicate</span>
-                                        </DropdownMenuItem>
-                                        <DropdownMenuItem className="gap-2.5 cursor-pointer rounded-md">
-                                            <Clipboard className="h-4 w-4 text-muted-foreground" />
-                                            <span className="font-medium text-sm">Copy Link</span>
-                                        </DropdownMenuItem>
-                                        <DropdownMenuItem className="text-destructive focus:text-destructive gap-2.5 cursor-pointer rounded-md">
-                                            <Trash2 className="h-4 w-4" />
-                                            <span className="font-medium text-sm">Delete Draft</span>
-                                        </DropdownMenuItem>
-                                    </DropdownMenuContent>
-                                </DropdownMenu>
-                            </div>
-                        </CardFooter>
-                    </Card>
-                ))}
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    {post.status === 'DRAFT' ? (
+                      <DropdownMenuItem
+                        className="text-xs gap-2 cursor-pointer"
+                        onClick={(e) => {
+                          e.stopPropagation() // FIX 2: Prevent navigation when clicking edit
+                          setPostToEdit(post)
+                        }}
+                      >
+                        <Edit2 className="h-3 w-3" /> Edit Post
+                      </DropdownMenuItem>
+                    ) : (
+                      <DropdownMenuItem
+                        className="text-xs gap-2 opacity-50 cursor-not-allowed"
+                        disabled
+                      >
+                        <Edit2 className="h-3 w-3" /> Edit Locked
+                      </DropdownMenuItem>
+                    )}
+                    {post.status === 'DRAFT' && (
+                      <DropdownMenuItem
+                        className="text-xs gap-2 text-destructive"
+                        onClick={(e) => {
+                          e.stopPropagation() // FIX 3: Prevent navigation when clicking delete
+                          setPostToDelete(post)
+                        }}
+                      >
+                        <Trash2 className="h-3 w-3" /> Delete
+                      </DropdownMenuItem>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             </div>
 
-            {/* Preview Dialog - IMAGE ONLY, 90% SCREEN */}
-            <Dialog open={!!previewPost} onOpenChange={() => setPreviewPost(null)}>
-                <DialogContent className="h-[75vh] !max-w-[75vw] p-0 border-none shadow-2xl bg-black/95 overflow-hidden flex items-center justify-center">
-                    {previewPost?.media_urls?.[0] && (
-                        <div className="relative w-full h-full flex items-center justify-center p-4">
-                            <img
-                                src={previewPost.media_urls[0]}
-                                alt="Preview"
-                                className="max-w-full max-h-full object-contain rounded-sm shadow-2xl"
-                            />
-                        </div>
-                    )}
-                </DialogContent>
-            </Dialog>
-        </TooltipProvider>
-    );
-}
+            <h3 className="text-lg font-semibold text-foreground mt-2">
+              {post.title || 'Draft Post'}
+            </h3>
 
+            {/* FIX 4: Stop propagation on the Media Grid click */}
+            <div
+              className="relative aspect-video rounded-xl overflow-hidden bg-muted cursor-pointer group/media"
+              onClick={(e) => {
+                e.stopPropagation() // Prevents navigating to details page when previewing
+                setPreviewPost(post)
+              }}
+            >
+              {renderMediaGrid(post)}
+              <div className="absolute inset-0 bg-black/20 opacity-0 group-hover/media:opacity-100 transition-opacity flex items-center justify-center">
+                <div className="bg-white/20 backdrop-blur-md p-2 rounded-full">
+                  <Eye className="text-white h-5 w-5" />
+                </div>
+              </div>
+            </div>
+
+            <CardContent className="p-0 flex-grow">
+              <p className="text-[13px] text-muted-foreground line-clamp-2 leading-snug">
+                {post.content || 'No content provided.'}
+              </p>
+            </CardContent>
+
+            <div className="pt-3 border-t border-border mt-2">
+              <span className="text-muted-foreground text-xs font-medium">
+                Created On{' '}
+                {format(new Date(post.created_at || Date.now()), 'd MMM, yyyy')}
+              </span>
+            </div>
+          </Card>
+        ))}
+      </div>
+
+      <DraftPostForm
+        clientId={clientId}
+        open={!!postToEdit}
+        onOpenChange={(isOpen) => !isOpen && setPostToEdit(null)}
+        initialData={postToEdit}
+      />
+
+      {/* Media Slider Preview Dialog */}
+      <Dialog open={!!previewPost} onOpenChange={() => setPreviewPost(null)}>
+        <DialogContent className="max-w-[90vw] lg:max-w-[1100px] h-[85vh] p-0 bg-transparent border-none shadow-none flex flex-col items-center justify-center overflow-visible">
+          <div className="relative w-full h-full group flex items-center justify-center">
+            <div className="relative w-full h-full overflow-hidden rounded-3xl bg-black/95 shadow-2xl flex items-center justify-center border border-white/10">
+              <img
+                src={previewPost?.media_urls[activeImageIndex]}
+                alt="Preview"
+                className="w-full h-full object-contain"
+              />
+
+              {previewPost?.media_urls?.length > 1 && (
+                <>
+                  <div className="absolute inset-x-4 top-1/2 -translate-y-1/2 flex justify-between items-center pointer-events-none">
+                    <button
+                      onClick={handlePrev}
+                      className="pointer-events-auto p-4 rounded-2xl bg-black/40 text-white hover:bg-black/60 backdrop-blur-xl transition-all"
+                    >
+                      <ChevronLeft className="h-8 w-8" />
+                    </button>
+                    <button
+                      onClick={handleNext}
+                      className="pointer-events-auto p-4 rounded-2xl bg-black/40 text-white hover:bg-black/60 backdrop-blur-xl transition-all"
+                    >
+                      <ChevronRight className="h-8 w-8" />
+                    </button>
+                  </div>
+                  <div className="absolute top-6 left-1/2 -translate-x-1/2">
+                    <Badge className="bg-white/10 text-white border-none backdrop-blur-md px-4 py-1.5 font-medium">
+                      {activeImageIndex + 1} / {previewPost.media_urls.length}
+                    </Badge>
+                  </div>
+                  <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex gap-2 p-2 bg-black/20 backdrop-blur-md rounded-full">
+                    {previewPost.media_urls.map((_, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => setActiveImageIndex(idx)}
+                        className={`h-2 rounded-full transition-all duration-300 ${idx === activeImageIndex ? 'bg-white w-8' : 'bg-white/30 w-2'}`}
+                      />
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={!!postToDelete} onOpenChange={() => setPostToDelete(null)}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-5 w-5" /> Delete Post
+            </DialogTitle>
+            <DialogDescription className="py-3">
+              Are you sure you want to delete{' '}
+              <span className="font-semibold text-foreground">
+                "{postToDelete?.title}"
+              </span>
+              ? This will permanently remove the post and its{' '}
+              <span className="font-bold">
+                {postToDelete?.media_urls?.length || 0} attached media files
+              </span>
+              .
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="ghost"
+              onClick={() => setPostToDelete(null)}
+              disabled={deleteMutation.isPending}
+            >
+              Cancel
+            </Button>
+            {/* Inside the Delete Confirmation Dialog */}
+            <Button
+              variant="destructive"
+              onClick={() => {
+                // Use post_id to delete the parent post,
+                // or just .id if you only want to delete that specific version
+                deleteMutation.mutate(postToDelete.post_id)
+              }}
+              disabled={deleteMutation.isPending}
+            >
+              {deleteMutation.isPending ? 'Deleting...' : 'Delete Permanently'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </TooltipProvider>
+  )
+}
