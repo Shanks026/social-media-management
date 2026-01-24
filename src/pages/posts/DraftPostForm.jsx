@@ -12,6 +12,7 @@ import {
   Globe,
   Loader2,
   Plus,
+  Calendar as CalendarIcon,
 } from 'lucide-react'
 
 import { createDraftPost, updatePost } from '@/api/posts'
@@ -42,9 +43,16 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
+import { Calendar } from '@/components/ui/calendar'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
+import { format, setHours, setMinutes } from 'date-fns'
 
 const MAX_FILES = 5
 
@@ -87,6 +95,7 @@ const formSchema = z.object({
   content: z.string().min(1, 'Post content is required'),
   platforms: z.array(z.string()).min(1, 'Select at least one platform'), // Changed to array
   images: z.array(z.any()).max(MAX_FILES).default([]),
+  target_date: z.date().optional(),
 })
 
 export default function DraftPostForm({
@@ -108,6 +117,7 @@ export default function DraftPostForm({
       content: '',
       platforms: [], // Default as empty array
       images: [],
+      target_date: undefined,
     },
   })
 
@@ -123,6 +133,9 @@ export default function DraftPostForm({
         content: initialData.content || '',
         platforms: platformData.map((p) => p.toLowerCase().replace(' ', '_')),
         images: [],
+        target_date: initialData.target_date
+          ? new Date(initialData.target_date)
+          : undefined,
       })
       setPreviews(initialData.media_urls || [])
     }
@@ -146,6 +159,7 @@ export default function DraftPostForm({
         content: values.content,
         mediaUrls: finalMediaUrls,
         platforms: values.platforms,
+        target_date: values.target_date?.toISOString(),
       }
 
       if (isEditMode) {
@@ -332,6 +346,91 @@ export default function DraftPostForm({
                 )}
               />
 
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="target_date"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                      <FormLabel>Proposed Schedule Date</FormLabel>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant="outline"
+                              className={cn(
+                                'w-full pl-3 text-left font-normal',
+                                !field.value && 'text-muted-foreground',
+                              )}
+                            >
+                              {field.value ? (
+                                format(field.value, 'PPP')
+                              ) : (
+                                <span>Pick a date</span>
+                              )}
+                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={field.value}
+                            onSelect={field.onChange}
+                            disabled={(date) =>
+                              date < new Date(new Date().setHours(0, 0, 0, 0))
+                            }
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormItem className="flex flex-col">
+                  <FormLabel>Time</FormLabel>
+                  <Select
+                    disabled={!form.watch('target_date')}
+                    value={
+                      form.watch('target_date')
+                        ? format(form.watch('target_date'), 'HH:mm')
+                        : ''
+                    }
+                    onValueChange={(val) => {
+                      const [hours, minutes] = val.split(':').map(Number)
+                      const current =
+                        form.getValues('target_date') || new Date()
+                      form.setValue(
+                        'target_date',
+                        setMinutes(setHours(current, hours), minutes),
+                      )
+                    }}
+                  >
+                    <FormControl>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select time" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent className="max-h-[200px]">
+                      {Array.from({ length: 48 }).map((_, i) => {
+                        const hour = Math.floor(i / 2)
+                          .toString()
+                          .padStart(2, '0')
+                        const min = i % 2 === 0 ? '00' : '30'
+                        const time = `${hour}:${min}`
+                        return (
+                          <SelectItem key={time} value={time}>
+                            {time}
+                          </SelectItem>
+                        )
+                      })}
+                    </SelectContent>
+                  </Select>
+                </FormItem>
+              </div>
+
               {/* Title Field */}
               <FormField
                 control={form.control}
@@ -357,7 +456,7 @@ export default function DraftPostForm({
                     <FormControl>
                       <Textarea
                         placeholder="Write your post content..."
-                        className="min-h-[120px] resize-none"
+                        className="resize-none"
                         {...field}
                       />
                     </FormControl>

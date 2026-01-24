@@ -13,8 +13,17 @@ import {
   DialogFooter,
   DialogTrigger,
 } from '@/components/ui/dialog'
-import { Loader2, Info, Check, PencilLine, ArrowRight } from 'lucide-react'
+import {
+  Loader2,
+  Info,
+  Check,
+  PencilLine,
+  ArrowRight,
+  Clock,
+  Calendar as CalendarIcon,
+} from 'lucide-react'
 import { format } from 'date-fns'
+import { Badge } from '@/components/ui/badge'
 
 export default function PublicReview() {
   const { token } = useParams()
@@ -37,14 +46,17 @@ export default function PublicReview() {
 
   const handleStatusUpdate = async (newStatus) => {
     setIsSubmitting(true)
+    // Map 'APPROVED' to 'SCHEDULED' for the automated founder-led flow
+    const finalStatus = newStatus === 'APPROVED' ? 'SCHEDULED' : newStatus
+
     const { error } = await supabase.rpc('update_post_status_by_token', {
       p_token: token,
-      p_status: newStatus,
+      p_status: finalStatus,
       p_feedback: feedback,
     })
 
     if (!error) {
-      setStatusUpdated(newStatus)
+      setStatusUpdated(finalStatus)
     } else {
       alert('Something went wrong. Please try again.')
     }
@@ -67,13 +79,13 @@ export default function PublicReview() {
           <Check size={40} />
         </div>
         <h2 className="text-2xl font-bold tracking-tight text-foreground">
-          {statusUpdated === 'APPROVED'
-            ? 'Content Approved'
+          {statusUpdated === 'SCHEDULED'
+            ? 'Content Approved and Scheduled'
             : 'Review Submitted'}
         </h2>
         <p className="mt-2 max-w-md text-muted-foreground leading-relaxed">
-          {statusUpdated === 'APPROVED'
-            ? 'Success! Our team has been notified. We will proceed with scheduling this post for publication immediately.'
+          {statusUpdated === 'SCHEDULED'
+            ? `Everything is set. Your post is queued for publication on ${post.target_date ? format(new Date(post.target_date), 'PPP @ p') : 'the agreed date'}.`
             : 'We’ve received your feedback. The team will review your suggestions and notify you via email once the revised version is ready.'}
         </p>
       </div>
@@ -87,27 +99,53 @@ export default function PublicReview() {
           {/* LEFT SIDE: CONTENT & ACTIONS */}
           <div className="max-w-xl space-y-8">
             {/* Header / Meta */}
-            <div className="space-y-6">
-              <div className="flex items-center gap-3">
-                {post.platform.map((p) => (
-                  <PlatformBadge key={p} platform={p} />
-                ))}
-                <span className="rounded bg-secondary px-2.5 py-1 text-[10px] font-bold tracking-wider text-secondary-foreground uppercase">
-                  Version {post.version_number}.0
-                </span>
+            <div className="space-y-4">
+              {/* Top Row: Platforms & Version */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  {post.platform.map((p) => (
+                    <PlatformBadge key={p} platform={p} />
+                  ))}
+                </div>
+                <Badge variant="secondary" className="rounded-sm">
+                  v{post.version_number}.0
+                </Badge>
               </div>
 
-              <div className="space-y-3">
-                <h1 className="text-3xl font-extrabold tracking-tight lg:text-4xl text-foreground">
-                  {post.title}
-                </h1>
-                <p className="text-sm font-medium text-muted-foreground">
-                  Created for {post.client_name} •{' '}
-                  {format(new Date(post.created_at), 'MMMM dd, yyyy')}
-                </p>
+              {/* Title */}
+              <h1 className="text-3xl font-extrabold tracking-tight lg:text-4xl text-foreground">
+                {post.title}
+              </h1>
+
+              {/* Horizontal Meta Bar */}
+              <div className="flex flex-wrap items-center gap-y-2 gap-x-4 border-y border-border/50 py-3">
+                {/* <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <span className="font-medium">{post.client_name}</span>
+                </div> */}
+
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <CalendarIcon size={14} />
+                  <span>
+                    Created {format(new Date(post.created_at), 'MMM dd, yyyy')}
+                  </span>
+                </div>
+
+                {post.target_date && (
+                  <>
+                    <div className="h-4 w-[1px] bg-border hidden sm:block" />
+                    <div className="flex items-center gap-2 text-sm font-semibold text-primary">
+                      <Clock size={14} className="animate-pulse-slow" />
+                      <span>
+                        Schedule:{' '}
+                        {format(new Date(post.target_date), 'MMM dd @ p')}
+                      </span>
+                    </div>
+                  </>
+                )}
               </div>
 
-              <p className="text-base leading-relaxed text-muted-foreground/90 whitespace-pre-wrap">
+              {/* Caption */}
+              <p className="text-sm leading-relaxed text-muted-foreground/90 font-medium whitespace-pre-wrap">
                 {post.content}
               </p>
             </div>
@@ -134,9 +172,8 @@ export default function PublicReview() {
               <div className="space-y-1">
                 <p className="font-bold text-foreground">Final Review Notice</p>
                 <p className="text-muted-foreground leading-snug">
-                  Approving this version will lock the content and media. You
-                  will receive a confirmation once the post is scheduled for
-                  publication.
+                  Approving this version will lock the content and media. This
+                  post will be scheduled for the time listed above.
                 </p>
               </div>
             </div>
@@ -150,12 +187,21 @@ export default function PublicReview() {
                     <Check className="mr-2 h-4 w-4" /> Approve Content
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="sm:max-w-md">
+                <DialogContent className="sm:max-w-lg">
                   <DialogHeader>
                     <DialogTitle>Ready to go live?</DialogTitle>
                     <DialogDescription className="pt-2 text-muted-foreground">
                       Confirming will finalize this content version.
                       <div className="mt-4 flex flex-col gap-2 rounded-xl bg-card/50 p-4 text-xs text-foreground">
+                        {post.target_date && (
+                          <div className="mb-2 flex items-center gap-3 border-b border-border pb-2 text-primary font-bold uppercase tracking-wider">
+                            <Clock size={12} />
+                            <span>
+                              Scheduled for:{' '}
+                              {format(new Date(post.target_date), 'PPP @ p')}
+                            </span>
+                          </div>
+                        )}
                         <div className="flex items-center gap-3">
                           <ArrowRight size={12} className="text-primary" />
                           <span>
@@ -165,7 +211,7 @@ export default function PublicReview() {
                         </div>
                         <div className="flex items-center gap-3">
                           <ArrowRight size={12} className="text-primary" />
-                          <span>Admin is notified for scheduling</span>
+                          <span>Admin is notified for final scheduling</span>
                         </div>
                         <div className="flex items-center gap-3">
                           <ArrowRight size={12} className="text-primary" />
@@ -192,7 +238,7 @@ export default function PublicReview() {
                     <PencilLine className="mr-2 h-4 w-4" /> Send for Revision
                   </Button>
                 </DialogTrigger>
-                <DialogContent>
+                <DialogContent className="max-w-lg">
                   <DialogHeader>
                     <DialogTitle>Request Revisions</DialogTitle>
                     <DialogDescription className="pt-2">
@@ -210,7 +256,7 @@ export default function PublicReview() {
                   </DialogHeader>
                   <div className="py-4">
                     <Textarea
-                      placeholder="e.g., Please change the call to action or use a different cover image..."
+                      placeholder="e.g., Please change the call to action, or move the post time to Friday..."
                       value={feedback}
                       onChange={(e) => setFeedback(e.target.value)}
                       className="min-h-[140px] rounded-xl border-border bg-muted/30 focus:bg-background transition-all"
@@ -234,8 +280,11 @@ export default function PublicReview() {
 
           {/* RIGHT SIDE: PREVIEW PLACEHOLDER */}
           <div className="hidden lg:block border-l border-border/50 pl-16">
-            <div className="h-full w-full rounded-[2rem] border-2 border-dashed border-border flex items-center justify-center text-muted-foreground/40 font-semibold tracking-tighter text-sm italic">
+            <div className="h-full w-full rounded-[2rem] border-2 border-dashed border-border flex items-center justify-center text-muted-foreground/40 font-semibold tracking-tighter text-sm italic text-center px-8">
               Social Media Preview In Development
+              <br />
+              {post.target_date &&
+                `Selected Slot: ${format(new Date(post.target_date), 'PPP @ p')}`}
             </div>
           </div>
         </div>

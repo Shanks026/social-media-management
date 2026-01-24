@@ -45,9 +45,9 @@ const STATUS_CONFIG = {
   },
   PUBLISHED: {
     label: 'Published',
-    dot: 'bg-emerald-500',
+    dot: 'bg-lime-500',
     className:
-      'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-400',
+      'bg-lime-100 text-lime-800 dark:bg-lime-500/10 dark:text-lime-400',
   },
   INACTIVE: {
     label: 'Inactive',

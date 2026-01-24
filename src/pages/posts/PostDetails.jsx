@@ -9,7 +9,17 @@ import PlatformBadge from '@/components/PlatformBadge'
 import { Badge } from '@/components/ui/badge'
 import { useHeader } from '../../components/misc/header-context'
 import { toast } from 'sonner'
-import { Lock, AlertCircle, History, X } from 'lucide-react'
+import {
+  Lock,
+  AlertCircle,
+  History,
+  X,
+  Check,
+  Loader2,
+  Globe,
+  Clock,
+  Calendar as CalendarIcon,
+} from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -21,13 +31,13 @@ import {
 
 const getStatusDotColor = (status) => {
   const config = {
-    DRAFT: 'bg-[#0091FF]',
-    PENDING_APPROVAL: 'bg-[#FF9500]',
-    SCHEDULED: 'bg-[#AF52DE]',
-    NEEDS_CHANGES: 'bg-[#FF2D55]',
-    ACTIVE: 'bg-[#34C759]',
-    POSTED: 'bg-[#4CD964]',
-    ARCHIVED: 'bg-[#8E8E93]',
+    DRAFT: 'bg-blue-500',
+    PENDING_APPROVAL: 'bg-orange-500',
+    SCHEDULED: 'bg-violet-500',
+    NEEDS_REVISION: 'bg-pink-500',
+    ACTIVE: 'bg-green-500',
+    PUBLISHED: 'bg-lime-500',
+    ARCHIVED: 'bg-slate-500',
   }
   return config[status] ?? 'bg-slate-400'
 }
@@ -40,6 +50,7 @@ export default function PostDetails() {
 
   const [isConfirmOpen, setIsConfirmOpen] = useState(false)
   const [showHistory, setShowHistory] = useState(false)
+  const [isPublishConfirmOpen, setIsPublishConfirmOpen] = useState(false)
 
   const { data: post, isLoading } = useQuery({
     queryKey: ['post-version', postId],
@@ -92,6 +103,28 @@ export default function PostDetails() {
     onError: (err) => toast.error(err.message),
   })
 
+  const getScheduleLabel = (status) => {
+    if (status === 'PUBLISHED') return 'Published on'
+    if (status === 'SCHEDULED') return 'Confirmed Scheduled Date'
+    return 'Expected scheduled date'
+  }
+
+  const markAsPublishedMutation = useMutation({
+    mutationFn: async (versionId) => {
+      const { error } = await supabase
+        .from('post_versions')
+        .update({ status: 'PUBLISHED' })
+        .eq('id', versionId)
+      if (error) throw error
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(['post-version', postId])
+      toast.success('Post marked as published')
+      setIsPublishConfirmOpen(false)
+    },
+    onError: (err) => toast.error(err.message),
+  })
+
   useEffect(() => {
     if (post) {
       setHeader({
@@ -130,18 +163,13 @@ export default function PostDetails() {
                     <PlatformBadge key={p} platform={p} />
                   ))
                 ) : (
-                  // Fallback for old single-string records
                   <PlatformBadge platform={post.platform} />
                 )}
               </div>
-              {/* <Badge variant="secondary" className="rounded-md">
-                v{post.version_number}.0
-              </Badge> */}
             </div>
 
             <div className="space-y-3">
               <div className="flex flex-row items-center gap-2">
-                {' '}
                 <h1 className="text-3xl font-semibold tracking-tight text-foreground">
                   {post.title}
                 </h1>
@@ -150,9 +178,34 @@ export default function PostDetails() {
                 </Badge>
               </div>
 
-              <p className="text-sm text-muted-foreground font-medium">
-                Created On {format(new Date(post.created_at), 'dd MMM, yyyy')}
-              </p>
+              <div className="flex flex-wrap items-center gap-y-2 gap-x-4 py-3">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <CalendarIcon size={14} />
+                  <span>
+                    Created On{' '}
+                    {format(new Date(post.created_at), 'dd MMM, yyyy')}
+                  </span>
+                </div>
+
+                {post.target_date && (
+                  <>
+                    <div className="h-4 w-[1px] bg-border hidden sm:block" />
+                    <div className="flex items-center gap-2 text-sm font-semibold text-primary">
+                      {/* Display Check only when PUBLISHED, otherwise show a Clock icon */}
+                      {post.status === 'PUBLISHED' ? (
+                        <Check size={14} className="text-green-500" />
+                      ) : (
+                        <Clock size={14} className="text-primary" />
+                      )}
+
+                      <p className="text-sm font-medium text-primary/80">
+                        {getScheduleLabel(post.status)}:{' '}
+                        {format(new Date(post.target_date), 'dd MMM, yyyy @ p')}
+                      </p>
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
 
             <p className="text-sm text-muted-foreground leading-relaxed max-w-3xl">
@@ -174,10 +227,10 @@ export default function PostDetails() {
               {showHistory ? 'Close History' : 'Version History'}
             </Button>
 
-            {/* Only show the Send for Approval button if it's NOT already pending */}
-            {post.status !== 'PENDING_APPROVAL' && (
+            {/* 2. SEND FOR APPROVAL (ONLY IF PENDING_APPROVAL) */}
+            {post.status === 'DRAFT' && (
               <Button
-                className="w-full sm:w-auto disabled:cursor-not-allowed"
+                className="w-full sm:w-auto"
                 disabled={
                   !canSendForApproval || sendForApprovalMutation.isPending
                 }
@@ -186,6 +239,22 @@ export default function PostDetails() {
                 {sendForApprovalMutation.isPending
                   ? 'Sending...'
                   : 'Send for Approval'}
+              </Button>
+            )}
+
+            {/* 3. MARK AS PUBLISHED (ONLY IF SCHEDULED) */}
+            {post.status === 'SCHEDULED' && (
+              <Button
+                className="w-full sm:w-auto"
+                disabled={markAsPublishedMutation.isPending}
+                onClick={() => setIsPublishConfirmOpen(true)}
+              >
+                {markAsPublishedMutation.isPending ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Check className="mr-2 h-4 w-4" />
+                )}
+                Mark as Published
               </Button>
             )}
           </div>
@@ -297,6 +366,56 @@ export default function PostDetails() {
               {sendForApprovalMutation.isPending
                 ? 'Submitting...'
                 : 'Confirm & Send'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={isPublishConfirmOpen}
+        onOpenChange={setIsPublishConfirmOpen}
+      >
+        <DialogContent className="max-w-2xl">
+          <DialogHeader className="space-y-4">
+            <DialogTitle className="flex items-center gap-2 text-xl ">
+              <Globe className="h-6 w-6 text-green-600" /> Finalize Publication
+            </DialogTitle>
+            <div className="space-y-4">
+              <DialogDescription className="text-base text-foreground/90 leading-relaxed">
+                By marking this post as <strong>Published</strong>, you are
+                confirming that this content has been successfully delivered to
+                the target social media platforms.
+              </DialogDescription>
+
+              <div className="bg-destructive/5 p-4 rounded-lg border border-destructive/20 text-sm space-y-3">
+                <div className="flex items-center gap-2 text-destructive font-bold uppercase tracking-tight">
+                  <AlertCircle size={16} />
+                  Terminal Status Warning
+                </div>
+                <p className="text-muted-foreground leading-snug font-medium italic">
+                  This action is irreversible. Marking this version as Published
+                  will permanently close the review and scheduling lifecycle for
+                  this specific post version. You will not be able to revert to
+                  a Draft or Scheduled status.
+                </p>
+              </div>
+            </div>
+          </DialogHeader>
+
+          <DialogFooter className="mt-6 flex flex-row gap-3">
+            <Button
+              variant="outline"
+              onClick={() => setIsPublishConfirmOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => markAsPublishedMutation.mutate(post.id)}
+              disabled={markAsPublishedMutation.isPending}
+            >
+              {markAsPublishedMutation.isPending
+                ? 'Finalizing...'
+                : 'Confirm Publication'}
             </Button>
           </DialogFooter>
         </DialogContent>

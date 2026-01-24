@@ -15,7 +15,8 @@ export async function fetchAllPostsByClient(clientId) {
         platform,
         status,
         version_number,
-        created_at
+        created_at,
+        target_date
       )
     `,
     )
@@ -38,6 +39,7 @@ export async function createDraftPost({
   mediaUrls,
   platforms,
   title,
+  target_date,
 }) {
   // The keys on the left (e.g., p_client_id) must match the SQL arguments exactly
   const { error } = await supabase.rpc('create_post_draft', {
@@ -46,6 +48,7 @@ export async function createDraftPost({
     p_content: content,
     p_media_urls: mediaUrls,
     p_platform: platforms, // This is the array from your Badge UI
+    p_target_date: target_date ?? null,
   })
 
   if (error) throw error
@@ -72,7 +75,7 @@ export const deletePost = async (postId) => {
  */
 export async function updatePost(
   versionId,
-  { title, content, mediaUrls, platforms }, // Destructure platforms
+  { title, content, mediaUrls, platforms, target_date }, // Destructure platforms
 ) {
   const { data, error } = await supabase
     .from('post_versions')
@@ -80,7 +83,8 @@ export async function updatePost(
       title,
       content,
       media_urls: mediaUrls,
-      platform: platforms, // Map to the 'platform' column in DB (which is text[])
+      platform: platforms,
+      target_date: target_date ?? null, // Map to the 'platform' column in DB (which is text[])
     })
     .eq('id', versionId)
     .eq('status', 'DRAFT')
