@@ -53,6 +53,7 @@ import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { format, setHours, setMinutes } from 'date-fns'
+import { useAuth } from '@/context/AuthContext'
 
 const MAX_FILES = 5
 
@@ -104,6 +105,7 @@ export default function DraftPostForm({
   onOpenChange,
   initialData = null,
 }) {
+  const { user } = useAuth()
   const queryClient = useQueryClient()
   const isEditMode = !!initialData
 
@@ -143,7 +145,8 @@ export default function DraftPostForm({
 
   const mutation = useMutation({
     mutationFn: async (values) => {
-      const uploadPromises = values.images.map((file) =>
+      // 1. Handle Image Uploads
+      const uploadPromises = (values.images || []).map((file) =>
         uploadPostImage({ file, clientId }),
       )
       const newMediaUrls = await Promise.all(uploadPromises)
@@ -153,6 +156,8 @@ export default function DraftPostForm({
       )
       const finalMediaUrls = [...existingRemoteUrls, ...newMediaUrls]
 
+      // 2. Construct Payload
+      // Mapping form 'values' to the keys expected by your API functions
       const payload = {
         clientId,
         title: values.title,
@@ -160,20 +165,33 @@ export default function DraftPostForm({
         mediaUrls: finalMediaUrls,
         platforms: values.platforms,
         target_date: values.target_date?.toISOString(),
+        userId: user?.id, // Required for create_post_draft_v3
+        adminNotes: values.admin_notes || null,
       }
 
       if (isEditMode) {
-        return updatePost(initialData.id, payload)
+        // CRITICAL: updatePost needs the version_id (UUID), not the parent post ID
+        // Based on your fetchAllPostsByClient return: it is 'version_id'
+        return updatePost(initialData.version_id, payload)
       }
+
       return createDraftPost(payload)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['draft-posts', clientId] })
+
+      if (isEditMode) {
+        // Invalidate the specific version detail query
+        queryClient.invalidateQueries({
+          queryKey: ['post-version', initialData.version_id],
+        })
+      }
       toast.success(isEditMode ? 'Post updated' : 'Draft created')
       resetAndClose()
     },
-    onError: () => {
-      toast.error('Something went wrong')
+    onError: (error) => {
+      console.error('Mutation Error:', error)
+      toast.error(error.message || 'Something went wrong')
     },
   })
 

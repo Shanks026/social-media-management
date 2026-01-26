@@ -32,7 +32,7 @@ const STATUS_CONFIG = {
       'bg-lime-100 text-lime-800 dark:bg-lime-500/10 dark:text-lime-400',
   },
   ARCHIVED: {
-    label: 'Archived',
+    label: 'Archived - Read Only',
     dot: 'bg-slate-500',
     className:
       'bg-slate-100 text-slate-800 dark:bg-slate-500/20 dark:text-slate-400',

@@ -4,13 +4,11 @@ import { fetchAllPostsByClient, deletePost } from '@/api/posts'
 import StatusBadge from '@/components/StatusBadge'
 import {
   MoreVertical,
-  Folder,
   Eye,
   Edit2,
   Trash2,
   ChevronLeft,
   ChevronRight,
-  X,
   AlertTriangle,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -36,34 +34,34 @@ import { TooltipProvider } from '@/components/ui/tooltip'
 import DraftPostForm from './DraftPostForm'
 import {
   Empty,
-  EmptyContent,
   EmptyDescription,
   EmptyHeader,
-  EmptyMedia,
   EmptyTitle,
 } from '@/components/ui/empty'
 import { toast } from 'sonner'
-import { Navigate, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import PlatformBadge from '@/components/PlatformBadge'
 
 export default function DraftPostList({ clientId }) {
   const queryClient = useQueryClient()
   const navigate = useNavigate()
+
+  // UI States
   const [previewPost, setPreviewPost] = useState(null)
   const [postToDelete, setPostToDelete] = useState(null)
   const [postToEdit, setPostToEdit] = useState(null)
   const [activeImageIndex, setActiveImageIndex] = useState(0)
 
+  // Query - Uses the specified relationship fix to avoid PGRST100/300 errors
   const { data = [], isLoading } = useQuery({
     queryKey: ['draft-posts', clientId],
     queryFn: () => fetchAllPostsByClient(clientId),
   })
 
-  // Delete Mutation
+  // Delete Mutation - Targets actual_post_id to cascade delete all versions
   const deleteMutation = useMutation({
     mutationFn: (postId) => deletePost(postId),
     onSuccess: () => {
-      // FIX: Use the object format for invalidateQueries
       queryClient.invalidateQueries({ queryKey: ['draft-posts', clientId] })
       toast.success('Post and media deleted successfully')
       setPostToDelete(null)
@@ -82,13 +80,27 @@ export default function DraftPostList({ clientId }) {
   // Keyboard Navigation for Preview
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (!previewPost || previewPost.media_urls.length <= 1) return
+      if (!previewPost || (previewPost.media_urls?.length || 0) <= 1) return
       if (e.key === 'ArrowLeft') handlePrev(e)
       if (e.key === 'ArrowRight') handleNext(e)
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [previewPost, activeImageIndex])
+
+  const handlePrev = (e) => {
+    e?.stopPropagation()
+    setActiveImageIndex((prev) =>
+      prev === 0 ? previewPost.media_urls.length - 1 : prev - 1,
+    )
+  }
+
+  const handleNext = (e) => {
+    e?.stopPropagation()
+    setActiveImageIndex((prev) =>
+      prev === previewPost.media_urls.length - 1 ? 0 : prev + 1,
+    )
+  }
 
   const renderMediaGrid = (post) => {
     const media = post.media_urls || []
@@ -98,6 +110,7 @@ export default function DraftPostList({ clientId }) {
       return (
         <img src={media[0]} alt="" className="w-full h-full object-cover" />
       )
+
     if (count === 2)
       return (
         <div className="grid grid-cols-2 gap-1 w-full h-full">
@@ -111,6 +124,7 @@ export default function DraftPostList({ clientId }) {
           ))}
         </div>
       )
+
     return (
       <div className="grid grid-cols-2 gap-1 w-full h-full">
         <img src={media[0]} alt="" className="w-full h-full object-cover" />
@@ -131,27 +145,26 @@ export default function DraftPostList({ clientId }) {
     )
   }
 
-  const handlePrev = (e) => {
-    e.stopPropagation()
-    setActiveImageIndex((prev) =>
-      prev === 0 ? previewPost.media_urls.length - 1 : prev - 1,
-    )
-  }
-
-  const handleNext = (e) => {
-    e.stopPropagation()
-    setActiveImageIndex((prev) =>
-      prev === previewPost.media_urls.length - 1 ? 0 : prev + 1,
-    )
-  }
-
   if (isLoading) {
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {[1, 2, 3].map((i) => (
-          <Skeleton key={i} className="h-[300px] w-full rounded-2xl" />
+          <Skeleton key={i} className="h-[350px] w-full rounded-2xl" />
         ))}
       </div>
+    )
+  }
+
+  if (data.length === 0) {
+    return (
+      <Empty className="mt-12">
+        <EmptyHeader>
+          <EmptyTitle>No drafts yet</EmptyTitle>
+          <EmptyDescription>
+            Create your first post to see it appearing here.
+          </EmptyDescription>
+        </EmptyHeader>
+      </Empty>
     )
   }
 
@@ -161,45 +174,40 @@ export default function DraftPostList({ clientId }) {
         {data.map((post) => (
           <Card
             key={post.id}
-            // The Main Navigation
-            onClick={() => navigate(`/clients/${clientId}/posts/${post.id}`)}
+            onClick={() =>
+              // Navigate using the VERSION ID if your details page expects a version
+              navigate(`/clients/${clientId}/posts/${post.version_id}`)
+            }
             className="group flex flex-col border-none shadow-none bg-[#FCFCFC] cursor-pointer dark:bg-card/70 p-6 gap-4 rounded-2xl transition-colors duration-200 hover:bg-[#F5F5F5] dark:hover:bg-card"
           >
+            {/* Header: Status and Platforms */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5">
                 <StatusBadge status={post.status || 'DRAFT'} />
                 <div className="flex items-center gap-1.5">
                   {Array.isArray(post.platform) && post.platform.length > 0 ? (
                     <>
-                      {/* Always show only the first platform badge */}
                       <PlatformBadge platform={post.platform[0]} />
-
-                      {/* Show the count for everything else (if 2 or more total) */}
                       {post.platform.length > 1 && (
                         <Badge
                           variant="secondary"
-                          className="rounded-md px-2 py-1 border-none shadow-none text-xs font-bold text-muted-foreground"
+                          className="rounded-md px-2 py-1 text-xs font-bold"
                         >
                           +{post.platform.length - 1}
                         </Badge>
                       )}
                     </>
                   ) : (
-                    /* Fallback for single strings (legacy data) */
                     <PlatformBadge platform={post.platform} />
                   )}
                 </div>
               </div>
 
-              {/* FIX 1: Stop propagation on the Dropdown Trigger */}
+              {/* Actions Dropdown */}
               <div onClick={(e) => e.stopPropagation()}>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6 text-muted-foreground hover:bg-transparent"
-                    >
+                    <Button variant="ghost" size="icon" className="h-6 w-6">
                       <MoreVertical className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
@@ -207,46 +215,38 @@ export default function DraftPostList({ clientId }) {
                     {post.status === 'DRAFT' ? (
                       <DropdownMenuItem
                         className="text-xs gap-2 cursor-pointer"
-                        onClick={(e) => {
-                          e.stopPropagation() // FIX 2: Prevent navigation when clicking edit
-                          setPostToEdit(post)
-                        }}
+                        onClick={() => setPostToEdit(post)}
                       >
                         <Edit2 className="h-3 w-3" /> Edit Post
                       </DropdownMenuItem>
                     ) : (
                       <DropdownMenuItem
-                        className="text-xs gap-2 opacity-50 cursor-not-allowed"
                         disabled
+                        className="text-xs gap-2 opacity-50"
                       >
                         <Edit2 className="h-3 w-3" /> Edit Locked
                       </DropdownMenuItem>
                     )}
-                    {post.status === 'DRAFT' && (
-                      <DropdownMenuItem
-                        className="text-xs gap-2 text-destructive"
-                        onClick={(e) => {
-                          e.stopPropagation() // FIX 3: Prevent navigation when clicking delete
-                          setPostToDelete(post)
-                        }}
-                      >
-                        <Trash2 className="h-3 w-3" /> Delete
-                      </DropdownMenuItem>
-                    )}
+                    <DropdownMenuItem
+                      className="text-xs gap-2 text-destructive cursor-pointer"
+                      onClick={() => setPostToDelete(post)}
+                    >
+                      <Trash2 className="h-3 w-3" /> Delete
+                    </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
             </div>
 
-            <h3 className="text-lg font-semibold text-foreground mt-2">
-              {post.title || 'Draft Post'}
+            <h3 className="text-lg font-semibold text-foreground mt-2 line-clamp-1">
+              {post.title || 'Untitled Draft'}
             </h3>
 
-            {/* FIX 4: Stop propagation on the Media Grid click */}
+            {/* Media Preview Section */}
             <div
               className="relative aspect-video rounded-xl overflow-hidden bg-muted cursor-pointer group/media"
               onClick={(e) => {
-                e.stopPropagation() // Prevents navigating to details page when previewing
+                e.stopPropagation()
                 setPreviewPost(post)
               }}
             >
@@ -260,20 +260,20 @@ export default function DraftPostList({ clientId }) {
 
             <CardContent className="p-0 flex-grow">
               <p className="text-[13px] text-muted-foreground line-clamp-2 leading-snug">
-                {post.content || 'No content provided.'}
+                {post.content || 'No description provided.'}
               </p>
             </CardContent>
 
             <div className="pt-3 border-t border-border mt-2">
               <span className="text-muted-foreground text-xs font-medium">
-                Created On{' '}
-                {format(new Date(post.created_at || Date.now()), 'd MMM, yyyy')}
+                Created {format(new Date(post.display_date || Date.now()), 'd MMM, yyyy')}
               </span>
             </div>
           </Card>
         ))}
       </div>
 
+      {/* Edit Form Modal */}
       <DraftPostForm
         clientId={clientId}
         open={!!postToEdit}
@@ -281,20 +281,19 @@ export default function DraftPostList({ clientId }) {
         initialData={postToEdit}
       />
 
-      {/* Media Slider Preview Dialog */}
+      {/* Fullscreen Media Slider */}
       <Dialog open={!!previewPost} onOpenChange={() => setPreviewPost(null)}>
-        <DialogContent className="max-w-[90vw] lg:max-w-[1100px] h-[85vh] p-0 bg-transparent border-none shadow-none flex flex-col items-center justify-center overflow-visible">
-          <div className="relative w-full h-full group flex items-center justify-center">
-            <div className="relative w-full h-full overflow-hidden rounded-3xl bg-black/95 shadow-2xl flex items-center justify-center border border-white/10">
+        <DialogContent className="max-w-[90vw] lg:max-w-[1100px] h-[85vh] p-0 bg-transparent border-none shadow-none flex items-center justify-center">
+          <div className="relative w-full h-full flex items-center justify-center">
+            <div className="relative w-full h-full overflow-hidden rounded-3xl bg-black/95 flex items-center justify-center border border-white/10">
               <img
                 src={previewPost?.media_urls[activeImageIndex]}
                 alt="Preview"
                 className="w-full h-full object-contain"
               />
-
               {previewPost?.media_urls?.length > 1 && (
                 <>
-                  <div className="absolute inset-x-4 top-1/2 -translate-y-1/2 flex justify-between items-center pointer-events-none">
+                  <div className="absolute inset-x-4 top-1/2 -translate-y-1/2 flex justify-between pointer-events-none">
                     <button
                       onClick={handlePrev}
                       className="pointer-events-auto p-4 rounded-2xl bg-black/40 text-white hover:bg-black/60 backdrop-blur-xl transition-all"
@@ -309,18 +308,9 @@ export default function DraftPostList({ clientId }) {
                     </button>
                   </div>
                   <div className="absolute top-6 left-1/2 -translate-x-1/2">
-                    <Badge className="bg-white/10 text-white border-none backdrop-blur-md px-4 py-1.5 font-medium">
+                    <Badge className="bg-white/10 text-white border-none backdrop-blur-md px-4 py-1.5">
                       {activeImageIndex + 1} / {previewPost.media_urls.length}
                     </Badge>
-                  </div>
-                  <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex gap-2 p-2 bg-black/20 backdrop-blur-md rounded-full">
-                    {previewPost.media_urls.map((_, idx) => (
-                      <button
-                        key={idx}
-                        onClick={() => setActiveImageIndex(idx)}
-                        className={`h-2 rounded-full transition-all duration-300 ${idx === activeImageIndex ? 'bg-white w-8' : 'bg-white/30 w-2'}`}
-                      />
-                    ))}
                   </div>
                 </>
               )}
@@ -329,7 +319,7 @@ export default function DraftPostList({ clientId }) {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
+      {/* Delete Confirmation */}
       <Dialog open={!!postToDelete} onOpenChange={() => setPostToDelete(null)}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
@@ -337,18 +327,12 @@ export default function DraftPostList({ clientId }) {
               <AlertTriangle className="h-5 w-5" /> Delete Post
             </DialogTitle>
             <DialogDescription className="py-3">
-              Are you sure you want to delete{' '}
-              <span className="font-semibold text-foreground">
-                "{postToDelete?.title}"
-              </span>
-              ? This will permanently remove the post and its{' '}
-              <span className="font-bold">
-                {postToDelete?.media_urls?.length || 0} attached media files
-              </span>
-              .
+              This will permanently delete{' '}
+              <span className="font-bold">"{postToDelete?.title}"</span> and all
+              its versions. This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="gap-2 sm:gap-0">
+          <DialogFooter>
             <Button
               variant="ghost"
               onClick={() => setPostToDelete(null)}
@@ -356,14 +340,9 @@ export default function DraftPostList({ clientId }) {
             >
               Cancel
             </Button>
-            {/* Inside the Delete Confirmation Dialog */}
             <Button
               variant="destructive"
-              onClick={() => {
-                // Use post_id to delete the parent post,
-                // or just .id if you only want to delete that specific version
-                deleteMutation.mutate(postToDelete.post_id)
-              }}
+              onClick={() => deleteMutation.mutate(postToDelete.actual_post_id)}
               disabled={deleteMutation.isPending}
             >
               {deleteMutation.isPending ? 'Deleting...' : 'Delete Permanently'}

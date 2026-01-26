@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useState } from 'react'
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover";
+} from '@/components/ui/popover'
 import {
   Dialog,
   DialogContent,
@@ -11,166 +11,221 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-} from "@/components/ui/dialog";
-import { AlertTriangle, File, Globe, MoreVertical, Pencil, Trash2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import StatusBadge from "@/components/StatusBadge";
-import { formatDate } from "@/lib/helper";
+} from '@/components/ui/dialog'
+import {
+  MoreVertical,
+  Pencil,
+  Trash2,
+  Instagram,
+  Linkedin,
+  Twitter,
+  Crown,
+  Zap,
+} from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+
+const PlatformIcon = ({ name }) => {
+  const icons = {
+    instagram: {
+      icon: <Instagram className="size-3.5 text-white" />,
+      bg: 'bg-[#E4405F]',
+    },
+    linkedin: {
+      icon: <Linkedin className="size-3.5 text-white" />,
+      bg: 'bg-[#0077B5]',
+    },
+    twitter: {
+      icon: <Twitter className="size-3.5 text-white" />,
+      bg: 'bg-black',
+    },
+  }
+
+  const platform = icons[name.toLowerCase()]
+  if (!platform) return null
+
+  return (
+    <div
+      className={`size-8 rounded-full border-2 border-white dark:border-[#18181b] flex items-center justify-center ${platform.bg}`}
+    >
+      {platform.icon}
+    </div>
+  )
+}
 
 function ClientCard({ client, onOpen, onEdit, onDelete }) {
-  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false)
+
+  const tier = client.tier?.toUpperCase() || 'VIP'
+  const industry = client.industry || 'Food and Eatables'
+  const pipeline = client.pipeline || { drafts: 12, pending: 3, scheduled: 7 }
+  const platforms = client.platforms || ['instagram', 'linkedin', 'twitter']
+  const nextPost = '20 Jan 2026'
+
+  const initials = client.name
+    ? client.name
+        .split(' ')
+        .map((n) => n[0])
+        .join('')
+        .toUpperCase()
+        .slice(0, 2)
+    : 'CL'
+
+  const renderTierBadge = () => {
+    if (tier === 'VIP') {
+      return (
+        <Badge className="bg-purple-600 hover:bg-purple-600 text-white border-none text-[10px] h-5 px-2 gap-1 rounded-md shadow-sm">
+          <Crown className="size-3 fill-current" /> VIP
+        </Badge>
+      )
+    }
+    if (tier === 'PRO') {
+      return (
+        <Badge className="bg-amber-400 hover:bg-amber-400 text-amber-900 border-none text-[10px] h-5 px-2 gap-1 rounded-md shadow-sm">
+          <Zap className="size-3 fill-current" /> PRO
+        </Badge>
+      )
+    }
+    return null
+  }
 
   return (
     <>
       <Card
         onClick={() => onOpen(client)}
-        className="
-          cursor-pointer
-          p-0
-          transition-colors
-          bg-gray-50
-          shadow-none
-          border-none
-          
-          hover:bg-gray-100
-          dark:border-none
-          dark:bg-card/80
-        "
+        // Added transition-colors and duration-300 to fix the background swap delay
+        className="group cursor-pointer shadow-none border-none transition-colors duration-300 bg-[#FCFCFC] dark:bg-card/40 hover:bg-gray-50 dark:hover:bg-[#242427]"
       >
-        <CardContent className="p-5 space-y-4">
-          {/* Header: Status + Actions */}
-          <div className="flex items-center justify-between">
-            <StatusBadge status={client.status} />
+        <CardContent className="p-6">
+          {/* Header */}
+          <div className="flex justify-between items-start mb-8">
+            <div className="flex gap-4 items-center">
+              <div className="h-16 w-16 shrink-0 rounded-xl bg-white dark:bg-white/5 border border-gray-100 dark:border-white/10 flex items-center justify-center overflow-hidden">
+                {client.logo_url ? (
+                  <img
+                    src={client.logo_url}
+                    alt=""
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <div className="h-full w-full flex items-center justify-center bg-gray-100 dark:bg-zinc-800 text-gray-400 font-bold text-xl">
+                    {initials}
+                  </div>
+                )}
+              </div>
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">
+                    {client.name}
+                  </h3>
+                  {renderTierBadge()}
+                </div>
+                <p className="text-sm text-muted-foreground">{industry}</p>
+              </div>
+            </div>
 
             <Popover>
-              <PopoverTrigger asChild>
+              <PopoverTrigger asChild onClick={(e) => e.stopPropagation()}>
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8"
-                  onClick={(e) => e.stopPropagation()}
+                  className="h-8 w-8 text-gray-400 hover:text-gray-900 dark:hover:text-white"
                 >
-                  <MoreVertical className="size-4" />
+                  <MoreVertical className="size-5" />
                 </Button>
               </PopoverTrigger>
-
-              <PopoverContent align="end" className="w-36 p-2">
+              <PopoverContent align="end" className="w-32 p-1">
                 <Button
                   variant="ghost"
-                  className="w-full justify-start px-3 py-2 h-9 hover:bg-accent"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onEdit(client);
-                  }}
+                  className="w-full justify-start text-xs h-9"
+                  onClick={() => onEdit(client)}
                 >
-                  <Pencil className="mr-2.5 size-4" />
-                  Edit
+                  <Pencil className="mr-2 size-4" /> Edit
                 </Button>
-
                 <Button
                   variant="ghost"
-                  className="w-full justify-start px-3 py-2 h-9 text-destructive hover:bg-destructive/10"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setDeleteOpen(true);
-                  }}
+                  className="w-full justify-start text-xs h-9 text-destructive"
+                  onClick={() => setDeleteOpen(true)}
                 >
-                  <Trash2 className="mr-2.5 size-4" />
-                  Delete
+                  <Trash2 className="mr-2 size-4" /> Delete
                 </Button>
               </PopoverContent>
             </Popover>
           </div>
 
-          {/* Client Name */}
-          <div className="space-y-1">
-            <h3 className="text-lg font-semibold leading-snug">
-              {client.name}
-            </h3>
+          {/* Pipeline */}
+          <div className="flex items-center gap-6 mb-8">
+            <div className="flex items-center gap-2">
+              <div className="size-2 rounded-full bg-blue-500" />
+              <span className="text-sm font-semibold dark:text-white">
+                {pipeline.drafts}
+              </span>
+              <span className="text-sm text-muted-foreground">Drafts</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="size-2 rounded-full bg-amber-500" />
+              <span className="text-sm font-semibold dark:text-white">
+                {pipeline.pending}
+              </span>
+              <span className="text-sm text-muted-foreground">
+                Pending App.
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="size-2 rounded-full bg-purple-500" />
+              <span className="text-sm font-semibold dark:text-white">
+                {pipeline.scheduled}
+              </span>
+              <span className="text-sm text-muted-foreground">Scheduled</span>
+            </div>
           </div>
 
-          {/* Stats */}
-          <div className="flex items-center gap-6 pt-1">
-            <div className="flex items-center gap-2">
-              <div className="p-1.5 bg-muted/50 rounded-md">
-                <File className="size-3.5 text-muted-foreground" />
+          {/* Footer */}
+          <div className="flex items-center justify-between pt-5 border-t border-gray-100 dark:border-white/5">
+            <div className="flex -space-x-2">
+              {platforms.map((p, i) => (
+                <div key={p} style={{ zIndex: 10 - i }}>
+                  <PlatformIcon name={p} />
+                </div>
+              ))}
+              <div className="size-8 rounded-full border-2 border-white dark:border-[#18181b] bg-gray-100 dark:bg-zinc-800 flex items-center justify-center text-gray-500 dark:text-gray-400 text-[10px] font-bold z-0">
+                +2
               </div>
-              <div className="text-xs font-medium">{client.posts || 0}</div>
-              <div className="text-xs text-muted-foreground">Posts</div>
             </div>
 
             <div className="flex items-center gap-2">
-              <div className="p-1.5 bg-muted/50 rounded-md">
-                <Globe className="size-3.5 text-muted-foreground" />
-              </div>
-              <div className="text-xs font-medium">
-                {client.platforms || 0}
-              </div>
-              <div className="text-xs text-muted-foreground">Platforms</div>
-            </div>
-          </div>
-
-          {/* Optional description */}
-          {client.description && (
-            <div className="pt-2">
-              <p className="text-sm text-muted-foreground line-clamp-2">
-                {client.description}
-              </p>
-            </div>
-          )}
-
-          {/* Date */}
-          <div className="pt-4 border-t">
-            <div className="text-xs text-muted-foreground">
-              Created on {formatDate(client.created_at)}
+              <div className="size-2 rounded-full bg-green-500" />
+              <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
+                Next Post: {nextPost}
+              </span>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Delete confirmation dialog */}
+      {/* Delete Dialog */}
       <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
-        <DialogContent onClick={(e) => e.stopPropagation()}>
-          <DialogHeader className="space-y-2">
-            <DialogTitle className="flex items-center gap-2 text-destructive">
-              <AlertTriangle className="size-4" />
-              Delete client
-            </DialogTitle>
-
-            <DialogDescription className="pt-1">
-              Are you sure you want to delete{" "}
-              <span className="font-medium">{client.name}</span>?
-              This action cannot be undone. All data associated with this
-              client will be permanently deleted.
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Deletion</DialogTitle>
+            <DialogDescription>
+              Remove <span className="font-bold">{client.name}</span> from the
+              workspace?
             </DialogDescription>
           </DialogHeader>
-
           <DialogFooter>
-            <Button
-              variant="ghost"
-              onClick={() => setDeleteOpen(false)}
-            >
+            <Button variant="ghost" onClick={() => setDeleteOpen(false)}>
               Cancel
             </Button>
-            <Button
-              variant="destructive"
-              onClick={async () => {
-                try {
-                  await onDelete(client);
-                } finally {
-                  setDeleteOpen(false);
-                }
-              }}
-            >
+            <Button variant="destructive" onClick={() => onDelete(client)}>
               Delete
             </Button>
-
           </DialogFooter>
         </DialogContent>
       </Dialog>
     </>
-  );
+  )
 }
 
-export default ClientCard;
+export default ClientCard
