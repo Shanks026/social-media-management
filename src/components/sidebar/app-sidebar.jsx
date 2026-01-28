@@ -3,10 +3,15 @@ import { AppSidebarHeader } from './nav-header'
 import { NavMain } from './nav-main'
 import { NavClients } from './nav-clients'
 import { NavUser } from './nav-user'
-import { Sidebar, SidebarContent, SidebarFooter, useSidebar } from '@/components/ui/sidebar'
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  useSidebar,
+} from '@/components/ui/sidebar'
 import { Separator } from '../ui/separator'
-import CreateClient from '../../pages/CreateClient'
-import EditClient from '../../pages/EditClient'
+import CreateClient from '../../pages/clients/CreateClient'
+import EditClient from '../../pages/clients/EditClient'
 import { NavSecondary } from './nav-secondary'
 import { SidebarSubCard } from './sidebar-sub-card'
 
