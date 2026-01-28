@@ -31,6 +31,7 @@ import { z } from 'zod'
 
 // Import your new components
 import PlatformSelector from './PlatformSelector'
+import { INDUSTRY_OPTIONS } from '../../lib/industries'
 
 const createClientSchema = z.object({
   name: z.string().min(2, 'Client name is required'),
@@ -42,7 +43,7 @@ const createClientSchema = z.object({
   status: z.enum(['ACTIVE', 'PAUSED']),
   tier: z.enum(['BASIC', 'PRO', 'VIP']),
   logo_url: z.string().optional().nullable(),
-  // Add platforms to the schema
+  industry: z.string().min(1, 'Industry is required'),
   platforms: z.array(z.string()).default([]),
 })
 
@@ -61,7 +62,8 @@ export default function CreateClient({ open, onOpenChange }) {
       status: 'ACTIVE',
       tier: 'BASIC',
       logo_url: null,
-      platforms: [], // Initialize as empty array
+      platforms: [],
+      industry: 'Other', // Initialize as empty array
     },
   })
 
@@ -185,6 +187,7 @@ export default function CreateClient({ open, onOpenChange }) {
               Identity & Settings
             </Label>
 
+            {/* Client Name */}
             <div className="space-y-2">
               <Input
                 {...form.register('name')}
@@ -197,6 +200,31 @@ export default function CreateClient({ open, onOpenChange }) {
               )}
             </div>
 
+            {/* Industry Selection (Full Width) */}
+            <div className="space-y-2">
+              <Select
+                value={form.watch('industry')}
+                onValueChange={(value) => form.setValue('industry', value)}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select Industry" />
+                </SelectTrigger>
+                <SelectContent>
+                  {INDUSTRY_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {form.formState.errors.industry && (
+                <p className="text-xs text-red-500">
+                  {form.formState.errors.industry.message}
+                </p>
+              )}
+            </div>
+
+            {/* Status and Tier (Two Columns) */}
             <div className="grid grid-cols-2 gap-4">
               <Select
                 value={form.watch('status')}

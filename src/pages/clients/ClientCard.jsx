@@ -1,10 +1,5 @@
 import { useState } from 'react'
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover'
-import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -13,9 +8,6 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog'
 import {
-  MoreVertical,
-  Pencil,
-  Trash2,
   Instagram,
   Linkedin,
   Twitter,
@@ -28,8 +20,8 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { getUrgencyStatus } from '@/lib/client-helpers'
+import IndustryBadge from './IndustryBadge' // Ensure this path is correct
 
 const PlatformIcon = ({ name }) => {
   const icons = {
@@ -45,23 +37,53 @@ const PlatformIcon = ({ name }) => {
       icon: <Twitter className="size-3.5 text-white" />,
       bg: 'bg-black',
     },
+    facebook: {
+      icon: <Facebook className="size-3.5 text-white" />,
+      bg: 'bg-[#1877F2]',
+    },
+    youtube: {
+      icon: <Youtube className="size-3.5 text-white" />,
+      bg: 'bg-[#FF0000]',
+    },
+    google_business: {
+      icon: <Globe className="size-3.5 text-white" />,
+      bg: 'bg-[#4285F4]',
+    },
   }
+
   const platform = icons[name.toLowerCase()]
   if (!platform) return null
+
   return (
     <div
-      className={`size-8 rounded-full border-2 border-white dark:border-[#1c1c1f] flex items-center justify-center shrink-0 shadow-sm ${platform.bg}`}
+      className={`flex h-8 w-8 items-center justify-center rounded-full border-2 border-background ${platform.bg} shadow-sm transition-transform hover:scale-110`}
     >
       {platform.icon}
     </div>
   )
 }
 
-function ClientCard({ client, onOpen, onEdit, onDelete }) {
+const StatItem = ({ count, label, colorClass }) => {
+  if (!count || count < 1) return null
+  return (
+    <div className="flex items-center gap-2 shrink-0">
+      <div className={`size-2.5 rounded-full ${colorClass}`} />
+      <div className="flex items-baseline gap-1.5">
+        <span className="text-base font-bold dark:text-white leading-none">
+          {count}
+        </span>
+        <span className="text-xs text-muted-foreground font-medium">
+          {label}
+        </span>
+      </div>
+    </div>
+  )
+}
+
+function ClientCard({ client, onOpen, onDelete }) {
   const [deleteOpen, setDeleteOpen] = useState(false)
 
   const tier = client.tier?.toUpperCase() || 'BASIC'
-  const industry = client.industry || 'Food and Eatables'
   const platforms = client.platforms || []
   const pipeline = client.pipeline || {
     drafts: 0,
@@ -99,63 +121,6 @@ function ClientCard({ client, onOpen, onEdit, onDelete }) {
         .slice(0, 2)
     : 'CL'
 
-  const PlatformIcon = ({ name }) => {
-    const icons = {
-      instagram: {
-        icon: <Instagram className="size-3.5 text-white" />,
-        bg: 'bg-[#E4405F]',
-      },
-      linkedin: {
-        icon: <Linkedin className="size-3.5 text-white" />,
-        bg: 'bg-[#0077B5]',
-      },
-      twitter: {
-        icon: <Twitter className="size-3.5 text-white" />,
-        bg: 'bg-black',
-      },
-      facebook: {
-        icon: <Facebook className="size-3.5 text-white" />,
-        bg: 'bg-[#1877F2]',
-      },
-      youtube: {
-        icon: <Youtube className="size-3.5 text-white" />,
-        bg: 'bg-[#FF0000]',
-      },
-      google_business: {
-        icon: <Globe className="size-3.5 text-white" />,
-        bg: 'bg-[#4285F4]',
-      },
-    }
-
-    const platform = icons[name.toLowerCase()]
-    if (!platform) return null
-
-    return (
-      <div
-        className={`flex h-8 w-8 items-center justify-center rounded-full border-2 border-background ${platform.bg} shadow-sm transition-transform hover:scale-110`}
-      >
-        {platform.icon}
-      </div>
-    )
-  }
-
-  const StatItem = ({ count, label, colorClass }) => {
-    if (!count || count < 1) return null
-    return (
-      <div className="flex items-center gap-2 shrink-0">
-        <div className={`size-2.5 rounded-full ${colorClass}`} />
-        <div className="flex items-baseline gap-1.5">
-          <span className="text-base font-bold dark:text-white leading-none">
-            {count}
-          </span>
-          <span className="text-xs text-muted-foreground font-medium">
-            {label}
-          </span>
-        </div>
-      </div>
-    )
-  }
-
   const hasPipelineData =
     pipeline.drafts > 0 ||
     pipeline.pending > 0 ||
@@ -163,18 +128,25 @@ function ClientCard({ client, onOpen, onEdit, onDelete }) {
     pipeline.scheduled > 0
 
   const renderTierBadge = () => {
+    const baseStyles =
+      'inline-flex items-center justify-center py-0.5 px-1.5 rounded-md shrink-0 shadow-md font-bold tracking-wider uppercase'
+
     if (tier === 'VIP')
       return (
-        <div className="flex items-center justify-center size-5.5 rounded-md bg-purple-600 text-white shrink-0 shadow-sm">
-          <Crown className="size-3 fill-current" />
+        <div className={`${baseStyles} bg-purple-600 text-white`}>
+          <Crown className="size-3 fill-current mr-1" />
+          <span className="text-[10px]">VIP</span>
         </div>
       )
+
     if (tier === 'PRO')
       return (
-        <div className="flex items-center justify-center size-5.5 rounded-md bg-amber-400 text-amber-950 shrink-0 shadow-sm">
-          <Zap className="size-3 fill-current" />
+        <div className={`${baseStyles} bg-amber-400 text-amber-950`}>
+          <Zap className="size-3 fill-current mr-1" />
+          <span className="text-[10px]">PRO</span>
         </div>
       )
+
     return null
   }
 
@@ -182,7 +154,7 @@ function ClientCard({ client, onOpen, onEdit, onDelete }) {
     <>
       <Card
         onClick={() => onOpen(client)}
-        className="group relative cursor-pointer shadow-none border-none transition-all duration-300 py-2 bg-[#FCFCFC] dark:bg-card hover:bg-gray-100/50 dark:hover:bg-[#242427] h-full flex flex-col overflow-hidden ring-1 ring-gray-200/50 dark:ring-white/5"
+        className="group relative cursor-pointer shadow-none border-none transition-all duration-300 py-2 bg-gray-50/80 dark:bg-card/50 hover:bg-gray-100/50 dark:hover:bg-card h-full flex flex-col overflow-hidden"
       >
         <CardContent className="p-6 flex flex-col flex-1 min-w-0">
           {/* Header */}
@@ -201,21 +173,22 @@ function ClientCard({ client, onOpen, onEdit, onDelete }) {
                   </div>
                 )}
               </div>
-              <div className="space-y-1 min-w-0">
-                <div className="flex items-center gap-2.5">
-                  <h3 className="text-lg font-bold text-gray-900 dark:text-white tracking-tight leading-none truncate">
+              <div className="space-y-2 min-w-0">
+                <div className="flex items-center gap-3">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white tracking-normal leading-none truncate">
                     {client.name}
                   </h3>
                   {renderTierBadge()}
                 </div>
-                <p className="text-sm font-medium text-muted-foreground truncate">
-                  {industry}
-                </p>
+                {/* Industry Display using the Badge for Label Lookup */}
+                <div className="flex">
+                  <IndustryBadge industryValue={client.industry} />
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Pipeline */}
+          {/* Pipeline Stats */}
           <div className="flex-1 min-w-0">
             {hasPipelineData ? (
               <div className="flex flex-wrap items-center gap-x-6 gap-y-3 mb-8">
@@ -250,7 +223,7 @@ function ClientCard({ client, onOpen, onEdit, onDelete }) {
             )}
           </div>
 
-          {/* Footer - High Contrast & Larger */}
+          {/* Footer */}
           <div className="flex items-center justify-between pt-5 border-t border-gray-100 dark:border-white/5 mt-auto min-w-0">
             <div className="flex items-center -space-x-3 overflow-hidden">
               {platforms.length > 0 ? (
@@ -258,7 +231,6 @@ function ClientCard({ client, onOpen, onEdit, onDelete }) {
                   {visiblePlatforms.map((p) => (
                     <PlatformIcon key={p} name={p} />
                   ))}
-
                   {remainingCount > 0 && (
                     <div className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-white dark:border-[#1c1c1f] bg-gray-200 dark:bg-zinc-800 text-[10px] font-bold text-gray-600 dark:text-gray-400 z-10">
                       +{remainingCount}
@@ -274,20 +246,20 @@ function ClientCard({ client, onOpen, onEdit, onDelete }) {
 
             <div className="flex items-center min-w-0">
               {health && nextPostFormatted ? (
-                <div className="flex items-center gap-2.5 px-3 py-1.5 bg-gray-50 dark:bg-white/5 rounded-full border border-gray-100 dark:border-white/5 shrink-0">
+                <div className="flex items-center gap-2.5 px-3 py-1.5 bg-gray-100 dark:bg-white/5 rounded-full border border-gray-100 dark:border-white/5 shrink-0">
                   <div
                     className={`size-2 rounded-full ${health.color} ${health.pulse ? 'animate-pulse shadow-[0_0_8px_rgba(0,0,0,0.1)]' : ''}`}
                   />
                   <div className="flex items-center text-[11px] gap-1 whitespace-nowrap">
                     <span className="text-muted-foreground font-semibold">
-                      NEXT
+                      Next
                     </span>
                     <span className="font-bold text-gray-900 dark:text-gray-100">
                       {nextPostFormatted}
                     </span>
                     {health.label && (
                       <span
-                        className={`ml-1 font-black ${health.color.replace('bg-', 'text-')}`}
+                        className={`ml-1 mt-0.5 leading-none font-black ${health.color.replace('bg-', 'text-')}`}
                       >
                         {health.label.toUpperCase()}
                       </span>

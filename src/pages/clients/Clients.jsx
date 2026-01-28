@@ -127,7 +127,7 @@ export default function Clients() {
           </EmptyContent>
         </Empty>
       ) : (
-        <div className="grid gap-4 grid-cols-[repeat(auto-fill,minmax(380px,1fr))]">
+        <div className="grid gap-4 grid-cols-[repeat(auto-fill,minmax(400px,1fr))]">
           {clients.map((client) => (
             <ClientCard
               key={client.id}

@@ -25,12 +25,13 @@ import {
 import { Loader2, Upload, X } from 'lucide-react'
 import { toast } from 'sonner'
 
-import { useForm } from 'react-hook-form'
+import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 
-// Shared Components
+// Shared Components & Constants
 import PlatformSelector from './PlatformSelector'
+import { INDUSTRY_OPTIONS } from '../../lib/industries'
 
 const editClientSchema = z.object({
   name: z.string().min(2, 'Client name is required'),
@@ -42,7 +43,8 @@ const editClientSchema = z.object({
   status: z.enum(['ACTIVE', 'PAUSED']),
   tier: z.enum(['BASIC', 'PRO', 'VIP']),
   logo_url: z.string().optional().nullable(),
-  platforms: z.array(z.string()).default([]), // Match CreateClient logic
+  industry: z.string().min(1, 'Industry is required'),
+  platforms: z.array(z.string()).default([]),
 })
 
 export default function EditClient({ client, onClose }) {
@@ -60,6 +62,7 @@ export default function EditClient({ client, onClose }) {
       status: 'ACTIVE',
       tier: 'BASIC',
       logo_url: null,
+      industry: 'Other',
       platforms: [],
     },
   })
@@ -75,7 +78,8 @@ export default function EditClient({ client, onClose }) {
         status: client.status ?? 'ACTIVE',
         tier: client.tier ?? 'BASIC',
         logo_url: client.logo_url ?? null,
-        platforms: client.platforms ?? [], // Load existing SLA
+        industry: client.industry ?? 'Other',
+        platforms: client.platforms ?? [],
       })
       setPreviewUrl(client.logo_url)
     }
@@ -118,6 +122,7 @@ export default function EditClient({ client, onClose }) {
       setPreviewUrl(publicUrl)
       toast.success('Logo updated!')
     } catch (error) {
+      console.error('Upload error:', error)
       toast.error('Failed to upload logo')
     } finally {
       setIsUploading(false)
@@ -191,8 +196,10 @@ export default function EditClient({ client, onClose }) {
 
           <div className="space-y-4">
             <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-              Identity & Status
+              Identity & Settings
             </Label>
+
+            {/* Client Name */}
             <div className="space-y-2">
               <Input {...form.register('name')} placeholder="Client Name" />
               {form.formState.errors.name && (
@@ -202,55 +209,85 @@ export default function EditClient({ client, onClose }) {
               )}
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Select
-                  value={form.watch('status')}
-                  onValueChange={(v) =>
-                    form.setValue('status', v, { shouldDirty: true })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="ACTIVE">Active</SelectItem>
-                    <SelectItem value="PAUSED">Paused</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+            {/* Industry Selection */}
+            <div className="space-y-2">
+              <Select
+                value={form.watch('industry')}
+                onValueChange={(value) =>
+                  form.setValue('industry', value, { shouldDirty: true })
+                }
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select Industry" />
+                </SelectTrigger>
+                <SelectContent>
+                  {INDUSTRY_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {form.formState.errors.industry && (
+                <p className="text-xs text-red-500">
+                  {form.formState.errors.industry.message}
+                </p>
+              )}
+            </div>
 
-              <div className="space-y-2">
-                <Select
-                  value={form.watch('tier')}
-                  onValueChange={(v) =>
-                    form.setValue('tier', v, { shouldDirty: true })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Tier" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="BASIC">Basic</SelectItem>
-                    <SelectItem value="PRO">Pro</SelectItem>
-                    <SelectItem value="VIP">VIP</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+            {/* Status and Tier */}
+            <div className="grid grid-cols-2 gap-4">
+              <Select
+                value={form.watch('status')}
+                onValueChange={(value) =>
+                  form.setValue('status', value, { shouldDirty: true })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ACTIVE">Active</SelectItem>
+                  <SelectItem value="PAUSED">Paused</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select
+                value={form.watch('tier')}
+                onValueChange={(value) =>
+                  form.setValue('tier', value, { shouldDirty: true })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Service Tier" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="BASIC">Basic</SelectItem>
+                  <SelectItem value="PRO">Pro</SelectItem>
+                  <SelectItem value="VIP">VIP</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
-          {/* Platform SLA Management */}
-          <PlatformSelector
-            selected={form.watch('platforms')}
-            onChange={(val) =>
-              form.setValue('platforms', val, { shouldDirty: true })
-            }
+          {/* Platform Selection Section */}
+          <Controller
+            name="platforms"
+            control={form.control}
+            render={({ field }) => (
+              <PlatformSelector
+                selected={field.value || []}
+                onChange={(val) => {
+                  field.onChange(val)
+                  form.setValue('platforms', val, { shouldDirty: true })
+                }}
+              />
+            )}
           />
 
           <div className="space-y-4">
             <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-              Contact & Notes
+              Contact Information
             </Label>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
