@@ -8,36 +8,57 @@ import { supabase } from '@/lib/supabase'
  */
 // src/api/clients.js
 
-export async function fetchClients() {
+// src/api/clients.js
+
+// src/api/clients.js
+
+export async function fetchClients(filters = {}) {
+  const {
+    search = '',
+    industry = 'all',
+    tier = 'all',
+    urgency = 'all',
+  } = filters
+
   const {
     data: { user },
-    error: authError,
   } = await supabase.auth.getUser()
-  if (authError || !user) throw new Error('Not authenticated')
+  if (!user) throw new Error('Not authenticated')
 
+  // Supabase automatically parses JSONB returns into a JS object
   const { data, error } = await supabase.rpc('get_clients_with_pipeline', {
     p_user_id: user.id,
+    p_search: search,
+    p_industry: industry,
+    p_tier: tier,
+    p_urgency: urgency,
   })
 
   if (error) throw error
 
-  return data.map((client) => ({
-    id: client.id,
-    name: client.name,
-    status: client.status,
-    logo_url: client.logo_url,
-    tier: client.tier,
-    industry: client.industry, // Ensure industry is passed
-    platforms: client.platforms || [], // Extract platforms here
-    created_at: client.created_at,
+  // 'data' is now { clients: [...], counts: {...} }
+  const clients = (data.clients || []).map((c) => ({
+    id: c.id,
+    name: c.name,
+    status: c.status,
+    logo_url: c.logo_url,
+    tier: c.tier,
+    industry: c.industry,
+    platforms: c.platforms || [],
+    created_at: c.created_at,
     pipeline: {
-      drafts: Number(client.drafts),
-      pending: Number(client.pending),
-      revisions: Number(client.revisions),
-      scheduled: Number(client.scheduled),
-      next_post_at: client.next_post_at,
+      drafts: Number(c.drafts),
+      pending: Number(c.pending),
+      revisions: Number(c.revisions),
+      scheduled: Number(c.scheduled),
+      next_post_at: c.next_scheduled, // Note: Column name is next_scheduled in this RPC version
     },
   }))
+
+  return {
+    clients,
+    counts: data.counts || { all: 0, urgent: 0, upcoming: 0, idle: 0 },
+  }
 }
 /**
  * Create a client owned by the current authenticated user

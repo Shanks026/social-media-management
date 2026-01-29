@@ -67,9 +67,9 @@ const StatItem = ({ count, label, colorClass }) => {
   if (!count || count < 1) return null
   return (
     <div className="flex items-center gap-2 shrink-0">
-      <div className={`size-2.5 rounded-full ${colorClass}`} />
+      <div className={`size-2 rounded-full ${colorClass}`} />
       <div className="flex items-baseline gap-1.5">
-        <span className="text-base font-bold dark:text-white leading-none">
+        <span className="text-sm font-bold dark:text-white leading-none">
           {count}
         </span>
         <span className="text-xs text-muted-foreground font-medium">
