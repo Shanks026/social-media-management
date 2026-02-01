@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/sidebar'
 
 const navItems = [
-  { title: 'Home', url: '/', icon: Home },
+  // { title: 'Home', url: '/', icon: Home },
   { title: 'Clients', url: '/clients', icon: UserStar },
 ]
 

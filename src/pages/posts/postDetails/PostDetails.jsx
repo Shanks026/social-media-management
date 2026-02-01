@@ -57,8 +57,6 @@ export default function PostDetails() {
 
   // --- Mutations ---
 
-  // PostDetails.jsx mutation section
-
   const createRevisionMutation = useMutation({
     mutationFn: () => {
       // Check if user exists before calling the RPC
@@ -76,9 +74,21 @@ export default function PostDetails() {
       setIsRevisionConfirmOpen(false)
       setAdminNotes('')
 
-      // Invalidate history so the sidebar updates
+      // 1. Invalidate history so the sidebar updates
       queryClient.invalidateQueries({
         queryKey: ['post-versions-list', post?.actual_post_id],
+      })
+
+      // 2. CRITICAL FIX: Invalidate the query for the CURRENT (Old) version.
+      // This forces a re-fetch when you navigate back to this ID, updating status to 'ARCHIVED'.
+      queryClient.invalidateQueries({
+        queryKey: ['post-version', post.id],
+      })
+
+      // Optional: You can also manually set the cache for the old version to be instant
+      queryClient.setQueryData(['post-version', post.id], (oldData) => {
+        if (!oldData) return oldData
+        return { ...oldData, status: 'ARCHIVED' }
       })
 
       // Navigate to the new version's detail page
@@ -113,7 +123,10 @@ export default function PostDetails() {
     mutationFn: async (versionId) => {
       const { error: upError } = await supabase
         .from('post_versions')
-        .update({ status: 'PUBLISHED' })
+        .update({
+          status: 'PUBLISHED',
+          published_at: new Date().toISOString(), // <--- Capture timestamp
+        })
         .eq('id', versionId)
       if (upError) throw upError
     },

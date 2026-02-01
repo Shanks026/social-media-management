@@ -154,7 +154,7 @@ function ClientCard({ client, onOpen, onDelete }) {
     <>
       <Card
         onClick={() => onOpen(client)}
-        className="group relative cursor-pointer shadow-none border-none transition-all duration-300 py-2 bg-gray-50/80 dark:bg-card/50 hover:bg-gray-100/50 dark:hover:bg-card h-full flex flex-col overflow-hidden"
+        className="group relative cursor-pointer shadow-none border dark:border-none transition-all duration-300 py-2 border dark:bg-card/50 hover:bg-gray-100/50 dark:hover:bg-card h-full flex flex-col overflow-hidden"
       >
         <CardContent className="p-6 flex flex-col flex-1 min-w-0">
           {/* Header */}

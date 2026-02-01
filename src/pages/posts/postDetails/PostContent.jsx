@@ -18,6 +18,7 @@ import {
   ChevronRight,
   Eye,
   Globe,
+  CheckCircle2,
 } from 'lucide-react'
 import {
   Dialog,
@@ -77,10 +78,90 @@ export default function PostContent({
     notesRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
-  const getScheduleLabel = (status) => {
-    if (status === 'PUBLISHED') return 'Published on'
-    if (status === 'SCHEDULED') return 'Confirmed Scheduled Date'
-    return 'Expected scheduled date'
+  // --- DATE STATUS LOGIC ---
+  const DateStatus = () => {
+    const formatDate = (date) => format(new Date(date), 'dd MMM, p') // Compact format: "12 Oct, 4:00 PM"
+
+    // Styling Constants (Light Mode & Dark Mode)
+
+    // Violet (Scheduled)
+    const violetText = 'text-violet-800 dark:text-violet-400'
+    const violetBadge =
+      'bg-violet-50 text-violet-800 hover:bg-violet-50 border-violet-100 dark:bg-violet-500/10 dark:text-violet-300 dark:border-violet-500/20'
+
+    // Green (Published)
+    const greenText = 'text-lime-800 dark:text-lime-400'
+    const greenBadge =
+      'bg-lime-50 text-lime-800 hover:bg-lime-50 border-lime-100 dark:bg-lime-500/10 dark:text-lime-300 dark:border-lime-500/20'
+
+    // 1. Case: PUBLISHED (Show Both)
+    if (post.status === 'PUBLISHED') {
+      return (
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+          {/* Secondary: Originally Scheduled (Only if target_date exists) */}
+          {post.target_date && (
+            <div className="flex items-center gap-2 opacity-80">
+              <div className="h-3 w-[1px] bg-border hidden sm:block" />
+              <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                <Clock size={13} />
+                <span>Scheduled:</span>
+              </div>
+              <Badge
+                variant="outline"
+                className="text-muted-foreground border-dashed"
+              >
+                {formatDate(post.target_date)}
+              </Badge>
+            </div>
+          )}
+
+          {/* Primary: Actual Published Date */}
+          <div className="flex items-center gap-2">
+            <div className={`flex items-center gap-1.5 text-sm font-medium `}>
+              <CheckCircle2 className={`${greenText}`} size={14} />
+              <span>Published on:</span>
+            </div>
+            <Badge variant="secondary">
+              {formatDate(post.published_at || post.updated_at)}
+            </Badge>
+          </div>
+        </div>
+      )
+    }
+
+    // 2. Case: SCHEDULED (Show Target in Violet)
+    if (post.status === 'SCHEDULED') {
+      return (
+        <div className="flex items-center gap-2">
+          <div
+            className={`flex items-center gap-1.5 text-sm font-medium`}
+          >
+            <Clock className={violetText} size={14} />
+            <span>Scheduled for:</span>
+          </div>
+          <Badge variant="secondary">
+            {formatDate(post.target_date)}
+          </Badge>
+        </div>
+      )
+    }
+
+    // 3. Case: DRAFT / REVISION (Show Target if exists)
+    if (post.target_date) {
+      return (
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+            <CalendarIcon size={14} />
+            <span>Target Date:</span>
+          </div>
+          <Badge variant="outline" className="text-muted-foreground">
+            {formatDate(post.target_date)}
+          </Badge>
+        </div>
+      )
+    }
+
+    return null
   }
 
   const canSendForApproval =
@@ -127,41 +208,35 @@ export default function PostContent({
             </div>
           </div>
 
-          <div className="space-y-3">
-            <div className="flex flex-row items-center gap-2">
+          <div className="space-y-4">
+            <div className="flex flex-row items-center gap-3">
               <h1 className="text-4xl font-semibold tracking-tight text-foreground">
                 {post.title}
               </h1>
-              <Badge variant="secondary" className="rounded-md text-sm">
+              <Badge
+                variant="outline"
+                className="h-6 text-xs font-medium text-muted-foreground"
+              >
                 v{post.version_number}.0
               </Badge>
             </div>
 
-            <div className="flex flex-wrap items-center gap-y-2 gap-x-4 py-3">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <CalendarIcon size={14} />
+            {/* Date Metadata Row */}
+            <div className="flex flex-wrap items-center gap-y-2 gap-x-6 py-1">
+              {/* Created Date */}
+              <div className="flex items-center gap-2 text-sm text-muted-foreground/70">
                 <span>
-                  Created On {format(new Date(post.created_at), 'dd MMM, yyyy')}
+                  Created {format(new Date(post.created_at), 'dd MMM, yyyy')}
                 </span>
               </div>
-              {post.target_date && (
-                <div className="flex items-center gap-2">
-                  <div className="h-4 w-[1px] bg-border hidden sm:block" />
-                  <div className="flex items-center gap-1.5 text-sm font-semibold text-primary">
-                    {post.status === 'PUBLISHED' ? (
-                      <Check size={14} className="text-green-500" />
-                    ) : (
-                      <Clock size={14} />
-                    )}
-                    <span className="text-sm font-medium text-primary/80">
-                      {getScheduleLabel(post.status)}:
-                    </span>
-                  </div>
-                  <Badge variant="secondary" className="font-medium rounded-sm">
-                    {format(new Date(post.target_date), 'dd MMM, yyyy @ p')}
-                  </Badge>
-                </div>
+
+              {/* Divider (Only show if we have specific date info) */}
+              {(post.target_date || post.status === 'PUBLISHED') && (
+                <div className="h-4 w-[1px] bg-border hidden sm:block" />
               )}
+
+              {/* Dynamic Status Dates */}
+              <DateStatus />
             </div>
           </div>
 
@@ -183,7 +258,7 @@ export default function PostContent({
             </div>
           )}
 
-          <p className="text-sm text-muted-foreground leading-relaxed max-w-3xl">
+          <p className="text-sm text-muted-foreground leading-relaxed max-w-3xl whitespace-pre-wrap">
             {post.content}
           </p>
         </div>

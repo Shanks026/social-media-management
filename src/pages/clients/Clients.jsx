@@ -6,13 +6,15 @@ import {
   useOutletContext,
 } from 'react-router-dom'
 import { toast } from 'sonner'
-import { UserStar, X } from 'lucide-react'
+import { UserStar, X, Lock } from 'lucide-react' // Added Lock icon
 
 import { fetchClients, deleteClient } from '@/api/clients'
 import { useHeader } from '@/components/misc/header-context'
+import { useSubscription } from '../../api/useSubscription' // Added Subscription Hook
 
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
+import { cn } from '@/lib/utils' // Added cn utility
 import {
   Empty,
   EmptyContent,
@@ -40,6 +42,9 @@ export default function Clients() {
   const { setHeader } = useHeader()
   const { user } = useOutletContext()
 
+  // 1. Fetch Subscription Data
+  const { data: subscription, isLoading: isSubLoading } = useSubscription()
+
   useEffect(() => {
     setHeader({
       title: 'Clients',
@@ -55,6 +60,17 @@ export default function Clients() {
   const urgency = searchParams.get('urgency') || 'all'
   const industry = searchParams.get('industry') || 'all'
   const tier = searchParams.get('tier') || 'all'
+
+  // 2. Gatekeeper Logic for Creating Clients
+  const handleCreateClick = () => {
+    if (subscription?.is_client_limit_reached) {
+      toast.error(
+        `Plan limit reached (${subscription.max_clients} clients). Please upgrade to add more.`,
+      )
+      return
+    }
+    setCreateOpen(true)
+  }
 
   const updateParams = (key, value) => {
     const newParams = new URLSearchParams(searchParams)
@@ -74,7 +90,6 @@ export default function Clients() {
     queryKey: ['clients', user.id, { search, urgency, industry, tier }],
     queryFn: () => fetchClients({ search, urgency, industry, tier }),
     enabled: !!user?.id,
-    // This keeps the previous counts/clients visible while the new ones load
     placeholderData: (previousData) => previousData,
   })
 
@@ -85,6 +100,8 @@ export default function Clients() {
     mutationFn: deleteClient,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clients'] })
+      // Also invalidate subscription to update the count immediately
+      queryClient.invalidateQueries({ queryKey: ['subscription'] })
     },
   })
 
@@ -136,7 +153,26 @@ export default function Clients() {
       {/* --- ROW 1: TITLE & PRIMARY ACTION --- */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <h1 className="text-3xl font-bold tracking-tight">Clients</h1>
-        <Button onClick={() => setCreateOpen(true)}>Create Client</Button>
+
+        {/* 3. Updated Create Button with Limit Logic */}
+        <Button
+          onClick={handleCreateClick}
+          disabled={isSubLoading}
+          className={cn(
+            'transition-all',
+            subscription?.is_client_limit_reached &&
+              'opacity-80 bg-muted-foreground hover:bg-muted-foreground cursor-not-allowed',
+          )}
+        >
+          {subscription?.is_client_limit_reached ? (
+            <>
+              <Lock className="mr-2 h-4 w-4" />
+              Limit Reached ({subscription.max_clients})
+            </>
+          ) : (
+            'Create Client'
+          )}
+        </Button>
       </div>
 
       {/* ROW 2: TOOLBOX */}
@@ -188,8 +224,19 @@ export default function Clients() {
                 Clear all filters
               </Button>
             ) : (
-              <Button onClick={() => setCreateOpen(true)} size="lg">
-                Create Your First Client
+              // 4. Updated Empty State Button as well
+              <Button
+                onClick={handleCreateClick}
+                size="lg"
+                disabled={isSubLoading || subscription?.is_client_limit_reached}
+              >
+                {subscription?.is_client_limit_reached ? (
+                  <>
+                    <Lock className="mr-2 h-4 w-4" /> Plan Limit Reached
+                  </>
+                ) : (
+                  'Create Your First Client'
+                )}
               </Button>
             )}
           </EmptyContent>
