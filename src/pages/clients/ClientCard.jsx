@@ -22,6 +22,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { getUrgencyStatus } from '@/lib/client-helpers'
 import IndustryBadge from './IndustryBadge' // Ensure this path is correct
+import TierBadge from '@/components/TierBadge'
 
 const PlatformIcon = ({ name }) => {
   const icons = {
@@ -34,8 +35,8 @@ const PlatformIcon = ({ name }) => {
       bg: 'bg-[#0077B5]',
     },
     twitter: {
-      icon: <Twitter className="size-3.5 text-white" />,
-      bg: 'bg-black',
+      icon: <Twitter className="size-3.5 text-white dark:text-black" />,
+      bg: 'bg-black dark:bg-white',
     },
     facebook: {
       icon: <Facebook className="size-3.5 text-white" />,
@@ -127,29 +128,6 @@ function ClientCard({ client, onOpen, onDelete }) {
     pipeline.revisions > 0 ||
     pipeline.scheduled > 0
 
-  const renderTierBadge = () => {
-    const baseStyles =
-      'inline-flex items-center justify-center py-0.5 px-1.5 rounded-md shrink-0 shadow-md font-bold tracking-wider uppercase'
-
-    if (tier === 'VIP')
-      return (
-        <div className={`${baseStyles} bg-purple-600 text-white`}>
-          <Crown className="size-3 fill-current mr-1" />
-          <span className="text-[10px]">VIP</span>
-        </div>
-      )
-
-    if (tier === 'PRO')
-      return (
-        <div className={`${baseStyles} bg-amber-400 text-amber-950`}>
-          <Zap className="size-3 fill-current mr-1" />
-          <span className="text-[10px]">PRO</span>
-        </div>
-      )
-
-    return null
-  }
-
   return (
     <>
       <Card
@@ -178,7 +156,7 @@ function ClientCard({ client, onOpen, onDelete }) {
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white tracking-normal leading-none truncate">
                     {client.name}
                   </h3>
-                  {renderTierBadge()}
+                  <TierBadge tier={client.tier} />
                 </div>
                 {/* Industry Display using the Badge for Label Lookup */}
                 <div className="flex">

@@ -1,8 +1,10 @@
-import { Zap, Database, Users, Loader2 } from 'lucide-react'
+// src/components/sidebar/sidebar-sub-card.jsx
+import { Zap, Database, Users } from 'lucide-react'
 import { useSidebar } from '@/components/ui/sidebar'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import { useSubscription } from '../../api/useSubscription'
 import { cn } from '@/lib/utils'
 
@@ -10,116 +12,147 @@ export function SidebarSubCard() {
   const { state } = useSidebar()
   const { data: sub, isLoading } = useSubscription()
 
-  // Hide the card entirely when sidebar is collapsed
+  // Hide entirely if sidebar is collapsed
   if (state === 'collapsed') return null
+  if (isLoading || !sub) return null
 
-  // Show a mini skeleton while loading
-  if (isLoading) {
-    return (
-      <div className="px-3">
-        <div className="h-24 w-full bg-muted/50 rounded-xl animate-pulse" />
-      </div>
-    )
-  }
+  // 1. Logic for Conditional Visibility
+  const clientLimit = sub.max_clients
+  const currentClients = sub.client_count
+  const storagePercent = sub.storage_display.percent
 
-  if (!sub) return null
+  const isClientReached = currentClients >= clientLimit
+  const isClientNearing = currentClients === clientLimit - 1
+
+  const isStorageReached = storagePercent >= 100
+  const isStorageNearing = storagePercent >= 80 && storagePercent < 100
+
+  // 2. The Trigger: Only show if nearing or reached any limit
+  const shouldShow =
+    isClientReached || isClientNearing || isStorageReached || isStorageNearing
+
+  if (!shouldShow) return null
 
   /**
-   * Formats bytes to MB or GB dynamically
-   * Uses MB for values < 1024MB, otherwise uses GB
+   * Helper to format storage bytes
    */
   const formatStorage = (bytes) => {
     const mb = bytes / (1024 * 1024)
-    if (mb < 1024) {
-      return `${mb.toFixed(1)} MB`
-    }
-    const gb = mb / 1024
-    return `${gb.toFixed(1)} GB`
+    if (mb < 1024) return `${mb.toFixed(1)} MB`
+    return `${(mb / 1024).toFixed(1)} GB`
   }
 
-  // Usage Math
-  const clientPercent = (sub.client_count / sub.max_clients) * 100
-  const storagePercent = sub.storage_display.percent
-  const showUpgradeButton = clientPercent >= 80 || storagePercent >= 80
+  /**
+   * Helper to get status colors based on thresholds
+   */
+  const getStatusClasses = (percent, isCountLimit = false) => {
+    if (percent >= 100 || isCountLimit)
+      return { text: 'text-red-600', bg: 'bg-red-600', indicator: 'bg-red-600' }
+    if (percent >= 80)
+      return {
+        text: 'text-orange-500',
+        bg: 'bg-orange-500',
+        indicator: 'bg-orange-500',
+      }
+    return {
+      text: 'text-muted-foreground',
+      bg: 'bg-primary',
+      indicator: 'bg-primary',
+    }
+  }
+
+  const clientStatus = getStatusClasses(
+    (currentClients / clientLimit) * 100,
+    isClientReached,
+  )
+  const storageStatus = getStatusClasses(storagePercent)
 
   return (
-    <div className="px-3">
-      <Card className="shadow-none border-muted bg-muted/50 !pt-4 gap-2 py-0">
-        <CardHeader className="p-4 py-0">
-          <CardTitle className="text-sm font-bold flex items-center gap-2 uppercase tracking-wide text-foreground/90">
-            <Zap className="size-3.5 fill-primary text-primary" />
-            {sub.plan_name} Plan
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-4 pt-0 space-y-4">
-          <p className="text-[11px] text-muted-foreground leading-relaxed">
-            Manage up to <strong>{sub.max_clients} clients</strong>. Scale as
-            you grow.
-          </p>
+    <div className="px-3 py-4">
+      <Card className="shadow-none border-muted bg-muted/50 py-0 gap-0 overflow-hidden">
+        <CardHeader className="p-4 pb-2 space-y-3">
+          <div className="flex flex-col gap-3 items-start">
+            {isClientReached || isStorageReached ? (
+              <Badge
+                variant="outline"
+                className=" text-red-600 py-1 text-[10px]"
+              >
+                <span className="relative flex h-2 w-2 me-1">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-red-600"></span>
+                </span>
+                Limit reached
+              </Badge>
+            ) : (
+              (isClientNearing || isStorageNearing) && (
+                <Badge
+                  variant="outline"
+                  className="text-amber-600 py-1 text-[10px]"
+                >
+                  <span className="inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+                  Nearing limit
+                </Badge>
+              )
+            )}
+            <CardTitle className="text-[11px] font-bold flex items-center gap-2 uppercase tracking-widest text-primary">
+              <Zap className="size-3 fill-primary text-primary" />
+              {sub.plan_name} Plan
+            </CardTitle>
 
-          <div className="space-y-3">
+            {/* Status Badges */}
+          </div>
+        </CardHeader>
+
+        <CardContent className="p-4 pt-0 space-y-4">
+          <div className="space-y-4">
             {/* Client Usage */}
             <div className="space-y-1.5">
-              <div className="flex justify-between text-[10px] font-medium">
-                <span className="font-light text-muted-foreground flex items-center gap-1">
-                  <Users size={10} /> Clients
+              <div className="flex justify-between text-[10px] font-bold">
+                <span className="text-muted-foreground flex items-center gap-1.5">
+                  <Users size={12} /> Clients
                 </span>
-                <span
-                  className={cn(
-                    sub.is_client_limit_reached && 'text-destructive font-bold',
-                  )}
-                >
-                  {sub.client_count} / {sub.max_clients}
+                <span className={clientStatus.text}>
+                  {currentClients} / {clientLimit}
                 </span>
               </div>
               <Progress
-                value={clientPercent}
-                className="h-1.5"
-                indicatorClassName={
-                  sub.is_client_limit_reached ? 'bg-destructive' : ''
-                }
+                value={(currentClients / clientLimit) * 100}
+                className="h-1"
+                indicatorClassName={clientStatus.indicator}
               />
             </div>
 
-            {/* Storage Usage - Dynamically formatted */}
+            {/* Storage Usage */}
             <div className="space-y-1.5">
-              <div className="flex justify-between text-[10px] font-medium">
-                <span className="font-light text-muted-foreground flex items-center gap-1">
-                  <Database size={10} /> Storage
+              <div className="flex justify-between text-[10px] font-bold">
+                <span className="text-muted-foreground flex items-center gap-1.5">
+                  <Database size={12} /> Storage
                 </span>
-                <span
-                  className={cn(
-                    storagePercent >= 100 && 'text-destructive font-bold',
-                  )}
-                >
+                <span className={storageStatus.text}>
                   {formatStorage(sub.storage_used_bytes)} /{' '}
                   {formatStorage(sub.storage_max_bytes)}
                 </span>
               </div>
               <Progress
                 value={storagePercent}
-                className="h-1.5"
-                indicatorClassName={
-                  storagePercent >= 100 ? 'bg-destructive' : ''
-                }
+                className="h-1"
+                indicatorClassName={storageStatus.indicator}
               />
             </div>
           </div>
 
-          {showUpgradeButton && (
-            <Button
-              size="sm"
-              className="w-full h-8 text-xs font-semibold mt-1 shadow-sm"
-              variant="default"
-              onClick={() =>
-                window.open(
-                  'mailto:support@yourdomain.com?subject=Upgrade Plan Request',
-                )
-              }
-            >
-              Upgrade Plan
-            </Button>
-          )}
+          <Button
+            size="sm"
+            className="w-full h-8 text-[11px] font-bold mt-2 shadow-sm uppercase tracking-wider"
+            variant="default"
+            onClick={() =>
+              window.open(
+                'mailto:support@yourdomain.com?subject=Upgrade Plan Request',
+              )
+            }
+          >
+            Manage
+          </Button>
         </CardContent>
       </Card>
     </div>

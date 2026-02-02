@@ -40,6 +40,7 @@ import { cn } from '@/lib/utils'
 // Import components
 import PlatformSelector from './PlatformSelector'
 import { INDUSTRY_OPTIONS } from '../../lib/industries'
+import { useAuth } from '@/context/AuthContext'
 
 // --- SCHEMA ---
 const createClientSchema = z.object({
@@ -74,6 +75,7 @@ const STEPS = [
 
 export default function CreateClient({ open, onOpenChange }) {
   const queryClient = useQueryClient()
+  const { user } = useAuth()
   const fileInputRef = useRef(null)
   const [currentStep, setCurrentStep] = useState(1)
   const [isUploading, setIsUploading] = useState(false)
@@ -103,11 +105,19 @@ export default function CreateClient({ open, onOpenChange }) {
   const mutation = useMutation({
     mutationFn: createClient,
     onSuccess: () => {
+      // 3. CORRECT INVALIDATION
       queryClient.invalidateQueries({ queryKey: ['clients'] })
+
+      // We must pass the user.id here so the subscription hook knows to refetch
+      if (user?.id) {
+        queryClient.invalidateQueries({ queryKey: ['subscription', user.id] })
+      }
+
       toast.success('Client created successfully')
       handleCancel()
     },
-    onError: () => {
+    onError: (error) => {
+      console.error('Mutation Error:', error) // Log the actual error to console
       toast.error('Failed to create client')
     },
   })
@@ -172,7 +182,7 @@ export default function CreateClient({ open, onOpenChange }) {
 
   // 3. SUBMISSION: Triggered only on the last step
   const onFormSubmit = (values) => {
-    mutation.mutate(values)
+    mutation.mutate({ ...values, user_id: user?.id })
   }
 
   const onFormError = (errors) => {
@@ -294,7 +304,7 @@ export default function CreateClient({ open, onOpenChange }) {
                         <button
                           type="button"
                           onClick={removeLogo}
-                          className="absolute right-0 top-0 translate-x-[-25%] translate-y-[25%] rounded-full bg-destructive p-1.5 text-white shadow-lg hover:scale-110"
+                          className="absolute right-0 top-0 z-99999 translate-x-[-25%] translate-y-[25%] rounded-full bg-destructive p-1.5 text-white shadow-lg hover:scale-110"
                         >
                           <X size={12} strokeWidth={3} />
                         </button>
@@ -354,7 +364,7 @@ export default function CreateClient({ open, onOpenChange }) {
                         value={form.watch('status')}
                         onValueChange={(v) => form.setValue('status', v)}
                       >
-                        <SelectTrigger className="h-10">
+                        <SelectTrigger className="h-10 w-full">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -371,7 +381,7 @@ export default function CreateClient({ open, onOpenChange }) {
                         value={form.watch('tier')}
                         onValueChange={(v) => form.setValue('tier', v)}
                       >
-                        <SelectTrigger className="h-10">
+                        <SelectTrigger className="h-10 w-full">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -398,7 +408,7 @@ export default function CreateClient({ open, onOpenChange }) {
                     value={form.watch('industry')}
                     onValueChange={(v) => form.setValue('industry', v)}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="w-full">
                       <SelectValue placeholder="Select Industry" />
                     </SelectTrigger>
                     <SelectContent>

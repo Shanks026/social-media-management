@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
@@ -13,10 +13,13 @@ import {
   Loader2,
   Plus,
   Calendar as CalendarIcon,
+  AlertCircle,
+  Film, // Added for video icon
 } from 'lucide-react'
 
 import { createDraftPost, updatePost } from '@/api/posts'
 import { uploadPostImage } from '@/api/storage'
+import { fetchClientById } from '@/api/clients'
 
 import {
   Dialog,
@@ -48,14 +51,34 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 import { Calendar } from '@/components/ui/calendar'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { format, setHours, setMinutes } from 'date-fns'
 import { useAuth } from '@/context/AuthContext'
+import { supabase } from '@/lib/supabase'
+import { useSubscription } from '@/api/useSubscription'
+import { Skeleton } from '@/components/ui/skeleton'
 
 const MAX_FILES = 5
+
+// Helper to determine if a URL/File is a video
+const isVideoSource = (url) => {
+  if (!url) return false
+  const videoExtensions = ['.mp4', '.mov', '.webm', '.ogg', '.m4v']
+  return (
+    videoExtensions.some((ext) => url.toLowerCase().includes(ext)) ||
+    url.startsWith('blob:') || // Local previews
+    url.includes('video')
+  )
+}
 
 const PLATFORM_CONFIG = {
   instagram: {
@@ -76,8 +99,8 @@ const PLATFORM_CONFIG = {
     active:
       'bg-cyan-100 text-cyan-800 border-cyan-200 dark:bg-cyan-500/20 dark:text-cyan-400 dark:border-cyan-500/30',
   },
-  google_ads: {
-    label: 'Google Ads',
+  google_business: {
+    label: 'Google Business',
     icon: Globe,
     active:
       'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-500/20 dark:text-yellow-400 dark:border-yellow-500/30',
@@ -88,13 +111,18 @@ const PLATFORM_CONFIG = {
     active:
       'bg-red-100 text-red-800 border-red-200 dark:bg-red-600/20 dark:text-red-400 dark:border-red-600/30',
   },
+  twitter: {
+    label: 'Twitter/X',
+    icon: Globe,
+    active:
+      'bg-slate-100 text-slate-800 border-slate-200 dark:bg-slate-500/20 dark:text-slate-400 dark:border-slate-500/30',
+  },
 }
 
-// Updated Schema to include all platforms
 const formSchema = z.object({
   title: z.string().min(1, 'Title is required'),
   content: z.string().min(1, 'Post content is required'),
-  platforms: z.array(z.string()).min(1, 'Select at least one platform'), // Changed to array
+  platforms: z.array(z.string()).min(1, 'Select at least one platform'),
   images: z.array(z.any()).max(MAX_FILES).default([]),
   target_date: z.date().optional(),
 })
@@ -107,17 +135,20 @@ export default function DraftPostForm({
 }) {
   const { user } = useAuth()
   const queryClient = useQueryClient()
+  const { data: subscription } = useSubscription()
   const isEditMode = !!initialData
 
   const [previews, setPreviews] = useState([])
   const fileInputRef = useRef(null)
+  const isStorageFull =
+    subscription?.storage_used_bytes >= subscription?.storage_max_bytes
 
   const form = useForm({
     resolver: zodResolver(formSchema),
     defaultValues: {
       title: '',
       content: '',
-      platforms: [], // Default as empty array
+      platforms: [],
       images: [],
       target_date: undefined,
     },
@@ -125,7 +156,6 @@ export default function DraftPostForm({
 
   useEffect(() => {
     if (initialData && open) {
-      // Logic to handle if initialData.platform is a string or already an array
       const platformData = Array.isArray(initialData.platform)
         ? initialData.platform
         : [initialData.platform].filter(Boolean)
@@ -143,9 +173,34 @@ export default function DraftPostForm({
     }
   }, [initialData, open, form])
 
+  const { data: client, isLoading: isClientLoading } = useQuery({
+    queryKey: ['client', clientId],
+    queryFn: () => fetchClientById(clientId),
+    enabled: !!clientId && open,
+  })
+
+  const availablePlatforms = client?.platforms || []
+
   const mutation = useMutation({
     mutationFn: async (values) => {
-      // 1. Handle Image Uploads
+      if (isEditMode) {
+        const initialUrls = initialData.media_urls || []
+        const urlsToRemove = initialUrls.filter(
+          (url) => !previews.includes(url),
+        )
+
+        if (urlsToRemove.length > 0) {
+          const pathsToRemove = urlsToRemove
+            .map((url) => url.split('/post-media/')[1])
+            .filter(Boolean)
+
+          if (pathsToRemove.length > 0) {
+            await supabase.storage.from('post-media').remove(pathsToRemove)
+          }
+        }
+      }
+
+      // Handle New Media Uploads (Images and Videos)
       const uploadPromises = (values.images || []).map((file) =>
         uploadPostImage({ file, clientId }),
       )
@@ -156,8 +211,6 @@ export default function DraftPostForm({
       )
       const finalMediaUrls = [...existingRemoteUrls, ...newMediaUrls]
 
-      // 2. Construct Payload
-      // Mapping form 'values' to the keys expected by your API functions
       const payload = {
         clientId,
         title: values.title,
@@ -165,13 +218,11 @@ export default function DraftPostForm({
         mediaUrls: finalMediaUrls,
         platforms: values.platforms,
         target_date: values.target_date?.toISOString(),
-        userId: user?.id, // Required for create_post_draft_v3
+        userId: user?.id,
         adminNotes: values.admin_notes || null,
       }
 
       if (isEditMode) {
-        // CRITICAL: updatePost needs the version_id (UUID), not the parent post ID
-        // Based on your fetchAllPostsByClient return: it is 'version_id'
         return updatePost(initialData.version_id, payload)
       }
 
@@ -179,9 +230,8 @@ export default function DraftPostForm({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['draft-posts', clientId] })
-
+      queryClient.invalidateQueries({ queryKey: ['subscription', user?.id] })
       if (isEditMode) {
-        // Invalidate the specific version detail query
         queryClient.invalidateQueries({
           queryKey: ['post-version', initialData.version_id],
         })
@@ -256,20 +306,45 @@ export default function DraftPostForm({
             <div className="flex-1 overflow-y-auto p-6 space-y-6">
               {/* Media Section */}
               <div className="space-y-3">
-                <FormLabel>
-                  Media Assets ({previews.length}/{MAX_FILES})
-                </FormLabel>
+                <div className="flex items-center justify-between">
+                  <FormLabel>
+                    Media Assets ({previews.length}/{MAX_FILES})
+                  </FormLabel>
+                  {isStorageFull && (
+                    <Badge
+                      variant="destructive"
+                      className="text-[10px] animate-pulse"
+                    >
+                      Storage Full - Upgrade Plan
+                    </Badge>
+                  )}
+                </div>
+
                 <div className="grid grid-cols-5 gap-4">
                   {previews.map((url, index) => (
                     <div
                       key={url}
                       className="relative aspect-square rounded-lg border overflow-hidden bg-muted shadow-sm"
                     >
-                      <img
-                        src={url}
-                        alt="Preview"
-                        className="h-full w-full object-cover"
-                      />
+                      {/* Dynamic Rendering for Image vs Video */}
+                      {isVideoSource(url) ? (
+                        <div className="relative h-full w-full">
+                          <video
+                            src={url}
+                            className="h-full w-full object-cover"
+                            muted
+                          />
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                            <Film className="h-6 w-6 text-white opacity-80" />
+                          </div>
+                        </div>
+                      ) : (
+                        <img
+                          src={url}
+                          alt="Preview"
+                          className="h-full w-full object-cover"
+                        />
+                      )}
                       <button
                         type="button"
                         onClick={() => removeImage(index)}
@@ -281,31 +356,53 @@ export default function DraftPostForm({
                   ))}
 
                   {previews.length < MAX_FILES && (
-                    <button
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      className="flex aspect-square items-center justify-center rounded-lg border-2 border-dashed hover:bg-accent hover:border-primary/50 transition-all"
-                    >
-                      <div className="flex flex-col items-center gap-1 text-muted-foreground">
-                        <Plus className="h-6 w-6" />
-                        <span className="text-[10px] font-bold uppercase">
-                          Add
-                        </span>
-                      </div>
-                    </button>
+                    <Tooltip delayDuration={0}>
+                      <TooltipTrigger asChild>
+                        <button
+                          type="button"
+                          disabled={isStorageFull}
+                          onClick={() => fileInputRef.current?.click()}
+                          className={cn(
+                            'flex aspect-square items-center justify-center rounded-lg border-2 border-dashed transition-all',
+                            isStorageFull
+                              ? 'opacity-50 cursor-not-allowed bg-muted/50 border-muted'
+                              : 'hover:bg-accent hover:border-primary/50',
+                          )}
+                        >
+                          <div className="flex flex-col items-center gap-1 text-muted-foreground">
+                            {isStorageFull ? (
+                              <AlertCircle className="h-5 w-5 text-destructive" />
+                            ) : (
+                              <Plus className="h-6 w-6" />
+                            )}
+                            <span className="text-[10px] font-bold uppercase">
+                              {isStorageFull ? 'Locked' : 'Add'}
+                            </span>
+                          </div>
+                        </button>
+                      </TooltipTrigger>
+                      {isStorageFull && (
+                        <TooltipContent side="bottom">
+                          <p className="text-xs">
+                            Your storage limit of{' '}
+                            {subscription?.storage_display?.limit}GB is reached.
+                          </p>
+                        </TooltipContent>
+                      )}
+                    </Tooltip>
                   )}
                 </div>
                 <input
                   type="file"
                   multiple
-                  accept="image/*"
+                  accept="image/*,video/*" // Support videos now
                   className="hidden"
                   ref={fileInputRef}
                   onChange={handleFileChange}
                 />
               </div>
 
-              {/* Updated Platform Select */}
+              {/* Platform Select */}
               <FormField
                 control={form.control}
                 name="platforms"
@@ -315,49 +412,49 @@ export default function DraftPostForm({
                       Target Platforms
                     </FormLabel>
                     <div className="flex flex-wrap gap-2 pt-2">
-                      {Object.entries(PLATFORM_CONFIG).map(([id, config]) => {
-                        const Icon = config.icon
-                        const isSelected = field.value?.includes(id)
-
-                        return (
-                          <label
-                            key={id}
-                            className="cursor-pointer select-none"
-                          >
-                            <input
-                              type="checkbox"
-                              className="sr-only"
-                              checked={isSelected}
-                              onChange={(e) => {
-                                const currentValues = field.value || []
-                                if (e.target.checked) {
-                                  field.onChange([...currentValues, id])
-                                } else {
-                                  field.onChange(
-                                    currentValues.filter((v) => v !== id),
-                                  )
-                                }
-                              }}
-                            />
-                            <Badge
-                              variant="outline"
-                              className={cn(
-                                'flex items-center gap-2 px-3 py-1.5 rounded-sm transition-all duration-200 border-transparent',
-                                'bg-secondary/40 text-muted-foreground hover:bg-secondary/60 dark:bg-muted/20', // Inactive State
-                                isSelected && config.active, // Active State from your config
-                              )}
-                            >
-                              <Icon
-                                className={cn(
-                                  'h-3.5 w-3.5',
-                                  isSelected ? 'opacity-100' : 'opacity-50',
-                                )}
-                              />
-                              {config.label}
-                            </Badge>
-                          </label>
-                        )
-                      })}
+                      {isClientLoading ? (
+                        <Skeleton className="h-8 w-32" />
+                      ) : (
+                        Object.entries(PLATFORM_CONFIG)
+                          .filter(([id]) => availablePlatforms.includes(id))
+                          .map(([id, config]) => {
+                            const Icon = config.icon
+                            const isSelected = field.value?.includes(id)
+                            return (
+                              <label key={id} className="cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  className="sr-only"
+                                  checked={isSelected}
+                                  onChange={(e) => {
+                                    const current = field.value || []
+                                    field.onChange(
+                                      e.target.checked
+                                        ? [...current, id]
+                                        : current.filter((v) => v !== id),
+                                    )
+                                  }}
+                                />
+                                <Badge
+                                  variant="outline"
+                                  className={cn(
+                                    'flex items-center gap-2 px-3 py-1.5 transition-all',
+                                    'bg-secondary/40 text-muted-foreground',
+                                    isSelected && config.active,
+                                  )}
+                                >
+                                  <Icon
+                                    className={cn(
+                                      'h-3.5 w-3.5',
+                                      isSelected ? 'opacity-100' : 'opacity-50',
+                                    )}
+                                  />
+                                  {config.label}
+                                </Badge>
+                              </label>
+                            )
+                          })
+                      )}
                     </div>
                     <FormMessage />
                   </FormItem>
@@ -365,6 +462,7 @@ export default function DraftPostForm({
               />
 
               <div className="grid grid-cols-2 gap-4">
+                {/* Date Picker */}
                 <FormField
                   control={form.control}
                   name="target_date"
@@ -407,6 +505,7 @@ export default function DraftPostForm({
                   )}
                 />
 
+                {/* Time Picker */}
                 <FormItem className="flex flex-col">
                   <FormLabel>Time</FormLabel>
                   <Select
@@ -449,7 +548,7 @@ export default function DraftPostForm({
                 </FormItem>
               </div>
 
-              {/* Title Field */}
+              {/* Title and Caption */}
               <FormField
                 control={form.control}
                 name="title"
@@ -464,7 +563,6 @@ export default function DraftPostForm({
                 )}
               />
 
-              {/* Caption Field */}
               <FormField
                 control={form.control}
                 name="content"

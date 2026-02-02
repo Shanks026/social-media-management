@@ -11,11 +11,11 @@ import {
 
 // Data-driven object for easy scaling
 const secondaryNavItems = [
-  {
-    title: 'Support',
-    url: '/support',
-    icon: Headphones,
-  },
+  // {
+  //   title: 'Support',
+  //   url: '/support',
+  //   icon: Headphones,
+  // },
   {
     title: 'Settings',
     url: '/settings',

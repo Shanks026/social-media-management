@@ -10,6 +10,8 @@ import {
   ChevronLeft,
   ChevronRight,
   AlertTriangle,
+  Play,
+  Film,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -41,9 +43,63 @@ import {
 import { toast } from 'sonner'
 import { useNavigate } from 'react-router-dom'
 import PlatformBadge from '@/components/PlatformBadge'
+import { useAuth } from '@/context/AuthContext'
+import { cn } from '@/lib/utils'
+
+/**
+ * Helper to check if a URL is a video
+ */
+const isVideoSource = (url) => {
+  if (!url) return false
+  const videoExtensions = ['.mp4', '.mov', '.webm', '.ogg', '.m4v']
+  return (
+    videoExtensions.some((ext) => url.toLowerCase().includes(ext)) ||
+    url.includes('video') ||
+    url.startsWith('blob:')
+  )
+}
+
+/**
+ * Reusable Media Item to handle Video vs Image rendering
+ */
+const MediaItem = ({ url, className, isPreview = false }) => {
+  const isVideo = isVideoSource(url)
+
+  if (isVideo) {
+    return (
+      <div className={cn('relative h-full w-full bg-black', className)}>
+        <video
+          src={url}
+          className="h-full w-full object-cover"
+          muted={!isPreview}
+          controls={isPreview}
+          autoPlay={isPreview}
+          loop={!isPreview}
+          playsInline
+        />
+        {!isPreview && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/20 pointer-events-none">
+            <div className="bg-white/20 backdrop-blur-md p-1.5 rounded-full">
+              <Play className="text-white h-4 w-4 fill-current" />
+            </div>
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  return (
+    <img
+      src={url}
+      alt="Media"
+      className={cn('h-full w-full object-cover', className)}
+    />
+  )
+}
 
 export default function DraftPostList({ clientId }) {
   const queryClient = useQueryClient()
+  const { user } = useAuth()
   const navigate = useNavigate()
 
   // UI States
@@ -52,17 +108,18 @@ export default function DraftPostList({ clientId }) {
   const [postToEdit, setPostToEdit] = useState(null)
   const [activeImageIndex, setActiveImageIndex] = useState(0)
 
-  // Query - Uses the specified relationship fix to avoid PGRST100/300 errors
+  // Query posts
   const { data = [], isLoading } = useQuery({
     queryKey: ['draft-posts', clientId],
     queryFn: () => fetchAllPostsByClient(clientId),
   })
 
-  // Delete Mutation - Targets actual_post_id to cascade delete all versions
+  // Delete Mutation
   const deleteMutation = useMutation({
     mutationFn: (postId) => deletePost(postId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['draft-posts', clientId] })
+      queryClient.invalidateQueries({ queryKey: ['subscription', user?.id] })
       toast.success('Post and media deleted successfully')
       setPostToDelete(null)
     },
@@ -106,34 +163,27 @@ export default function DraftPostList({ clientId }) {
     const media = post.media_urls || []
     const count = media.length
     if (count === 0) return <div className="w-full h-full bg-muted/50" />
-    if (count === 1)
-      return (
-        <img src={media[0]} alt="" className="w-full h-full object-cover" />
-      )
+
+    if (count === 1) return <MediaItem url={media[0]} />
 
     if (count === 2)
       return (
         <div className="grid grid-cols-2 gap-1 w-full h-full">
           {media.map((url, i) => (
-            <img
-              key={i}
-              src={url}
-              alt=""
-              className="w-full h-full object-cover"
-            />
+            <MediaItem key={i} url={url} />
           ))}
         </div>
       )
 
     return (
       <div className="grid grid-cols-2 gap-1 w-full h-full">
-        <img src={media[0]} alt="" className="w-full h-full object-cover" />
+        <MediaItem url={media[0]} />
         <div className="grid grid-rows-2 gap-1 h-full overflow-hidden">
-          <img src={media[1]} alt="" className="w-full h-full object-cover" />
+          <MediaItem url={media[1]} />
           <div className="relative h-full w-full">
-            <img src={media[2]} alt="" className="w-full h-full object-cover" />
+            <MediaItem url={media[2]} />
             {count > 3 && (
-              <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+              <div className="absolute inset-0 bg-black/60 flex items-center justify-center pointer-events-none">
                 <span className="text-white font-bold text-lg">
                   +{count - 3}
                 </span>
@@ -175,7 +225,6 @@ export default function DraftPostList({ clientId }) {
           <Card
             key={post.id}
             onClick={() =>
-              // Navigate using the VERSION ID if your details page expects a version
               navigate(`/clients/${clientId}/posts/${post.version_id}`)
             }
             className="group flex flex-col border-none shadow-none bg-[#FCFCFC] cursor-pointer dark:bg-card/70 p-6 gap-4 rounded-2xl transition-colors duration-200 hover:bg-[#F5F5F5] dark:hover:bg-card"
@@ -203,7 +252,6 @@ export default function DraftPostList({ clientId }) {
                 </div>
               </div>
 
-              {/* Actions Dropdown */}
               <div onClick={(e) => e.stopPropagation()}>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -252,7 +300,7 @@ export default function DraftPostList({ clientId }) {
             >
               {renderMediaGrid(post)}
               <div className="absolute inset-0 bg-black/20 opacity-0 group-hover/media:opacity-100 transition-opacity flex items-center justify-center">
-                <div className="bg-white/20 backdrop-blur-md p-2 rounded-full">
+                <div className="bg-white/20 backdrop-blur-md p-2 rounded-full shadow-sm">
                   <Eye className="text-white h-5 w-5" />
                 </div>
               </div>
@@ -266,7 +314,11 @@ export default function DraftPostList({ clientId }) {
 
             <div className="pt-3 border-t border-border mt-2">
               <span className="text-muted-foreground text-xs font-medium">
-                Created {format(new Date(post.display_date || Date.now()), 'd MMM, yyyy')}
+                Created{' '}
+                {format(
+                  new Date(post.display_date || Date.now()),
+                  'd MMM, yyyy',
+                )}
               </span>
             </div>
           </Card>
@@ -283,17 +335,23 @@ export default function DraftPostList({ clientId }) {
 
       {/* Fullscreen Media Slider */}
       <Dialog open={!!previewPost} onOpenChange={() => setPreviewPost(null)}>
-        <DialogContent className="max-w-[90vw] lg:max-w-[1100px] h-[85vh] p-0 bg-transparent border-none shadow-none flex items-center justify-center">
+        <DialogContent className="max-w-[90vw] lg:max-w-[1100px] h-[85vh] p-0 bg-transparent border-none shadow-none flex items-center justify-center overflow-hidden">
           <div className="relative w-full h-full flex items-center justify-center">
             <div className="relative w-full h-full overflow-hidden rounded-3xl bg-black/95 flex items-center justify-center border border-white/10">
-              <img
-                src={previewPost?.media_urls[activeImageIndex]}
-                alt="Preview"
-                className="w-full h-full object-contain"
-              />
+              {/* Conditional Video/Image Rendering in Slider */}
+              <div className="w-full h-full flex items-center justify-center">
+                {previewPost && (
+                  <MediaItem
+                    url={previewPost.media_urls[activeImageIndex]}
+                    className="object-contain"
+                    isPreview={true}
+                  />
+                )}
+              </div>
+
               {previewPost?.media_urls?.length > 1 && (
                 <>
-                  <div className="absolute inset-x-4 top-1/2 -translate-y-1/2 flex justify-between pointer-events-none">
+                  <div className="absolute inset-x-4 top-1/2 -translate-y-1/2 flex justify-between pointer-events-none z-50">
                     <button
                       onClick={handlePrev}
                       className="pointer-events-auto p-4 rounded-2xl bg-black/40 text-white hover:bg-black/60 backdrop-blur-xl transition-all"
@@ -307,8 +365,8 @@ export default function DraftPostList({ clientId }) {
                       <ChevronRight className="h-8 w-8" />
                     </button>
                   </div>
-                  <div className="absolute top-6 left-1/2 -translate-x-1/2">
-                    <Badge className="bg-white/10 text-white border-none backdrop-blur-md px-4 py-1.5">
+                  <div className="absolute top-6 left-1/2 -translate-x-1/2 z-50">
+                    <Badge className="bg-white/10 text-white border-none backdrop-blur-md px-4 py-1.5 font-mono">
                       {activeImageIndex + 1} / {previewPost.media_urls.length}
                     </Badge>
                   </div>
@@ -323,16 +381,16 @@ export default function DraftPostList({ clientId }) {
       <Dialog open={!!postToDelete} onOpenChange={() => setPostToDelete(null)}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-destructive">
+            <DialogTitle className="flex items-center gap-2 text-destructive font-bold">
               <AlertTriangle className="h-5 w-5" /> Delete Post
             </DialogTitle>
-            <DialogDescription className="py-3">
+            <DialogDescription className="py-3 text-foreground/80">
               This will permanently delete{' '}
               <span className="font-bold">"{postToDelete?.title}"</span> and all
               its versions. This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter>
+          <DialogFooter className="gap-2 sm:gap-0">
             <Button
               variant="ghost"
               onClick={() => setPostToDelete(null)}
@@ -344,6 +402,7 @@ export default function DraftPostList({ clientId }) {
               variant="destructive"
               onClick={() => deleteMutation.mutate(postToDelete.actual_post_id)}
               disabled={deleteMutation.isPending}
+              className="font-bold"
             >
               {deleteMutation.isPending ? 'Deleting...' : 'Delete Permanently'}
             </Button>

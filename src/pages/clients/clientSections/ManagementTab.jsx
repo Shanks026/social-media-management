@@ -4,6 +4,9 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { deleteClient } from '@/api/clients'
 import { toast } from 'sonner'
 
+// Constants & Helpers
+import { INDUSTRY_OPTIONS } from '../../../lib/industries'
+
 // UI Components
 import { Button } from '@/components/ui/button'
 import {
@@ -25,10 +28,59 @@ import {
   Globe,
   Pencil,
   ExternalLink,
+  Instagram,
+  Linkedin,
+  Twitter,
+  Facebook,
+  Youtube,
+  Share2,
 } from 'lucide-react'
 
 // Import the standardized Edit Dialog
 import EditClient from '../EditClient'
+
+/**
+ * Helper to render brand-colored platform icons
+ */
+const PlatformIcon = ({ name }) => {
+  const icons = {
+    instagram: {
+      icon: <Instagram className="size-3.5 text-white" />,
+      bg: 'bg-[#E4405F]',
+    },
+    linkedin: {
+      icon: <Linkedin className="size-3.5 text-white" />,
+      bg: 'bg-[#0077B5]',
+    },
+    twitter: {
+      icon: <Twitter className="size-3.5 text-white dark:text-black" />,
+      bg: 'bg-black dark:bg-white',
+    },
+    facebook: {
+      icon: <Facebook className="size-3.5 text-white" />,
+      bg: 'bg-[#1877F2]',
+    },
+    youtube: {
+      icon: <Youtube className="size-3.5 text-white" />,
+      bg: 'bg-[#FF0000]',
+    },
+    google_business: {
+      icon: <Globe className="size-3.5 text-white" />,
+      bg: 'bg-yellow-500',
+    },
+  }
+
+  const platform = icons[name.toLowerCase()]
+  if (!platform) return null
+
+  return (
+    <div
+      className={`flex h-7 w-7 items-center justify-center rounded-full shadow-sm transition-transform hover:scale-110 ${platform.bg}`}
+    >
+      {platform.icon}
+    </div>
+  )
+}
 
 export default function ManagementTab({ client }) {
   const navigate = useNavigate()
@@ -41,12 +93,18 @@ export default function ManagementTab({ client }) {
     mutationFn: deleteClient,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clients'] })
+      queryClient.invalidateQueries({ queryKey: ['subscription'] })
       toast.success('Client workspace deleted')
       navigate('/clients')
     },
   })
 
-  // Standardized Detail Item for a clean, borderless layout
+  // Helper to find the correct label from your industry options
+  const getIndustryLabel = (value) => {
+    const industry = INDUSTRY_OPTIONS.find((opt) => opt.value === value)
+    return industry ? industry.label : value || 'Not Specified'
+  }
+
   const DetailItem = ({
     icon: Icon,
     label,
@@ -80,6 +138,7 @@ export default function ManagementTab({ client }) {
   )
 
   const tier = client.tier?.toUpperCase() || 'BASIC'
+  const platforms = client.platforms || []
 
   return (
     <div className="max-w-6xl mx-auto space-y-8 py-4">
@@ -107,18 +166,13 @@ export default function ManagementTab({ client }) {
           </div>
         </div>
 
-        <Button
-          variant="secondary"
-          size="sm"
-          onClick={() => setEditOpen(true)}
-          className=""
-        >
+        <Button variant="secondary" size="sm" onClick={() => setEditOpen(true)}>
           <Pencil className="size-3.5 mr-2" />
           Edit Profile
         </Button>
       </section>
 
-      {/* 2. Unified Information Grid (3 Columns) */}
+      {/* 2. Unified Information Grid */}
       <section className="grid grid-cols-1 md:grid-cols-3 gap-x-16 gap-y-10 px-4">
         <DetailItem
           icon={ShieldCheck}
@@ -140,9 +194,37 @@ export default function ManagementTab({ client }) {
                 : ''
           }
         />
-        <DetailItem icon={Globe} label="Industry" value={client.industry} />
+
+        {/* Industry Sector (Dynamic from helper) */}
+        <DetailItem
+          icon={Briefcase}
+          label="Industry"
+          value={getIndustryLabel(client.industry)}
+        />
+
         <DetailItem icon={Mail} label="Primary Email" value={client.email} />
+
         <DetailItem icon={Phone} label="Contact" value={client.mobile_number} />
+
+        {/* Active Social Channels */}
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center gap-2 text-muted-foreground/70">
+            <Share2 className="size-3.5" />
+            <span className="text-xs font-bold uppercase tracking-wide">
+              Active Channels
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            {platforms.length > 0 ? (
+              platforms.map((p) => <PlatformIcon key={p} name={p} />)
+            ) : (
+              <span className="text-sm font-semibold text-muted-foreground/50">
+                None linked
+              </span>
+            )}
+          </div>
+        </div>
+
         <DetailItem
           icon={Globe}
           label="Official Website"

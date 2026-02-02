@@ -111,8 +111,16 @@ export default function EditClient({ client, onClose }) {
   const mutation = useMutation({
     mutationFn: updateClient,
     onSuccess: () => {
+      // 1. Invalidate the general list
       queryClient.invalidateQueries({ queryKey: ['clients'] })
+
+      // 2. Invalidate the specific client details
       queryClient.invalidateQueries({ queryKey: ['client', client?.id] })
+
+      // 3. CRITICAL: Invalidate subscription to reflect storage change (logo update)
+      // We use the owner's ID (the current user)
+      queryClient.invalidateQueries({ queryKey: ['subscription'] })
+
       toast.success('Client updated successfully')
       onClose()
     },

@@ -74,12 +74,22 @@ export async function createClient(payload) {
     throw new Error('Not authenticated')
   }
 
-  const { error } = await supabase.from('clients').insert({
-    ...payload,
-    user_id: user.id,
-  })
+  // 1. We add .select().single() to return the created record
+  const { data, error } = await supabase
+    .from('clients')
+    .insert({
+      ...payload,
+      user_id: user.id,
+    })
+    .select()
+    .single()
 
-  if (error) throw error
+  if (error) {
+    console.error('Supabase Insert Error:', error)
+    throw error
+  }
+
+  return data // 2. Return the data to the mutationFn
 }
 
 /**

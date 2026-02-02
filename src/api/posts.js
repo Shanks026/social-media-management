@@ -42,6 +42,22 @@ export async function fetchAllPostsByClient(clientId) {
 }
 
 /**
+ * HELPER: Extracts the storage path from a public URL
+ * Use this to ensure we are sending the correct path to .remove()
+ */
+const getPathFromUrl = (url) => {
+  if (!url) return null
+
+  // This looks for the public URL pattern and snips everything before the bucket name
+  // Pattern: .../public/post-media/YOUR_FILE_PATH
+  const bucketSegment = '/public/post-media/'
+  if (url.includes(bucketSegment)) {
+    return url.split(bucketSegment)[1]
+  }
+  return null
+}
+
+/**
  * Fetches details for a post.
  * Smart logic: Checks if ID is a Post ID OR a Version ID.
  */
@@ -125,15 +141,55 @@ export async function createDraftPost({
   if (error) throw error
 }
 
-export const deletePost = async (postId) => {
-  const { data, error } = await supabase
-    .from('posts')
-    .delete()
-    .eq('id', postId)
-    .select()
+/**
+ * Deletes a post AND all its associated media from storage
+ */
+// api/posts.js
 
-  if (error) throw error
-  return data
+export const deletePost = async (postId) => {
+  try {
+    const { data: versions, error: fetchError } = await supabase
+      .from('post_versions')
+      .select('media_urls')
+      .eq('post_id', postId)
+
+    if (fetchError) throw fetchError
+
+    const allUrls = versions.flatMap((v) => v.media_urls || [])
+    const uniquePaths = [...new Set(allUrls.map(getPathFromUrl))].filter(
+      Boolean,
+    )
+
+    console.log('Attempting to delete these paths from bucket:', uniquePaths)
+
+    // api/posts.js -> inside deletePost function
+    if (uniquePaths.length > 0) {
+      // We MUST destructure { data, error } here
+      const { data, error: storageError } = await supabase.storage
+        .from('post-media')
+        .remove(uniquePaths)
+
+      // Now 'data' is defined and can be logged
+      console.log('Supabase storage removal response:', data)
+
+      if (storageError) {
+        console.error('Storage cleanup failed:', storageError)
+        throw storageError
+      }
+    }
+
+    const { data: dbData, error: dbError } = await supabase
+      .from('posts')
+      .delete()
+      .eq('id', postId)
+      .select()
+
+    if (dbError) throw dbError
+    return dbData
+  } catch (error) {
+    console.error('Detailed Delete Error:', error)
+    throw error
+  }
 }
 
 export async function updatePost(
@@ -216,4 +272,49 @@ export const createPostRevision = async (
     .eq('id', parentPostId)
 
   return newVersion
+}
+
+// api/posts.js
+
+/**
+ * Removes a single image from a post version and deletes it from storage.
+ */
+export async function deleteIndividualMedia(
+  versionId,
+  urlToDelete,
+  currentMediaUrls,
+) {
+  const path = getPathFromUrl(urlToDelete)
+  if (!path) throw new Error('Invalid media path')
+
+  // 1. Update the Database for THIS version first
+  const updatedUrls = currentMediaUrls.filter((url) => url !== urlToDelete)
+  const { error: dbError } = await supabase
+    .from('post_versions')
+    .update({ media_urls: updatedUrls })
+    .eq('id', versionId)
+
+  if (dbError) throw dbError
+
+  // 2. CHECK: Is any other version of this post (or any other post) still using this URL?
+  const { count } = await supabase
+    .from('post_versions')
+    .select('*', { count: 'exact', head: true })
+    .contains('media_urls', [urlToDelete])
+
+  // 3. Only delete from storage if count is 0
+  if (count === 0) {
+    const { data, error: storageError } = await supabase.storage
+      .from('post-media')
+      .remove([path])
+
+    if (storageError) console.error('Storage cleanup failed:', storageError)
+    console.log('File deleted from bucket as it is no longer referenced:', data)
+  } else {
+    console.log(
+      `File kept in bucket: ${count} other versions still reference it.`,
+    )
+  }
+
+  return updatedUrls
 }

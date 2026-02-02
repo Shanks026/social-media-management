@@ -19,6 +19,8 @@ import {
 import WorkflowTab from './clientSections/WorkflowTab'
 import ManagementTab from './clientSections/ManagementTab'
 import { ComingSoon } from './clientSections/ComingSoon'
+import IndustryBadge from './IndustryBadge'
+import TierBadge from '@/components/TierBadge'
 
 const TABS_CONFIG = [
   { value: 'workflow', label: 'Workflow', icon: LayoutGrid },
@@ -72,22 +74,6 @@ export default function ClientDetails() {
         .slice(0, 2)
     : 'CL'
 
-  const renderTierBadge = () => {
-    if (tier === 'VIP')
-      return (
-        <div className="flex items-center justify-center size-5 rounded-md bg-purple-600 text-white shrink-0 shadow-sm">
-          <Crown className="size-2.5 fill-current" />
-        </div>
-      )
-    if (tier === 'PRO')
-      return (
-        <div className="flex items-center justify-center size-5 rounded-md bg-amber-400 text-amber-950 shrink-0 shadow-sm">
-          <Zap className="size-2.5 fill-current" />
-        </div>
-      )
-    return null
-  }
-
   return (
     <div className="flex flex-col h-full bg-background">
       <div className="px-8 pt-8 pb-4 space-y-7">
@@ -112,11 +98,13 @@ export default function ClientDetails() {
               <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight truncate">
                 {client.name}
               </h1>
-              {renderTierBadge()}
+              <TierBadge tier={client.tier} />
             </div>
-            <p className="text-xs font-medium text-muted-foreground truncate">
-              {industry}
-            </p>
+
+            {/* 2. Replace the old <p> tag with IndustryBadge */}
+            <div className="flex">
+              <IndustryBadge industryValue={client.industry} />
+            </div>
           </div>
         </div>
 

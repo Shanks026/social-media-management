@@ -7,6 +7,7 @@ import Clients from './pages/clients/Clients'
 import ClientDetails from './pages/clients/ClientDetails'
 import PostDetails from './pages/posts/postDetails/PostDetails'
 import PublicReview from './pages/PublicReview'
+import Settings from './pages/Settings'
 
 function AppRoutes() {
   const { session, user } = useAuth()
@@ -25,6 +26,7 @@ function AppRoutes() {
             path="/clients/:clientId/posts/:postId"
             element={<PostDetails />}
           />
+          <Route path="/settings" element={<Settings />} />
           <Route path="*" element={<Navigate to="/clients" replace />} />
         </Route>
       ) : (
