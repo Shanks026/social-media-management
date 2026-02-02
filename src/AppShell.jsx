@@ -8,7 +8,7 @@ import { AppBody } from "./components/misc/AppBody";
 
 export function AppShell({ user }) {
   return (
-    <div className="flex min-h-screen min-w-screen">
+    <div className="flex min-h-screen">
       <AppSidebar user={user} />
 
       <div className="flex flex-1 flex-col w-full">

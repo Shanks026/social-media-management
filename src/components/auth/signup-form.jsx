@@ -1,38 +1,40 @@
-import { cn } from "@/lib/utils";
-import { supabase } from "@/lib/supabase";
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
+import { cn } from '@/lib/utils'
+import { supabase } from '@/lib/supabase'
+import { useState } from 'react'
+import { useNavigate } from 'react-router-dom' // 1. Added useNavigate
+import { Button } from '@/components/ui/button'
 import {
   Field,
   FieldDescription,
   FieldGroup,
   FieldLabel,
-  FieldSeparator,
-} from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
+} from '@/components/ui/field'
+import { Input } from '@/components/ui/input'
 
 export function SignupForm({ className, ...props }) {
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const navigate = useNavigate() // 2. Initialize navigate
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(null)
 
   async function handleSubmit(e) {
-    e.preventDefault();
-    setError(null);
+    e.preventDefault()
+    setError(null)
 
-    const form = new FormData(e.currentTarget);
-    const name = form.get("name");
-    const email = form.get("email");
-    const password = form.get("password");
-    const confirm = form.get("confirm-password");
+    const form = new FormData(e.currentTarget)
+    const name = form.get('name')
+    const email = form.get('email')
+    const password = form.get('password')
+    const confirm = form.get('confirm-password')
 
     if (password !== confirm) {
-      setError("Passwords do not match");
-      return;
+      setError('Passwords do not match')
+      return
     }
 
-    setLoading(true);
+    setLoading(true)
 
-    const { error } = await supabase.auth.signUp({
+    // 3. Destructure data to check for the session
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -40,19 +42,26 @@ export function SignupForm({ className, ...props }) {
           full_name: name,
         },
       },
-    });
+    })
 
-    setLoading(false);
+    setLoading(false)
 
     if (error) {
-      setError(error.message);
+      setError(error.message)
+    } else if (data?.session) {
+      // 4. Redirect to clients on successful signup
+      navigate('/clients')
+    } else {
+      // If email confirmation is ON, session will be null.
+      // You might want to show a "Check your email" message here.
+      setError('Success! Please check your email to confirm your account.')
     }
   }
 
   return (
     <form
       onSubmit={handleSubmit}
-      className={cn("flex flex-col gap-6", className)}
+      className={cn('flex flex-col gap-6', className)}
       {...props}
     >
       <FieldGroup>
@@ -105,10 +114,21 @@ export function SignupForm({ className, ...props }) {
         </Field>
       </FieldGroup>
 
-      {error && <p className="text-sm text-red-500">{error}</p>}
+      {/* Success/Error message styling */}
+      {error && (
+        <p
+          className={cn(
+            'text-sm',
+            error.includes('Success') ? 'text-green-600' : 'text-red-500',
+          )}
+        >
+          {error}
+        </p>
+      )}
+
       <Button type="submit" disabled={loading}>
-        {loading ? "Creating..." : "Create Account"}
+        {loading ? 'Creating...' : 'Create Account'}
       </Button>
     </form>
-  );
+  )
 }
