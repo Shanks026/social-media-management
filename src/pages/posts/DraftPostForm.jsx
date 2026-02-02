@@ -14,7 +14,7 @@ import {
   Plus,
   Calendar as CalendarIcon,
   AlertCircle,
-  Film, // Added for video icon
+  Film,
 } from 'lucide-react'
 
 import { createDraftPost, updatePost } from '@/api/posts'
@@ -69,13 +69,12 @@ import { Skeleton } from '@/components/ui/skeleton'
 
 const MAX_FILES = 5
 
-// Helper to determine if a URL/File is a video
-const isVideoSource = (url) => {
+// Improved helper for remote URLs
+const isRemoteVideo = (url) => {
   if (!url) return false
   const videoExtensions = ['.mp4', '.mov', '.webm', '.ogg', '.m4v']
   return (
     videoExtensions.some((ext) => url.toLowerCase().includes(ext)) ||
-    url.startsWith('blob:') || // Local previews
     url.includes('video')
   )
 }
@@ -138,6 +137,7 @@ export default function DraftPostForm({
   const { data: subscription } = useSubscription()
   const isEditMode = !!initialData
 
+  // State now stores objects: { url: string, type: 'image' | 'video' }
   const [previews, setPreviews] = useState([])
   const fileInputRef = useRef(null)
   const isStorageFull =
@@ -169,7 +169,13 @@ export default function DraftPostForm({
           ? new Date(initialData.target_date)
           : undefined,
       })
-      setPreviews(initialData.media_urls || [])
+
+      // Initialize with correct types for remote URLs
+      const initialPreviews = (initialData.media_urls || []).map((url) => ({
+        url,
+        type: isRemoteVideo(url) ? 'video' : 'image',
+      }))
+      setPreviews(initialPreviews)
     }
   }, [initialData, open, form])
 
@@ -185,30 +191,30 @@ export default function DraftPostForm({
     mutationFn: async (values) => {
       if (isEditMode) {
         const initialUrls = initialData.media_urls || []
+        const currentUrls = previews.map((p) => p.url)
         const urlsToRemove = initialUrls.filter(
-          (url) => !previews.includes(url),
+          (url) => !currentUrls.includes(url),
         )
 
         if (urlsToRemove.length > 0) {
           const pathsToRemove = urlsToRemove
             .map((url) => url.split('/post-media/')[1])
             .filter(Boolean)
-
           if (pathsToRemove.length > 0) {
             await supabase.storage.from('post-media').remove(pathsToRemove)
           }
         }
       }
 
-      // Handle New Media Uploads (Images and Videos)
       const uploadPromises = (values.images || []).map((file) =>
         uploadPostImage({ file, clientId }),
       )
       const newMediaUrls = await Promise.all(uploadPromises)
 
-      const existingRemoteUrls = previews.filter(
-        (p) => typeof p === 'string' && p.startsWith('http'),
-      )
+      const existingRemoteUrls = previews
+        .filter((p) => p.url.startsWith('http'))
+        .map((p) => p.url)
+
       const finalMediaUrls = [...existingRemoteUrls, ...newMediaUrls]
 
       const payload = {
@@ -222,35 +228,25 @@ export default function DraftPostForm({
         adminNotes: values.admin_notes || null,
       }
 
-      if (isEditMode) {
-        return updatePost(initialData.version_id, payload)
-      }
-
+      if (isEditMode) return updatePost(initialData.version_id, payload)
       return createDraftPost(payload)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['draft-posts', clientId] })
       queryClient.invalidateQueries({ queryKey: ['subscription', user?.id] })
-      if (isEditMode) {
+      if (isEditMode)
         queryClient.invalidateQueries({
           queryKey: ['post-version', initialData.version_id],
         })
-      }
       toast.success(isEditMode ? 'Post updated' : 'Draft created')
       resetAndClose()
-    },
-    onError: (error) => {
-      console.error('Mutation Error:', error)
-      toast.error(error.message || 'Something went wrong')
     },
   })
 
   function resetAndClose() {
     form.reset()
-    previews.forEach((url) => {
-      if (typeof url === 'string' && url.startsWith('blob:')) {
-        URL.revokeObjectURL(url)
-      }
+    previews.forEach((p) => {
+      if (p.url.startsWith('blob:')) URL.revokeObjectURL(p.url)
     })
     setPreviews([])
     onOpenChange(false)
@@ -262,23 +258,27 @@ export default function DraftPostForm({
     const remainingSlots = MAX_FILES - previews.length
     const addedFiles = files.slice(0, remainingSlots)
 
-    const newFilesList = [...currentFiles, ...addedFiles]
-    form.setValue('images', newFilesList)
+    form.setValue('images', [...currentFiles, ...addedFiles])
 
-    const newLocalPreviews = addedFiles.map((file) => URL.createObjectURL(file))
+    const newLocalPreviews = addedFiles.map((file) => ({
+      url: URL.createObjectURL(file),
+      type: file.type.startsWith('video') ? 'video' : 'image',
+    }))
     setPreviews((prev) => [...prev, ...newLocalPreviews])
   }
 
   const removeImage = (index) => {
     const itemToRemove = previews[index]
-    if (typeof itemToRemove === 'string' && itemToRemove.startsWith('blob:')) {
+    if (itemToRemove.url.startsWith('blob:')) {
       const currentFiles = form.getValues('images')
+      // Calculate index relative to the 'images' array (local files only)
       const localFileIndex = previews
         .slice(0, index)
-        .filter((p) => p.startsWith('blob:')).length
+        .filter((p) => p.url.startsWith('blob:')).length
+
       const newFiles = currentFiles.filter((_, i) => i !== localFileIndex)
       form.setValue('images', newFiles)
-      URL.revokeObjectURL(itemToRemove)
+      URL.revokeObjectURL(itemToRemove.url)
     }
     setPreviews((prev) => prev.filter((_, i) => i !== index))
   }
@@ -286,10 +286,7 @@ export default function DraftPostForm({
   return (
     <Dialog
       open={open}
-      onOpenChange={(val) => {
-        if (!val) resetAndClose()
-        else onOpenChange(val)
-      }}
+      onOpenChange={(val) => (!val ? resetAndClose() : onOpenChange(val))}
     >
       <DialogContent className="sm:max-w-[600px] max-h-[95vh] flex flex-col p-0 overflow-hidden">
         <DialogHeader className="p-6 pb-0">
@@ -304,7 +301,6 @@ export default function DraftPostForm({
             className="flex flex-col flex-1 overflow-hidden"
           >
             <div className="flex-1 overflow-y-auto p-6 space-y-6">
-              {/* Media Section */}
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <FormLabel>
@@ -321,16 +317,15 @@ export default function DraftPostForm({
                 </div>
 
                 <div className="grid grid-cols-5 gap-4">
-                  {previews.map((url, index) => (
+                  {previews.map((item, index) => (
                     <div
-                      key={url}
+                      key={item.url}
                       className="relative aspect-square rounded-lg border overflow-hidden bg-muted shadow-sm"
                     >
-                      {/* Dynamic Rendering for Image vs Video */}
-                      {isVideoSource(url) ? (
+                      {item.type === 'video' ? (
                         <div className="relative h-full w-full">
                           <video
-                            src={url}
+                            src={item.url}
                             className="h-full w-full object-cover"
                             muted
                           />
@@ -340,7 +335,7 @@ export default function DraftPostForm({
                         </div>
                       ) : (
                         <img
-                          src={url}
+                          src={item.url}
                           alt="Preview"
                           className="h-full w-full object-cover"
                         />
@@ -381,21 +376,13 @@ export default function DraftPostForm({
                           </div>
                         </button>
                       </TooltipTrigger>
-                      {isStorageFull && (
-                        <TooltipContent side="bottom">
-                          <p className="text-xs">
-                            Your storage limit of{' '}
-                            {subscription?.storage_display?.limit}GB is reached.
-                          </p>
-                        </TooltipContent>
-                      )}
                     </Tooltip>
                   )}
                 </div>
                 <input
                   type="file"
                   multiple
-                  accept="image/*,video/*" // Support videos now
+                  accept="image/*,video/*"
                   className="hidden"
                   ref={fileInputRef}
                   onChange={handleFileChange}

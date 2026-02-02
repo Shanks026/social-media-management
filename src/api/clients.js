@@ -1,17 +1,18 @@
 import { supabase } from '@/lib/supabase'
 
 /**
- * Fetch all clients for the current authenticated user
+ * HELPER: Extracts the storage path from a public URL
  */
+const getPathFromUrl = (url) => {
+  if (!url) return null
+  // Pattern: .../public/post-media/FOLDER/FILE
+  const bucketSegment = '/public/post-media/'
+  return url.includes(bucketSegment) ? url.split(bucketSegment)[1] : null
+}
+
 /**
- * Fetch all clients for the current authenticated user with Pipeline Analytics
+ * Fetch all clients with pipeline analytics
  */
-// src/api/clients.js
-
-// src/api/clients.js
-
-// src/api/clients.js
-
 export async function fetchClients(filters = {}) {
   const {
     search = '',
@@ -25,7 +26,6 @@ export async function fetchClients(filters = {}) {
   } = await supabase.auth.getUser()
   if (!user) throw new Error('Not authenticated')
 
-  // Supabase automatically parses JSONB returns into a JS object
   const { data, error } = await supabase.rpc('get_clients_with_pipeline', {
     p_user_id: user.id,
     p_search: search,
@@ -36,7 +36,6 @@ export async function fetchClients(filters = {}) {
 
   if (error) throw error
 
-  // 'data' is now { clients: [...], counts: {...} }
   const clients = (data.clients || []).map((c) => ({
     id: c.id,
     name: c.name,
@@ -51,7 +50,7 @@ export async function fetchClients(filters = {}) {
       pending: Number(c.pending),
       revisions: Number(c.revisions),
       scheduled: Number(c.scheduled),
-      next_post_at: c.next_scheduled, // Note: Column name is next_scheduled in this RPC version
+      next_post_at: c.next_scheduled,
     },
   }))
 
@@ -60,9 +59,9 @@ export async function fetchClients(filters = {}) {
     counts: data.counts || { all: 0, urgent: 0, upcoming: 0, idle: 0 },
   }
 }
+
 /**
- * Create a client owned by the current authenticated user
- * Payload now includes logo_url from the form
+ * Create a client
  */
 export async function createClient(payload) {
   const {
@@ -70,11 +69,8 @@ export async function createClient(payload) {
     error: authError,
   } = await supabase.auth.getUser()
 
-  if (authError || !user) {
-    throw new Error('Not authenticated')
-  }
+  if (authError || !user) throw new Error('Not authenticated')
 
-  // 1. We add .select().single() to return the created record
   const { data, error } = await supabase
     .from('clients')
     .insert({
@@ -84,39 +80,96 @@ export async function createClient(payload) {
     .select()
     .single()
 
-  if (error) {
-    console.error('Supabase Insert Error:', error)
-    throw error
-  }
-
-  return data // 2. Return the data to the mutationFn
+  if (error) throw error
+  return data
 }
 
 /**
- * Update a client (RLS ensures ownership)
+ * Update a client
  */
 export async function updateClient({ id, ...updates }) {
   const { error } = await supabase.from('clients').update(updates).eq('id', id)
-
   if (error) throw error
 }
 
 /**
- * Delete a client (RLS ensures ownership)
+ * Delete a client, their history, and all associated media
  */
-export async function deleteClient(id) {
-  const { error } = await supabase.from('clients').delete().eq('id', id)
+export async function deleteClient(clientId) {
+  try {
+    // 1. Fetch the Client's logo_url directly
+    const { data: client, error: clientError } = await supabase
+      .from('clients')
+      .select('logo_url')
+      .eq('id', clientId)
+      .single()
 
-  if (error) throw error
+    if (clientError) throw clientError
+
+    // 2. Fetch all media URLs from all post versions for this client
+    const { data: versions, error: fetchError } = await supabase
+      .from('post_versions')
+      .select(
+        `
+        media_urls, 
+        posts!post_versions_post_id_fkey!inner(client_id)
+      `,
+      )
+      .eq('posts.client_id', clientId)
+
+    if (fetchError) throw fetchError
+
+    // 3. Collect ALL URLs into a single array
+    const allUrls = versions?.flatMap((v) => v.media_urls || []) || []
+
+    // Add the logo_url to the deletion queue if it exists
+    if (client.logo_url) {
+      allUrls.push(client.logo_url)
+    }
+
+    // 4. Convert URLs to unique storage paths
+    const uniquePaths = [...new Set(allUrls.map(getPathFromUrl))].filter(
+      Boolean,
+    )
+
+    // 5. Cleanup Storage Bucket (branding/ folder and post assets)
+    if (uniquePaths.length > 0) {
+      const { error: storageError } = await supabase.storage
+        .from('post-media')
+        .remove(uniquePaths)
+
+      if (storageError) {
+        console.error(
+          'Storage cleanup failed during client deletion:',
+          storageError,
+        )
+      } else {
+        console.log(
+          `Successfully removed ${uniquePaths.length} assets from storage.`,
+        )
+      }
+    }
+
+    // 6. Delete Client row (Cascade handles posts and versions)
+    const { error: dbError } = await supabase
+      .from('clients')
+      .delete()
+      .eq('id', clientId)
+
+    if (dbError) throw dbError
+  } catch (error) {
+    console.error('Full Client Delete Error:', error)
+    throw error
+  }
 }
 
 /**
- * Fetch a single client by ID (RLS ensures ownership)
+ * Fetch single client by ID
  */
 export async function fetchClientById(id) {
   const { data, error } = await supabase
     .from('clients')
-    .select('*') // Captures logo_url automatically
+    .select('*')
     .eq('id', id)
     .single()
 
