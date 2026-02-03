@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase'
+import { startOfMonth, endOfMonth, startOfWeek, endOfWeek } from 'date-fns'
 
 /**
  * Fetches all posts for a client, joining the current version data.
@@ -317,4 +318,20 @@ export async function deleteIndividualMedia(
   }
 
   return updatedUrls
+}
+
+export async function fetchGlobalCalendar({ userId, currentMonth }) {
+  const startDate = startOfWeek(startOfMonth(currentMonth)).toISOString()
+  const endDate = endOfWeek(endOfMonth(currentMonth)).toISOString()
+
+  const { data, error } = await supabase.rpc('get_global_calendar', {
+    p_user_id: userId,
+    p_start_date: startDate,
+    p_end_date: endDate,
+  })
+
+  if (error) throw error
+
+  // The data now includes media_urls (array) and version_number (int)
+  return data || []
 }

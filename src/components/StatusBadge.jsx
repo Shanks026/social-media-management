@@ -63,7 +63,7 @@ export default function StatusBadge({ status }) {
   return (
     <Badge
       variant="none"
-      className={`flex items-center gap-2 rounded-md px-3 py-1 capitalize border-none shadow-none transition-colors ${config.className}`}
+      className={`flex items-center gap-2 rounded-full px-3 py-1 capitalize border-none shadow-none transition-colors ${config.className}`}
     >
       <span
         className={`size-2 rounded-full ${config.dot} dark:brightness-125`}
