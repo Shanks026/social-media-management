@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/api/clients'
 import { supabase } from '@/lib/supabase'
@@ -50,17 +50,24 @@ const createClientSchema = z.object({
   mobile_number: z
     .string()
     .min(1, 'Mobile number is required')
-    .regex(
-      /^\+91[6-9]\d{9}$/,
-      'Mobile number must start with +91 and contain 10 digits',
-    ),
+    .regex(/^\+91[6-9]\d{9}$/, 'Must be a valid +91 number'),
   status: z.enum(['ACTIVE', 'PAUSED']),
   tier: z.enum(['BASIC', 'PRO', 'VIP']),
-  logo_url: z
-    .string({ required_error: 'Client logo is required' })
-    .min(1, 'Client logo is required'),
+  logo_url: z.string().min(1, 'Client logo is required'),
   industry: z.string().min(1, 'Industry is required'),
-  platforms: z.array(z.string()).min(1, 'Select at least one active platform'),
+  platforms: z.array(z.string()).min(1, 'Select at least one platform'),
+  // Added social_links to the schema so PlatformSelector can register them
+  social_links: z.object({}).catchall(
+    z.object({
+      handle: z.string().trim().min(1, 'Handle is required'),
+      url: z
+        .string()
+        .trim()
+        .url('Invalid URL')
+        .or(z.string().length(0))
+        .optional(),
+    }),
+  ),
 })
 
 const STEPS = [
@@ -83,9 +90,7 @@ export default function CreateClient({ open, onOpenChange }) {
 
   const form = useForm({
     resolver: zodResolver(createClientSchema),
-    // 1. CRITICAL CHANGE: Only validate when the final submit button is clicked
     mode: 'onSubmit',
-    reValidateMode: 'onChange', // Once submitted, re-validate as they fix typos
     defaultValues: {
       name: '',
       description: '',
@@ -96,11 +101,29 @@ export default function CreateClient({ open, onOpenChange }) {
       logo_url: '',
       platforms: [],
       industry: '',
+      social_links: {}, // Initialize as empty object
     },
   })
 
-  // We need the errors object to highlight the Stepper circles
   const { errors, isSubmitted } = form.formState
+  const selectedPlatforms = form.watch('platforms')
+
+  useEffect(() => {
+    const currentSocials = form.getValues('social_links') || {}
+    const nextSocials = { ...currentSocials }
+
+    selectedPlatforms.forEach((p) => {
+      if (!nextSocials[p]) nextSocials[p] = { handle: '', url: '' }
+    })
+
+    Object.keys(nextSocials).forEach((key) => {
+      if (!selectedPlatforms.includes(key)) delete nextSocials[key]
+    })
+
+    form.setValue('social_links', nextSocials)
+  }, [selectedPlatforms, form])
+
+  // We need the errors object to highlight the Stepper circles
 
   const mutation = useMutation({
     mutationFn: createClient,
@@ -437,6 +460,9 @@ export default function CreateClient({ open, onOpenChange }) {
                       <PlatformSelector
                         selected={field.value || []}
                         onChange={field.onChange}
+                        // CRITICAL FIX: Pass these props!
+                        register={form.register}
+                        errors={errors}
                       />
                     )}
                   />

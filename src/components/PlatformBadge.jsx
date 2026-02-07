@@ -16,7 +16,7 @@ const PLATFORM_CONFIG = {
     className:
       'bg-cyan-100 text-cyan-800 dark:bg-cyan-500/10 dark:text-cyan-400',
   },
-  google_ads: {
+  google_business: {
     label: 'Google Ads',
     className:
       'bg-yellow-100 text-yellow-800 dark:bg-yellow-500/10 dark:text-yellow-400',

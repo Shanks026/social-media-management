@@ -8,7 +8,7 @@ import ClientDetails from './pages/clients/ClientDetails'
 import PostDetails from './pages/posts/postDetails/PostDetails'
 import PublicReview from './pages/PublicReview'
 import Settings from './pages/Settings'
-import SocialCalendar from './pages/calendar/SocialCalendar'
+import SocialCalendar from './pages/calendar/ContentCalendar'
 
 function AppRoutes() {
   const { session, user } = useAuth()

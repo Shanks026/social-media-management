@@ -211,7 +211,7 @@ export function CalendarPostCard({ post }) {
                 alt=""
                 className="size-5 rounded-lg object-cover ring-1 ring-border"
               />
-              <span className="text-xs font-semibold tracking-wide text-foreground truncate">
+              <span className="text-xs font-semibold text-foreground truncate">
                 {post.client_name}
               </span>
             </div>

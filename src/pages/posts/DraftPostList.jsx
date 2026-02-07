@@ -11,12 +11,18 @@ import {
   ChevronRight,
   AlertTriangle,
   Play,
-  Film,
+  Clock,
+  Layers,
+  Instagram,
+  Linkedin,
+  Twitter,
+  Facebook,
+  Youtube,
+  Globe,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { format } from 'date-fns'
-import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
   DropdownMenu,
@@ -42,13 +48,9 @@ import {
 } from '@/components/ui/empty'
 import { toast } from 'sonner'
 import { useNavigate } from 'react-router-dom'
-import PlatformBadge from '@/components/PlatformBadge'
 import { useAuth } from '@/context/AuthContext'
 import { cn } from '@/lib/utils'
 
-/**
- * Helper to check if a URL is a video
- */
 const isVideoSource = (url) => {
   if (!url) return false
   const videoExtensions = ['.mp4', '.mov', '.webm', '.ogg', '.m4v']
@@ -59,12 +61,8 @@ const isVideoSource = (url) => {
   )
 }
 
-/**
- * Reusable Media Item to handle Video vs Image rendering
- */
 const MediaItem = ({ url, className, isPreview = false }) => {
   const isVideo = isVideoSource(url)
-
   if (isVideo) {
     return (
       <div className={cn('relative h-full w-full bg-black', className)}>
@@ -87,7 +85,6 @@ const MediaItem = ({ url, className, isPreview = false }) => {
       </div>
     )
   }
-
   return (
     <img
       src={url}
@@ -97,53 +94,74 @@ const MediaItem = ({ url, className, isPreview = false }) => {
   )
 }
 
+const PlatformIcon = ({ name }) => {
+  const icons = {
+    instagram: {
+      icon: <Instagram className="size-3.5 text-white" />,
+      bg: 'bg-[#E4405F]',
+    },
+    linkedin: {
+      icon: <Linkedin className="size-3.5 text-white" />,
+      bg: 'bg-[#0077B5]',
+    },
+    twitter: {
+      icon: <Twitter className="size-3.5 text-white dark:text-black" />,
+      bg: 'bg-black dark:bg-white',
+    },
+    facebook: {
+      icon: <Facebook className="size-3.5 text-white" />,
+      bg: 'bg-[#1877F2]',
+    },
+    youtube: {
+      icon: <Youtube className="size-3.5 text-white" />,
+      bg: 'bg-[#FF0000]',
+    },
+    google_business: {
+      icon: <Globe className="size-3.5 text-white" />,
+      bg: 'bg-[#4285F4]',
+    },
+  }
+  const platform = icons[name.toLowerCase()]
+  if (!platform) return null
+  return (
+    <div
+      className={cn(
+        'flex h-7 w-7 items-center justify-center rounded-full border-2 border-background shadow-sm shrink-0',
+        platform.bg,
+      )}
+    >
+      {platform.icon}
+    </div>
+  )
+}
+
 export default function DraftPostList({ clientId }) {
   const queryClient = useQueryClient()
   const { user } = useAuth()
   const navigate = useNavigate()
 
-  // UI States
   const [previewPost, setPreviewPost] = useState(null)
   const [postToDelete, setPostToDelete] = useState(null)
   const [postToEdit, setPostToEdit] = useState(null)
   const [activeImageIndex, setActiveImageIndex] = useState(0)
 
-  // Query posts
   const { data = [], isLoading } = useQuery({
     queryKey: ['draft-posts', clientId],
     queryFn: () => fetchAllPostsByClient(clientId),
   })
 
-  // Delete Mutation
   const deleteMutation = useMutation({
     mutationFn: (postId) => deletePost(postId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['draft-posts', clientId] })
-      queryClient.invalidateQueries({ queryKey: ['subscription', user?.id] })
-      toast.success('Post and media deleted successfully')
+      toast.success('Post deleted successfully')
       setPostToDelete(null)
-    },
-    onError: (err) => {
-      console.error('Mutation Error:', err)
-      toast.error('Failed to delete post')
     },
   })
 
-  // Reset index when preview changes
   useEffect(() => {
     if (!previewPost) setActiveImageIndex(0)
   }, [previewPost])
-
-  // Keyboard Navigation for Preview
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (!previewPost || (previewPost.media_urls?.length || 0) <= 1) return
-      if (e.key === 'ArrowLeft') handlePrev(e)
-      if (e.key === 'ArrowRight') handleNext(e)
-    }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [previewPost, activeImageIndex])
 
   const handlePrev = (e) => {
     e?.stopPropagation()
@@ -162,29 +180,31 @@ export default function DraftPostList({ clientId }) {
   const renderMediaGrid = (post) => {
     const media = post.media_urls || []
     const count = media.length
-    if (count === 0) return <div className="w-full h-full bg-muted/50" />
-
+    if (count === 0)
+      return (
+        <div className="absolute inset-0 flex items-center justify-center text-muted-foreground/10 font-black text-2xl uppercase select-none">
+          No Media
+        </div>
+      )
     if (count === 1) return <MediaItem url={media[0]} />
-
     if (count === 2)
       return (
-        <div className="grid grid-cols-2 gap-1 w-full h-full">
+        <div className="grid grid-cols-2 gap-0.5 w-full h-full">
           {media.map((url, i) => (
             <MediaItem key={i} url={url} />
           ))}
         </div>
       )
-
     return (
-      <div className="grid grid-cols-2 gap-1 w-full h-full">
+      <div className="grid grid-cols-2 gap-0.5 w-full h-full">
         <MediaItem url={media[0]} />
-        <div className="grid grid-rows-2 gap-1 h-full overflow-hidden">
+        <div className="grid grid-rows-2 gap-0.5 h-full overflow-hidden">
           <MediaItem url={media[1]} />
           <div className="relative h-full w-full">
             <MediaItem url={media[2]} />
             {count > 3 && (
               <div className="absolute inset-0 bg-black/60 flex items-center justify-center pointer-events-none">
-                <span className="text-white font-bold text-lg">
+                <span className="text-white font-bold text-sm">
                   +{count - 3}
                 </span>
               </div>
@@ -195,17 +215,16 @@ export default function DraftPostList({ clientId }) {
     )
   }
 
-  if (isLoading) {
+  if (isLoading)
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {[1, 2, 3].map((i) => (
-          <Skeleton key={i} className="h-[350px] w-full rounded-2xl" />
+          <Skeleton key={i} className="h-[400px] w-full rounded-2xl" />
         ))}
       </div>
     )
-  }
 
-  if (data.length === 0) {
+  if (data.length === 0)
     return (
       <Empty className="mt-12">
         <EmptyHeader>
@@ -216,116 +235,114 @@ export default function DraftPostList({ clientId }) {
         </EmptyHeader>
       </Empty>
     )
-  }
 
   return (
     <TooltipProvider>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {data.map((post) => (
-          <Card
-            key={post.id}
-            onClick={() =>
-              navigate(`/clients/${clientId}/posts/${post.version_id}`)
-            }
-            className="group flex flex-col border-none shadow-none bg-[#FCFCFC] cursor-pointer dark:bg-card/70 p-6 gap-4 rounded-2xl transition-colors duration-200 hover:bg-[#F5F5F5] dark:hover:bg-card"
-          >
-            {/* Header: Status and Platforms */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1.5">
-                <StatusBadge status={post.status || 'DRAFT'} />
-                <div className="flex items-center gap-1.5">
-                  {Array.isArray(post.platform) && post.platform.length > 0 ? (
-                    <>
-                      <PlatformBadge platform={post.platform[0]} />
-                      {post.platform.length > 1 && (
-                        <Badge
-                          variant="secondary"
-                          className="rounded-md px-2 py-1 text-xs font-bold"
-                        >
-                          +{post.platform.length - 1}
-                        </Badge>
-                      )}
-                    </>
-                  ) : (
-                    <PlatformBadge platform={post.platform} />
-                  )}
-                </div>
-              </div>
+      <div className="grid gap-4 grid-cols-[repeat(auto-fill,minmax(350px,1fr))] pb-8">
+        {data.map((post) => {
+          const platforms = Array.isArray(post.platform)
+            ? post.platform
+            : [post.platform]
 
-              <div onClick={(e) => e.stopPropagation()}>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-6 w-6">
-                      <MoreVertical className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    {post.status === 'DRAFT' ? (
-                      <DropdownMenuItem
-                        className="text-xs gap-2 cursor-pointer"
-                        onClick={() => setPostToEdit(post)}
-                      >
-                        <Edit2 className="h-3 w-3" /> Edit Post
-                      </DropdownMenuItem>
-                    ) : (
-                      <DropdownMenuItem
-                        disabled
-                        className="text-xs gap-2 opacity-50"
-                      >
-                        <Edit2 className="h-3 w-3" /> Edit Locked
-                      </DropdownMenuItem>
-                    )}
-                    <DropdownMenuItem
-                      className="text-xs gap-2 text-destructive cursor-pointer"
-                      onClick={() => setPostToDelete(post)}
-                    >
-                      <Trash2 className="h-3 w-3" /> Delete
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            </div>
-
-            <h3 className="text-lg font-semibold text-foreground mt-2 line-clamp-1">
-              {post.title || 'Untitled Draft'}
-            </h3>
-
-            {/* Media Preview Section */}
+          return (
             <div
-              className="relative aspect-video rounded-xl overflow-hidden bg-muted cursor-pointer group/media"
-              onClick={(e) => {
-                e.stopPropagation()
-                setPreviewPost(post)
-              }}
+              key={post.id}
+              onClick={() =>
+                navigate(`/clients/${clientId}/posts/${post.version_id}`)
+              }
+              className="flex flex-col bg-card border rounded-xl overflow-hidden hover:bg-muted/30 transition-colors duration-200 cursor-pointer group"
             >
-              {renderMediaGrid(post)}
-              <div className="absolute inset-0 bg-black/20 opacity-0 group-hover/media:opacity-100 transition-opacity flex items-center justify-center">
-                <div className="bg-white/20 backdrop-blur-md p-2 rounded-full shadow-sm">
-                  <Eye className="text-white h-5 w-5" />
+              {/* Media Preview Section */}
+              <div
+                className="relative aspect-video bg-muted overflow-hidden shrink-0 group/media"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setPreviewPost(post)
+                }}
+              >
+                {renderMediaGrid(post)}
+                <div className="absolute inset-0 bg-black/20 opacity-0 group-hover/media:opacity-100 transition-opacity flex items-center justify-center">
+                  <div className="bg-white/20 backdrop-blur-md p-2 rounded-full shadow-sm">
+                    <Eye className="text-white h-5 w-5" />
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-6 flex flex-col flex-1">
+                {/* 🛠️ Updated Header: Status | Version | Actions */}
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <StatusBadge status={post.status || 'DRAFT'} />
+                    <Badge
+                      variant="secondary"
+                      className="text-xs"
+                    >
+                      v{post.version_number || '1'}
+                    </Badge>
+                  </div>
+
+                  <div onClick={(e) => e.stopPropagation()}>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 hover:bg-muted transition-colors"
+                        >
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-40">
+                        <DropdownMenuItem
+                          onClick={() => setPostToEdit(post)}
+                          className="text-xs gap-2 cursor-pointer"
+                        >
+                          <Edit2 className="h-3 w-3" /> Edit Post
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => setPostToDelete(post)}
+                          className="text-xs gap-2 text-destructive cursor-pointer"
+                        >
+                          <Trash2 className="h-3 w-3" /> Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </div>
+
+                <div className="mb-6 space-y-2">
+                  <h4 className="text-lg font-bold tracking-tight leading-tight text-foreground line-clamp-1">
+                    {post.title || 'Untitled Draft'}
+                  </h4>
+                  <p className="text-sm font-medium text-muted-foreground leading-[1.6] line-clamp-2">
+                    {post.content || 'No description provided.'}
+                  </p>
+                </div>
+
+                <div className="flex items-center justify-between mt-auto pt-5 border-t border-border/50">
+                  <div className="flex items-center -space-x-2">
+                    {platforms.map((p, idx) => (
+                      <PlatformIcon key={`${p}-${idx}`} name={p} />
+                    ))}
+                  </div>
+
+                  {/* 🛠️ Updated Date: Target Date + Time */}
+                  <div className="flex items-center gap-1.5 text-muted-foreground">
+                    <Clock size={14} className="text-foreground/70" />
+                    <span className="text-xs font-semibold capitalize text-foreground">
+                      {post.target_date
+                        ? format(new Date(post.target_date), 'd MMM, p')
+                        : 'No Date Set'}
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
-
-            <CardContent className="p-0 flex-grow">
-              <p className="text-[13px] text-muted-foreground line-clamp-2 leading-snug">
-                {post.content || 'No description provided.'}
-              </p>
-            </CardContent>
-
-            <div className="pt-3 border-t border-border mt-2">
-              <span className="text-muted-foreground text-xs font-medium">
-                Created{' '}
-                {format(
-                  new Date(post.display_date || Date.now()),
-                  'd MMM, yyyy',
-                )}
-              </span>
-            </div>
-          </Card>
-        ))}
+          )
+        })}
       </div>
 
-      {/* Edit Form Modal */}
+      {/* Modals Stays Same */}
       <DraftPostForm
         clientId={clientId}
         open={!!postToEdit}
@@ -333,80 +350,46 @@ export default function DraftPostList({ clientId }) {
         initialData={postToEdit}
       />
 
-      {/* Fullscreen Media Slider */}
-      <Dialog open={!!previewPost} onOpenChange={() => setPreviewPost(null)}>
-        <DialogContent className="max-w-[90vw] lg:max-w-[1100px] h-[85vh] p-0 bg-transparent border-none shadow-none flex items-center justify-center overflow-hidden">
-          <div className="relative w-full h-full flex items-center justify-center">
-            <div className="relative w-full h-full overflow-hidden rounded-3xl bg-black/95 flex items-center justify-center border border-white/10">
-              {/* Conditional Video/Image Rendering in Slider */}
-              <div className="w-full h-full flex items-center justify-center">
-                {previewPost && (
-                  <MediaItem
-                    url={previewPost.media_urls[activeImageIndex]}
-                    className="object-contain"
-                    isPreview={true}
-                  />
-                )}
-              </div>
 
-              {previewPost?.media_urls?.length > 1 && (
-                <>
-                  <div className="absolute inset-x-4 top-1/2 -translate-y-1/2 flex justify-between pointer-events-none z-50">
-                    <button
-                      onClick={handlePrev}
-                      className="pointer-events-auto p-4 rounded-2xl bg-black/40 text-white hover:bg-black/60 backdrop-blur-xl transition-all"
-                    >
-                      <ChevronLeft className="h-8 w-8" />
-                    </button>
-                    <button
-                      onClick={handleNext}
-                      className="pointer-events-auto p-4 rounded-2xl bg-black/40 text-white hover:bg-black/60 backdrop-blur-xl transition-all"
-                    >
-                      <ChevronRight className="h-8 w-8" />
-                    </button>
-                  </div>
-                  <div className="absolute top-6 left-1/2 -translate-x-1/2 z-50">
-                    <Badge className="bg-white/10 text-white border-none backdrop-blur-md px-4 py-1.5 font-mono">
-                      {activeImageIndex + 1} / {previewPost.media_urls.length}
-                    </Badge>
-                  </div>
-                </>
+      <Dialog open={!!previewPost} onOpenChange={() => setPreviewPost(null)}>
+        <DialogContent
+          className="max-w-[90vw] lg:max-w-[1100px] h-[85vh] p-0 bg-transparent border-none shadow-none overflow-hidden"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="relative w-full h-full rounded-3xl bg-black/95 flex items-center justify-center border border-white/10">
+            <div className="w-full h-full flex items-center justify-center">
+              {previewPost && (
+                <MediaItem
+                  url={previewPost.media_urls[activeImageIndex]}
+                  className="object-contain"
+                  isPreview={true}
+                />
               )}
             </div>
+            {previewPost?.media_urls?.length > 1 && (
+              <>
+                <div className="absolute inset-x-4 top-1/2 -translate-y-1/2 flex justify-between pointer-events-none z-50">
+                  <button
+                    onClick={handlePrev}
+                    className="pointer-events-auto p-4 rounded-2xl bg-black/40 text-white hover:bg-black/60 backdrop-blur-xl transition-all"
+                  >
+                    <ChevronLeft className="h-8 w-8" />
+                  </button>
+                  <button
+                    onClick={handleNext}
+                    className="pointer-events-auto p-4 rounded-2xl bg-black/40 text-white hover:bg-black/60 backdrop-blur-xl transition-all"
+                  >
+                    <ChevronRight className="h-8 w-8" />
+                  </button>
+                </div>
+                <div className="absolute top-6 left-1/2 -translate-x-1/2 z-50">
+                  <Badge className="bg-white/10 text-white border-none backdrop-blur-md px-4 py-1.5 font-mono">
+                    {activeImageIndex + 1} / {previewPost.media_urls.length}
+                  </Badge>
+                </div>
+              </>
+            )}
           </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Delete Confirmation */}
-      <Dialog open={!!postToDelete} onOpenChange={() => setPostToDelete(null)}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-destructive font-bold">
-              <AlertTriangle className="h-5 w-5" /> Delete Post
-            </DialogTitle>
-            <DialogDescription className="py-3 text-foreground/80">
-              This will permanently delete{' '}
-              <span className="font-bold">"{postToDelete?.title}"</span> and all
-              its versions. This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button
-              variant="ghost"
-              onClick={() => setPostToDelete(null)}
-              disabled={deleteMutation.isPending}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={() => deleteMutation.mutate(postToDelete.actual_post_id)}
-              disabled={deleteMutation.isPending}
-              className="font-bold"
-            >
-              {deleteMutation.isPending ? 'Deleting...' : 'Delete Permanently'}
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
     </TooltipProvider>

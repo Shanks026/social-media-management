@@ -21,6 +21,7 @@ import ManagementTab from './clientSections/ManagementTab'
 import { ComingSoon } from './clientSections/ComingSoon'
 import IndustryBadge from './IndustryBadge'
 import TierBadge from '@/components/TierBadge'
+import ContentCalendar from '../calendar/ContentCalendar'
 
 const TABS_CONFIG = [
   { value: 'workflow', label: 'Workflow', icon: LayoutGrid },
@@ -76,7 +77,7 @@ export default function ClientDetails() {
 
   return (
     <div className="flex flex-col h-full bg-background">
-      <div className="px-8 pt-8 pb-4 space-y-7">
+      <div className="px-8 pt-6 pb-8 space-y-6">
         {/* Compact Sub-Header */}
         <div className="flex items-center gap-4">
           <div className="h-12 w-12 shrink-0 rounded-xl bg-white dark:bg-white/5 border border-gray-100 dark:border-white/10 flex items-center justify-center overflow-hidden shadow-sm">
@@ -110,10 +111,6 @@ export default function ClientDetails() {
 
         {/* Minimalist Tabs */}
         <Tabs defaultValue="workflow" className="w-full gap-0">
-          {/* TabsList: 
-            - justify-start keeps them to the left
-            - w-full ensures the border-b spans the container
-        */}
           <TabsList className="bg-transparent h-auto w-full justify-start rounded-none p-0 gap-12 border-b shadow-none border-gray-100 dark:border-white/10">
             {TABS_CONFIG.map((tab) => (
               <TabsTrigger
@@ -159,7 +156,9 @@ export default function ClientDetails() {
           </TabsContent>
 
           <TabsContent value="calendar" className="focus-visible:outline-none">
-            <ComingSoon icon={Calendar} title="Content Calendar" />
+            <div className="mt-6 px-8">
+              <ContentCalendar clientId={clientId} hideHeader={true} />
+            </div>
           </TabsContent>
 
           <TabsContent value="insights" className="focus-visible:outline-none">

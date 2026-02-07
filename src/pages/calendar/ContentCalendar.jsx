@@ -57,7 +57,10 @@ const PLATFORMS = [
   { id: 'youtube', label: 'YouTube', icon: Youtube },
 ]
 
-export default function SocialCalendar() {
+export default function ContentCalendar({
+  clientId = null,
+  hideHeader = false,
+}) {
   const { user } = useAuth()
   const { setHeader } = useHeader()
   const [currentDate, setCurrentDate] = useState(new Date())
@@ -66,22 +69,26 @@ export default function SocialCalendar() {
   // Filter States
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
-  const [clientFilter, setClientFilter] = useState('all')
+  const [clientFilter, setClientFilter] = useState(clientId || 'all')
   const [platformFilter, setPlatformFilter] = useState('all')
 
   const { data: posts = [], isLoading } = useQuery({
     queryKey: [
-      'global-calendar',
+      'calendar',
       user?.id,
+      clientId,
       view,
       format(currentDate, 'yyyy-MM-dd'),
     ],
     queryFn: () =>
-      fetchGlobalCalendar({ userId: user?.id, currentMonth: currentDate }),
+      fetchGlobalCalendar({
+        userId: user?.id,
+        currentMonth: currentDate,
+        clientId: clientId,
+      }),
     enabled: !!user?.id,
   })
 
-  // Dynamic Title Logic
   const calendarTitle = useMemo(() => {
     if (view === 'month') return format(currentDate, 'MMMM yyyy')
     const start = startOfWeek(currentDate)
@@ -92,14 +99,16 @@ export default function SocialCalendar() {
   }, [currentDate, view])
 
   useEffect(() => {
-    setHeader({
-      title: calendarTitle,
-      breadcrumbs: [
-        { label: 'Calendar', href: '/calendar' },
-        { label: view === 'month' ? 'Month View' : 'Week View' },
-      ],
-    })
-  }, [calendarTitle, view, setHeader])
+    if (!hideHeader) {
+      setHeader({
+        title: calendarTitle,
+        breadcrumbs: [
+          { label: 'Calendar', href: '/calendar' },
+          { label: view === 'month' ? 'Month View' : 'Week View' },
+        ],
+      })
+    }
+  }, [calendarTitle, view, setHeader, hideHeader])
 
   const uniqueClients = useMemo(() => {
     const clients = posts.map((p) => p.client_name)
@@ -113,13 +122,18 @@ export default function SocialCalendar() {
         .includes(searchQuery.toLowerCase())
       const matchesStatus =
         statusFilter === 'all' || post.status === statusFilter
-      const matchesClient =
-        clientFilter === 'all' || post.client_name === clientFilter
+
+      // 🔥 FIX: Check for ID match if clientId prop is present
+      const matchesClient = clientId
+        ? String(post.client_id) === String(clientId)
+        : clientFilter === 'all' || post.client_name === clientFilter
+
       const matchesPlatform =
         platformFilter === 'all' || post.platforms?.includes(platformFilter)
+
       return matchesSearch && matchesStatus && matchesClient && matchesPlatform
     })
-  }, [posts, searchQuery, statusFilter, clientFilter, platformFilter])
+  }, [posts, searchQuery, statusFilter, clientFilter, platformFilter, clientId])
 
   const postsByDate = useMemo(() => {
     return filteredPosts.reduce((acc, post) => {
@@ -134,32 +148,37 @@ export default function SocialCalendar() {
     setCurrentDate(
       view === 'month' ? subMonths(currentDate, 1) : subWeeks(currentDate, 1),
     )
+
   const handleNext = () =>
     setCurrentDate(
       view === 'month' ? addMonths(currentDate, 1) : addWeeks(currentDate, 1),
     )
+
   const resetFilters = () => {
     setSearchQuery('')
     setStatusFilter('all')
-    setClientFilter('all')
+    setClientFilter(clientId || 'all')
     setPlatformFilter('all')
   }
 
   return (
-    <div className="p-8 max-w-[1600px] mx-auto space-y-6">
-      {/* 🛠️ Top Row: Identity + Unified Navigation Group */}
+    <div
+      className={cn(
+        'mx-auto space-y-6',
+        !hideHeader ? 'p-8 max-w-[1600px]' : 'w-full',
+      )}
+    >
       <div className="flex items-center justify-between">
         <div className="space-y-1">
           <h2 className="text-3xl font-bold tracking-tight text-foreground">
             {calendarTitle}
           </h2>
-          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em]">
+          {/* <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em]">
             {view === 'month' ? 'Monthly Overview' : 'Weekly Schedule'}
-          </p>
+          </p> */}
         </div>
 
         <div className="flex items-center gap-4">
-          {/* Navigation Controls Segment */}
           <div className="flex items-center border rounded-lg overflow-hidden bg-background shadow-sm">
             <Button
               variant="ghost"
@@ -187,7 +206,6 @@ export default function SocialCalendar() {
             </Button>
           </div>
 
-          {/* View Switcher Tabs */}
           <Tabs value={view} onValueChange={setView} className="w-[180px]">
             <TabsList className="grid w-full grid-cols-2 h-9">
               <TabsTrigger
@@ -207,10 +225,8 @@ export default function SocialCalendar() {
         </div>
       </div>
 
-      {/* 🔍 Refined Action Bar: No extra borders, tightened spacing */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3 flex-1">
-          {/* Search */}
           <div className="relative w-full max-w-sm group">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
             <Input
@@ -223,28 +239,28 @@ export default function SocialCalendar() {
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Client Filter */}
-          <Select value={clientFilter} onValueChange={setClientFilter}>
-            <SelectTrigger className="w-36 h-9 text-xs font-semibold uppercase tracking-tight shadow-none">
-              <SelectValue placeholder="Client" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Clients</SelectItem>
-              {uniqueClients.map((name) => (
-                <SelectItem key={name} value={name}>
-                  {name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {!clientId && (
+            <Select value={clientFilter} onValueChange={setClientFilter}>
+              <SelectTrigger className="w-36 h-9 text-xs font-semibold uppercase tracking-tight shadow-none">
+                <SelectValue placeholder="Client" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Clients</SelectItem>
+                {uniqueClients.map((name) => (
+                  <SelectItem key={name} value={name}>
+                    {name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
 
-          {/* Status Filter */}
           <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="w-36 h-9 text-xs font-semibold uppercase tracking-tight shadow-none">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Statuses</SelectItem>
+              <SelectItem value="all">Statuses</SelectItem>
               {STATUS_LEGEND.map((s) => (
                 <SelectItem key={s.id} value={s.id}>
                   {s.label}
@@ -253,13 +269,12 @@ export default function SocialCalendar() {
             </SelectContent>
           </Select>
 
-          {/* Platform Filter */}
           <Select value={platformFilter} onValueChange={setPlatformFilter}>
             <SelectTrigger className="w-36 h-9 text-xs font-semibold uppercase tracking-tight shadow-none">
               <SelectValue placeholder="Platform" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Platforms</SelectItem>
+              <SelectItem value="all">Platforms</SelectItem>
               {PLATFORMS.map((p) => (
                 <SelectItem key={p.id} value={p.id}>
                   <div className="flex items-center gap-2">
@@ -273,7 +288,7 @@ export default function SocialCalendar() {
 
           {(searchQuery ||
             statusFilter !== 'all' ||
-            clientFilter !== 'all' ||
+            (!clientId && clientFilter !== 'all') ||
             platformFilter !== 'all') && (
             <Button
               variant="ghost"
@@ -287,7 +302,24 @@ export default function SocialCalendar() {
         </div>
       </div>
 
-      {/* 🎨 Interaction Legend */}
+      <div className="bg-card rounded-xl border border-border/50 overflow-hidden shadow-sm">
+        {view === 'month' ? (
+          <MonthView
+            currentMonth={currentDate}
+            postsByDate={postsByDate}
+            isLoading={isLoading}
+            clientId={clientId}
+          />
+        ) : (
+          <WeekView
+            currentMonth={currentDate}
+            postsByDate={postsByDate}
+            isLoading={isLoading}
+            clientId={clientId}
+          />
+        )}
+      </div>
+
       <div className="flex items-center gap-6 px-1 pt-2">
         {STATUS_LEGEND.map((item) => (
           <button
@@ -308,23 +340,6 @@ export default function SocialCalendar() {
             </span>
           </button>
         ))}
-      </div>
-
-      {/* Calendar Grid Container */}
-      <div className="bg-card rounded-xl border border-border/50 overflow-hidden shadow-sm">
-        {view === 'month' ? (
-          <MonthView
-            currentMonth={currentDate}
-            postsByDate={postsByDate}
-            isLoading={isLoading}
-          />
-        ) : (
-          <WeekView
-            currentMonth={currentDate}
-            postsByDate={postsByDate}
-            isLoading={isLoading}
-          />
-        )}
       </div>
     </div>
   )

@@ -43,6 +43,7 @@ export async function fetchClients(filters = {}) {
     logo_url: c.logo_url,
     tier: c.tier,
     industry: c.industry,
+    is_internal: c.is_internal,
     platforms: c.platforms || [],
     created_at: c.created_at,
     pipeline: {

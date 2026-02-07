@@ -27,7 +27,12 @@ const STATUS_STYLES = {
   PENDING_APPROVAL: 'border-l-amber-600',
 }
 
-export default function MonthView({ currentMonth, postsByDate, isLoading }) {
+export default function MonthView({
+  currentMonth,
+  postsByDate,
+  isLoading,
+  clientId,
+}) {
   const [selectedDate, setSelectedDate] = useState(null)
   const monthStart = startOfMonth(currentMonth)
   const monthEnd = endOfMonth(monthStart)
@@ -95,15 +100,16 @@ export default function MonthView({ currentMonth, postsByDate, isLoading }) {
                       STATUS_STYLES[post.status] || 'border-l-muted',
                     )}
                   >
-                    {/* Post Title */}
                     <span className="truncate text-[11px] font-medium leading-tight text-foreground">
                       {post.title}
                     </span>
 
-                    {/* Client Name only - keep it subtle */}
-                    <span className="text-[9px] font-bold uppercase tracking-wider opacity-50 truncate mt-0.5">
-                      {post.client_name}
-                    </span>
+                    {/* 🔥 Conditionally hide Client Name */}
+                    {!clientId && (
+                      <span className="text-[9px] font-bold uppercase tracking-wider opacity-50 truncate mt-0.5">
+                        {post.client_name}
+                      </span>
+                    )}
                   </button>
                 ))}
 

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { useHeader } from '../components/misc/header-context'
 import { useSubscription } from '../api/useSubscription'
 import {
@@ -14,28 +14,102 @@ import {
 } from 'lucide-react'
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { ComingSoon } from './clients/clientSections/ComingSoon'
 
-const ComingSoon = ({ icon: Icon, title }) => (
-  <div className="flex flex-col items-center justify-center py-24 border-2 border-dashed rounded-2xl bg-muted/5 mt-6">
-    <div className="size-12 rounded-full bg-background flex items-center justify-center border shadow-sm mb-4">
-      <Icon className="size-6 text-muted-foreground" />
-    </div>
-    <h3 className="text-sm font-semibold">{title}</h3>
-    <p className="text-xs text-muted-foreground mt-1 text-center max-w-[200px]">
-      This feature is currently in development.
-    </p>
-  </div>
+// --- Sub-Components (Internal for Cleanliness) ---
+
+const UsageCard = ({
+  title,
+  icon: Icon,
+  value,
+  max,
+  unit,
+  percent,
+  status,
+}) => (
+  <Card className={cn('border-none bg-card/50 shadow-sm', status.border)}>
+    <CardContent className="p-6 space-y-4">
+      <div className="flex items-center justify-between">
+        <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80">
+          {title}
+        </p>
+        <Icon className={cn('size-4', status.text)} />
+      </div>
+
+      <div className="flex items-baseline justify-between">
+        <div className="flex items-baseline gap-1.5">
+          <span
+            className={cn('text-3xl font-black tracking-tight', status.text)}
+          >
+            {value}
+          </span>
+          <span className="text-xs font-medium text-muted-foreground">
+            / {max} {unit} used
+          </span>
+        </div>
+        {percent >= 80 && (
+          <AlertTriangle className={cn('size-4 animate-pulse', status.text)} />
+        )}
+      </div>
+
+      <div className="space-y-2">
+        <Progress
+          value={percent}
+          className="h-1.5 bg-muted/50"
+          indicatorClassName={status.progress}
+        />
+        <div className="flex justify-between text-[10px] font-bold uppercase tracking-tighter text-muted-foreground/70">
+          <span>
+            {max - value} {unit} remaining
+          </span>
+          <span className={status.text}>{percent.toFixed(0)}%</span>
+        </div>
+      </div>
+    </CardContent>
+  </Card>
 )
+
+const PlanOverview = ({ sub }) => (
+  <Card className="border-none bg-gradient-to-br from-card/80 to-muted/30 shadow-sm overflow-hidden relative">
+    <div className="absolute top-0 right-0 p-8 opacity-5">
+      <Zap className="size-24 fill-primary text-primary" />
+    </div>
+    <CardContent className="p-8 flex flex-col md:flex-row md:items-center justify-between gap-6 relative">
+      <div className="space-y-1">
+        <div className="flex items-center gap-2">
+          <Zap className="size-5 fill-primary text-primary" />
+          <h2 className="text-2xl font-black tracking-tight">
+            {sub.plan_name} Plan
+          </h2>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          Workspace tier:{' '}
+          <span className="font-bold text-foreground">{sub.plan_name}</span>
+        </p>
+        <div className="flex items-center gap-1.5 mt-2 px-2 py-1 bg-primary/10 rounded-md w-fit border border-primary/10">
+          <ShieldCheck className="size-3 text-primary" />
+          <span className="text-[10px] font-bold uppercase tracking-widest text-primary">
+            Agency Workspace is Free
+          </span>
+        </div>
+      </div>
+      <Button
+        variant="outline"
+        className="gap-2 border-primary/20 hover:bg-primary/5 hover:text-primary transition-all font-bold text-xs uppercase tracking-widest"
+        onClick={() => window.open('mailto:support@yourdomain.com')}
+      >
+        <ArrowUpCircle className="size-3.5" />
+        Upgrade Plan
+      </Button>
+    </CardContent>
+  </Card>
+)
+
+// --- Main Settings Page ---
 
 export default function Settings() {
   const { setHeader } = useHeader()
@@ -48,270 +122,129 @@ export default function Settings() {
     })
   }, [setHeader])
 
-  const formatStorage = (bytes) => {
+  const formatStorageValue = (bytes) => {
     const mb = bytes / (1024 * 1024)
-    if (mb < 1024) return `${mb.toFixed(1)} MB`
-    const gb = mb / 1024
-    return `${gb.toFixed(1)} GB`
+    return mb < 1024 ? mb.toFixed(1) : (mb / 1024).toFixed(1)
   }
 
-  /**
-   * Helper to determine status colors based on percentage
-   * < 80%: Neutral/Primary
-   * 80% - 99%: Warning (Orange)
-   * 100%+: Critical (Red)
-   */
+  const getStorageUnit = (bytes) => (bytes / (1024 * 1024) < 1024 ? 'MB' : 'GB')
+
   const getStatusConfig = (percent) => {
     if (percent >= 100)
       return {
-        text: 'text-red-600 dark:text-red-400',
-        progress: 'bg-red-600 dark:bg-red-500',
-        border: 'border-red-200 dark:border-red-900/50',
-        bg: 'bg-red-50/50 dark:bg-red-950/20',
+        text: 'text-red-500',
+        progress: 'bg-red-500',
+        border: 'border-l-4 border-l-red-500',
       }
     if (percent >= 80)
       return {
-        text: 'text-orange-500 dark:text-orange-400',
-        progress: 'bg-orange-500 dark:bg-orange-400',
-        border: 'border-orange-200 dark:border-orange-900/50',
-        bg: 'bg-orange-50/50 dark:bg-orange-950/20',
+        text: 'text-orange-500',
+        progress: 'bg-orange-500',
+        border: 'border-l-4 border-l-orange-500',
       }
     return {
       text: 'text-primary',
       progress: 'bg-primary',
-      border: 'border-border',
-      bg: 'bg-card',
+      border: 'border-none',
     }
   }
 
   return (
-    <div className="p-8 max-w-6xl mx-auto space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
-        <p className="text-muted-foreground mt-1">
-          Manage your account, subscription, and usage metrics.
+    <div className="p-10 max-w-[80vw] mx-auto space-y-10 animate-in fade-in duration-500">
+      <header className="space-y-1">
+        <h1 className="text-3xl font-black tracking-tighter">Settings</h1>
+        <p className="text-sm text-muted-foreground/80">
+          Configure your workspace and monitor subscription usage.
         </p>
-      </div>
+      </header>
 
-      <Tabs defaultValue="subscription" className="space-y-6">
-        <TabsList className="bg-muted/50 p-1">
-          <TabsTrigger value="profile" className="gap-2">
-            <User className="size-4" /> My Profile
-          </TabsTrigger>
-          <TabsTrigger value="subscription" className="gap-2">
-            <CreditCard className="size-4" /> Subscription
-          </TabsTrigger>
-          <TabsTrigger value="preferences" className="gap-2">
-            <SettingsIcon className="size-4" /> Preferences
-          </TabsTrigger>
+      <Tabs defaultValue="subscription" className="space-y-8">
+        <TabsList className="bg-transparent border-b border-white/5 rounded-none p-0 h-auto gap-8 w-full justify-start">
+          {[
+            { value: 'profile', icon: User, label: 'My Profile' },
+            { value: 'subscription', icon: CreditCard, label: 'Subscription' },
+            { value: 'preferences', icon: SettingsIcon, label: 'Preferences' },
+          ].map((tab) => (
+            <TabsTrigger
+              key={tab.value}
+              value={tab.value}
+              className="
+        relative rounded-none bg-transparent px-0 pb-3 pt-0 text-sm font-medium transition-none 
+        shadow-none border-b-2 border-transparent text-muted-foreground
+
+        flex-none w-fit
+        
+        /* Active State Background Fixes */
+        data-[state=active]:bg-transparent 
+        dark:data-[state=active]:bg-transparent
+        
+        /* Hardcoded Active Text: Pure Black (Light) / Pure White (Dark) */
+        data-[state=active]:text-black 
+        dark:data-[state=active]:text-white 
+        
+        /* Hardcoded Active Border: Pure Black (Light) / Pure White (Dark) */
+        data-[state=active]:border-black
+        dark:data-[state=active]:border-white
+        
+        data-[state=active]:shadow-none
+        
+        /* Force remove any side/top borders from the base component */
+        data-[state=active]:border-x-0 
+        data-[state=active]:border-t-0
+        focus-visible:ring-0
+      "
+            >
+              <tab.icon className="size-4" />
+              {tab.label}
+            </TabsTrigger>
+          ))}
         </TabsList>
 
-        <TabsContent value="profile">
-          <ComingSoon icon={User} title="Profile Management" />
-        </TabsContent>
-
-        <TabsContent value="subscription" className="space-y-6">
+        <TabsContent
+          value="subscription"
+          className="space-y-8 focus-visible:outline-none"
+        >
           {isLoading ? (
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {[1, 2, 3].map((i) => (
-                <div
-                  key={i}
-                  className="h-44 bg-muted animate-pulse rounded-xl"
-                />
-              ))}
+            <div className="grid gap-6 md:grid-cols-2">
+              <div className="h-44 bg-muted animate-pulse rounded-2xl col-span-2" />
+              <div className="h-44 bg-muted animate-pulse rounded-2xl" />
+              <div className="h-44 bg-muted animate-pulse rounded-2xl" />
             </div>
           ) : sub ? (
             <>
-              {/* Plan Overview Card */}
-              <Card className="border-primary/10 bg-gradient-to-br from-background to-muted/30">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-6">
-                  <div className="space-y-1">
-                    <CardTitle className="text-2xl font-bold flex items-center gap-2">
-                      <Zap className="size-5 fill-primary text-primary" />
-                      {sub.plan_name} Plan
-                    </CardTitle>
-                    <CardDescription>
-                      Your workspace is currently on the{' '}
-                      <span className="font-bold text-foreground">
-                        {sub.plan_name}
-                      </span>{' '}
-                      tier.
-                    </CardDescription>
-                  </div>
-                  <Button
-                    onClick={() =>
-                      window.open(
-                        'mailto:support@yourdomain.com?subject=Upgrade Plan Request',
-                      )
-                    }
-                    className="gap-2"
-                  >
-                    <ArrowUpCircle className="size-4" />
-                    Upgrade Plan
-                  </Button>
-                </CardHeader>
-              </Card>
+              <PlanOverview sub={sub} />
 
-              {/* KPI Grid */}
               <div className="grid gap-6 md:grid-cols-2">
-                {/* Client Usage KPI Card */}
-                {(() => {
-                  const percent = (sub.client_count / sub.max_clients) * 100
-                  const status = getStatusConfig(percent)
-                  return (
-                    <Card
-                      className={cn(
-                        'transition-colors duration-300',
-                        status.border,
-                        status.bg,
-                      )}
-                    >
-                      <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-                        <CardTitle className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-                          Client Slots
-                        </CardTitle>
-                        <Users className={cn('size-4', status.text)} />
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        <div className="flex items-baseline justify-between">
-                          <div className="flex items-baseline gap-1">
-                            <span
-                              className={cn(
-                                'text-4xl font-black tracking-tighter',
-                                status.text,
-                              )}
-                            >
-                              {sub.client_count}
-                            </span>
-                            <span className="text-sm font-medium text-muted-foreground">
-                              / {sub.max_clients} used
-                            </span>
-                          </div>
-                          {percent >= 80 && (
-                            <AlertTriangle
-                              className={cn(
-                                'size-5 animate-pulse',
-                                status.text,
-                              )}
-                            />
-                          )}
-                        </div>
-                        <div className="space-y-2">
-                          <Progress
-                            value={percent}
-                            className="h-2 bg-muted/50"
-                            indicatorClassName={status.progress}
-                          />
-                          <div className="flex justify-between items-center">
-                            <p className="text-[11px] font-bold uppercase tracking-tight text-muted-foreground">
-                              {sub.max_clients - sub.client_count} slots
-                              available
-                            </p>
-                            <p
-                              className={cn(
-                                'text-[11px] font-black',
-                                status.text,
-                              )}
-                            >
-                              {percent.toFixed(0)}%
-                            </p>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )
-                })()}
+                <UsageCard
+                  title="Client Capacity"
+                  icon={Users}
+                  value={sub.client_count}
+                  max={sub.max_clients}
+                  unit="slots"
+                  percent={(sub.client_count / sub.max_clients) * 100}
+                  status={getStatusConfig(
+                    (sub.client_count / sub.max_clients) * 100,
+                  )}
+                />
 
-                {/* Storage Usage KPI Card */}
-                {(() => {
-                  const percent = sub.storage_display.percent
-                  const status = getStatusConfig(percent)
-                  return (
-                    <Card
-                      className={cn(
-                        'transition-colors duration-300',
-                        status.border,
-                        status.bg,
-                      )}
-                    >
-                      <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-                        <CardTitle className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-                          Storage Capacity
-                        </CardTitle>
-                        <Database className={cn('size-4', status.text)} />
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        <div className="flex items-baseline justify-between">
-                          <div className="flex items-baseline gap-1">
-                            <span
-                              className={cn(
-                                'text-4xl font-black tracking-tighter',
-                                status.text,
-                              )}
-                            >
-                              {
-                                formatStorage(sub.storage_used_bytes).split(
-                                  ' ',
-                                )[0]
-                              }
-                            </span>
-                            <span className="text-sm font-medium text-muted-foreground uppercase">
-                              {
-                                formatStorage(sub.storage_used_bytes).split(
-                                  ' ',
-                                )[1]
-                              }{' '}
-                              of {formatStorage(sub.storage_max_bytes)}
-                            </span>
-                          </div>
-                          {percent >= 80 && (
-                            <AlertTriangle
-                              className={cn(
-                                'size-5 animate-pulse',
-                                status.text,
-                              )}
-                            />
-                          )}
-                        </div>
-                        <div className="space-y-2">
-                          <Progress
-                            value={percent}
-                            className="h-2 bg-muted/50"
-                            indicatorClassName={status.progress}
-                          />
-                          <div className="flex justify-between items-center">
-                            <p className="text-[11px] font-bold uppercase tracking-tight text-muted-foreground">
-                              {formatStorage(
-                                sub.storage_max_bytes - sub.storage_used_bytes,
-                              )}{' '}
-                              remaining
-                            </p>
-                            <p
-                              className={cn(
-                                'text-[11px] font-black',
-                                status.text,
-                              )}
-                            >
-                              {percent.toFixed(1)}%
-                            </p>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )
-                })()}
+                <UsageCard
+                  title="Storage Limit"
+                  icon={Database}
+                  value={formatStorageValue(sub.storage_used_bytes)}
+                  max={formatStorageValue(sub.storage_max_bytes)}
+                  unit={getStorageUnit(sub.storage_max_bytes)}
+                  percent={sub.storage_display.percent}
+                  status={getStatusConfig(sub.storage_display.percent)}
+                />
               </div>
 
-              {/* Trust Badge */}
-              <div className="flex items-center gap-3 p-4 rounded-xl bg-primary/5 border border-primary/10">
-                <ShieldCheck className="size-5 text-primary shrink-0" />
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  Your subscription is managed by the platform administrator.
-                  For immediate billing inquiries, upgrades, or to request
-                  higher storage limits, please
+              <div className="flex items-center gap-3 p-4 rounded-2xl bg-muted/30 border border-white/5">
+                <ShieldCheck className="size-4 text-muted-foreground" />
+                <p className="text-[11px] text-muted-foreground leading-relaxed uppercase tracking-wider font-bold">
+                  Managed by administrator. For upgrades or higher limits,
                   <a
-                    href="mailto:support@yourdomain.com"
-                    className="ml-1 text-primary font-bold hover:underline"
+                    href="mailto:support@domain.com"
+                    className="ml-1 text-primary hover:underline"
                   >
                     contact support
                   </a>
@@ -319,19 +252,14 @@ export default function Settings() {
                 </p>
               </div>
             </>
-          ) : (
-            <Card className="border-destructive/20 bg-destructive/5">
-              <CardContent className="py-10 text-center">
-                <p className="text-sm font-medium text-destructive">
-                  No active subscription found. Please contact the administrator
-                  to assign a plan to your account.
-                </p>
-              </CardContent>
-            </Card>
-          )}
+          ) : null}
         </TabsContent>
 
-        <TabsContent value="preferences">
+        <TabsContent value="profile" className="focus-visible:outline-none">
+          <ComingSoon icon={User} title="Profile Settings" />
+        </TabsContent>
+
+        <TabsContent value="preferences" className="focus-visible:outline-none">
           <ComingSoon icon={SettingsIcon} title="Workspace Preferences" />
         </TabsContent>
       </Tabs>
