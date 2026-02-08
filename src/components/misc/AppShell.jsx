@@ -13,8 +13,9 @@ import { Loader2 } from 'lucide-react'
 
 export function AppShell({ user }) {
   const [agencySettings, setAgencySettings] = useState(null)
-  const [showWelcome, setShowWelcome] = useState(false) // New state for Carousel
-  const [isSetupOpen, setIsSetupOpen] = useState(false) // State to control the Setup Modal
+  const [showWelcome, setShowWelcome] = useState(false)
+  const [isSetupOpen, setIsSetupOpen] = useState(false)
+  const [setupMode, setSetupMode] = useState('full') // 'full' or 'branding'
   const [loading, setLoading] = useState(true)
 
   const checkAgencyStatus = async () => {
@@ -22,12 +23,11 @@ export function AppShell({ user }) {
     try {
       const settings = await fetchAgencySettings()
       setAgencySettings(settings)
-
-      // Only show welcome if they haven't set up an agency name yet
       const isIncomplete =
         !settings || !settings.agency_name || settings.agency_name.trim() === ''
+      const hasSeenWelcome = localStorage.getItem(`has_seen_welcome_${user.id}`)
 
-      if (isIncomplete) {
+      if (isIncomplete && !hasSeenWelcome) {
         setShowWelcome(true)
       }
     } catch (err) {
@@ -41,9 +41,18 @@ export function AppShell({ user }) {
     checkAgencyStatus()
   }, [user])
 
-  const handleStartSetup = () => {
-    setShowWelcome(false) // Hide carousel
-    setIsSetupOpen(true) // Show setup modal
+  const handleStartFullSetup = () => {
+    localStorage.setItem(`has_seen_welcome_${user.id}`, 'true')
+    setShowWelcome(false)
+    setSetupMode('full')
+    setIsSetupOpen(true)
+  }
+
+  const handleStartBrandingOnly = () => {
+    localStorage.setItem(`has_seen_welcome_${user.id}`, 'true')
+    setShowWelcome(false)
+    setSetupMode('branding')
+    setIsSetupOpen(true)
   }
 
   const handleSetupComplete = async () => {
@@ -51,13 +60,12 @@ export function AppShell({ user }) {
     await checkAgencyStatus()
   }
 
-  if (loading) {
+  if (loading)
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
         <Loader2 className="size-6 animate-spin text-primary" />
       </div>
     )
-  }
 
   return (
     <HeaderProvider>
@@ -68,33 +76,39 @@ export function AppShell({ user }) {
             user={user}
             agencySettings={agencySettings}
           />
-
           <div className="flex flex-1 flex-col w-full min-w-0">
             <AppHeader user={user} agencySettings={agencySettings} />
-
             <AppBody>
               <Outlet
                 context={{
                   user,
                   agencySettings,
                   refreshAgency: checkAgencyStatus,
-                  openAgencySetup: () => setIsSetupOpen(true), // Allow child pages to trigger setup
+                  openAgencySetup: () => {
+                    setSetupMode('full')
+                    setIsSetupOpen(true)
+                  },
                 }}
               />
             </AppBody>
           </div>
 
-          {/* 1. The Welcome Introduction */}
           <WelcomeCarousel
+            user={user}
             open={showWelcome}
-            onOpenChange={setShowWelcome}
-            onStartSetup={handleStartSetup}
+            onOpenChange={(val) => {
+              setShowWelcome(val)
+              if (!val)
+                localStorage.setItem(`has_seen_welcome_${user.id}`, 'true')
+            }}
+            onStartFullSetup={handleStartFullSetup}
+            onStartBrandingOnly={handleStartBrandingOnly}
           />
 
-          {/* 2. The Actual Setup Modal */}
           {isSetupOpen && (
             <AgencySetupModal
               user={user}
+              mode={setupMode}
               onComplete={handleSetupComplete}
               onClose={() => setIsSetupOpen(false)}
             />

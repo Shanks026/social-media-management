@@ -8,37 +8,43 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar'
 import { Skeleton } from '../ui/skeleton'
+import { Layout, ShieldCheck } from 'lucide-react' // Added Layout for fallback icon
+
+// Application Defaults
+const APP_NAME = 'Tertiary'
+const APP_TAGLINE = 'Development'
 
 export function AppSidebarHeader() {
   const { state, isMobile } = useSidebar()
   const { data: sub, isLoading } = useSubscription()
 
-  // This ensures we only hide things if we are on Desktop AND Collapsed
   const isCollapsed = state === 'collapsed' && !isMobile
 
+  // Logic: Check if branding is complete
+  const isBrandingComplete = sub?.agency_name && sub?.logo_url && sub?.plan_name
+
   const getInitials = (name) => {
-    return name
-      ? name
-          .split(' ')
-          .map((n) => n[0])
-          .join('')
-          .toUpperCase()
-          .slice(0, 2)
-      : '??'
+    const finalName = name || APP_NAME
+    return finalName
+      .split(' ')
+      .map((n) => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2)
   }
 
   return (
-    <SidebarHeader>
+    <SidebarHeader className="pt-4 px-2">
       <SidebarMenu>
         <SidebarMenuItem className="flex items-center">
           <SidebarMenuButton
             size="lg"
-            className="hover:bg-transparent cursor-default"
+            className="hover:bg-transparent cursor-default group"
           >
             {/* LOGO SECTION */}
-            <div className="flex size-9 items-center justify-center rounded-lg bg-primary text-primary-foreground shrink-0 overflow-hidden shadow-sm">
+            <div className="flex size-9 items-center justify-center rounded-xl bg-zinc-950 text-white shrink-0 overflow-hidden shadow-sm transition-all duration-500">
               {isLoading ? (
-                <Skeleton className="size-full bg-primary-foreground/20" />
+                <Skeleton className="size-full bg-white/10" />
               ) : sub?.logo_url ? (
                 <img
                   src={sub.logo_url}
@@ -46,27 +52,44 @@ export function AppSidebarHeader() {
                   className="size-full object-cover"
                 />
               ) : (
-                <span className="text-[10px] font-black uppercase tracking-tighter">
-                  {getInitials(sub?.agency_name)}
-                </span>
+                <div className="flex flex-col items-center justify-center">
+                  {/* If it's the app fallback, show an icon, otherwise initials */}
+                  {!sub?.agency_name ? (
+                    <div className="flex size-8 items-center justify-center rounded-md bg-primary text-primary-foreground font-semibold shrink-0">
+                      Te
+                    </div>
+                  ) : (
+                    <span className="text-[10px] font-black uppercase tracking-tighter">
+                      {getInitials(sub?.agency_name)}
+                    </span>
+                  )}
+                </div>
               )}
             </div>
 
-            {/* AGENCY & PLAN TEXT */}
+            {/* IDENTITY TEXT SECTION */}
             {!isCollapsed && (
-              <div className="flex flex-col text-left min-w-0">
+              <div className="flex flex-col text-left min-w-0 animate-in fade-in slide-in-from-left-2 duration-500">
                 {isLoading ? (
-                  <>
-                    <Skeleton className="h-3 w-20 mb-1" />
-                    <Skeleton className="h-2 w-12" />
-                  </>
+                  <div className="space-y-2">
+                    <Skeleton className="h-3 w-24" />
+                    <Skeleton className="h-2 w-16" />
+                  </div>
                 ) : (
                   <>
-                    <span className="text-sm font-bold truncate">
-                      {sub?.agency_name}
-                    </span>
-                    <span className="text-[11px] font-bold text-primary/60 truncate">
-                      {sub?.plan_name} Plan
+                    <div className="flex items-center gap-1.5 overflow-hidden">
+                      <span className="text-sm font-semibold text-foreground truncate tracking-tight">
+                        {sub?.agency_name || APP_NAME}
+                      </span>
+                      {isBrandingComplete && (
+                        <ShieldCheck
+                          size={12}
+                          className="text-primary shrink-0"
+                        />
+                      )}
+                    </div>
+                    <span className="text-xs text-muted-foreground truncate">
+                      {sub?.plan_name || APP_TAGLINE}
                     </span>
                   </>
                 )}
@@ -74,7 +97,7 @@ export function AppSidebarHeader() {
             )}
           </SidebarMenuButton>
 
-          {/* Trigger only visible when expanded on Desktop */}
+          {/* Trigger: Visible on Desktop when Expanded */}
           {!isCollapsed && !isMobile && (
             <div className="ml-auto shrink-0">
               <SidebarTrigger />
@@ -82,14 +105,10 @@ export function AppSidebarHeader() {
           )}
         </SidebarMenuItem>
 
-        {/* Trigger visible below logo when collapsed on Desktop */}
+        {/* Desktop-only: Show trigger below icon when collapsed */}
         {isCollapsed && (
-          <SidebarMenuItem>
-            <SidebarMenuButton tooltip="Expand" className="justify-center">
-              <div className="mt-2">
-                <SidebarTrigger />
-              </div>
-            </SidebarMenuButton>
+          <SidebarMenuItem className="flex justify-center mt-2">
+            <SidebarTrigger />
           </SidebarMenuItem>
         )}
       </SidebarMenu>

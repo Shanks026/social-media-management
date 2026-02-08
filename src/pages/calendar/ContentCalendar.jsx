@@ -170,9 +170,9 @@ export default function ContentCalendar({
     >
       <div className="flex items-center justify-between">
         <div className="space-y-1">
-          <h2 className="text-3xl font-bold tracking-tight text-foreground">
+          <h1 className="text-4xl font-light tracking-tight text-foreground">
             {calendarTitle}
-          </h2>
+          </h1>
           {/* <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em]">
             {view === 'month' ? 'Monthly Overview' : 'Weekly Schedule'}
           </p> */}

@@ -132,7 +132,7 @@ function ClientCard({ client, onOpen, onDelete }) {
     <>
       <Card
         onClick={() => onOpen(client)}
-        className="group relative cursor-pointer shadow-none border dark:border-none transition-all duration-300 py-2 border dark:bg-card/50 hover:bg-gray-100/50 dark:hover:bg-card h-full flex flex-col overflow-hidden"
+        className="group relative cursor-pointer shadow-none border dark:border-none transition-all duration-300 py-4 border dark:bg-card/50 hover:bg-gray-100/50 dark:hover:bg-card h-full flex flex-col overflow-hidden"
       >
         <CardContent className="p-6 flex flex-col flex-1 min-w-0">
           {/* Header */}
@@ -153,7 +153,7 @@ function ClientCard({ client, onOpen, onDelete }) {
               </div>
               <div className="space-y-2 min-w-0">
                 <div className="flex items-center gap-3">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white tracking-normal leading-none truncate">
+                  <h3 className="text-lg font-medium text-foreground tracking-tight leading-none truncate]">
                     {client.name}
                   </h3>
                   <TierBadge tier={client.tier} />
@@ -245,14 +245,9 @@ function ClientCard({ client, onOpen, onDelete }) {
                   </div>
                 </div>
               ) : (
-                <div className="flex items-center text-xs gap-2 text-muted-foreground whitespace-nowrap overflow-hidden">
-                  <CalendarDays className="size-4 shrink-0 opacity-60" />
-                  <div className="flex items-center gap-1.5 truncate">
-                    <span className="font-medium">Onboarded</span>
-                    <span className="font-bold text-gray-500 dark:text-gray-400">
-                      {joinedDateFormatted}
-                    </span>
-                  </div>
+                <div className="flex items-center text-xs gap-2 font-medium text-muted-foreground/60">
+                  <CalendarDays size={14} className="opacity-50" />
+                  <span>Joined {formatDate(client.created_at)}</span>
                 </div>
               )}
             </div>

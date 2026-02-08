@@ -8,110 +8,195 @@ import {
   Send,
   ShieldCheck,
   MousePointer2,
+  Rocket,
+  ArrowRight,
 } from 'lucide-react'
 
-const SLIDES = [
-  {
-    title: 'Welcome to your new Agency Hub',
-    description:
-      "Manage clients and social content without the chaos. Let's show you how to streamline your workflow.",
-    icon: <Sparkles className="size-10 text-primary" />,
-    color: 'bg-primary/[0.03]',
-  },
-  {
-    title: 'The Magic Link Workflow',
-    description:
-      'Send a single link to your clients where they can review, request revisions, or approve posts in seconds.',
-    icon: <MousePointer2 className="size-10 text-primary" />,
-    color: 'bg-primary/[0.03]',
-  },
-  {
-    title: 'Scale with Confidence',
-    description:
-      'A fast, skeletal interface designed to handle onboarding and scheduling as your agency grows.',
-    icon: <Send className="size-10 text-primary" />,
-    color: 'bg-primary/[0.03]',
-  },
-]
-
-export default function WelcomeCarousel({ open, onOpenChange, onStartSetup }) {
+export default function WelcomeCarousel({
+  open,
+  onOpenChange,
+  onStartFullSetup,
+  onStartBrandingOnly,
+  user,
+}) {
   const [current, setCurrent] = useState(0)
-  const isLast = current === SLIDES.length - 1
+
+  const userName = user?.user_metadata?.full_name?.split(' ')[0] || 'there'
+
+  const SLIDES = [
+    {
+      title: `Welcome to Tertiary, ${userName}`,
+      description:
+        "Tertiary is designed to be the backbone of your agency. Let's take a quick tour of your new workspace.",
+      icon: <Sparkles className="size-7 text-primary/70" />,
+      buttonText: 'See how it works',
+    },
+    {
+      title: 'The Magic Link workflow',
+      description:
+        'Forget email threads. Send a single link where clients can review, request revisions, and approve posts in seconds.',
+      icon: <MousePointer2 className="size-7 text-primary/70" />,
+      buttonText: 'Continue',
+    },
+    {
+      title: 'Built to scale',
+      description:
+        'Manage post versioning and automated scheduling through a skeletal, distraction-free interface.',
+      icon: <Send className="size-7 text-primary/70" />,
+      buttonText: 'Final step',
+    },
+  ]
+
+  const isChoiceSlide = current === SLIDES.length
+
+  const handleBack = () => {
+    setCurrent((prev) => Math.max(0, prev - 1))
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl sm:max-w-2xl p-0 overflow-hidden border-none bg-background shadow-2xl">
-        <div className="relative p-12 md:p-16 space-y-12">
+      <DialogContent className="!max-w-4xl p-0 overflow-hidden border-none bg-background shadow-xl">
+        <div className="relative p-10 md:p-14 min-h-[520px] flex flex-col justify-between">
           {/* Progress Indicator */}
-          <div className="flex gap-2 justify-start">
-            {SLIDES.map((_, i) => (
+          {!isChoiceSlide && (
+            <div className="flex gap-3 justify-start mb-8">
+              {SLIDES.map((_, i) => (
+                <div
+                  key={i}
+                  className={`h-0.5 transition-all duration-500 ${
+                    i === current ? 'w-10 bg-primary' : 'w-4 bg-muted'
+                  }`}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* Main Content Area */}
+          <div className="flex-1 flex flex-col justify-center">
+            {!isChoiceSlide ? (
               <div
-                key={i}
-                className={`h-1 rounded-full transition-all duration-500 ${
-                  i === current ? 'w-12 bg-primary' : 'w-4 bg-muted'
-                }`}
-              />
-            ))}
+                key={current}
+                className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-700"
+              >
+                <div className="size-14 rounded-xl flex items-center justify-center bg-primary/[0.04] border border-primary/10">
+                  {SLIDES[current].icon}
+                </div>
+
+                <div className="space-y-4">
+                  <h2 className="text-3xl font-medium tracking-tight text-foreground">
+                    {SLIDES[current].title}
+                  </h2>
+                  <p className="text-base text-muted-foreground leading-relaxed max-w-lg">
+                    {SLIDES[current].description}
+                  </p>
+                </div>
+              </div>
+            ) : (
+              /* --- Path Selection Slide --- */
+              <div className="space-y-10 animate-in fade-in zoom-in-95 duration-700">
+                <div className="space-y-2">
+                  <h2 className="text-3xl font-medium tracking-tight">
+                    Make it yours
+                  </h2>
+                  <p className="text-base text-muted-foreground">
+                    How would you like to begin your journey?
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-2">
+                  <button
+                    onClick={onStartFullSetup}
+                    className="group flex flex-col p-6 rounded-2xl border border-primary/10 bg-primary/[0.02] hover:bg-primary/[0.04] transition-all text-left space-y-4"
+                  >
+                    <div className="size-9 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <ShieldCheck className="size-4 text-primary" />
+                    </div>
+                    <div className="space-y-2">
+                      <h3 className="text-lg font-medium tracking-tight">
+                        Full setup
+                      </h3>
+                      <p className="text-xs leading-relaxed text-muted-foreground/80">
+                        Brand your workspace and create a free agency account
+                        for your own content.
+                      </p>
+                    </div>
+                    <div className="pt-2 flex items-center text-xs font-medium text-primary">
+                      Get started{' '}
+                      <ArrowRight className="ml-2 size-3 transition-transform group-hover:translate-x-1" />
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={onStartBrandingOnly}
+                    className="group flex flex-col p-6 rounded-2xl border border-muted bg-muted/[0.03] hover:bg-muted/[0.08] transition-all text-left space-y-4"
+                  >
+                    <div className="size-9 rounded-lg bg-muted flex items-center justify-center">
+                      <Sparkles className="size-4 text-muted-foreground" />
+                    </div>
+                    <div className="space-y-2">
+                      <h3 className="text-lg font-medium tracking-tight">
+                        Visual identity
+                      </h3>
+                      <p className="text-xs leading-relaxed text-muted-foreground/80">
+                        Update the logo and name in your sidebar. You can create
+                        an internal account later.
+                      </p>
+                    </div>
+                    <div className="pt-2 flex items-center text-xs font-medium text-muted-foreground">
+                      Set identity{' '}
+                      <ArrowRight className="ml-2 size-3 transition-transform group-hover:translate-x-1" />
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => onOpenChange(false)}
+                    className="group flex flex-col p-6 rounded-2xl border border-muted bg-muted/[0.03] hover:bg-muted/[0.08] transition-all text-left space-y-4"
+                  >
+                    <div className="size-9 rounded-lg bg-muted flex items-center justify-center">
+                      <Rocket className="size-4 text-muted-foreground" />
+                    </div>
+                    <div className="space-y-2">
+                      <h3 className="text-lg font-medium tracking-tight">
+                        Explore first
+                      </h3>
+                      <p className="text-xs leading-relaxed text-muted-foreground/80">
+                        Head straight to your client list. You can customize
+                        your branding anytime.
+                      </p>
+                    </div>
+                    <div className="pt-2 flex items-center text-xs font-medium text-muted-foreground">
+                      Skip for now{' '}
+                      <ArrowRight className="ml-2 size-3 transition-transform group-hover:translate-x-1" />
+                    </div>
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* Content Area */}
-          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-            <div
-              className={`size-20 rounded-3xl flex items-center justify-center ${SLIDES[current].color} border border-primary/5`}
-            >
-              {SLIDES[current].icon}
-            </div>
-
-            <div className="space-y-4">
-              <h2 className="text-4xl md:text-5xl font-black tracking-tighter leading-[0.9]">
-                {SLIDES[current].title}
-              </h2>
-              <p className="text-lg text-muted-foreground font-medium leading-relaxed max-w-md">
-                {SLIDES[current].description}
-              </p>
-            </div>
-          </div>
-
-          {/* Navigation Actions */}
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-6 pt-8 border-t border-muted/30">
-            <div className="flex items-center gap-2">
+          {/* Footer Navigation */}
+          <div className="flex items-center justify-between pt-10 border-t border-muted/20">
+            <div className="flex items-center">
               {current > 0 && (
                 <Button
                   variant="ghost"
-                  onClick={() => setCurrent((prev) => prev - 1)}
-                  
+                  onClick={handleBack}
+                  className="text-muted-foreground hover:text-foreground hover:bg-transparent font-medium px-0 mr-8"
                 >
-                  <ChevronLeft className="size-4 mr-1" /> Back
+                  <ChevronLeft className="size-4 mr-2" /> Back
                 </Button>
               )}
             </div>
 
-            <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
-              {isLast ? (
-                <>
-                  <Button
-                    variant="ghost"
-                    onClick={() => onOpenChange(false)}
-                   
-                  >
-                    Start Managing Clients
-                  </Button>
-                  <Button
-                    onClick={onStartSetup}
-                  
-                  >
-                    Brand your Agency <ShieldCheck className="ml-2 size-4" />
-                  </Button>
-                </>
-              ) : (
-                <Button
-                  onClick={() => setCurrent((prev) => prev + 1)}
-        
-                >
-                  Next <ChevronRight className="size-4 ml-1" />
-                </Button>
-              )}
-            </div>
+            {!isChoiceSlide && (
+              <Button
+                onClick={() => setCurrent((prev) => prev + 1)}
+                className="h-10 px-6 bg-foreground text-background hover:bg-foreground/90 font-medium rounded-lg transition-all"
+              >
+                {SLIDES[current].buttonText}{' '}
+                <ChevronRight className="size-4 ml-2" />
+              </Button>
+            )}
           </div>
         </div>
       </DialogContent>

@@ -94,6 +94,7 @@ export default function ManagementTab({ client }) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clients'] })
       queryClient.invalidateQueries({ queryKey: ['subscription'] })
+      queryClient.invalidateQueries({ queryKey: ['internal-client'] })
       toast.success('Client workspace deleted')
       navigate('/clients')
     },

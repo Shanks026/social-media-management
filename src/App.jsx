@@ -9,6 +9,7 @@ import PostDetails from './pages/posts/postDetails/PostDetails'
 import PublicReview from './pages/PublicReview'
 import Settings from './pages/Settings'
 import SocialCalendar from './pages/calendar/ContentCalendar'
+import MyOrganization from './pages/MyOrganization'
 
 function AppRoutes() {
   const { session, user } = useAuth()
@@ -22,6 +23,7 @@ function AppRoutes() {
       {session ? (
         <Route element={<AppShell user={user} />}>
           <Route path="/clients" element={<Clients />} />
+          <Route path="/myorganazation" element={<MyOrganization />} />
           <Route path="/clients/:clientId" element={<ClientDetails />} />
           <Route
             path="/clients/:clientId/posts/:postId"

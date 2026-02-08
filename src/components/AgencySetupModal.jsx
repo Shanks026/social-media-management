@@ -3,7 +3,7 @@ import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { supabase } from '@/lib/supabase'
-import { completeAgencySetup } from '@/api/agency'
+import { completeFullAgencySetup, setupBrandingOnly } from '@/api/agency'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 
@@ -28,17 +28,14 @@ import {
 } from '@/components/ui/select'
 import {
   Loader2,
-  X,
-  Check,
-  Camera,
   ImagePlus,
-  AlertCircle,
   Lock,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react'
 
-// Shared Components/Constants
+// Shared Components
 import PlatformSelector from '@/pages/clients/PlatformSelector'
-import { INDUSTRY_OPTIONS } from '@/lib/industries'
 
 // --- SCHEMA ---
 const setupSchema = z.object({
@@ -51,12 +48,7 @@ const setupSchema = z.object({
   social_links: z.object({}).catchall(
     z.object({
       handle: z.string().trim().min(1, 'Handle is required'),
-      url: z
-        .string()
-        .trim()
-        .url('Must be a valid URL (https://...)')
-        .or(z.string().length(0))
-        .optional(),
+      url: z.string().trim().url().or(z.string().length(0)).optional(),
     }),
   ),
   email: z.string().min(1, 'Email is required').email('Invalid email address'),
@@ -81,7 +73,13 @@ const STEPS = [
   },
 ]
 
-export function AgencySetupModal({ user, onComplete }) {
+export function AgencySetupModal({
+  user,
+  mode = 'full',
+  initialData = null, // <--- New Prop for Path B Pre-filling
+  onComplete,
+  onClose,
+}) {
   const [currentStep, setCurrentStep] = useState(1)
   const [isUploading, setIsUploading] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -90,15 +88,16 @@ export function AgencySetupModal({ user, onComplete }) {
   const form = useForm({
     resolver: zodResolver(setupSchema),
     mode: 'onSubmit',
+    // Pre-fill form with initialData (Path B) if available
     defaultValues: {
-      name: '',
-      logo_url: '',
+      name: initialData?.agency_name || '',
+      logo_url: initialData?.logo_url || '',
       status: 'ACTIVE',
-      tier: 'PRO', // LOCKED
-      industry: 'Marketing Agency', // LOCKED
+      tier: 'PRO',
+      industry: 'Marketing Agency',
       platforms: [],
-      social_links: {},
-      email: user?.email || '', // LOCKED
+      social_links: initialData?.social_links || {}, // Pre-fill links if they exist
+      email: user?.email || '',
       mobile_number: '+91',
       description: '',
     },
@@ -117,7 +116,7 @@ export function AgencySetupModal({ user, onComplete }) {
       if (!selectedPlatforms.includes(key)) delete nextSocials[key]
     })
     form.setValue('social_links', nextSocials)
-  }, [selectedPlatforms, form])
+  }, [selectedPlatforms])
 
   const handleFileUpload = async (e) => {
     const file = e.target.files?.[0]
@@ -146,111 +145,71 @@ export function AgencySetupModal({ user, onComplete }) {
   const onFormSubmit = async (data) => {
     setIsSubmitting(true)
     try {
-      await completeAgencySetup(data)
-      toast.success('Agency workspace ready!')
+      if (mode === 'branding') {
+        await setupBrandingOnly(data)
+        toast.success('Visual identity updated!')
+      } else {
+        await completeFullAgencySetup(data)
+        toast.success('Agency workspace ready!')
+      }
       onComplete()
     } catch (error) {
       console.error(error)
-      toast.error('Setup failed. Please check if your user session is active.')
+      toast.error('Submission failed. Check your network or permissions.')
     } finally {
       setIsSubmitting(false)
     }
   }
 
-  const onFormError = (err) => {
-    const firstErrorStep = STEPS.find((step) =>
-      step.fields.some(
-        (field) => err[field] || (field === 'social_links' && err.social_links),
-      ),
-    )
-    if (firstErrorStep) {
-      setCurrentStep(firstErrorStep.id)
-      toast.error(`Please fix errors in the ${firstErrorStep.title} step`)
-    }
+  const handleNext = async () => {
+    const fields = STEPS[currentStep - 1].fields
+    const isValid = await form.trigger(fields)
+    if (isValid) setCurrentStep((prev) => Math.min(STEPS.length, prev + 1))
   }
 
-  const stepHasError = (id) =>
-    STEPS.find((s) => s.id === id)?.fields.some(
-      (f) => errors[f] || (f === 'social_links' && errors.social_links),
-    )
-
   return (
-    <Dialog open={true}>
-      <DialogContent className="sm:max-w-xl p-0 overflow-hidden bg-background dark:bg-zinc-950 shadow-2xl border-none">
-        <div className="p-8">
-          <DialogHeader className="mb-6">
-            <DialogTitle className="text-2xl font-bold tracking-tight">
-              Setup Your Agency
+    <Dialog open={true} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-xl p-0 overflow-hidden bg-background shadow-xl border-none">
+        <div className="p-10">
+          <DialogHeader className="mb-8 text-left">
+            <DialogTitle className="text-3xl font-medium tracking-tight">
+              {mode === 'branding'
+                ? 'Brand your workspace'
+                : 'Setup your agency'}
             </DialogTitle>
-            <DialogDescription>
-              Step {currentStep} of 3: {STEPS[currentStep - 1].title}
+            <DialogDescription className="text-base text-muted-foreground mt-2">
+              Step {currentStep} of 3 — {STEPS[currentStep - 1].title}
             </DialogDescription>
           </DialogHeader>
 
-          {/* STEPPER */}
-          <div className="flex items-center justify-between mb-8 px-2">
-            {STEPS.map((step) => {
-              const isError = stepHasError(step.id)
-              const isActive = currentStep === step.id
-              const isCompleted = currentStep > step.id
-              return (
-                <div key={step.id} className="flex items-center gap-2">
-                  <div
-                    className={cn(
-                      'size-8 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-all',
-                      isError
-                        ? 'bg-destructive border-destructive text-white animate-pulse'
-                        : isActive
-                          ? 'bg-primary border-primary text-primary-foreground shadow-sm'
-                          : isCompleted
-                            ? 'border-primary text-primary'
-                            : 'border-muted text-muted-foreground',
-                    )}
-                  >
-                    {isError ? (
-                      <AlertCircle size={14} />
-                    ) : isCompleted ? (
-                      <Check size={14} strokeWidth={3} />
-                    ) : (
-                      step.id
-                    )}
-                  </div>
-                  <span
-                    className={cn(
-                      'text-xs font-semibold hidden sm:inline',
-                      isError
-                        ? 'text-destructive'
-                        : isActive
-                          ? 'text-foreground'
-                          : 'text-muted-foreground',
-                    )}
-                  >
-                    {step.title}
-                  </span>
-                  {step.id < 3 && (
-                    <div className="w-8 md:w-12 h-px bg-muted mx-1" />
-                  )}
-                </div>
-              )
-            })}
+          <div className="flex items-center justify-start gap-3 mb-10">
+            {STEPS.map((step) => (
+              <div
+                key={step.id}
+                className={cn(
+                  'h-0.5 transition-all duration-500 rounded-full',
+                  currentStep === step.id ? 'w-10 bg-primary' : 'w-4 bg-muted',
+                )}
+              />
+            ))}
           </div>
 
           <form
-            onSubmit={form.handleSubmit(onFormSubmit, onFormError)}
-            className="space-y-6"
+            onSubmit={form.handleSubmit(onFormSubmit)}
+            className="space-y-8"
           >
-            <div className="min-h-[350px]">
-              {/* STEP 1 */}
+            <div className="min-h-[380px]">
+              {/* STEP 1: BRANDING */}
               {currentStep === 1 && (
-                <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
-                  <div className="flex flex-col items-center justify-center py-2">
+                <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                  <div className="flex flex-col items-center justify-center">
                     <div
                       onClick={() => fileInputRef.current?.click()}
                       className={cn(
-                        'group relative size-32 rounded-full border-2 border-dashed transition-all cursor-pointer flex items-center justify-center overflow-hidden',
+                        'group relative size-28 rounded-2xl border border-dashed transition-all cursor-pointer flex items-center justify-center overflow-hidden',
                         form.watch('logo_url')
                           ? 'border-primary/20'
-                          : 'border-muted-foreground/25',
+                          : 'border-muted-foreground/20',
                         errors.logo_url &&
                           'border-destructive bg-destructive/5',
                       )}
@@ -261,14 +220,14 @@ export function AgencySetupModal({ user, onComplete }) {
                           className="size-full object-cover"
                         />
                       ) : (
-                        <div className="text-center text-muted-foreground group-hover:text-primary transition-colors">
+                        <div className="text-center text-muted-foreground">
                           {isUploading ? (
-                            <Loader2 className="size-6 animate-spin text-primary" />
+                            <Loader2 className="size-5 animate-spin text-primary" />
                           ) : (
-                            <ImagePlus className="size-6 mx-auto" />
+                            <ImagePlus className="size-5 mx-auto opacity-40" />
                           )}
-                          <span className="text-[10px] font-bold uppercase mt-1 block">
-                            Logo *
+                          <span className="text-[10px] font-medium mt-2 block tracking-tight">
+                            Logo
                           </span>
                         </div>
                       )}
@@ -280,33 +239,27 @@ export function AgencySetupModal({ user, onComplete }) {
                       accept="image/*"
                       onChange={handleFileUpload}
                     />
-                    {errors.logo_url && (
-                      <p className="text-[10px] text-destructive mt-2">
-                        {errors.logo_url.message}
-                      </p>
-                    )}
                   </div>
 
-                  <div className="space-y-4">
+                  <div className="space-y-5">
                     <div className="space-y-2">
-                      <Label className="text-xs font-semibold">
-                        Agency Name *
-                      </Label>
+                      <Label className="text-sm font-medium">Agency name</Label>
                       <Input
                         {...form.register('name')}
                         placeholder="e.g. Nexus Media"
+                        className="h-11"
                       />
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label className="text-xs font-semibold">
-                          Internal Status
+                        <Label className="text-sm font-medium">
+                          Internal status
                         </Label>
                         <Select
                           value={form.watch('status')}
                           onValueChange={(v) => form.setValue('status', v)}
                         >
-                          <SelectTrigger>
+                          <SelectTrigger className="h-11">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -315,14 +268,14 @@ export function AgencySetupModal({ user, onComplete }) {
                           </SelectContent>
                         </Select>
                       </div>
-                      <div className="space-y-2 opacity-80">
-                        <Label className="text-xs font-semibold flex items-center gap-1">
-                          Workspace Tier <Lock size={10} />
+                      <div className="space-y-2 opacity-60">
+                        <Label className="text-sm font-medium flex items-center gap-1">
+                          Workspace Tier <Lock size={12} />
                         </Label>
                         <Input
                           disabled
-                          value="PRO"
-                          className="bg-muted cursor-not-allowed h-10"
+                          value={form.watch('tier')}
+                          className="bg-muted h-11"
                         />
                       </div>
                     </div>
@@ -330,22 +283,22 @@ export function AgencySetupModal({ user, onComplete }) {
                 </div>
               )}
 
-              {/* STEP 2 */}
+              {/* STEP 2: BUSINESS */}
               {currentStep === 2 && (
-                <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
-                  <div className="space-y-2 opacity-80">
-                    <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
-                      Industry Vertical <Lock size={10} />
+                <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                  <div className="space-y-2 opacity-60">
+                    <Label className="text-sm font-medium flex items-center gap-1">
+                      Industry <Lock size={12} />
                     </Label>
                     <Input
                       disabled
                       value="Marketing Agency"
-                      className="bg-muted cursor-not-allowed"
+                      className="bg-muted h-11"
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                      Service Platforms
+                  <div className="space-y-4">
+                    <Label className="text-sm font-medium">
+                      Service platforms
                     </Label>
                     <Controller
                       name="platforms"
@@ -363,71 +316,71 @@ export function AgencySetupModal({ user, onComplete }) {
                 </div>
               )}
 
-              {/* STEP 3 */}
+              {/* STEP 3: CONTACT */}
               {currentStep === 3 && (
-                <div className="space-y-5 animate-in fade-in slide-in-from-right-4 duration-300">
+                <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2 opacity-80">
-                      <Label className="text-xs font-semibold flex items-center gap-1">
-                        Primary Email <Lock size={10} />
+                    <div className="space-y-2 opacity-60">
+                      <Label className="text-sm font-medium flex items-center gap-1">
+                        Account email <Lock size={12} />
                       </Label>
                       <Input
                         disabled
                         value={user?.email}
-                        className="bg-muted cursor-not-allowed"
+                        className="bg-muted h-11"
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label className="text-xs font-semibold">
-                        Agency Phone *
+                      <Label className="text-sm font-medium">
+                        Phone number
                       </Label>
                       <Input
                         {...form.register('mobile_number')}
                         placeholder="+91"
+                        className="h-11"
                       />
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-xs font-semibold">
-                      Workspace Notes
-                    </Label>
+                    <Label className="text-sm font-medium">Notes</Label>
                     <Textarea
                       {...form.register('description')}
-                      placeholder="Vision for your own agency content..."
-                      className="min-h-[140px] resize-none"
+                      placeholder="Vision for your agency..."
+                      className="min-h-[120px] resize-none"
                     />
                   </div>
                 </div>
               )}
             </div>
 
-            <div className="flex justify-between items-center pt-6 border-t border-muted/50">
+            <div className="flex justify-between items-center pt-8 border-t border-muted/20">
               <Button
                 type="button"
                 variant="ghost"
                 onClick={() => setCurrentStep((s) => s - 1)}
                 disabled={currentStep === 1}
+                className="font-medium hover:bg-transparent px-0"
               >
-                Back
+                <ChevronLeft className="size-4 mr-2" /> Back
               </Button>
               {currentStep < 3 ? (
                 <Button
                   type="button"
-                  onClick={() => setCurrentStep((s) => s + 1)}
-                  className="min-w-[120px]"
+                  onClick={handleNext}
+                  className="h-10 px-8 font-medium rounded-lg"
                 >
-                  Continue
+                  Continue <ChevronRight className="size-4 ml-2" />
                 </Button>
               ) : (
                 <Button
                   type="submit"
                   disabled={isSubmitting}
-                  className="min-w-[140px]"
+                  className="h-10 px-10 font-medium rounded-lg"
                 >
                   {isSubmitting ? (
-                    <Loader2 className="mr-2 size-4 animate-spin" />
+                    <Loader2 className="size-4 animate-spin" />
                   ) : (
-                    'Complete Setup'
+                    'Complete setup'
                   )}
                 </Button>
               )}

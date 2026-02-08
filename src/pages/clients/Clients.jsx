@@ -6,15 +6,15 @@ import {
   useOutletContext,
 } from 'react-router-dom'
 import { toast } from 'sonner'
-import { UserStar, X, Lock } from 'lucide-react' // Added Lock icon
+import { UserStar, X, Lock, Plus, Search } from 'lucide-react'
 
 import { fetchClients, deleteClient } from '@/api/clients'
 import { useHeader } from '@/components/misc/header-context'
-import { useSubscription } from '../../api/useSubscription' // Added Subscription Hook
+import { useSubscription } from '../../api/useSubscription'
 
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import { cn } from '@/lib/utils' // Added cn utility
+import { cn } from '@/lib/utils'
 import {
   Empty,
   EmptyContent,
@@ -42,7 +42,6 @@ export default function Clients() {
   const { setHeader } = useHeader()
   const { user } = useOutletContext()
 
-  // 1. Fetch Subscription Data
   const { data: subscription, isLoading: isSubLoading } = useSubscription()
 
   useEffect(() => {
@@ -61,12 +60,9 @@ export default function Clients() {
   const industry = searchParams.get('industry') || 'all'
   const tier = searchParams.get('tier') || 'all'
 
-  // 2. Gatekeeper Logic for Creating Clients
   const handleCreateClick = () => {
     if (subscription?.is_client_limit_reached) {
-      toast.error(
-        `Plan limit reached (${subscription.max_clients} clients). Please upgrade to add more.`,
-      )
+      toast.error(`Plan limit reached. Please upgrade to add more.`)
       return
     }
     setCreateOpen(true)
@@ -84,13 +80,12 @@ export default function Clients() {
 
   const isFilterActive =
     search !== '' || urgency !== 'all' || industry !== 'all' || tier !== 'all'
-
   const resetFilters = () => setSearchParams({})
-  const { data, isLoading, isPlaceholderData, error } = useQuery({
+
+  const { data, isLoading, error } = useQuery({
     queryKey: ['clients', user.id, { search, urgency, industry, tier }],
     queryFn: () => fetchClients({ search, urgency, industry, tier }),
     enabled: !!user?.id,
-    placeholderData: (previousData) => previousData,
   })
 
   const clients = data?.clients || []
@@ -100,7 +95,6 @@ export default function Clients() {
     mutationFn: deleteClient,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clients'] })
-      // Also invalidate subscription to update the count immediately
       queryClient.invalidateQueries({ queryKey: ['subscription'] })
     },
   })
@@ -126,12 +120,15 @@ export default function Clients() {
 
   if (isLoading) {
     return (
-      <div className="p-8 space-y-6">
+      <div className="p-8 space-y-8 animate-pulse">
         <div className="flex items-center justify-between">
-          <Skeleton className="h-8 w-40" />
-          <Skeleton className="h-10 w-32" />
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-48 rounded-md" />
+            <Skeleton className="h-4 w-32 rounded-md" />
+          </div>
+          <Skeleton className="h-11 w-36 rounded-full" />
         </div>
-        <div className="grid gap-4 grid-cols-1 lg:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
           {Array.from({ length: 6 }).map((_, i) => (
             <ClientCardSkeleton key={i} />
           ))}
@@ -140,43 +137,52 @@ export default function Clients() {
     )
   }
 
-  if (error) {
-    return (
-      <div className="p-8 text-red-600 font-medium italic">
-        Failed to load clients: {error.message}
-      </div>
-    )
-  }
-
   return (
-    <div className="p-8 space-y-6">
-      {/* --- ROW 1: TITLE & PRIMARY ACTION --- */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <h1 className="text-3xl font-bold tracking-tight">Clients</h1>
+    <div className="min-h-full bg-background selection:bg-primary/10">
+      <div className="px-8 pt-8 pb-20 space-y-8 max-w-[1600px] mx-auto">
+        {/* --- SECTION 1: HEADER & PRIMARY ACTION --- */}
+        <div className="flex items-end justify-between">
+          <div className="space-y-1">
+            <h1 className="text-4xl font-light tracking-tight text-foreground">
+              Clients{' '}
+              <span className="text-muted-foreground/50 ml-2 font-extralight">
+                {clients.length}
+              </span>
+            </h1>
+            <p className="text-sm text-muted-foreground font-light">
+              Manage your active partnerships and social pipelines.
+            </p>
+          </div>
 
-        {/* 3. Updated Create Button with Limit Logic */}
-        <Button
-          onClick={handleCreateClick}
-          disabled={isSubLoading}
-          className={cn(
-            'transition-all',
-            subscription?.is_client_limit_reached &&
-              'opacity-80 bg-muted-foreground hover:bg-muted-foreground cursor-not-allowed',
-          )}
-        >
-          {subscription?.is_client_limit_reached ? (
-            <>
-              <Lock className="mr-2 h-4 w-4" />
-              Limit Reached ({subscription.max_clients})
-            </>
-          ) : (
-            'Create Client'
-          )}
-        </Button>
-      </div>
+          <Button
+            onClick={handleCreateClick}
+            disabled={isSubLoading}
+            size="lg"
+            className={cn(
+              'rounded-full px-6 shadow-sm transition-all duration-300 gap-2',
+              subscription?.is_client_limit_reached
+                ? 'bg-secondary text-secondary-foreground hover:bg-secondary/80 border border-border'
+                : 'bg-primary text-primary-foreground hover:shadow-md',
+            )}
+          >
+            {subscription?.is_client_limit_reached ? (
+              <>
+                <Lock className="h-4 w-4" />
+                <span className="text-xs uppercase tracking-wider font-bold">
+                  Limit Reached
+                </span>
+              </>
+            ) : (
+              <>
+                <Plus className="h-5 w-5" />
+                <span className="font-medium">Create Client</span>
+              </>
+            )}
+          </Button>
+        </div>
 
-      {/* ROW 2: TOOLBOX */}
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
+        {/* --- SECTION 2: THE TOOLBAR (Google Search Aesthetic) --- */}
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
         {/* LEFT: Search + Filters */}
         <div className="flex flex-wrap items-center gap-2">
           <SearchBar value={search} onChange={(v) => updateParams('q', v)} />
@@ -202,61 +208,63 @@ export default function Clients() {
         </div>
       </div>
 
-      {/* --- GRID SECTION --- */}
-      {clients.length === 0 ? (
-        <Empty className="py-20">
-          <EmptyHeader>
-            <EmptyMedia variant="icon">
-              <UserStar />
-            </EmptyMedia>
-            <EmptyTitle>
-              {isFilterActive ? 'No results found' : 'Ready to scale?'}
-            </EmptyTitle>
-            <EmptyDescription>
-              {isFilterActive
-                ? "Try adjusting your filters or search terms to find what you're looking for."
-                : "You haven't added any clients yet. Onboard your first partner to start managing their social pipeline."}
-            </EmptyDescription>
-          </EmptyHeader>
-          <EmptyContent>
-            {isFilterActive ? (
-              <Button variant="outline" onClick={resetFilters}>
-                Clear all filters
-              </Button>
-            ) : (
-              // 4. Updated Empty State Button as well
-              <Button
-                onClick={handleCreateClick}
-                size="lg"
-                disabled={isSubLoading || subscription?.is_client_limit_reached}
-              >
-                {subscription?.is_client_limit_reached ? (
-                  <>
-                    <Lock className="mr-2 h-4 w-4" /> Plan Limit Reached
-                  </>
-                ) : (
-                  'Create Your First Client'
-                )}
-              </Button>
-            )}
-          </EmptyContent>
-        </Empty>
-      ) : (
-        <div className="grid gap-4 grid-cols-[repeat(auto-fill,minmax(400px,1fr))] pb-20">
-          {clients.map((client) => (
-            <ClientCard
-              key={client.id}
-              client={client}
-              onOpen={handleOpenClient}
-              onDelete={handleDelete}
-            />
-          ))}
-        </div>
-      )}
+        {/* --- SECTION 3: THE CONTENT GRID --- */}
+        {clients.length === 0 ? (
+          <Empty className="py-32 bg-card/20 rounded-[32px] border border-dashed border-border/60">
+            <EmptyHeader className="flex flex-col items-center">
+              <div className="h-20 w-20 rounded-full bg-primary/5 flex items-center justify-center mb-6">
+                <UserStar className="size-10 text-primary/40" />
+              </div>
+              <EmptyTitle className="text-2xl font-light">
+                {isFilterActive
+                  ? 'No clients match your criteria'
+                  : 'Ready to scale your agency?'}
+              </EmptyTitle>
+              <EmptyDescription className="max-w-md text-center font-light">
+                {isFilterActive
+                  ? 'Adjust your filters or search terms to find specific client profiles.'
+                  : 'Onboard your first partner to start managing their content strategy and workflow.'}
+              </EmptyDescription>
+            </EmptyHeader>
+            <EmptyContent className="mt-8">
+              {isFilterActive ? (
+                <Button
+                  variant="ghost"
+                  onClick={resetFilters}
+                  className="rounded-full gap-2"
+                >
+                  <X className="size-4" /> Clear all filters
+                </Button>
+              ) : (
+                <Button
+                  onClick={handleCreateClick}
+                  size="xl"
+                  disabled={
+                    isSubLoading || subscription?.is_client_limit_reached
+                  }
+                  className="rounded-full px-10 h-14"
+                >
+                  Onboard Your First Client
+                </Button>
+              )}
+            </EmptyContent>
+          </Empty>
+        ) : (
+          <div className="grid gap-6 grid-cols-[repeat(auto-fill,minmax(420px,1fr))] animate-in fade-in duration-500">
+            {clients.map((client) => (
+              <ClientCard
+                key={client.id}
+                client={client}
+                onOpen={handleOpenClient}
+                onDelete={handleDelete}
+              />
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* --- MODALS --- */}
       <CreateClient open={createOpen} onOpenChange={setCreateOpen} />
-
       {editClient && (
         <EditClient client={editClient} onClose={() => setEditClient(null)} />
       )}

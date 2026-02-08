@@ -177,3 +177,20 @@ export async function fetchClientById(id) {
   if (error) throw error
   return data
 }
+
+export async function fetchInternalClient() {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return null
+
+  const { data, error } = await supabase
+    .from('clients')
+    .select('*')
+    .eq('user_id', user.id)
+    .eq('is_internal', true)
+    .maybeSingle()
+
+  if (error) throw error
+  return data
+}

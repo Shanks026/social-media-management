@@ -238,7 +238,7 @@ export default function DraftPostList({ clientId }) {
 
   return (
     <TooltipProvider>
-      <div className="grid gap-4 grid-cols-[repeat(auto-fill,minmax(350px,1fr))] pb-8">
+      <div className="grid gap-4 grid-cols-[repeat(auto-fill,minmax(400px,1fr))]">
         {data.map((post) => {
           const platforms = Array.isArray(post.platform)
             ? post.platform
