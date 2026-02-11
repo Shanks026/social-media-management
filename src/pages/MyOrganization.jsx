@@ -93,7 +93,7 @@ export default function MyOrganization() {
 
   return (
     <div className="h-full bg-background overflow-y-auto selection:bg-primary/10">
-      <div className="px-8 pt-8 pb-20 space-y-8 max-w-[1600px] mx-auto">
+      <div className="px-8 pt-8 pb-20 space-y-8 max-w-[1400px] mx-auto">
         {/* PAGE HEADER */}
         <div className="space-y-1">
           <h1 className="text-3xl font-light tracking-tight text-foreground">

@@ -67,6 +67,21 @@ const STATUS_CONFIG = {
     className:
       'bg-slate-100 text-slate-800 dark:bg-slate-500/20 dark:text-slate-400',
   },
+  MONTHLY: {
+    label: 'Monthly',
+    className:
+      'bg-cyan-100 text-cyan-800 dark:bg-cyan-500/10 dark:text-cyan-400',
+  },
+  QUARTERLY: {
+    label: 'Quarterly',
+    className:
+      'bg-indigo-100 text-indigo-800 dark:bg-indigo-500/10 dark:text-indigo-400',
+  },
+  YEARLY: {
+    label: 'Yearly',
+    className:
+      'bg-violet-100 text-violet-800 dark:bg-violet-500/10 dark:text-violet-400',
+  },
 }
 
 export default function StatusBadge({ status }) {
@@ -78,7 +93,7 @@ export default function StatusBadge({ status }) {
       variant="none"
       className={`flex items-center gap-2 rounded-full px-2.5 py-1 border-none shadow-none transition-colors ${config.className}`}
     >
-      <Icon className="size-4 shrink-0" aria-hidden />
+      {Icon && <Icon className="size-4 shrink-0" aria-hidden />}
       <span className="text-xs font-semibold whitespace-nowrap">
         {config.label}
       </span>

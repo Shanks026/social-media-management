@@ -10,6 +10,7 @@ import PublicReview from './pages/PublicReview'
 import Settings from './pages/Settings'
 import SocialCalendar from './pages/calendar/ContentCalendar'
 import MyOrganization from './pages/MyOrganization'
+import Expenses from './pages/expenses/Expenses'
 
 function AppRoutes() {
   const { session, user } = useAuth()
@@ -30,6 +31,7 @@ function AppRoutes() {
             element={<PostDetails />}
           />
           <Route path="/calendar" element={<SocialCalendar />} />
+          <Route path="/expenses" element={<Expenses />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="*" element={<Navigate to="/clients" replace />} />
         </Route>

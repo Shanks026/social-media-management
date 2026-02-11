@@ -35,9 +35,9 @@ export default function ClientProfileView({ client }) {
   return (
     <div className="min-h-full bg-background selection:bg-primary/10">
       {/* MAIN CONTAINER: 
-          Standardised to max-w-[1600px] to match the Clients List Page 
+          Standardised to max-w-[1400px] to match the Clients List Page 
       */}
-      <div className="px-8 pt-10 pb-20 space-y-10 max-w-[1600px] mx-auto animate-in fade-in duration-700">
+      <div className="px-8 pt-10 pb-20 space-y-10 max-w-[1400px] mx-auto animate-in fade-in duration-700">
         {/* --- HEADER SECTION: Google-esque Lightweight Typography --- */}
         <div className="flex items-center gap-6">
           <div className="h-16 w-16 shrink-0 rounded-[22px] bg-muted/20 border border-border/40 flex items-center justify-center overflow-hidden shadow-sm transition-transform hover:scale-[1.02]">

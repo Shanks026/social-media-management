@@ -139,11 +139,11 @@ export default function Clients() {
 
   return (
     <div className="min-h-full bg-background selection:bg-primary/10">
-      <div className="px-8 pt-8 pb-20 space-y-8 max-w-[1600px] mx-auto">
+      <div className="px-8 pt-8 pb-20 space-y-8 max-w-[1400px] mx-auto">
         {/* --- SECTION 1: HEADER & PRIMARY ACTION --- */}
         <div className="flex items-end justify-between">
           <div className="space-y-1">
-            <h1 className="text-4xl font-light tracking-tight text-foreground">
+            <h1 className="text-3xl font-light tracking-tight text-foreground">
               Clients{' '}
               <span className="text-muted-foreground/50 ml-2 font-extralight">
                 {clients.length}
@@ -183,30 +183,30 @@ export default function Clients() {
 
         {/* --- SECTION 2: THE TOOLBAR (Google Search Aesthetic) --- */}
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
-        {/* LEFT: Search + Filters */}
-        <div className="flex flex-wrap items-center gap-2">
-          <SearchBar value={search} onChange={(v) => updateParams('q', v)} />
+          {/* LEFT: Search + Filters */}
+          <div className="flex flex-wrap items-center gap-2">
+            <SearchBar value={search} onChange={(v) => updateParams('q', v)} />
 
-          <IndustryFilter
-            value={industry}
-            onValueChange={(v) => updateParams('industry', v)}
-          />
+            <IndustryFilter
+              value={industry}
+              onValueChange={(v) => updateParams('industry', v)}
+            />
 
-          <TierFilter
-            value={tier}
-            onValueChange={(v) => updateParams('tier', v)}
-          />
+            <TierFilter
+              value={tier}
+              onValueChange={(v) => updateParams('tier', v)}
+            />
+          </div>
+
+          {/* RIGHT: Urgency tabs */}
+          <div className="lg:ml-auto">
+            <UrgencyFilter
+              activeValue={urgency}
+              onSelect={(v) => updateParams('urgency', v)}
+              counts={counts}
+            />
+          </div>
         </div>
-
-        {/* RIGHT: Urgency tabs */}
-        <div className="lg:ml-auto">
-          <UrgencyFilter
-            activeValue={urgency}
-            onSelect={(v) => updateParams('urgency', v)}
-            counts={counts}
-          />
-        </div>
-      </div>
 
         {/* --- SECTION 3: THE CONTENT GRID --- */}
         {clients.length === 0 ? (

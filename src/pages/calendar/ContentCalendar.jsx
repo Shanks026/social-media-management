@@ -165,12 +165,12 @@ export default function ContentCalendar({
     <div
       className={cn(
         'mx-auto space-y-6',
-        !hideHeader ? 'p-8 max-w-[1600px]' : 'w-full',
+        !hideHeader ? 'p-8 max-w-[1400px]' : 'w-full',
       )}
     >
       <div className="flex items-center justify-between">
         <div className="space-y-1">
-          <h1 className="text-4xl font-light tracking-tight text-foreground">
+          <h1 className="text-3xl font-normal tracking-tight text-foreground">
             {calendarTitle}
           </h1>
           {/* <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em]">

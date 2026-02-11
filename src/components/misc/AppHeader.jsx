@@ -14,7 +14,7 @@ export function AppHeader() {
   const { header } = useHeader()
 
   return (
-    <header className="flex h-16 items-center px-4 md:px-8 border-b w-full bg-background">
+    <header className="flex h-18 items-center px-4 md:px-8 border-b w-full bg-background">
       {/* --- MOBILE LOGO SECTION --- */}
       <div className="flex items-center gap-2 md:hidden">
         <div className="flex size-8 items-center justify-center rounded-md bg-primary text-primary-foreground font-semibold">

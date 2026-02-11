@@ -1,4 +1,4 @@
-import { Home, UserStar, Settings, Calendar, Building2 } from 'lucide-react'
+import { Home, UserStar, Settings, Calendar, Building2, Banknote } from 'lucide-react'
 import { NavLink, useLocation } from 'react-router-dom'
 import {
   SidebarGroup,
@@ -15,6 +15,7 @@ const navItems = [
   { title: 'My Organization', url: '/myorganazation', icon: Building2 },
   { title: 'Clients', url: '/clients', icon: UserStar },
   { title: 'Calendar', url: '/calendar', icon: Calendar },
+  { title: 'Expenses', url: '/expenses', icon: Banknote },
 ]
 
 export function NavMain() {
