@@ -10,7 +10,11 @@ import PublicReview from './pages/PublicReview'
 import Settings from './pages/Settings'
 import SocialCalendar from './pages/calendar/ContentCalendar'
 import MyOrganization from './pages/MyOrganization'
-import Expenses from './pages/expenses/Expenses'
+import Expenses from './pages/finance/FinanceLayout'
+import FinanceLayout from './pages/finance/FinanceLayout'
+import OverviewTab from './pages/finance/OverviewTab'
+import SubscriptionsTab from './pages/finance/SubscriptionsTab'
+import LedgerTab from './pages/finance/LedgerTab'
 
 function AppRoutes() {
   const { session, user } = useAuth()
@@ -31,7 +35,14 @@ function AppRoutes() {
             element={<PostDetails />}
           />
           <Route path="/calendar" element={<SocialCalendar />} />
-          <Route path="/expenses" element={<Expenses />} />
+          <Route path="/finance" element={<FinanceLayout />}>
+            {/* Redirect /finance to /finance/overview */}
+            <Route index element={<Navigate to="overview" replace />} />
+
+            <Route path="overview" element={<OverviewTab />} />
+            <Route path="subscriptions" element={<SubscriptionsTab />} />
+            <Route path="ledger" element={<LedgerTab />} />
+          </Route>
           <Route path="/settings" element={<Settings />} />
           <Route path="*" element={<Navigate to="/clients" replace />} />
         </Route>

@@ -28,6 +28,7 @@ export function useExpenses() {
           billing_cycle,
           next_billing_date,
           category,
+          created_at,
           assigned_client_id,
           assigned_client:assigned_client_id (
             id,
@@ -74,10 +75,10 @@ export function useCreateExpense() {
 
   return useMutation({
     mutationFn: async (formData) => {
-      // Logic to handle "myself" vs client ID
-      const assignedClientId =
-        formData.assigned_client_id === 'myself' ||
-        formData.assigned_client_id === ''
+      const sanitizedClientId =
+        !formData.assigned_client_id ||
+        formData.assigned_client_id === '' ||
+        formData.assigned_client_id === 'myself'
           ? null
           : formData.assigned_client_id
 
@@ -88,7 +89,7 @@ export function useCreateExpense() {
         billing_cycle: formData.billing_cycle,
         next_billing_date: formData.next_billing_date,
         category: formData.category,
-        assigned_client_id: assignedClientId,
+        assigned_client_id: sanitizedClientId,
       }
 
       const { data, error } = await supabase

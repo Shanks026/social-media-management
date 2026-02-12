@@ -75,12 +75,39 @@ const STATUS_CONFIG = {
   QUARTERLY: {
     label: 'Quarterly',
     className:
-      'bg-indigo-100 text-indigo-800 dark:bg-indigo-500/10 dark:text-indigo-400',
+      'bg-teal-100 text-teal-800 dark:bg-teal-500/10 dark:text-teal-400',
   },
   YEARLY: {
     label: 'Yearly',
     className:
       'bg-violet-100 text-violet-800 dark:bg-violet-500/10 dark:text-violet-400',
+  },
+
+  // Finance Statuses
+  PAID: {
+    label: 'Paid',
+    className:
+      'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-400',
+  },
+  PENDING: {
+    label: 'Pending',
+    className:
+      'bg-amber-100 text-amber-800 dark:bg-amber-500/10 dark:text-amber-400',
+  },
+  OVERDUE: {
+    label: 'Overdue',
+    className:
+      'bg-rose-100 text-rose-800 dark:bg-rose-500/10 dark:text-rose-400',
+  },
+
+  // Transaction Types (Optional if you want badges for them)
+  INCOME: {
+    label: 'Income',
+    className: 'bg-teal-50 text-teal-700 border-teal-200',
+  },
+  EXPENSE: {
+    label: 'Expense',
+    className: 'bg-pink-50 text-pink-700 border-pink-200',
   },
 }
 
