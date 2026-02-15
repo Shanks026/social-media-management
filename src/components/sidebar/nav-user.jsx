@@ -1,5 +1,6 @@
 import { LogOut, User, Mail, Settings, ChevronsUpDown } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { useQueryClient } from '@tanstack/react-query'
 import {
   SidebarMenu,
   SidebarMenuItem,
@@ -15,7 +16,11 @@ import {
 } from '@/components/ui/dropdown-menu'
 
 export function NavUser({ user }) {
-  const handleLogout = () => supabase.auth.signOut()
+  const queryClient = useQueryClient()
+  const handleLogout = async () => {
+    await supabase.auth.signOut()
+    queryClient.clear()
+  }
 
   const fullName =
     user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User'

@@ -37,88 +37,103 @@ The database uses the following custom ENUM types:
 
 ## Tables
 
+## Tables
+
 ### `agency_subscriptions`
 
-Stores agency profiles and subscription details. Linked to Supabase Auth users.
+Stores workspace configuration and billing metadata for agency owners.
 
 - **Primary Key**: `user_id` (uuid) -> `auth.users.id`
-- **Columns**:
-  - `plan_name` (text, default: 'PENDING')
-  - `max_clients` (integer)
-  - `max_storage_bytes` (bigint)
-  - `current_storage_used` (bigint, default: 0)
-  - `is_active` (boolean, default: true)
-  - `whitelabel_enabled` (boolean, default: false)
-  - `agency_name` (text)
-  - `logo_url` (text)
-  - `primary_color` (text, default: '#6366f1')
-  - `social_links` (jsonb, default: '{}')
-  - `industry` (text)
-  - `platforms` (jsonb, default: '[]')
-  - `email` (text)
-  - `mobile_number` (text)
-  - `description` (text)
+- **Fields**:
+  - `plan_name` (text, default: 'PENDING'): Subscription level.
+  - `max_clients` (integer): Account limit.
+  - `max_storage_bytes` (bigint): Asset storage limit.
+  - `current_storage_used` (bigint): Real-time usage tracking (bytes).
+  - `is_active` (boolean): Whether the agency can access tools.
+  - `whitelabel_enabled` (boolean): Flag for custom branding features.
+  - `agency_name` (text): Display name for the agency.
+  - `logo_url` (text): Branding asset link.
+  - `primary_color` (text, default: '#6366f1'): UI theme color.
+  - `social_links` (jsonb): Map of agency social presence.
+  - `industry` (text): Niche category.
+  - `platforms` (jsonb): Targeted social platforms.
+  - `email` (text): Public contact email.
+  - `mobile_number` (text): Public contact phone.
+  - `description` (text): Agency bio/mission.
   - `created_at` (timestamptz)
   - `updated_at` (timestamptz)
 
+#### Triggers
+
+- **`on_storage_object_changed`**: Automatically updates `current_storage_used` based on inserts, updates, or deletions in the `storage.objects` table.
+
+---
+
 ### `clients`
 
-Represents clients managed by an agency.
+Stores profiles for external clients and the internal agency workspace.
 
 - **Primary Key**: `id` (uuid)
 - **Foreign Keys**:
-  - `user_id` -> `auth.users.id` (The agency governing this client)
-- **Columns**:
-  - `name` (text)
+  - `user_id` -> `auth.users.id` (Owner of the client/workspace)
+- **Constraints & Indexes**:
+  - `clients_pkey` (PRIMARY KEY): `id`
+  - `unique_internal_client_per_user` (UNIQUE INDEX): `user_id` WHERE `(is_internal = true)`
+- **Fields**:
+  - `name` (text): Client name.
   - `status` (text, check: ACTIVE, PAUSED)
   - `email` (text)
-  - `mobile_number` (text)
-  - `description` (text)
-  - `logo_url` (text)
-  - `tier` (`client_tier`, default: 'BASIC')
+  - `mobile_number` (text, nullable)
+  - `description` (text, nullable)
+  - `logo_url` (text, nullable)
+  - `tier` (client_tier, default: 'BASIC')
   - `industry` (text, default: 'General')
   - `platforms` (text[], default: '{}')
   - `is_internal` (boolean, default: false)
   - `social_links` (jsonb, default: '{}')
   - `created_at` (timestamptz)
 
+---
+
 ### `client_users`
 
-Associates specific users with a client (likely for team access or client portal access).
+Associates specific users with a client for team or portal access.
 
 - **Primary Key**: `id` (uuid)
 - **Foreign Keys**:
   - `client_id` -> `clients.id`
-  - `user_id` -> (Implicitly `auth.users.id`?)
-- **Columns**:
+- **Fields**:
   - `role` (text, check: ADMIN, INTERNAL)
+
+---
 
 ### `posts`
 
-The container for social media posts. The actual content is versioned in `post_versions`.
+Container for social content. Actual content resides in `post_versions`.
 
 - **Primary Key**: `id` (uuid)
 - **Foreign Keys**:
   - `client_id` -> `clients.id`
   - `current_version_id` -> `post_versions.id`
-- **Columns**:
+- **Fields**:
   - `created_at` (timestamptz)
+
+---
 
 ### `post_versions`
 
-Stores the content and state of a post. Allows for revision history.
+Revision history and state for post content.
 
 - **Primary Key**: `id` (uuid)
 - **Foreign Keys**:
   - `post_id` -> `posts.id`
   - `client_id` -> `clients.id`
-  - `created_by` -> (Implicitly `auth.users.id`?)
-- **Columns**:
+- **Fields**:
   - `version_number` (integer)
-  - `status` (`post_status`)
+  - `status` (post_status)
   - `content` (text)
-  - `media_urls` (text[], default: '{}')
-  - `platform` (text[], default: '{}')
+  - `media_urls` (text[])
+  - `platform` (text[])
   - `title` (text)
   - `client_notes` (text)
   - `admin_notes` (text)
@@ -127,71 +142,81 @@ Stores the content and state of a post. Allows for revision history.
   - `created_at` (timestamptz)
   - `updated_at` (timestamptz)
 
+---
+
 ### `approvals`
 
-Tracks approval status for post versions.
+Approval workflow for post versions.
 
 - **Primary Key**: `id` (uuid)
 - **Foreign Keys**:
   - `post_version_id` -> `post_versions.id`
   - `client_id` -> `clients.id`
-- **Columns**:
+- **Fields**:
   - `approved` (boolean)
   - `comment` (text)
   - `approved_by` (text)
   - `approved_at` (timestamptz)
 
+---
+
 ### `schedules`
 
-Manages the scheduling of approved posts.
+Scheduling metadata for approved posts.
 
 - **Primary Key**: `id` (uuid)
 - **Foreign Keys**:
   - `post_version_id` -> `post_versions.id`
   - `client_id` -> `clients.id`
-- **Columns**:
+- **Fields**:
   - `scheduled_for` (timestamptz)
   - `created_at` (timestamptz)
 
+---
+
 ### `share_tokens`
 
-Allows generating temporary public links for specific post versions (e.g., for client review).
+Public review links for post versions.
 
 - **Primary Key**: `id` (uuid)
 - **Foreign Keys**:
   - `post_version_id` -> `post_versions.id`
-- **Columns**:
+- **Fields**:
   - `token` (text, unique)
   - `expires_at` (timestamptz)
   - `created_at` (timestamptz)
 
+---
+
 ### `transactions`
 
-Financial transactions (Income/Expense).
+Financial records for income and costs.
 
 - **Primary Key**: `id` (uuid)
 - **Foreign Keys**:
   - `user_id` -> `auth.users.id`
   - `client_id` -> `clients.id` (Optional)
-- **Columns**:
-  - `type` (`transaction_type`)
+- **Fields**:
+  - `type` (transaction_type): `INCOME` or `EXPENSE`.
   - `amount` (numeric)
   - `date` (date)
   - `category` (text)
   - `description` (text)
-  - `status` (`transaction_status`, default: 'PAID')
+  - `status` (transaction_status, default: 'PAID')
   - `invoice_url` (text)
   - `created_at` (timestamptz)
 
+---
+
 ### `expenses`
 
-Recurring or one-time expenses tracked by the agency.
+Recurring operational costs.
 
 - **Primary Key**: `id` (uuid)
 - **Foreign Keys**:
   - `user_id` -> `auth.users.id`
   - `assigned_client_id` -> `clients.id` (Optional)
-- **Columns**:
+- **Fields**:
   - `name` (text)
   - `cost` (numeric)
   - `billing_cycle` (text, check: MONTHLY, QUARTERLY, YEARLY)
@@ -199,6 +224,18 @@ Recurring or one-time expenses tracked by the agency.
   - `category` (text, default: 'Software')
   - `created_at` (timestamptz)
   - `updated_at` (timestamptz)
+
+---
+
+### `view_client_profitability` (View)
+
+Aggregates financial performance per client.
+
+- **Columns**:
+  - `client_id` (uuid)
+  - `total_revenue` (numeric)
+  - `one_off_costs` (numeric)
+  - `monthly_recurring_costs` (numeric)
 
 ## Entity Relationship Diagram
 

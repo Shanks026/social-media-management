@@ -1,4 +1,47 @@
 import { supabase } from '@/lib/supabase'
+import { useQuery } from '@tanstack/react-query'
+import { useAuth } from '@/context/AuthContext'
+
+export function useClients() {
+  const { user } = useAuth()
+  return useQuery({
+    queryKey: ['clients-list', user?.id],
+    queryFn: async () => {
+      if (!user) return { internalAccount: null, realClients: [] }
+
+      const { data, error } = await supabase
+        .from('clients')
+        .select('id, name, logo_url, is_internal')
+        .eq('user_id', user.id)
+
+      if (error) throw error
+
+      return {
+        internalAccount: data?.find((c) => c.is_internal) || null,
+        realClients: data?.filter((c) => !c.is_internal) || [],
+      }
+    },
+    enabled: !!user?.id,
+  })
+}
+
+export function useClientMetrics(clientId) {
+  return useQuery({
+    queryKey: ['client-metrics', clientId],
+    queryFn: async () => {
+      if (!clientId) return null
+      const { data, error } = await supabase
+        .from('view_client_profitability')
+        .select('*')
+        .eq('client_id', clientId)
+        .single()
+
+      if (error) throw error
+      return data
+    },
+    enabled: !!clientId,
+  })
+}
 
 /**
  * HELPER: Extracts the storage path from a public URL

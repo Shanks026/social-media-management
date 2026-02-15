@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { format } from 'date-fns'
 import {
   Filter,
@@ -24,39 +24,30 @@ import { Badge } from '@/components/ui/badge'
 import StatusBadge from '@/components/StatusBadge'
 
 import { useTransactions, useDeleteTransaction } from '@/api/transactions'
+import { useClients } from '@/api/clients'
+import { formatCurrency } from '@/utils/finance'
 import { supabase } from '@/lib/supabase'
 import { useQuery } from '@tanstack/react-query'
 import { cn } from '@/lib/utils'
 import { AddTransactionDialog } from './AddTransactionDialog'
 import { CustomTable } from '@/components/CustomTable'
 
-function useClientsList() {
-  return useQuery({
-    queryKey: ['clients-list'],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from('clients')
-        .select('id, name, logo_url, is_internal') // Added is_internal
-
-      const internalAccount = data?.find((c) => c.is_internal) || null
-      const realClients = data?.filter((c) => !c.is_internal) || []
-
-      return { internalAccount, realClients }
-    },
-  })
-}
-
-export default function LedgerTab() {
+export default function LedgerTab({ clientId, subTabs }) {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingTransaction, setEditingTransaction] = useState(null)
   const [filterMode, setFilterMode] = useState('ALL')
   const [searchTerm, setSearchTerm] = useState('')
 
-  const { data: transactions = [], isLoading } = useTransactions()
+  const { data: transactions = [], isLoading } = useTransactions({ clientId })
   const { mutate: deleteTransaction } = useDeleteTransaction()
-  const { data: clientData } = useClientsList()
+  const { data: clientData } = useClients()
   const clients = clientData?.realClients || []
   const internalAccount = clientData?.internalAccount
+
+  // Force filterMode if clientId is present (optional, but cleaner)
+  useEffect(() => {
+    if (clientId) setFilterMode(clientId)
+  }, [clientId])
 
   // 1. Define Columns configuration
   const columns = [
@@ -142,11 +133,7 @@ export default function LedgerTab() {
             t.type === 'INCOME' ? 'text-emerald-600' : 'text-foreground',
           )}
         >
-          {t.type === 'INCOME' ? '+' : '-'}{' '}
-          {new Intl.NumberFormat('en-IN', {
-            style: 'currency',
-            currency: 'INR',
-          }).format(t.amount)}
+          {t.type === 'INCOME' ? '+' : '-'} {formatCurrency(t.amount)}
         </span>
       ),
     },
@@ -221,7 +208,11 @@ export default function LedgerTab() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         {/* Search Bar */}
 
-        <span className="text-2xl font-normal">Ledger - Transactions</span>
+        {subTabs ? (
+          subTabs
+        ) : (
+          <span className="text-2xl font-normal">Ledger - Transactions</span>
+        )}
 
         <div className="flex items-center gap-3 w-full md:w-auto">
           <div className="relative w-full md:w-[300px]">
@@ -234,28 +225,31 @@ export default function LedgerTab() {
             />
           </div>
           {/* Client Filter */}
-          <Select value={filterMode} onValueChange={setFilterMode}>
-            <SelectTrigger className="w-[180px] border-dashed">
-              <div className="flex items-center gap-2 text-muted-foreground text-xs">
-                <Filter className="h-3.5 w-3.5" />
-                <SelectValue placeholder="Filter View" />
-              </div>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="ALL">All Expenses</SelectItem>
-              <SelectItem value={internalAccount?.id || 'INTERNAL'}>
-                Internal (My Agency)
-              </SelectItem>
-              {clients.length > 0 && (
-                <div className="h-px bg-border my-2 mx-1" />
-              )}
-              {clients.map((c) => (
-                <SelectItem key={c.id} value={c.id}>
-                  {c.name}
+          {/* Client Filter - Hide if clientId is provided */}
+          {!clientId && (
+            <Select value={filterMode} onValueChange={setFilterMode}>
+              <SelectTrigger className="w-[180px] border-dashed">
+                <div className="flex items-center gap-2 text-muted-foreground text-xs">
+                  <Filter className="h-3.5 w-3.5" />
+                  <SelectValue placeholder="Filter View" />
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">All Expenses</SelectItem>
+                <SelectItem value={internalAccount?.id || 'INTERNAL'}>
+                  Internal (My Agency)
                 </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+                {clients.length > 0 && (
+                  <div className="h-px bg-border my-2 mx-1" />
+                )}
+                {clients.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
 
           {/* Add Button */}
           <Button size="sm" onClick={() => setIsDialogOpen(true)} className="">
@@ -277,6 +271,7 @@ export default function LedgerTab() {
           if (!val) setEditingTransaction(null)
         }}
         editingData={editingTransaction}
+        defaultClientId={clientId}
       />
     </div>
   )

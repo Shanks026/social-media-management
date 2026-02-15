@@ -3,10 +3,11 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
 import { format } from 'date-fns'
-import { Calendar as CalendarIcon, Building2 } from 'lucide-react'
+import { Calendar as CalendarIcon, Building2, User } from 'lucide-react'
 
 // API & Libs
 import { useCreateExpense, useUpdateExpense } from '@/api/expenses'
+import { useClients } from '@/api/clients'
 import { supabase } from '@/lib/supabase'
 import { useQuery } from '@tanstack/react-query'
 import { cn } from '@/lib/utils'
@@ -71,22 +72,15 @@ export function AddSubscriptionDialog({
   open,
   onOpenChange,
   editingData = null,
+  defaultClientId = null,
 }) {
   const { mutate: createExpense, isPending: isCreating } = useCreateExpense()
   const { mutate: updateExpense, isPending: isUpdating } = useUpdateExpense()
 
-  const { data: clientData } = useQuery({
-    queryKey: ['clients-list'],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from('clients')
-        .select('id, name, logo_url, is_internal')
-      return {
-        internalAccount: data?.find((c) => c.is_internal) || null,
-        realClients: data?.filter((c) => !c.is_internal) || [],
-      }
-    },
-  })
+  const { data: clientData, isLoading: isLoadingClients } = useClients()
+
+  const clients = clientData?.realClients || []
+  const internalAccount = clientData?.internalAccount
 
   const form = useForm({
     resolver: zodResolver(expenseSchema),
@@ -114,10 +108,10 @@ export function AddSubscriptionDialog({
         category: '',
         billing_cycle: 'MONTHLY',
         next_billing_date: new Date(),
-        assigned_client_id: clientData?.internalAccount?.id || '',
+        assigned_client_id: defaultClientId || '',
       })
     }
-  }, [editingData, open, form, clientData])
+  }, [editingData, open, form, defaultClientId])
 
   function onSubmit(data) {
     if (editingData) {
@@ -185,8 +179,8 @@ export function AddSubscriptionDialog({
                     <FormLabel>Category</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select" />
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select category" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -274,21 +268,37 @@ export function AddSubscriptionDialog({
                     <Select
                       onValueChange={field.onChange}
                       value={field.value || ''}
+                      disabled={!!defaultClientId}
                     >
                       <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Account" />
+                        <SelectTrigger className="w-full">
+                          <SelectValue
+                            placeholder={
+                              isLoadingClients
+                                ? 'Loading account...'
+                                : 'Select account...'
+                            }
+                          />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {clientData?.internalAccount && (
-                          <SelectItem value={clientData.internalAccount.id}>
-                            My Agency
-                          </SelectItem>
+                        {internalAccount && (
+                          <>
+                            <SelectItem value={internalAccount.id}>
+                              <div className="flex items-center gap-2">
+                                <Building2 className="h-4 w-4" />
+                                <span>My Agency</span>
+                              </div>
+                            </SelectItem>
+                            <div className="h-px bg-muted my-1" />
+                          </>
                         )}
-                        {clientData?.realClients.map((c) => (
+                        {clients.map((c) => (
                           <SelectItem key={c.id} value={c.id}>
-                            {c.name}
+                            <div className="flex items-center gap-2">
+                              <User className="h-4 w-4 text-muted-foreground" />
+                              <span>{c.name}</span>
+                            </div>
                           </SelectItem>
                         ))}
                       </SelectContent>

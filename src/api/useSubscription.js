@@ -25,27 +25,50 @@ export function useSubscription() {
         .eq('user_id', user.id)
         .eq('is_internal', false)
 
-      const storageUsed = sub.current_storage_used || 0
-      const storageLimit = sub.max_storage_bytes
-      const mbUsed = storageUsed / (1024 * 1024)
+      // Storage Calculation Logic
+      const bytesUsed = sub.current_storage_used || 0
+      const bytesMax = sub.max_storage_bytes || 0
+      const gbThreshold = 1024 * 1024 * 1024 // 1 GB in bytes
+
+      // 1. Calculate Usage Display (MB vs GB)
+      let usageVal, usageUnit
+      if (bytesUsed < gbThreshold) {
+        // If < 1GB, show as MB (e.g. 500.5)
+        usageVal = (bytesUsed / (1024 * 1024)).toFixed(1)
+        usageUnit = 'MB'
+      } else {
+        // If >= 1GB, show as GB (e.g. 1.2)
+        usageVal = (bytesUsed / gbThreshold).toFixed(1)
+        usageUnit = 'GB'
+      }
+
+      // 2. Calculate Max Display (Usually GB)
+      const maxVal = (bytesMax / gbThreshold).toFixed(0)
+      const maxUnit = 'GB'
+
+      // 3. Calculate Remaining (Handle mixed units)
+      const bytesRemaining = Math.max(0, bytesMax - bytesUsed)
+      let remainingLabel
+      if (bytesRemaining < gbThreshold) {
+        remainingLabel = `${(bytesRemaining / (1024 * 1024)).toFixed(0)} MB remaining`
+      } else {
+        remainingLabel = `${(bytesRemaining / gbThreshold).toFixed(1)} GB remaining`
+      }
 
       return {
-        // Branding Data
         agency_name: sub.agency_name || 'My Agency',
         logo_url: sub.logo_url,
         plan_name: sub.plan_name,
-
-        // Limits
         client_count: count || 0,
         max_clients: sub.max_clients,
 
-        // Storage Logic (MB before 1GB)
-        storage_used_bytes: storageUsed,
-        storage_max_bytes: storageLimit,
         storage_display: {
-          value: mbUsed < 1024 ? mbUsed.toFixed(0) : (mbUsed / 1024).toFixed(1),
-          unit: mbUsed < 1024 ? 'MB' : 'GB',
-          percent: Math.min(100, (storageUsed / storageLimit) * 100),
+          usage_value: usageVal,
+          usage_unit: usageUnit,
+          max_value: maxVal,
+          max_unit: maxUnit,
+          percent: Math.min(100, (bytesUsed / bytesMax) * 100),
+          remaining_label: remainingLabel, // Pass pre-calculated string
         },
       }
     },

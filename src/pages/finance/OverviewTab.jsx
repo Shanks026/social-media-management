@@ -18,6 +18,12 @@ import {
   format,
   isWithinInterval,
 } from 'date-fns'
+import {
+  calculatePeriodMetrics,
+  calculateRecurringBurn,
+  formatCurrency,
+} from '@/utils/finance'
+import { CURRENCY } from '@/utils/constants'
 
 // UI Components
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -62,20 +68,16 @@ const chartConfig = {
   },
 }
 
-const formatCurrency = (amount) => {
-  return new Intl.NumberFormat('en-IN', {
-    style: 'currency',
-    currency: 'INR',
-    maximumFractionDigits: 0,
-  }).format(amount)
-}
-
-export default function OverviewPage() {
-  const [viewMode, setViewMode] = useState('ALL') // ALL, INTERNAL, CLIENTS
+export default function OverviewPage({ clientId, subTabs }) {
+  const [viewMode, setViewMode] = useState(clientId ? 'SELECTED' : 'ALL')
   const [accountingMethod, setAccountingMethod] = useState('CASH') // CASH, ACCRUAL
 
-  const { data: transactions = [], isLoading: loadingTx } = useTransactions()
-  const { data: expenses = [], isLoading: loadingExp } = useExpenses()
+  const { data: transactions = [], isLoading: loadingTx } = useTransactions({
+    clientId: viewMode === 'SELECTED' ? clientId : undefined,
+  })
+  const { data: expenses = [], isLoading: loadingExp } = useExpenses({
+    clientId: viewMode === 'SELECTED' ? clientId : undefined,
+  })
 
   const { data: clientData } = useQuery({
     queryKey: ['clients-list'],
@@ -94,95 +96,45 @@ export default function OverviewPage() {
     const currentMonthEnd = endOfMonth(today)
 
     // --- 1. Filter Transactions/Expenses based on View Mode ---
-    const filteredExpenses = expenses.filter((e) => {
-      if (viewMode === 'ALL') return true
-      if (viewMode === 'INTERNAL')
-        return (
-          e.assigned_client_id === null ||
-          e.assigned_client_id === internalAccount?.id
-        )
-      if (viewMode === 'CLIENTS')
-        return (
-          e.assigned_client_id !== null &&
-          e.assigned_client_id !== internalAccount?.id
-        )
-      return true
-    })
+    let filteredTransactions = transactions
+    let filteredExpenses = expenses
 
-    const filteredTransactions = transactions.filter((t) => {
-      if (viewMode === 'ALL') return true
-      if (viewMode === 'INTERNAL')
-        return t.client_id === null || t.client_id === internalAccount?.id
-      if (viewMode === 'CLIENTS')
-        return t.client_id !== null && t.client_id !== internalAccount?.id
-      return true
-    })
-
-    // --- 2. Calculate Monthly Burn (Recurring) ---
-    const calculateRecurringBurn = (dateLimit) => {
-      let total = 0
-      filteredExpenses.forEach((e) => {
-        const createdAt = new Date(e.created_at)
-        if (createdAt <= dateLimit) {
-          const cost = parseFloat(e.cost)
-          if (e.billing_cycle === 'MONTHLY') total += cost
-          else if (e.billing_cycle === 'QUARTERLY') total += cost / 3
-          else if (e.billing_cycle === 'YEARLY') total += cost / 12
-        }
-      })
-      return total
+    if (viewMode === 'INTERNAL' && internalAccount) {
+      filteredTransactions = transactions.filter(
+        (t) => t.client_id === internalAccount.id || t.client_id === null,
+      )
+      filteredExpenses = expenses.filter(
+        (e) =>
+          e.assigned_client_id === internalAccount.id ||
+          e.assigned_client_id === null,
+      )
+    } else if (viewMode === 'CLIENTS' && internalAccount) {
+      filteredTransactions = transactions.filter(
+        (t) => t.client_id && t.client_id !== internalAccount.id,
+      )
+      filteredExpenses = expenses.filter(
+        (e) =>
+          e.assigned_client_id && e.assigned_client_id !== internalAccount.id,
+      )
     }
 
-    const currentMonthlyBurn = calculateRecurringBurn(currentMonthEnd)
-
-    // --- 3. Calculate Current Month Metrics ---
-    let monthInvoiced = 0 // Accrual (All Income)
-    let monthCollected = 0 // Cash (Only Paid)
-    let monthOneOffExpense = 0
-    let pendingIncome = 0 // Global Pending
-    let overdueIncome = 0 // Global Overdue
-
-    filteredTransactions.forEach((t) => {
-      const tDate = new Date(t.date)
-      const amount = parseFloat(t.amount)
-
-      // A. Global Counters (Status checks regardless of date)
-      if (t.type === 'INCOME') {
-        if (t.status === 'PENDING') pendingIncome += amount
-        if (t.status === 'OVERDUE') overdueIncome += amount
-      }
-
-      // B. Monthly Interval Counters
-      if (
-        isWithinInterval(tDate, {
-          start: currentMonthStart,
-          end: currentMonthEnd,
-        })
-      ) {
-        if (t.type === 'INCOME') {
-          monthInvoiced += amount // Count everything for Accrual
-          if (t.status === 'PAID') {
-            monthCollected += amount // Count only PAID for Cash
-          }
-        }
-        if (t.type === 'EXPENSE') {
-          monthOneOffExpense += amount
-        }
-      }
+    // --- 2. Calculate Current Month Metrics via Utility ---
+    const metrics = calculatePeriodMetrics({
+      transactions: filteredTransactions,
+      expenses: filteredExpenses,
+      periodStart: currentMonthStart,
+      periodEnd: currentMonthEnd,
+      method: accountingMethod,
     })
 
-    const totalMonthExpense = monthOneOffExpense + currentMonthlyBurn
-
-    // --- 4. Determine Display Values based on Toggle ---
-    const displayedRevenue =
-      accountingMethod === 'CASH' ? monthCollected : monthInvoiced
-
-    // Profit = Revenue - Expenses
-    const netProfit = displayedRevenue - totalMonthExpense
-
-    // Margin = Profit / Revenue
-    const margin =
-      displayedRevenue > 0 ? (netProfit / displayedRevenue) * 100 : 0
+    const {
+      revenue: displayedRevenue,
+      expense: totalMonthExpense,
+      profit: netProfit,
+      margin,
+      pending: pendingIncome,
+      overdue: overdueIncome,
+    } = metrics
 
     // --- 5. Prepare Historical Chart Data ---
     const chartData = []
@@ -208,7 +160,10 @@ export default function OverviewPage() {
         }
       })
 
-      const historicalRecurring = calculateRecurringBurn(monthEnd)
+      const historicalRecurring = calculateRecurringBurn(
+        filteredExpenses,
+        monthEnd,
+      )
 
       chartData.push({
         month: monthLabel,
@@ -245,7 +200,11 @@ export default function OverviewPage() {
       {/* --- HEADER ACTIONS --- */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center gap-2">
-          <span className="text-2xl font-normal">Performance Metrics</span>
+          {subTabs ? (
+            subTabs
+          ) : (
+            <span className="text-2xl font-normal">Performance Metrics</span>
+          )}
         </div>
 
         <div className="flex flex-col sm:flex-row gap-3">
@@ -268,19 +227,21 @@ export default function OverviewPage() {
           </Tabs>
 
           {/* VIEW FILTER */}
-          <Select value={viewMode} onValueChange={setViewMode}>
-            <SelectTrigger className="w-[180px] h-9 rounded-md border-dashed shadow-sm bg-background/50">
-              <div className="flex items-center gap-2 text-xs">
-                <Filter className="h-3.5 w-3.5" />
-                <SelectValue placeholder="Select View" />
-              </div>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="ALL">Combined View</SelectItem>
-              <SelectItem value="INTERNAL">Agency Only</SelectItem>
-              <SelectItem value="CLIENTS">Client Projects</SelectItem>
-            </SelectContent>
-          </Select>
+          {!clientId && (
+            <Select value={viewMode} onValueChange={setViewMode}>
+              <SelectTrigger className="w-[180px] h-9 rounded-md border-dashed shadow-sm bg-background/50">
+                <div className="flex items-center gap-2 text-xs">
+                  <Filter className="h-3.5 w-3.5" />
+                  <SelectValue placeholder="Select View" />
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">Combined View</SelectItem>
+                <SelectItem value="INTERNAL">Agency Only</SelectItem>
+                <SelectItem value="CLIENTS">Client Projects</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
         </div>
       </div>
 
@@ -430,7 +391,9 @@ export default function OverviewPage() {
                   tickMargin={10}
                   fontSize={10}
                   className="text-muted-foreground"
-                  tickFormatter={(value) => `₹${value / 1000}k`}
+                  tickFormatter={(value) =>
+                    `${CURRENCY.SYMBOL}${value / 1000}k`
+                  }
                 />
                 <ChartTooltip
                   cursor={false}

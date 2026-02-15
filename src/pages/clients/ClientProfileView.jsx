@@ -1,5 +1,11 @@
 import { useEffect } from 'react'
-import { LayoutGrid, Calendar, Settings2, BarChart3 } from 'lucide-react'
+import {
+  LayoutGrid,
+  Calendar,
+  Settings2,
+  BarChart3,
+  CircleDollarSign,
+} from 'lucide-react'
 
 // UI Components
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -13,8 +19,14 @@ import IndustryBadge from './IndustryBadge'
 import ContentCalendar from '../calendar/ContentCalendar'
 import { cn } from '@/lib/utils'
 
+// Finance Imports
+import OverviewPage from '../finance/OverviewTab'
+import LedgerTab from '../finance/LedgerTab'
+import SubscriptionsTab from '../finance/SubscriptionsTab'
+
 const TABS_CONFIG = [
   { value: 'workflow', label: 'Workflow', icon: LayoutGrid },
+  { value: 'financials', label: 'Financials', icon: CircleDollarSign },
   { value: 'calendar', label: 'Calendar', icon: Calendar },
   { value: 'insights', label: 'Insights', icon: BarChart3 },
   { value: 'management', label: 'Settings', icon: Settings2 },
@@ -31,6 +43,29 @@ export default function ClientProfileView({ client }) {
         .toUpperCase()
         .slice(0, 2)
     : 'CL'
+
+  const subTabs = (
+    <TabsList className="bg-muted/20 p-1 rounded-lg w-fit h-auto">
+      <TabsTrigger
+        value="overview"
+        className="rounded-md text-xs px-3 py-1.5 h-8"
+      >
+        Overview
+      </TabsTrigger>
+      <TabsTrigger
+        value="ledger"
+        className="rounded-md text-xs px-3 py-1.5 h-8"
+      >
+        Ledger
+      </TabsTrigger>
+      <TabsTrigger
+        value="subscriptions"
+        className="rounded-md text-xs px-3 py-1.5 h-8"
+      >
+        Subscriptions
+      </TabsTrigger>
+    </TabsList>
+  )
 
   return (
     <div className="min-h-full bg-background selection:bg-primary/10">
@@ -64,9 +99,9 @@ export default function ClientProfileView({ client }) {
             <div className="flex items-center gap-2">
               <IndustryBadge industryValue={client.industry} />
               <span className="text-[10px] text-muted-foreground/30">•</span>
-              <span className="text-xs text-muted-foreground font-light tracking-wide italic">
+              {/* <span className="text-xs text-muted-foreground font-light tracking-wide italic">
                 Active Client Workspace
-              </span>
+              </span> */}
             </div>
           </div>
         </div>
@@ -107,6 +142,23 @@ export default function ClientProfileView({ client }) {
               className="mt-8 focus-visible:ring-0 outline-none"
             >
               <WorkflowTab client={client} />
+            </TabsContent>
+
+            <TabsContent
+              value="financials"
+              className="mt-8 focus-visible:outline-none"
+            >
+              <Tabs defaultValue="overview" className="w-full">
+                <TabsContent value="overview" className="mt-0">
+                  <OverviewPage clientId={client.id} subTabs={subTabs} />
+                </TabsContent>
+                <TabsContent value="ledger" className="mt-0">
+                  <LedgerTab clientId={client.id} subTabs={subTabs} />
+                </TabsContent>
+                <TabsContent value="subscriptions" className="mt-0">
+                  <SubscriptionsTab clientId={client.id} subTabs={subTabs} />
+                </TabsContent>
+              </Tabs>
             </TabsContent>
 
             <TabsContent

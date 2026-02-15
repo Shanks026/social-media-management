@@ -9,15 +9,15 @@ export const expenseKeys = {
 }
 
 // --- 1. FETCH ALL EXPENSES ---
-export function useExpenses() {
+export function useExpenses(filters = {}) {
   const { user } = useAuth()
 
   return useQuery({
-    queryKey: expenseKeys.list(),
+    queryKey: expenseKeys.list(filters),
     queryFn: async () => {
       if (!user) throw new Error('User not authenticated')
 
-      const { data, error } = await supabase
+      let query = supabase
         .from('expenses')
         // FIX: Removed comments from inside this string
         .select(
@@ -38,6 +38,12 @@ export function useExpenses() {
         `,
         )
         .order('next_billing_date', { ascending: true })
+
+      if (filters.clientId) {
+        query = query.eq('assigned_client_id', filters.clientId)
+      }
+
+      const { data, error } = await query
 
       if (error) throw error
       return data

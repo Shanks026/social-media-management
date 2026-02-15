@@ -41,31 +41,51 @@ export async function completeFullAgencySetup(payload) {
 
   if (subError) throw subError
 
-  // 2. Create Internal Client Account (Stores the UI 'tier' here)
-  const { data, error: clientError } = await supabase
+  // 2. Manage Internal Client Account
+  // Check if it already exists to avoid 42P10 error with partial indexes
+  const { data: existingClient } = await supabase
     .from('clients')
-    .upsert(
-      {
-        user_id: user.id,
-        name: payload.name,
-        logo_url: payload.logo_url,
-        industry: payload.industry,
-        status: payload.status,
-        platforms: payload.platforms,
-        social_links: payload.social_links,
-        email: payload.email,
-        mobile_number: payload.mobile_number,
-        description: payload.description,
-        tier: payload.tier, // Store 'PRO/BASIC/VIP' as client metadata
-        is_internal: true,
-      },
-      { onConflict: 'user_id,is_internal' },
-    )
-    .select()
-    .single()
+    .select('id')
+    .eq('user_id', user.id)
+    .eq('is_internal', true)
+    .maybeSingle()
 
-  if (clientError) throw clientError
-  return data
+  const clientPayload = {
+    user_id: user.id,
+    name: payload.name,
+    logo_url: payload.logo_url,
+    industry: payload.industry,
+    status: payload.status,
+    platforms: payload.platforms,
+    social_links: payload.social_links,
+    email: payload.email,
+    mobile_number: payload.mobile_number,
+    description: payload.description,
+    tier: payload.tier,
+    is_internal: true,
+  }
+
+  let clientResult
+  if (existingClient) {
+    const { data, error: updateError } = await supabase
+      .from('clients')
+      .update(clientPayload)
+      .eq('id', existingClient.id)
+      .select()
+      .single()
+    if (updateError) throw updateError
+    clientResult = data
+  } else {
+    const { data, error: insertError } = await supabase
+      .from('clients')
+      .insert(clientPayload)
+      .select()
+      .single()
+    if (insertError) throw insertError
+    clientResult = data
+  }
+
+  return clientResult
 }
 
 /**
@@ -108,28 +128,48 @@ export async function activateInternalWorkspace(brandingData) {
   } = await supabase.auth.getUser()
   if (!user) throw new Error('Not authenticated')
 
-  const { data, error } = await supabase
+  // Check for existing internal client
+  const { data: existingClient } = await supabase
     .from('clients')
-    .upsert(
-      {
-        user_id: user.id,
-        name: brandingData.agency_name,
-        logo_url: brandingData.logo_url,
-        industry: brandingData.industry,
-        platforms: brandingData.platforms,
-        social_links: brandingData.social_links,
-        email: brandingData.email || user.email,
-        mobile_number: brandingData.mobile_number,
-        description: brandingData.description,
-        status: 'ACTIVE',
-        tier: 'PRO',
-        is_internal: true,
-      },
-      { onConflict: 'user_id,is_internal' },
-    )
-    .select()
-    .single()
+    .select('id')
+    .eq('user_id', user.id)
+    .eq('is_internal', true)
+    .maybeSingle()
 
-  if (error) throw error
-  return data
+  const clientPayload = {
+    user_id: user.id,
+    name: brandingData.agency_name,
+    logo_url: brandingData.logo_url,
+    industry: brandingData.industry,
+    platforms: brandingData.platforms,
+    social_links: brandingData.social_links,
+    email: brandingData.email || user.email,
+    mobile_number: brandingData.mobile_number,
+    description: brandingData.description,
+    status: 'ACTIVE',
+    tier: 'PRO',
+    is_internal: true,
+  }
+
+  let result
+  if (existingClient) {
+    const { data, error } = await supabase
+      .from('clients')
+      .update(clientPayload)
+      .eq('id', existingClient.id)
+      .select()
+      .single()
+    if (error) throw error
+    result = data
+  } else {
+    const { data, error } = await supabase
+      .from('clients')
+      .insert(clientPayload)
+      .select()
+      .single()
+    if (error) throw error
+    result = data
+  }
+
+  return result
 }

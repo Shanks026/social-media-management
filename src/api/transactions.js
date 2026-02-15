@@ -38,6 +38,14 @@ export function useTransactions(filters = {}) {
         query = query.eq('client_id', clientId)
       }
 
+      if (filters.startDate) {
+        query = query.gte('date', filters.startDate)
+      }
+
+      if (filters.endDate) {
+        query = query.lte('date', filters.endDate)
+      }
+
       if (limit) {
         query = query.limit(limit)
       }

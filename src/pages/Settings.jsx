@@ -19,16 +19,18 @@ import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { ComingSoon } from './clients/clientSections/ComingSoon'
 
-// --- Sub-Components (Clean Organization Style) ---
+// --- Sub-Components ---
 
 const UsageCard = ({
   title,
   icon: Icon,
   value,
+  valueUnit, // New Prop: Unit specific to the current usage (e.g. MB)
   max,
-  unit,
+  unit, // The max/global unit (e.g. GB or slots)
   percent,
   status,
+  remainingLabel,
 }) => (
   <Card
     className={cn(
@@ -47,12 +49,18 @@ const UsageCard = ({
       </div>
 
       <div className="space-y-1">
-        <div className="flex items-baseline gap-2">
+        <div className="flex items-baseline gap-1">
           <span
             className={cn('text-4xl font-light tracking-tight', status.text)}
           >
             {value}
           </span>
+          {/* If a value-specific unit exists (e.g. MB), show it here */}
+          {valueUnit && (
+            <span className={cn('text-sm font-medium mr-1', status.text)}>
+              {valueUnit}
+            </span>
+          )}
           <span className="text-sm font-light text-muted-foreground/60">
             / {max} {unit}
           </span>
@@ -67,7 +75,7 @@ const UsageCard = ({
         />
         <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">
           <span>
-            {max - value} {unit} remaining
+            {remainingLabel || `${(max - value).toFixed(0)} ${unit} remaining`}
           </span>
           <span className={status.text}>{percent.toFixed(0)}%</span>
         </div>
@@ -123,11 +131,6 @@ export default function Settings() {
     })
   }, [setHeader])
 
-  const formatStorageValue = (bytes) => {
-    const mb = bytes / (1024 * 1024)
-    return mb < 1024 ? mb.toFixed(1) : (mb / 1024).toFixed(1)
-  }
-
   const getStatusConfig = (percent) => {
     if (percent >= 100)
       return {
@@ -150,9 +153,6 @@ export default function Settings() {
 
   return (
     <div className="h-full bg-background overflow-y-auto overflow-x-hidden selection:bg-primary/10 [scrollbar-gutter:stable]">
-      {/* WRAPPER: 'overflow-hidden' here prevents the slide-in animation from 
-          temporarily increasing the page height and triggering the scrollbar.
-      */}
       <div className="overflow-hidden">
         <div className="px-8 pt-8 pb-20 space-y-8 max-w-[1400px] mx-auto animate-in fade-in slide-in-from-bottom-4 duration-700 fill-mode-both">
           {/* PAGE HEADER */}
@@ -184,30 +184,20 @@ export default function Settings() {
                   key={tab.value}
                   value={tab.value}
                   className="
-        relative rounded-none bg-transparent px-0 pb-3 pt-0 text-sm font-medium transition-none 
-        shadow-none border-b-2 border-transparent text-muted-foreground
-
-        flex-none w-fit
-        
-        /* Active State Background Fixes */
-        data-[state=active]:bg-transparent 
-        dark:data-[state=active]:bg-transparent
-        
-        /* Hardcoded Active Text: Pure Black (Light) / Pure White (Dark) */
-        data-[state=active]:text-black 
-        dark:data-[state=active]:text-white 
-        
-        /* Hardcoded Active Border: Pure Black (Light) / Pure White (Dark) */
-        data-[state=active]:border-black
-        dark:data-[state=active]:border-white
-        
-        data-[state=active]:shadow-none
-        
-        /* Force remove any side/top borders from the base component */
-        data-[state=active]:border-x-0 
-        data-[state=active]:border-t-0
-        focus-visible:ring-0
-      "
+                    relative rounded-none bg-transparent px-0 pb-3 pt-0 text-sm font-medium transition-none 
+                    shadow-none border-b-2 border-transparent text-muted-foreground
+                    flex-none w-fit
+                    data-[state=active]:bg-transparent 
+                    dark:data-[state=active]:bg-transparent
+                    data-[state=active]:text-black 
+                    dark:data-[state=active]:text-white 
+                    data-[state=active]:border-black
+                    dark:data-[state=active]:border-white
+                    data-[state=active]:shadow-none
+                    data-[state=active]:border-x-0 
+                    data-[state=active]:border-t-0
+                    focus-visible:ring-0
+                  "
                 >
                   <tab.icon className="size-4" />
                   {tab.label}
@@ -242,16 +232,16 @@ export default function Settings() {
                       )}
                     />
 
+                    {/* UPDATED STORAGE CARD */}
                     <UsageCard
                       title="Storage Limit"
                       icon={Database}
-                      value={formatStorageValue(sub.storage_used_bytes)}
-                      max={formatStorageValue(sub.storage_max_bytes)}
-                      unit={
-                        sub.storage_max_bytes / (1024 * 1024) < 1024
-                          ? 'MB'
-                          : 'GB'
-                      }
+                      value={sub.storage_display.usage_value} // e.g., "1.1" or "1.5"
+                      // PASS SEPARATE UNITS HERE
+                      valueUnit={sub.storage_display.usage_unit} // e.g., "MB" or "GB"
+                      unit={sub.storage_display.max_unit} // e.g., "GB"
+                      max={sub.storage_display.max_value} // e.g., "20"
+                      remainingLabel={sub.storage_display.remaining_label}
                       percent={sub.storage_display.percent}
                       status={getStatusConfig(sub.storage_display.percent)}
                     />

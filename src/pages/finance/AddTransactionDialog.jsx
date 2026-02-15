@@ -8,10 +8,12 @@ import {
   ArrowUpCircle,
   ArrowDownCircle,
   Building2,
+  User,
 } from 'lucide-react'
 
 // API
 import { useCreateTransaction, useUpdateTransaction } from '@/api/transactions'
+import { useClients } from '@/api/clients'
 import { supabase } from '@/lib/supabase'
 import { useQuery } from '@tanstack/react-query'
 import { cn } from '@/lib/utils'
@@ -52,19 +54,25 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 // --- CONSTANTS ---
 const INCOME_CATEGORIES = [
-  'Retainer',
-  'Project Fee',
-  'Consulting',
-  'Ad Budget (Client)',
+  'Monthly Retainer',
+  'Setup / Onboarding',
+  'Performance / Success Fee',
+  'Ad Budget Reimbursement',
+  'Creative Project',
+  'Consulting / Audit',
   'Other',
 ]
+
 const EXPENSE_CATEGORIES = [
-  'Freelancer',
-  'Asset Purchase',
-  'Software (One-off)',
-  'Ad Spend',
-  'Office',
-  'Travel',
+  'Ad Spend / Media Buying',
+  'Freelancer / Contractor',
+  'SaaS / Marketing Tools',
+  'Content Production',
+  'Stock / Assets',
+  'Travel & Meetings',
+  'Training / Courses',
+  'Office / Rent',
+  'Taxes / Legal',
   'Other',
 ]
 
@@ -82,29 +90,13 @@ const transactionSchema = z.object({
   status: z.enum(['PAID', 'PENDING', 'OVERDUE']),
 })
 
-// --- HOOKS ---
-function useClientsList() {
-  return useQuery({
-    queryKey: ['clients-list'],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from('clients')
-        .select('id, name, logo_url, is_internal')
-
-      const internalAccount = data?.find((c) => c.is_internal) || null
-      const realClients = data?.filter((c) => !c.is_internal) || []
-
-      return { internalAccount, realClients }
-    },
-  })
-}
-
 export function AddTransactionDialog({
   open,
   onOpenChange,
   editingData = null,
+  defaultClientId = null,
 }) {
-  const { data: clientData } = useClientsList()
+  const { data: clientData, isLoading: isLoadingClients } = useClients()
   const clients = clientData?.realClients || []
   const internalAccount = clientData?.internalAccount
 
@@ -143,13 +135,13 @@ export function AddTransactionDialog({
         type: 'EXPENSE',
         amount: '',
         date: new Date(),
-        client_id: internalAccount?.id || '',
+        client_id: defaultClientId || '',
         category: '',
         description: '',
         status: 'PAID',
       })
     }
-  }, [editingData, internalAccount, form, open])
+  }, [editingData, form, open, defaultClientId])
 
   const type = form.watch('type')
   const activeCategories =
@@ -298,25 +290,37 @@ export function AddTransactionDialog({
                     <Select
                       onValueChange={field.onChange}
                       value={field.value || ''}
+                      disabled={!!defaultClientId}
                     >
                       <FormControl>
                         <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Select account" />
+                          <SelectValue
+                            placeholder={
+                              isLoadingClients
+                                ? 'Loading account...'
+                                : 'Select account...'
+                            }
+                          />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
                         {internalAccount && (
-                          <SelectItem value={internalAccount.id}>
-                            <div className="flex items-center gap-2">
-                              <Building2 className="h-4 w-4" />
-                              <span>My Agency</span>
-                            </div>
-                          </SelectItem>
+                          <>
+                            <SelectItem value={internalAccount.id}>
+                              <div className="flex items-center gap-2">
+                                <Building2 className="h-4 w-4" />
+                                <span>My Agency</span>
+                              </div>
+                            </SelectItem>
+                            <div className="h-px bg-muted my-1" />
+                          </>
                         )}
-                        <div className="h-px bg-muted my-1" />
                         {clients.map((c) => (
                           <SelectItem key={c.id} value={c.id}>
-                            {c.name}
+                            <div className="flex items-center gap-2">
+                              <User className="h-4 w-4 text-muted-foreground" />
+                              <span>{c.name}</span>
+                            </div>
                           </SelectItem>
                         ))}
                       </SelectContent>

@@ -12,6 +12,7 @@ import {
 
 // API & Libs
 import { useExpenses, useDeleteExpense } from '@/api/expenses'
+import { formatCurrency } from '@/utils/finance'
 import { supabase } from '@/lib/supabase'
 import { useQuery } from '@tanstack/react-query'
 import { cn } from '@/lib/utils'
@@ -31,12 +32,14 @@ import StatusBadge from '@/components/StatusBadge'
 import { CustomTable } from '@/components/CustomTable'
 import { AddSubscriptionDialog } from './AddSubscriptionDialog'
 
-export default function SubscriptionsTab() {
+export default function SubscriptionsTab({ clientId, subTabs }) {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingExpense, setEditingExpense] = useState(null)
   const [filterMode, setFilterMode] = useState('ALL')
 
-  const { data: allExpenses = [], isLoading: isLoadingExpenses } = useExpenses()
+  const { data: allExpenses = [], isLoading: isLoadingExpenses } = useExpenses({
+    clientId,
+  })
   const { mutate: deleteExpense } = useDeleteExpense()
 
   const { data: clientData } = useQuery({
@@ -101,11 +104,7 @@ export default function SubscriptionsTab() {
     {
       header: 'Cost',
       width: '12%',
-      render: (e) =>
-        new Intl.NumberFormat('en-IN', {
-          style: 'currency',
-          currency: 'INR',
-        }).format(e.cost),
+      render: (e) => formatCurrency(e.cost),
     },
     {
       header: 'Cycle',
@@ -180,22 +179,28 @@ export default function SubscriptionsTab() {
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <h2 className="text-2xl font-bold tracking-tight">Subscriptions</h2>
+        {subTabs ? (
+          subTabs
+        ) : (
+          <h2 className="text-2xl font-bold tracking-tight">Subscriptions</h2>
+        )}
         <div className="flex items-center gap-3">
-          <Select value={filterMode} onValueChange={setFilterMode}>
-            <SelectTrigger className="w-[200px] border-dashed">
-              <SelectValue placeholder="Filter View" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="ALL">All Expenses</SelectItem>
-              <SelectItem value="INTERNAL">My Agency</SelectItem>
-              {clients.map((c) => (
-                <SelectItem key={c.id} value={c.id}>
-                  {c.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {!clientId && (
+            <Select value={filterMode} onValueChange={setFilterMode}>
+              <SelectTrigger className="w-[200px] border-dashed">
+                <SelectValue placeholder="Filter View" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">All Expenses</SelectItem>
+                <SelectItem value="INTERNAL">My Agency</SelectItem>
+                {clients.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
           <Button
             onClick={() => {
               setEditingExpense(null)
@@ -221,10 +226,7 @@ export default function SubscriptionsTab() {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-medium tracking-tight">
-              {new Intl.NumberFormat('en-IN', {
-                style: 'currency',
-                currency: 'INR',
-              }).format(metrics.monthlyBurn)}
+              {formatCurrency(metrics.monthlyBurn)}
               <span className="text-sm font-normal text-muted-foreground ml-1">
                 / mo
               </span>
@@ -258,12 +260,7 @@ export default function SubscriptionsTab() {
                     )}
                   </Badge>
                   <span className="text-sm text-muted-foreground">
-                    (
-                    {new Intl.NumberFormat('en-IN', {
-                      style: 'currency',
-                      currency: 'INR',
-                    }).format(metrics.nextBill.cost)}
-                    )
+                    ({formatCurrency(metrics.nextBill.cost)})
                   </span>
                 </div>
               </>
@@ -289,6 +286,7 @@ export default function SubscriptionsTab() {
           if (!val) setEditingExpense(null)
         }}
         editingData={editingExpense}
+        defaultClientId={clientId}
       />
     </div>
   )
