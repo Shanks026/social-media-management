@@ -139,7 +139,7 @@ export default function Clients() {
 
   return (
     <div className="min-h-full bg-background selection:bg-primary/10">
-      <div className="px-8 pt-8 pb-20 space-y-8 max-w-[1400px] mx-auto">
+      <div className="px-8 pt-8 pb-20 space-y-8 max-w-[1440px] mx-auto">
         {/* --- SECTION 1: HEADER & PRIMARY ACTION --- */}
         <div className="flex items-end justify-between">
           <div className="space-y-1">

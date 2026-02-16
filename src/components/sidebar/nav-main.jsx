@@ -8,6 +8,7 @@ import {
   PieChart,
   ListOrdered,
   CreditCard,
+  LayoutGrid,
 } from 'lucide-react'
 import { NavLink, useLocation } from 'react-router-dom'
 import {
@@ -32,6 +33,7 @@ import {
 const navItems = [
   { title: 'My Organization', url: '/myorganazation', icon: Building2 },
   { title: 'Clients', url: '/clients', icon: UserStar },
+  { title: 'Content Hub', url: '/posts', icon: LayoutGrid },
   { title: 'Calendar', url: '/calendar', icon: Calendar },
   {
     title: 'Finance',

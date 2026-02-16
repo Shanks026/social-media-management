@@ -15,6 +15,7 @@ import FinanceLayout from './pages/finance/FinanceLayout'
 import OverviewTab from './pages/finance/OverviewTab'
 import SubscriptionsTab from './pages/finance/SubscriptionsTab'
 import LedgerTab from './pages/finance/LedgerTab'
+import Posts from './pages/Posts'
 
 function AppRoutes() {
   const { session, user } = useAuth()
@@ -34,6 +35,7 @@ function AppRoutes() {
             path="/clients/:clientId/posts/:postId"
             element={<PostDetails />}
           />
+          <Route path="/posts" element={<Posts />} />
           <Route path="/calendar" element={<SocialCalendar />} />
           <Route path="/finance" element={<FinanceLayout />}>
             {/* Redirect /finance to /finance/overview */}

@@ -165,7 +165,7 @@ export default function ContentCalendar({
     <div
       className={cn(
         'mx-auto space-y-6',
-        !hideHeader ? 'p-8 max-w-[1400px]' : 'w-full',
+        !hideHeader ? 'p-8 max-w-[1440px]' : 'w-full',
       )}
     >
       <div className="flex items-center justify-between">

@@ -219,10 +219,10 @@ export function CalendarPostCard({ post }) {
           </div>
 
           <div className="mb-6 space-y-2">
-            <h4 className="text-lg font-semibold tracking-tight leading-tight text-foreground line-clamp-1">
+            <h4 className="text-base font-semibold tracking-tight leading-tight text-foreground line-clamp-1">
               {post.title}
             </h4>
-            <p className="text-sm font-medium text-muted-foreground leading-[1.6] line-clamp-2">
+            <p className="text-xs font-normal text-muted-foreground leading-[1.6] line-clamp-2">
               {post.content}
             </p>
           </div>

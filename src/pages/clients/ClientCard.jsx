@@ -258,7 +258,7 @@ function ClientCard({ client, onOpen, onDelete }) {
             )}
 
             {/* Financial Snapshot */}
-            <div className="grid grid-cols-3 gap-4 pt-3 mt-2 border-t border-dashed border-gray-100 dark:border-white/5">
+            <div className="grid grid-cols-3 gap-4 py-4 border-t border-dashed border-gray-100 dark:border-white/5">
               {/* Column 1: LTV */}
               <div className="flex flex-col gap-0.5">
                 <span className="text-[11px] font-medium text-muted-foreground truncate">
