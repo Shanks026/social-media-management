@@ -15,10 +15,8 @@ const PlatformSelector = memo(
     }
 
     return (
-      <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
-        <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2 block">
-          Active Platforms & Handles
-        </Label>
+      <div className="space-y-4 max-h-[500px] overflow-y-auto overflow-x-hidden pr-2 custom-scrollbar">
+        <Label>Active Platforms & Handles</Label>
         <div className="grid grid-cols-1 gap-3">
           {SUPPORTED_PLATFORMS.map((platform) => {
             const isSelected = selected.includes(platform.id)
@@ -61,10 +59,16 @@ const PlatformSelector = memo(
                         <AlertCircle size={12} strokeWidth={3} />
                       )}
                     </div>
-                    <platform.icon
-                      className="size-4"
-                      style={{ color: isSelected ? platform.color : 'inherit' }}
-                    />
+                    <div className="size-6 flex items-center justify-center overflow-hidden">
+                      <img
+                        src={`/platformIcons/${platform.id === 'google_business' ? 'google_busines' : platform.id}.png`}
+                        alt={platform.label}
+                        className={cn(
+                          'size-full object-contain transition-all duration-300',
+                          !isSelected && 'grayscale opacity-50',
+                        )}
+                      />
+                    </div>
                     <span className="text-sm font-semibold">
                       {platform.label}
                     </span>
@@ -73,7 +77,7 @@ const PlatformSelector = memo(
 
                 {/* Handle & URL Inputs */}
                 {canRenderInputs && (
-                  <div className="px-4 pb-4 grid grid-cols-2 gap-3 animate-in slide-in-from-top-2 duration-200">
+                  <div className="px-4 pb-4 grid grid-cols-2 gap-3">
                     <div className="space-y-1">
                       <div className="relative">
                         <AtSign className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3 text-muted-foreground" />
