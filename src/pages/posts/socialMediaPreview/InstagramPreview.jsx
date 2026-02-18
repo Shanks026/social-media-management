@@ -1,17 +1,41 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Heart,
   MessageCircle,
   Send,
   Bookmark,
   MoreHorizontal,
-  Play,
   BadgeCheck,
   ChevronLeft,
   ChevronRight,
+  Music2,
+  Camera,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { AspectRatio } from '@/components/ui/aspect-ratio'
+import { Switch } from '@/components/ui/switch'
+import { Label } from '@/components/ui/label'
+
+/**
+ * Enhanced Text Parser
+ * Colors #hashtags and @mentions in Instagram's specific blue.
+ */
+const renderParsedContent = (text) => {
+  if (!text) return null
+  return text.split(/(\s+)/).map((part, i) => {
+    if (part.startsWith('#') || part.startsWith('@')) {
+      return (
+        <span
+          key={i}
+          className="text-[#00376b] dark:text-[#e0f1ff] cursor-pointer hover:opacity-70"
+        >
+          {part}
+        </span>
+      )
+    }
+    return part
+  })
+}
 
 const isVideoSource = (url) => {
   if (!url) return false
@@ -26,8 +50,8 @@ export default function InstagramPreview({ post, client }) {
   const [isExpanded, setIsExpanded] = useState(false)
   const [isLiked, setIsLiked] = useState(false)
   const [currentSlide, setCurrentSlide] = useState(0)
-  const [aspectRatio, setAspectRatio] = useState(1 / 1) // Default to square
-  const videoRef = useRef(null)
+  const [aspectRatio, setAspectRatio] = useState(1 / 1)
+  const [isReel, setIsReel] = useState(false)
 
   const mediaUrls = post?.media_urls || []
   const hasMultipleMedia = mediaUrls.length > 1
@@ -38,194 +62,279 @@ export default function InstagramPreview({ post, client }) {
   const logo = client?.logo_url
   const location = client?.industry || 'Location'
 
-  // Dynamic Aspect Ratio Calculation
   useEffect(() => {
     if (!currentMedia) return
 
     if (isVideoSource(currentMedia)) {
-      // For videos, the ratio is calculated once metadata is loaded
       const video = document.createElement('video')
       video.src = currentMedia
       video.onloadedmetadata = () => {
-        setAspectRatio(video.videoWidth / video.videoHeight)
+        const ratio = video.videoWidth / video.videoHeight
+        setAspectRatio(ratio)
+        if (ratio < 0.8) setIsReel(true)
+        else setIsReel(false)
       }
     } else {
-      // For images, calculate ratio from natural dimensions
       const img = new Image()
       img.src = currentMedia
       img.onload = () => {
         setAspectRatio(img.naturalWidth / img.naturalHeight)
+        setIsReel(false)
       }
     }
   }, [currentMedia])
 
-  const handleNext = (e) => {
+  const toggleLike = (e) => {
     e.stopPropagation()
-    setCurrentSlide((prev) => (prev === mediaUrls.length - 1 ? 0 : prev + 1))
-  }
-
-  const handlePrev = (e) => {
-    e.stopPropagation()
-    setCurrentSlide((prev) => (prev === 0 ? mediaUrls.length - 1 : prev - 1))
+    setIsLiked(!isLiked)
   }
 
   return (
-    <div className="mx-auto w-full max-w-[420px] overflow-hidden rounded-4xl border border-zinc-200 bg-white shadow-xl dark:border-zinc-800 dark:bg-zinc-950 transition-colors duration-200">
-      {/* 1. Header */}
-      <div className="flex items-center justify-between p-3.5">
-        <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-tr from-yellow-400 via-red-500 to-purple-600 p-[1.5px]">
-            <div className="size-8 rounded-full overflow-hidden">
-              {logo ? (
-                <img src={logo} alt="" className="h-full w-full object-cover" />
+    <div className="flex flex-col items-center w-full max-w-[400px] mx-auto gap-4">
+      {/* View Mode Toggle */}
+      <div className="flex items-center justify-end w-full space-x-2 px-2">
+        <Label
+          htmlFor="mode"
+          className={cn(
+            'text-xs font-medium transition-colors',
+            !isReel ? 'text-primary' : 'text-muted-foreground',
+          )}
+        >
+          Post
+        </Label>
+        <Switch
+          id="mode"
+          checked={isReel}
+          onCheckedChange={setIsReel}
+          disabled={!isVideoSource(currentMedia)}
+        />
+        <Label
+          htmlFor="mode"
+          className={cn(
+            'text-xs font-medium transition-colors',
+            isReel ? 'text-primary' : 'text-muted-foreground',
+          )}
+        >
+          Reel
+        </Label>
+      </div>
+
+      {isReel ? (
+        /* --- SLEEK REEL UI --- */
+        <div className="relative w-full aspect-[9/16] bg-black rounded-[2.5rem] overflow-hidden shadow-2xl border border-zinc-200 dark:border-zinc-800">
+          {currentMedia && (
+            <video
+              src={currentMedia}
+              className="absolute inset-0 w-full h-full object-cover"
+              autoPlay
+              muted
+              loop
+              playsInline
+            />
+          )}
+
+          <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/50 pointer-events-none" />
+
+          {/* Top Bar */}
+          <div className="absolute top-8 left-6 right-6 flex justify-between items-center text-white z-20">
+            <ChevronLeft size={24} strokeWidth={2.5} />
+            <span className="font-bold text-sm tracking-tight">Reels</span>
+            <Camera size={24} strokeWidth={2.5} />
+          </div>
+
+          {/* Right Action Bar */}
+          <div className="absolute right-3 bottom-20 flex flex-col items-center gap-5 text-white z-20">
+            <div
+              className="flex flex-col items-center gap-1 cursor-pointer"
+              onClick={toggleLike}
+            >
+              <Heart
+                size={28}
+                strokeWidth={2.5}
+                className={cn(
+                  'transition-all duration-200',
+                  isLiked
+                    ? 'fill-[#ed4956] text-[#ed4956] scale-110'
+                    : 'text-white active:scale-125',
+                )}
+              />
+              <span className="text-[10px] font-semibold tracking-wide">
+                120K
+              </span>
+            </div>
+            <div className="flex flex-col items-center gap-1">
+              <MessageCircle size={28} strokeWidth={2.5} />
+              <span className="text-[10px] font-semibold">452</span>
+            </div>
+            <div className="flex flex-col items-center gap-1">
+              <Send size={26} strokeWidth={2.5} className="-rotate-12" />
+              <span className="text-[10px] font-semibold">25K</span>
+            </div>
+            <MoreHorizontal size={24} strokeWidth={2.5} />
+            <div className="size-7 rounded-lg border-2 border-white overflow-hidden mt-2 bg-zinc-800 relative">
+              {logo && (
+                <img src={logo} className="w-full h-full object-cover" />
+              )}
+              <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                <Music2 size={10} className="text-white fill-current" />
+              </div>
+            </div>
+          </div>
+
+          {/* Bottom Attribution */}
+          <div className="absolute left-4 bottom-8 right-16 text-white z-20">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="size-8 rounded-full bg-zinc-700 overflow-hidden border border-white/20 shrink-0">
+                {logo ? (
+                  <img src={logo} className="w-full h-full object-cover" />
+                ) : (
+                  <div className="text-[10px] font-bold p-2">
+                    {(handle || 'U').slice(0, 1).toUpperCase()}
+                  </div>
+                )}
+              </div>
+              <span className="font-bold text-[13px]">{handle}</span>
+              <button className="border border-white/40 px-2.5 py-0.5 rounded-lg text-[10px] font-bold hover:bg-white/10 transition-colors">
+                Follow
+              </button>
+            </div>
+            <div className="mb-3">
+              <div
+                className={cn(
+                  'text-[13px] leading-snug',
+                  !isExpanded ? 'line-clamp-1' : 'line-clamp-none',
+                )}
+              >
+                <span className="font-bold mr-1.5">{handle}</span>
+                <span className="opacity-90">
+                  {renderParsedContent(content) || 'Your reel description...'}
+                </span>
+              </div>
+              {content.length > 40 && !isExpanded && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setIsExpanded(true)
+                  }}
+                  className="text-[13px] font-bold opacity-70 mt-0.5"
+                >
+                  more
+                </button>
+              )}
+            </div>
+            <div className="flex items-center gap-2 text-[11px] bg-black/20 backdrop-blur-md py-1 px-3 rounded-full w-fit max-w-full">
+              <Music2 size={10} className="shrink-0" />
+              <span className="truncate">Original audio • {handle}</span>
+            </div>
+          </div>
+        </div>
+      ) : (
+        /* --- REFINED FEED POST UI --- */
+        <div className="w-full bg-white dark:bg-zinc-950 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-xl overflow-hidden">
+          {/* Header */}
+          <div className="flex items-center justify-between p-3">
+            <div className="flex items-center gap-3">
+              <div className="size-8 rounded-full bg-zinc-100 overflow-hidden border border-zinc-200 dark:border-zinc-800">
+                {logo ? (
+                  <img src={logo} className="w-full h-full object-cover" />
+                ) : (
+                  <div className="size-full flex items-center justify-center text-[10px] font-bold text-zinc-400">
+                    {handle.slice(0, 1).toUpperCase()}
+                  </div>
+                )}
+              </div>
+              <div className="flex flex-col min-w-0">
+                <span className="text-[13px] font-bold leading-none truncate">
+                  {handle}
+                </span>
+                <span className="text-[11px] text-muted-foreground mt-0.5 truncate">
+                  {location}
+                </span>
+              </div>
+            </div>
+            <MoreHorizontal size={18} className="text-muted-foreground" />
+          </div>
+
+          {/* Media Area */}
+          <div className="relative w-full bg-zinc-50 dark:bg-zinc-900 overflow-hidden">
+            <AspectRatio ratio={aspectRatio}>
+              {currentMedia ? (
+                isVideoSource(currentMedia) ? (
+                  <video
+                    src={currentMedia}
+                    className="w-full h-full object-contain bg-black"
+                    autoPlay
+                    muted
+                    loop
+                    playsInline
+                  />
+                ) : (
+                  <img
+                    src={currentMedia}
+                    alt="Post"
+                    className="w-full h-full object-contain"
+                  />
+                )
               ) : (
-                <div className="h-full w-full flex items-center justify-center text-[10px] font-bold text-zinc-400">
-                  {client?.name?.slice(0, 2).toUpperCase()}
+                <div className="flex items-center justify-center h-full text-muted-foreground italic text-xs">
+                  No media selected
                 </div>
               )}
-            </div>
-          </div>
-          <div className="flex flex-col">
-            <div className="flex items-center gap-1">
-              <span className="text-[13px] font-bold text-zinc-900 dark:text-zinc-100">
-                {handle}
-              </span>
-              <BadgeCheck
-                size={14}
-                className="fill-blue-500 text-white dark:text-zinc-950"
-              />
-            </div>
-            <span className="text-[11px] text-zinc-500 dark:text-zinc-400">
-              {location}
-            </span>
-          </div>
-        </div>
-        <MoreHorizontal size={18} className="text-zinc-400" />
-      </div>
-
-      {/* 2. Media Area with Dynamic AspectRatio */}
-      <div className="relative w-full bg-zinc-50 dark:bg-zinc-900/50 group">
-        <AspectRatio ratio={aspectRatio}>
-          {mediaUrls.length > 0 ? (
-            <div className="h-full w-full">
-              {isVideoSource(currentMedia) ? (
-                <video
-                  key={currentMedia}
-                  src={currentMedia}
-                  className="h-full w-full object-contain bg-black"
-                  autoPlay
-                  muted
-                  loop
-                  playsInline
-                />
-              ) : (
-                <img
-                  src={currentMedia}
-                  alt="Post content"
-                  className="h-full w-full object-contain"
-                />
-              )}
-            </div>
-          ) : (
-            <div className="flex h-full w-full items-center justify-center">
-              <span className="text-xs text-zinc-400 font-medium italic">
-                No media selected
-              </span>
-            </div>
-          )}
-        </AspectRatio>
-
-        {/* Carousel Controls */}
-        {hasMultipleMedia && (
-          <>
-            <button
-              onClick={handlePrev}
-              className="absolute left-3 top-1/2 -translate-y-1/2 rounded-full bg-white/90 p-1 shadow-md opacity-0 group-hover:opacity-100 transition-opacity dark:bg-zinc-900/80"
-            >
-              <ChevronLeft size={18} />
-            </button>
-            <button
-              onClick={handleNext}
-              className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-white/90 p-1 shadow-md opacity-0 group-hover:opacity-100 transition-opacity dark:bg-zinc-900/80"
-            >
-              <ChevronRight size={18} />
-            </button>
-            <div className="absolute top-4 right-4 rounded-full bg-black/60 px-2.5 py-1 text-[10px] font-bold text-white backdrop-blur-sm">
-              {currentSlide + 1}/{mediaUrls.length}
-            </div>
-          </>
-        )}
-      </div>
-
-      {/* 3. Interaction Bar */}
-      <div className="space-y-2.5 p-3.5">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4 text-zinc-900 dark:text-zinc-100">
-            <Heart
-              size={24}
-              onClick={() => setIsLiked(!isLiked)}
-              className={cn(
-                'cursor-pointer transition-all active:scale-125',
-                isLiked ? 'fill-red-500 text-red-500' : 'hover:opacity-60',
-              )}
-            />
-            <MessageCircle
-              size={24}
-              className="hover:opacity-60 cursor-pointer"
-            />
-            <Send size={24} className="hover:opacity-60 cursor-pointer" />
+            </AspectRatio>
           </div>
 
-          {/* Pagination Dots */}
-          {hasMultipleMedia && (
-            <div className="flex gap-1 absolute left-1/2 -translate-x-1/2">
-              {mediaUrls.map((_, i) => (
-                <div
-                  key={i}
+          {/* Interaction Bar */}
+          <div className="p-3.5 space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <Heart
+                  size={24}
+                  onClick={toggleLike}
                   className={cn(
-                    'h-1.5 w-1.5 rounded-full transition-all',
-                    currentSlide === i
-                      ? 'bg-blue-500'
-                      : 'bg-zinc-300 dark:bg-zinc-700',
+                    'cursor-pointer transition-all duration-200 scale-110',
+                    isLiked
+                      ? 'fill-[#ed4956] text-[#ed4956]'
+                      : 'hover:opacity-60',
                   )}
                 />
-              ))}
+                <MessageCircle
+                  size={24}
+                  className="hover:opacity-60 cursor-pointer"
+                />
+                <Send size={24} className="hover:opacity-60 cursor-pointer" />
+              </div>
+              <Bookmark size={24} className="hover:opacity-60 cursor-pointer" />
             </div>
-          )}
 
-          <Bookmark
-            size={24}
-            className="text-zinc-900 dark:text-zinc-100 hover:opacity-60 cursor-pointer"
-          />
-        </div>
+            <p className="text-[13px] font-bold">
+              {isLiked ? '1,241' : '1,240'} likes
+            </p>
 
-        <p className="text-[13px] font-bold text-zinc-900 dark:text-zinc-100">
-          {isLiked ? '1,241' : '1,240'} likes
-        </p>
-
-        {/* 4. Caption: Username + Content inline */}
-        <div className="text-[13px] leading-[1.4] text-zinc-900 dark:text-zinc-100">
-          <div className={cn(!isExpanded && 'line-clamp-2')}>
-            <span className="font-bold mr-1.5 cursor-pointer">{handle}</span>
-            <span className="text-zinc-800 dark:text-zinc-300">
-              {content || 'No caption provided.'}
-            </span>
+            {/* 🛠️ ALIGNED DESCRIPTION NEXT TO USERNAME */}
+            <div className="text-[13px] leading-[1.4]">
+              <div className={cn('inline', !isExpanded && 'line-clamp-2')}>
+                <span className="font-bold mr-1.5 cursor-pointer hover:opacity-70 inline">
+                  {handle}
+                </span>
+                <span className="text-zinc-800 dark:text-zinc-300 inline">
+                  {renderParsedContent(content) || 'No caption provided.'}
+                </span>
+                {content.length > 50 && !isExpanded && (
+                  <button
+                    onClick={() => setIsExpanded(true)}
+                    className="text-muted-foreground font-medium ml-1 inline hover:text-zinc-400"
+                  >
+                    ... more
+                  </button>
+                )}
+              </div>
+            </div>
+            <p className="text-[12px] text-muted-foreground cursor-pointer pt-0.5">
+              View all 12 comments
+            </p>
           </div>
-
-          {content.length > 50 && (
-            <button
-              onClick={() => setIsExpanded(!isExpanded)}
-              className="mt-1 text-zinc-500 dark:text-zinc-400 font-medium hover:text-zinc-700 block"
-            >
-              {isExpanded ? '... less' : '... more'}
-            </button>
-          )}
         </div>
-
-        <p className="text-[13px] text-zinc-400 dark:text-zinc-500 cursor-pointer">
-          View all 12 comments
-        </p>
-      </div>
+      )}
     </div>
   )
 }

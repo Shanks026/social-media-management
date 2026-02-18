@@ -65,10 +65,20 @@ const MediaItem = ({ url, className, isPreview = false }) => {
   const isVideo = isVideoSource(url)
   if (isVideo) {
     return (
-      <div className={cn('relative h-full w-full bg-black', className)}>
+      <div
+        className={cn(
+          'relative bg-black flex items-center justify-center',
+          isPreview ? 'w-auto h-auto' : 'h-full w-full',
+          className,
+        )}
+      >
         <video
           src={url}
-          className="h-full w-full object-cover"
+          className={cn(
+            isPreview
+              ? 'max-h-[inherit] max-w-[inherit] object-contain'
+              : 'h-full w-full object-cover',
+          )}
           muted={!isPreview}
           controls={isPreview}
           autoPlay={isPreview}
@@ -89,7 +99,12 @@ const MediaItem = ({ url, className, isPreview = false }) => {
     <img
       src={url}
       alt="Media"
-      className={cn('h-full w-full object-cover', className)}
+      className={cn(
+        isPreview
+          ? 'w-auto h-auto max-h-[inherit] max-w-[inherit] object-contain'
+          : 'h-full w-full object-cover',
+        className,
+      )}
     />
   )
 }
@@ -100,11 +115,11 @@ const PlatformIcon = ({ name }) => {
   const imgSrc = `/platformIcons/${fileName}.png`
 
   return (
-    <div className="flex h-8 w-8 items-center justify-center rounded-full border-white dark:border-[#1c1c1f] bg-white dark:bg-zinc-900 shadow-sm transition-transform hover:scale-110 overflow-hidden">
+    <div className="flex h-7 w-7 items-center justify-center rounded-full border-white dark:border-[#1c1c1f] bg-white dark:bg-zinc-900 shadow-sm transition-transform hover:scale-110 overflow-hidden">
       <img
         src={imgSrc}
         alt={name}
-        className="size-7 object-contain"
+        className="size-6 object-contain"
         // Fallback for missing images
         onError={(e) => (e.target.style.display = 'none')}
       />
@@ -326,37 +341,36 @@ export default function DraftPostList({ clientId }) {
 
       <Dialog open={!!previewPost} onOpenChange={() => setPreviewPost(null)}>
         <DialogContent
-          className="max-w-[90vw] lg:max-w-[1100px] h-[85vh] p-0 bg-transparent border-none shadow-none overflow-hidden"
+          className="max-w-[95vw] w-fit h-fit p-0 bg-transparent border-none shadow-none focus:outline-none flex items-center justify-center"
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="relative w-full h-full rounded-3xl bg-black/95 flex items-center justify-center border border-white/10">
-            <div className="w-full h-full flex items-center justify-center">
-              {previewPost && (
-                <MediaItem
-                  url={previewPost.media_urls[activeImageIndex]}
-                  className="object-contain"
-                  isPreview={true}
-                />
-              )}
-            </div>
+          <div className="relative flex items-center justify-center rounded-2xl bg-black/95 overflow-hidden shadow-2xl border border-white/10 shrink-0 max-h-[90vh] max-w-[90vw]">
+            {previewPost && (
+              <MediaItem
+                url={previewPost.media_urls[activeImageIndex]}
+                className="w-auto h-auto max-h-[90vh] max-w-[90vw] object-contain"
+                isPreview={true}
+              />
+            )}
+
             {previewPost?.media_urls?.length > 1 && (
               <>
-                <div className="absolute inset-x-4 top-1/2 -translate-y-1/2 flex justify-between pointer-events-none z-50">
+                <div className="absolute inset-0 flex items-center justify-between pointer-events-none px-4">
                   <button
                     onClick={handlePrev}
-                    className="pointer-events-auto p-4 rounded-2xl bg-black/40 text-white hover:bg-black/60 backdrop-blur-xl transition-all"
+                    className="pointer-events-auto p-2 rounded-full bg-black/50 text-white hover:bg-black/70 backdrop-blur-sm transition-all hover:scale-110"
                   >
-                    <ChevronLeft className="h-8 w-8" />
+                    <ChevronLeft className="h-6 w-6" />
                   </button>
                   <button
                     onClick={handleNext}
-                    className="pointer-events-auto p-4 rounded-2xl bg-black/40 text-white hover:bg-black/60 backdrop-blur-xl transition-all"
+                    className="pointer-events-auto p-2 rounded-full bg-black/50 text-white hover:bg-black/70 backdrop-blur-sm transition-all hover:scale-110"
                   >
-                    <ChevronRight className="h-8 w-8" />
+                    <ChevronRight className="h-6 w-6" />
                   </button>
                 </div>
-                <div className="absolute top-6 left-1/2 -translate-x-1/2 z-50">
-                  <Badge className="bg-white/10 text-white border-none backdrop-blur-md px-4 py-1.5 font-mono">
+                <div className="absolute top-4 right-4 pointer-events-none z-50">
+                  <Badge className="bg-black/50 text-white border-white/10 backdrop-blur-md px-3 py-1 font-mono">
                     {activeImageIndex + 1} / {previewPost.media_urls.length}
                   </Badge>
                 </div>

@@ -67,7 +67,7 @@ const STATUS_TABS = [
   { key: 'ALL', label: 'All' },
   { key: 'DRAFT', label: 'Drafts' },
   { key: 'PENDING_APPROVAL', label: 'Pending Approval' },
-  { key: 'APPROVED', label: 'Approved' },
+  // { key: 'APPROVED', label: 'Approved' },
   { key: 'SCHEDULED', label: 'Scheduled' },
   { key: 'NEEDS_REVISION', label: 'Needs Revision' },
   { key: 'PUBLISHED', label: 'Published' },
@@ -562,7 +562,7 @@ export default function Posts() {
               )}
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-5">
               {posts.map((post) => (
                 <CalendarPostCard key={post.id} post={post} />
               ))}

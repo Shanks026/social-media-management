@@ -118,13 +118,46 @@ const PLATFORM_CONFIG = {
   },
 }
 
-const formSchema = z.object({
-  title: z.string().min(1, 'Title is required'),
-  content: z.string().min(1, 'Post content is required'),
-  platforms: z.array(z.string()).min(1, 'Select at least one platform'),
-  images: z.array(z.any()).max(MAX_FILES).default([]),
-  target_date: z.date().optional(),
-})
+// Helper to check if a file/preview is a video
+const isVideoContent = (fileOrPreview) => {
+  if (!fileOrPreview) return false
+  // Check if it's our preview object
+  if (fileOrPreview.type === 'video') return true
+  // Check if it's a File object
+  if (fileOrPreview instanceof File && fileOrPreview.type.startsWith('video/'))
+    return true
+  // Check if it's a remote URL string (fallback)
+  if (typeof fileOrPreview === 'string') return isRemoteVideo(fileOrPreview)
+  return false
+}
+
+const formSchema = z
+  .object({
+    title: z.string().min(1, 'Title is required'),
+    content: z.string().min(1, 'Post content is required'),
+    platforms: z.array(z.string()).min(1, 'Select at least one platform'),
+    images: z.array(z.any()).max(MAX_FILES).default([]),
+    target_date: z.date().optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.platforms.includes('youtube')) {
+      // Check if there is at least one video in images
+      // Note: 'images' in form state contains File objects.
+      // We might also have existing remote URLs if in edit mode, but 'images' usually tracks *new* files.
+      // Wait, 'images' in form values only tracks NEW files?
+      // Let's check how 'images' is used. It seems to only collect new files from inputs.
+      // But we need to validate against ALL media (existing + new).
+      // Since zod validation runs on submit, and 'previews' state holds the truth of what's selected...
+      // We can't easily access 'previews' here inside pure Zod.
+      // However, we can trust the component validation to prevent submit, OR pass context.
+      // A simpler way: The component logic handles most of it.
+      // But for strict schema safety:
+      // We'll skip strict file checking here if it's too complex to access current state,
+      // BUT we can check if 'images' has a video IF we only had new files.
+      // Better strategy: "DraftPostForm" keeps 'previews' updated. We should rely on component validation or inject current media into the form values if needed.
+      // For now, let's add a custom check in handleSubmit or rely on the UI restrictions we are building.
+    }
+  })
 
 export default function DraftPostForm({
   clientId,
@@ -153,6 +186,12 @@ export default function DraftPostForm({
       target_date: undefined,
     },
   })
+
+  // Derived state for validation
+  const watchedPlatforms = form.watch('platforms') || []
+  const hasVideo = previews.some((p) => p.type === 'video')
+  const hasMedia = previews.length > 0
+  const isYoutubeSelected = watchedPlatforms.includes('youtube')
 
   useEffect(() => {
     if (initialData && open) {
@@ -186,6 +225,19 @@ export default function DraftPostForm({
   })
 
   const availablePlatforms = client?.platforms || []
+
+  // Custom Submit Handler to enforce Youtube Constraint
+  const onSubmit = (values) => {
+    if (values.platforms.includes('youtube') && !hasVideo) {
+      form.setError('platforms', {
+        type: 'manual',
+        message:
+          'YouTube requires a video file. Please upload a video or deselect YouTube.',
+      })
+      return
+    }
+    mutation.mutate(values)
+  }
 
   const mutation = useMutation({
     mutationFn: async (values) => {
@@ -253,9 +305,36 @@ export default function DraftPostForm({
   }
 
   const handleFileChange = (e) => {
-    const files = Array.from(e.target.files || [])
+    let files = Array.from(e.target.files || [])
+
+    // Constraint: If YouTube selected, filter out non-videos
+    if (isYoutubeSelected) {
+      const videoFiles = files.filter((f) => f.type.startsWith('video/'))
+      if (videoFiles.length < files.length) {
+        toast.error('Only video files are allowed when YouTube is selected.')
+      }
+      files = videoFiles
+
+      // Constraint: Single file only
+      if (files.length > 1) {
+        toast.warning('YouTube allows only one video. Taking the first one.')
+        files = files.slice(0, 1)
+      }
+    }
+
     const currentFiles = form.getValues('images') || []
-    const remainingSlots = MAX_FILES - previews.length
+
+    // Calculate slots based on mode
+    const maxAllowed = isYoutubeSelected ? 1 : MAX_FILES
+    const remainingSlots = maxAllowed - previews.length
+
+    // If YouTube is selected and we already have 1, remaining is 0.
+    // If we're uploading 1 new one, and previews is 0, we can add 1.
+    if (remainingSlots <= 0 && isYoutubeSelected) {
+      toast.error('You can only upload 1 video for YouTube.')
+      return
+    }
+
     const addedFiles = files.slice(0, remainingSlots)
 
     form.setValue('images', [...currentFiles, ...addedFiles])
@@ -280,7 +359,23 @@ export default function DraftPostForm({
       form.setValue('images', newFiles)
       URL.revokeObjectURL(itemToRemove.url)
     }
-    setPreviews((prev) => prev.filter((_, i) => i !== index))
+
+    const newPreviews = previews.filter((_, i) => i !== index)
+    setPreviews(newPreviews)
+
+    // Check if we removed the last video and YouTube is selected
+    const remainingHasVideo = newPreviews.some((p) => p.type === 'video')
+    if (isYoutubeSelected && !remainingHasVideo) {
+      // Auto deselect YouTube or warn?
+      // "If the user uploads an image, automatically deselect "YouTube" if it was previously active"
+      // Logic here handles removal. If we remove the video, we should probably deselect YouTube to be safe.
+      const currentPlatforms = form.getValues('platforms')
+      form.setValue(
+        'platforms',
+        currentPlatforms.filter((p) => p !== 'youtube'),
+      )
+      toast.info('YouTube deselected because the video was removed.')
+    }
   }
 
   return (
@@ -297,7 +392,7 @@ export default function DraftPostForm({
 
         <Form {...form}>
           <form
-            onSubmit={form.handleSubmit((v) => mutation.mutate(v))}
+            onSubmit={form.handleSubmit(onSubmit)}
             className="flex flex-col flex-1 overflow-hidden"
           >
             <div className="flex-1 overflow-y-auto p-6 space-y-6">
@@ -350,39 +445,53 @@ export default function DraftPostForm({
                     </div>
                   ))}
 
-                  {previews.length < MAX_FILES && (
-                    <Tooltip delayDuration={0}>
-                      <TooltipTrigger asChild>
-                        <button
-                          type="button"
-                          disabled={isStorageFull}
-                          onClick={() => fileInputRef.current?.click()}
-                          className={cn(
-                            'flex aspect-square items-center justify-center rounded-lg border-2 border-dashed transition-all',
-                            isStorageFull
-                              ? 'opacity-50 cursor-not-allowed bg-muted/50 border-muted'
-                              : 'hover:bg-accent hover:border-primary/50',
-                          )}
-                        >
-                          <div className="flex flex-col items-center gap-1 text-muted-foreground">
-                            {isStorageFull ? (
-                              <AlertCircle className="h-5 w-5 text-destructive" />
-                            ) : (
-                              <Plus className="h-6 w-6" />
+                  {/* Add Button Logic based on YouTube selection */}
+                  {previews.length < (isYoutubeSelected ? 1 : MAX_FILES) && (
+                    <TooltipProvider delayDuration={0}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            type="button"
+                            disabled={isStorageFull}
+                            onClick={() => fileInputRef.current?.click()}
+                            className={cn(
+                              'flex aspect-square items-center justify-center rounded-lg border-2 border-dashed transition-all',
+                              isStorageFull
+                                ? 'opacity-50 cursor-not-allowed bg-muted/50 border-muted'
+                                : 'hover:bg-accent hover:border-primary/50',
                             )}
-                            <span className="text-[10px] font-bold uppercase">
-                              {isStorageFull ? 'Locked' : 'Add'}
-                            </span>
-                          </div>
-                        </button>
-                      </TooltipTrigger>
-                    </Tooltip>
+                          >
+                            <div className="flex flex-col items-center gap-1 text-muted-foreground">
+                              {isStorageFull ? (
+                                <AlertCircle className="h-5 w-5 text-destructive" />
+                              ) : (
+                                <Plus className="h-6 w-6" />
+                              )}
+                              <span className="text-[10px] font-bold uppercase">
+                                {isStorageFull ? 'Locked' : 'Add'}
+                              </span>
+                            </div>
+                          </button>
+                        </TooltipTrigger>
+                        {isStorageFull && (
+                          <TooltipContent>Your storage is full.</TooltipContent>
+                        )}
+                      </Tooltip>
+                    </TooltipProvider>
                   )}
                 </div>
+                {/* Helper Text for YouTube */}
+                {isYoutubeSelected && (
+                  <p className="text-[11px] text-amber-600 font-medium flex items-center gap-1">
+                    <AlertCircle size={12} />
+                    YouTube: Single video upload only.
+                  </p>
+                )}
+
                 <input
                   type="file"
-                  multiple
-                  accept="image/*,video/*"
+                  multiple={!isYoutubeSelected} // Single file only for YouTube
+                  accept={isYoutubeSelected ? 'video/*' : 'image/*,video/*'}
                   className="hidden"
                   ref={fileInputRef}
                   onChange={handleFileChange}
@@ -407,16 +516,69 @@ export default function DraftPostForm({
                           .map(([id, config]) => {
                             const Icon = config.icon
                             const isSelected = field.value?.includes(id)
-                            return (
-                              <label key={id} className="cursor-pointer">
+
+                            // Logic to disable YouTube
+                            let isDisabled = false
+                            let tooltipText = ''
+
+                            if (id === 'youtube') {
+                              // 1. Must have media (unless empty, but user can add later - wait, user requirement says "disabled unless user has uploaded a video file")
+                              // Actually user said: "The 'YouTube' option... must be disabled (grayed out) unless the user has uploaded a video file."
+                              // This implies we can't select it BEFORE uploading?
+                              // "Validation Logic: If the user selects "YouTube" first..." -> This implies we CAN select it first.
+                              // Let's interpret "Conditional Disabling":
+                              // "Conditional Disabling: The "YouTube" option... must be disabled... unless the user has uploaded a video file."
+                              // BUT checking requirement 2: "If the user selects "YouTube" first, restrict the file uploader..."
+                              // These are contradictory.
+                              // Interpretation: Verification logic in 'onSubmit' covers the "must have video" part.
+                              // The "Disabled" part likely means: If I have *IMAGES* only, disable it. If I have *NOTHING*, maybe allow it so I can upload a video next?
+                              // Let's stick to: Disable if there is content but NO video (handled below).
+                              if (hasMedia && !hasVideo) {
+                                isDisabled = true
+                                tooltipText = 'YouTube requires a video file.'
+                              }
+                            }
+
+                            const checkboxWithBadge = (
+                              <label
+                                key={id}
+                                className={cn(
+                                  'cursor-pointer',
+                                  isDisabled && 'cursor-not-allowed opacity-50',
+                                )}
+                              >
                                 <input
                                   type="checkbox"
                                   className="sr-only"
                                   checked={isSelected}
+                                  disabled={isDisabled}
                                   onChange={(e) => {
+                                    if (isDisabled) return
                                     const current = field.value || []
+                                    const isChecking = e.target.checked
+
+                                    // Constraint: YouTube Single File Policy
+                                    if (id === 'youtube' && isChecking) {
+                                      if (previews.length > 1) {
+                                        toast.error(
+                                          'YouTube posts are limited to 1 video file. Please remove other files first.',
+                                        )
+                                        return // Prevent selection
+                                      }
+                                      // Also ensure no images (though isDisabled handles the 'no video' case, we might have 1 video + 1 image)
+                                      const hasImages = previews.some(
+                                        (p) => p.type !== 'video',
+                                      )
+                                      if (hasImages) {
+                                        toast.error(
+                                          'YouTube allows only video files. Please remove images.',
+                                        )
+                                        return
+                                      }
+                                    }
+
                                     field.onChange(
-                                      e.target.checked
+                                      isChecking
                                         ? [...current, id]
                                         : current.filter((v) => v !== id),
                                     )
@@ -440,6 +602,22 @@ export default function DraftPostForm({
                                 </Badge>
                               </label>
                             )
+
+                            if (isDisabled) {
+                              return (
+                                <TooltipProvider key={id}>
+                                  <Tooltip delayDuration={0}>
+                                    <TooltipTrigger asChild>
+                                      <div>{checkboxWithBadge}</div>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>{tooltipText}</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              )
+                            }
+                            return checkboxWithBadge
                           })
                       )}
                     </div>

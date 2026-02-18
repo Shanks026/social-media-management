@@ -43,10 +43,11 @@ import MonthView from './MonthView'
 import WeekView from './WeekView'
 
 const STATUS_LEGEND = [
-  { id: 'PUBLISHED', label: 'Published', color: 'bg-green-600' },
-  { id: 'SCHEDULED', label: 'Scheduled', color: 'bg-purple-600' },
+  { id: 'DRAFT', label: 'Draft', color: 'bg-blue-600' },
+  { id: 'PENDING_APPROVAL', label: 'Pending Approval', color: 'bg-orange-600' },
   { id: 'NEEDS_REVISION', label: 'Needs Revision', color: 'bg-pink-600' },
-  { id: 'PENDING_APPROVAL', label: 'Pending Approval', color: 'bg-amber-600' },
+  { id: 'SCHEDULED', label: 'Scheduled', color: 'bg-purple-600' },
+  { id: 'PUBLISHED', label: 'Published', color: 'bg-lime-600' },
 ]
 
 const PLATFORMS = [
@@ -192,7 +193,7 @@ export default function ContentCalendar({
               variant="ghost"
               size="sm"
               onClick={() => setCurrentDate(new Date())}
-              className="px-4 h-9 rounded-none text-[11px] font-bold uppercase tracking-widest border-r"
+              className="px-4 h-9 rounded-none text-xs font-medium border-r"
             >
               Today
             </Button>
@@ -208,16 +209,10 @@ export default function ContentCalendar({
 
           <Tabs value={view} onValueChange={setView} className="w-[180px]">
             <TabsList className="grid w-full grid-cols-2 h-9">
-              <TabsTrigger
-                value="month"
-                className="text-[10px] font-bold uppercase tracking-wider"
-              >
+              <TabsTrigger value="month" className="text-xs font-medium">
                 Month
               </TabsTrigger>
-              <TabsTrigger
-                value="week"
-                className="text-[10px] font-bold uppercase tracking-wider"
-              >
+              <TabsTrigger value="week" className="text-xs font-medium">
                 Week
               </TabsTrigger>
             </TabsList>
@@ -241,7 +236,7 @@ export default function ContentCalendar({
         <div className="flex items-center gap-2">
           {!clientId && (
             <Select value={clientFilter} onValueChange={setClientFilter}>
-              <SelectTrigger className="w-36 h-9 text-xs font-semibold uppercase tracking-tight shadow-none">
+              <SelectTrigger className="w-36 h-9 text-xs shadow-none">
                 <SelectValue placeholder="Client" />
               </SelectTrigger>
               <SelectContent>
@@ -256,7 +251,7 @@ export default function ContentCalendar({
           )}
 
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-36 h-9 text-xs font-semibold uppercase tracking-tight shadow-none">
+            <SelectTrigger className="w-36 h-9 text-xs shadow-none">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
@@ -270,7 +265,7 @@ export default function ContentCalendar({
           </Select>
 
           <Select value={platformFilter} onValueChange={setPlatformFilter}>
-            <SelectTrigger className="w-36 h-9 text-xs font-semibold uppercase tracking-tight shadow-none">
+            <SelectTrigger className="w-36 h-9 text-xs shadow-none">
               <SelectValue placeholder="Platform" />
             </SelectTrigger>
             <SelectContent>
@@ -335,9 +330,7 @@ export default function ContentCalendar({
             )}
           >
             <span className={`size-1.5 rounded-full ${item.color} shadow-sm`} />
-            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide">
-              {item.label}
-            </span>
+            <span className="text-xs text-muted-foreground">{item.label}</span>
           </button>
         ))}
       </div>

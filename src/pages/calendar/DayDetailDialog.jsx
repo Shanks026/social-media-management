@@ -26,10 +26,11 @@ import {
 } from '@/components/ui/empty'
 
 const STATUS_STATS_CONFIG = [
-  { id: 'PUBLISHED', label: 'Published', color: 'bg-green-600' },
-  { id: 'SCHEDULED', label: 'Scheduled', color: 'bg-purple-600' },
+  { id: 'DRAFT', label: 'Draft', color: 'bg-blue-600' },
+  { id: 'PENDING_APPROVAL', label: 'Pending', color: 'bg-orange-600' },
   { id: 'NEEDS_REVISION', label: 'Revisions', color: 'bg-pink-600' },
-  { id: 'PENDING_APPROVAL', label: 'Pending', color: 'bg-amber-600' },
+  { id: 'SCHEDULED', label: 'Scheduled', color: 'bg-purple-600' },
+  { id: 'PUBLISHED', label: 'Published', color: 'bg-lime-600' },
 ]
 
 export function DayDetailDialog({ date, posts = [], open, onOpenChange }) {
@@ -194,7 +195,7 @@ export function DayDetailDialog({ date, posts = [], open, onOpenChange }) {
         {/* Footer: Clean & Weighted */}
         <div className="px-10 py-6 border-t flex items-center justify-between shrink-0 bg-background">
           <div className="flex items-center gap-8">
-            <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest border-r pr-8">
+            <p className="text-xs text-muted-foreground border-r pr-8">
               {posts.length} {posts.length === 1 ? 'Entry' : 'Entries'}
             </p>
             <div className="flex items-center gap-6">

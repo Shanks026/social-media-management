@@ -68,10 +68,20 @@ const MediaItem = ({ url, className, isPreview = false }) => {
   const isVideo = isVideoSource(url)
   if (isVideo) {
     return (
-      <div className={cn('relative h-full w-full bg-black', className)}>
+      <div
+        className={cn(
+          'relative bg-black flex items-center justify-center',
+          isPreview ? 'w-auto h-auto' : 'h-full w-full',
+          className,
+        )}
+      >
         <video
           src={url}
-          className="h-full w-full object-cover"
+          className={cn(
+            isPreview
+              ? 'max-h-[inherit] max-w-[inherit] object-contain'
+              : 'h-full w-full object-cover',
+          )}
           muted={!isPreview}
           controls={isPreview}
           autoPlay={isPreview}
@@ -92,7 +102,12 @@ const MediaItem = ({ url, className, isPreview = false }) => {
     <img
       src={url}
       alt="Media Asset"
-      className={cn('h-full w-full object-cover', className)}
+      className={cn(
+        isPreview
+          ? 'h-full w-full object-contain'
+          : 'h-full w-full object-cover',
+        className,
+      )}
     />
   )
 }
@@ -151,7 +166,7 @@ export default function PostContent({
   const formatDate = (date) => (date ? format(new Date(date), 'dd MMM, p') : '')
 
   return (
-    <div className="flex-1 p-8 space-y-6 min-w-0">
+    <div className="max-w-[1440px] mx-auto flex-1 p-8 space-y-6 min-w-0">
       {/* Revision Banner */}
       {post.status === 'NEEDS_REVISION' && (
         <div className="flex items-start gap-3 p-4 rounded-xl border border-amber-200 bg-amber-50/50 dark:bg-amber-500/5 dark:border-amber-500/20 max-w-2xl">
@@ -394,39 +409,40 @@ export default function PostContent({
 
       {/* Media Dialogs (Preview & Delete) stay the same ... */}
       <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
-        <DialogContent className="max-w-[90vw] lg:max-w-[1100px] h-[85vh] p-0 bg-transparent border-none flex items-center justify-center shadow-none">
-          <div className="relative w-full h-full flex items-center justify-center rounded-3xl bg-black/95 border border-white/10 overflow-hidden shadow-2xl">
+        <DialogContent className="max-w-[90vw] w-[90vw] h-[85vh] p-0 bg-transparent border-none shadow-none focus:outline-none flex items-center justify-center">
+          {/* Large fixed container for immersive media preview */}
+          <div className="relative flex items-center justify-center rounded-2xl bg-black/95 overflow-hidden shadow-2xl border border-white/10 w-full h-full">
             {post.media_urls?.[activeIndex] && (
-              <MediaItem
-                url={post.media_urls[activeIndex]}
-                className="object-contain"
-                isPreview={true}
-              />
+              <MediaItem url={post.media_urls[activeIndex]} isPreview={true} />
             )}
+
+            {/* Navigation Overlay */}
             {post.media_urls?.length > 1 && (
               <>
-                <div className="absolute inset-x-4 top-1/2 -translate-y-1/2 flex justify-between pointer-events-none z-50">
+                <div className="absolute inset-0 flex items-center justify-between pointer-events-none px-4">
                   <button
                     onClick={(e) => {
                       e.stopPropagation()
                       handlePrev()
                     }}
-                    className="pointer-events-auto p-4 rounded-2xl bg-black/40 text-white hover:bg-black/60 backdrop-blur-md transition-all"
+                    className="pointer-events-auto p-2 rounded-full bg-black/50 text-white hover:bg-black/70 backdrop-blur-sm transition-all hover:scale-110"
                   >
-                    <ChevronLeft className="h-8 w-8" />
+                    <ChevronLeft className="h-6 w-6" />
                   </button>
                   <button
                     onClick={(e) => {
                       e.stopPropagation()
                       handleNext()
                     }}
-                    className="pointer-events-auto p-4 rounded-2xl bg-black/40 text-white hover:bg-black/60 backdrop-blur-md transition-all"
+                    className="pointer-events-auto p-2 rounded-full bg-black/50 text-white hover:bg-black/70 backdrop-blur-sm transition-all hover:scale-110"
                   >
-                    <ChevronRight className="h-8 w-8" />
+                    <ChevronRight className="h-6 w-6" />
                   </button>
                 </div>
-                <div className="absolute top-6 left-1/2 -translate-x-1/2">
-                  <Badge className="bg-white/10 text-white border-none px-4 py-1.5 font-mono">
+
+                {/* Counter */}
+                <div className="absolute top-4 right-4 pointer-events-none">
+                  <Badge className="bg-black/50 text-white border-white/10 backdrop-blur-md px-3 py-1 font-mono">
                     {activeIndex + 1} / {post.media_urls.length}
                   </Badge>
                 </div>

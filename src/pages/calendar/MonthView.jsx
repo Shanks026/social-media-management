@@ -21,10 +21,11 @@ const PLATFORM_ICONS = {
 }
 
 const STATUS_STYLES = {
-  PUBLISHED: 'border-l-green-600',
-  SCHEDULED: 'border-l-purple-600',
+  DRAFT: 'border-l-blue-600',
+  PENDING_APPROVAL: 'border-l-orange-600',
   NEEDS_REVISION: 'border-l-pink-600 animate-pulse',
-  PENDING_APPROVAL: 'border-l-amber-600',
+  SCHEDULED: 'border-l-purple-600',
+  PUBLISHED: 'border-l-lime-600',
 }
 
 export default function MonthView({
@@ -51,7 +52,7 @@ export default function MonthView({
         {weekDays.map((day) => (
           <div
             key={day}
-            className="py-3 text-center text-[11px] font-bold text-muted-foreground uppercase tracking-wider"
+            className="py-3 text-center text-xs font-medium text-muted-foreground"
           >
             {day}
           </div>
@@ -106,7 +107,7 @@ export default function MonthView({
 
                     {/* 🔥 Conditionally hide Client Name */}
                     {!clientId && (
-                      <span className="text-[9px] font-bold uppercase tracking-wider opacity-50 truncate mt-0.5">
+                      <span className="text-[9px] text-muted-foreground truncate mt-0.5">
                         {post.client_name}
                       </span>
                     )}

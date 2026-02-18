@@ -20,10 +20,11 @@ const PLATFORM_ICONS = {
 }
 
 const STATUS_STYLES = {
-  PUBLISHED: 'border-l-green-600',
-  SCHEDULED: 'border-l-purple-600',
+  DRAFT: 'border-l-blue-600',
+  PENDING_APPROVAL: 'border-l-orange-600',
   NEEDS_REVISION: 'border-l-pink-600 animate-pulse',
-  PENDING_APPROVAL: 'border-l-amber-600',
+  SCHEDULED: 'border-l-purple-600',
+  PUBLISHED: 'border-l-lime-600',
 }
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i)
@@ -61,7 +62,7 @@ export default function WeekView({ currentMonth, postsByDate, clientId }) {
             key={day.toString()}
             className="flex-1 py-3 text-center border-r last:border-r-0"
           >
-            <p className="text-[10px] font-bold text-muted-foreground uppercase">
+            <p className="text-xs font-medium text-muted-foreground">
               {format(day, 'EEE')}
             </p>
             <span
@@ -96,7 +97,7 @@ export default function WeekView({ currentMonth, postsByDate, clientId }) {
               <div
                 key={hour}
                 style={{ height: `${ROW_HEIGHT}px` }}
-                className="border-b border-muted/30 p-2 text-[10px] font-bold text-muted-foreground/80 text-right"
+                className="border-b border-muted/30 p-2 text-[10px] font-medium text-muted-foreground/80 text-right"
               >
                 {format(setHours(new Date(), hour), 'ha')}
               </div>
@@ -165,7 +166,7 @@ export default function WeekView({ currentMonth, postsByDate, clientId }) {
                             />
                           ) : (
                             <div className="size-3.5 rounded-full bg-muted shrink-0 flex items-center justify-center">
-                              <span className="text-[6px] uppercase font-black">
+                              <span className="text-[6px] font-semibold">
                                 {post.client_name?.charAt(0)}
                               </span>
                             </div>
