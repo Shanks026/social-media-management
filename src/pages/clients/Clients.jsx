@@ -24,7 +24,7 @@ import {
   EmptyTitle,
 } from '@/components/ui/empty'
 
-import CreateClient from './CreateClient'
+// CreateClient import removed as it's now a dedicated page
 import EditClient from './EditClient'
 import ClientCard from './ClientCard'
 import { ClientCardSkeleton } from './ClientCardSkeleton'
@@ -52,7 +52,7 @@ export default function Clients() {
     })
   }, [setHeader])
 
-  const [createOpen, setCreateOpen] = useState(false)
+  // state for CreateClient modal removed
   const [editClient, setEditClient] = useState(null)
 
   const search = searchParams.get('q') || ''
@@ -60,12 +60,13 @@ export default function Clients() {
   const industry = searchParams.get('industry') || 'all'
   const tier = searchParams.get('tier') || 'all'
 
+  // Refactored to navigate to the dedicated page
   const handleCreateClick = () => {
     if (subscription?.is_client_limit_reached) {
       toast.error(`Plan limit reached. Please upgrade to add more.`)
       return
     }
-    setCreateOpen(true)
+    navigate('/clients/create')
   }
 
   const updateParams = (key, value) => {
@@ -181,24 +182,20 @@ export default function Clients() {
           </Button>
         </div>
 
-        {/* --- SECTION 2: THE TOOLBAR (Google Search Aesthetic) --- */}
+        {/* --- SECTION 2: THE TOOLBAR --- */}
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
-          {/* LEFT: Search + Filters */}
           <div className="flex flex-wrap items-center gap-2">
             <SearchBar value={search} onChange={(v) => updateParams('q', v)} />
-
             <IndustryFilter
               value={industry}
               onValueChange={(v) => updateParams('industry', v)}
             />
-
             <TierFilter
               value={tier}
               onValueChange={(v) => updateParams('tier', v)}
             />
           </div>
 
-          {/* RIGHT: Urgency tabs */}
           <div className="lg:ml-auto">
             <UrgencyFilter
               activeValue={urgency}
@@ -264,7 +261,7 @@ export default function Clients() {
       </div>
 
       {/* --- MODALS --- */}
-      <CreateClient open={createOpen} onOpenChange={setCreateOpen} />
+      {/* CreateClient modal removed */}
       {editClient && (
         <EditClient client={editClient} onClose={() => setEditClient(null)} />
       )}

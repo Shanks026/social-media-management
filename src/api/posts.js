@@ -59,8 +59,7 @@ const getPathFromUrl = (url) => {
 }
 
 /**
- * Fetches details for a post.
- * Smart logic: Checks if ID is a Post ID OR a Version ID.
+ * Fetches details for a post, joining client branding data.
  */
 export async function fetchPostDetails(id) {
   // 1. Try to fetch assuming 'id' is a Parent Post ID
@@ -70,7 +69,7 @@ export async function fetchPostDetails(id) {
       `
       id,
       client_id,
-      clients ( name, logo_url ),
+      clients ( name, logo_url, social_links, industry ),
       post_versions!fk_current_version (*)
     `,
     )
@@ -94,17 +93,14 @@ export async function fetchPostDetails(id) {
       posts!post_versions_post_id_fkey (
         id,
         client_id,
-        clients ( name, logo_url )
+        clients ( name, logo_url, social_links, industry )
       )
     `,
     )
     .eq('id', id)
     .maybeSingle()
 
-  if (error) {
-    console.error('Supabase Error:', error)
-    throw error
-  }
+  if (error) throw error
 
   if (versionData) {
     return {

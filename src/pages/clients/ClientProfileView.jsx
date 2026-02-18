@@ -91,7 +91,7 @@ export default function ClientProfileView({ client }) {
 
           <div className="space-y-1.5 min-w-0 flex-1">
             <div className="flex items-center gap-3">
-              <h1 className="text-3xl font-light tracking-tight text-foreground truncate">
+              <h1 className="text-2xl font-medium tracking-normal text-foreground truncate">
                 {client.name}
               </h1>
               <TierBadge tier={client.tier} />
@@ -139,14 +139,14 @@ export default function ClientProfileView({ client }) {
           <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
             <TabsContent
               value="workflow"
-              className="mt-8 focus-visible:ring-0 outline-none"
+              className="mt-2 focus-visible:ring-0 outline-none"
             >
               <WorkflowTab client={client} />
             </TabsContent>
 
             <TabsContent
               value="financials"
-              className="mt-8 focus-visible:outline-none"
+              className="mt-2 focus-visible:outline-none"
             >
               <Tabs defaultValue="overview" className="w-full">
                 <TabsContent value="overview" className="mt-0">
@@ -165,7 +165,7 @@ export default function ClientProfileView({ client }) {
               value="calendar"
               className="focus-visible:outline-none"
             >
-              <div className="mt-8">
+              <div className="mt-2">
                 <ContentCalendar clientId={client.id} hideHeader={true} />
               </div>
             </TabsContent>
@@ -181,7 +181,7 @@ export default function ClientProfileView({ client }) {
 
             <TabsContent
               value="management"
-              className="mt-8 focus-visible:outline-none"
+              className="mt-2 focus-visible:outline-none"
             >
               <ManagementTab client={client} />
             </TabsContent>

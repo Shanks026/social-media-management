@@ -22,7 +22,7 @@ const isVideoSource = (url) => {
   )
 }
 
-export default function InstagramPreview({ post }) {
+export default function InstagramPreview({ post, client }) {
   const [isExpanded, setIsExpanded] = useState(false)
   const [isLiked, setIsLiked] = useState(false)
   const [currentSlide, setCurrentSlide] = useState(0)
@@ -33,6 +33,10 @@ export default function InstagramPreview({ post }) {
   const hasMultipleMedia = mediaUrls.length > 1
   const content = post?.content || ''
   const currentMedia = mediaUrls[currentSlide]
+
+  const handle = client?.social_links?.instagram?.handle || 'username'
+  const logo = client?.logo_url
+  const location = client?.industry || 'Location'
 
   // Dynamic Aspect Ratio Calculation
   useEffect(() => {
@@ -71,12 +75,20 @@ export default function InstagramPreview({ post }) {
       <div className="flex items-center justify-between p-3.5">
         <div className="flex items-center gap-3">
           <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-tr from-yellow-400 via-red-500 to-purple-600 p-[1.5px]">
-            <div className="h-full w-full rounded-full border-2 border-white bg-zinc-200 dark:border-zinc-950 dark:bg-zinc-800" />
+            <div className="size-8 rounded-full overflow-hidden">
+              {logo ? (
+                <img src={logo} alt="" className="h-full w-full object-cover" />
+              ) : (
+                <div className="h-full w-full flex items-center justify-center text-[10px] font-bold text-zinc-400">
+                  {client?.name?.slice(0, 2).toUpperCase()}
+                </div>
+              )}
+            </div>
           </div>
           <div className="flex flex-col">
             <div className="flex items-center gap-1">
               <span className="text-[13px] font-bold text-zinc-900 dark:text-zinc-100">
-                username
+                {handle}
               </span>
               <BadgeCheck
                 size={14}
@@ -84,7 +96,7 @@ export default function InstagramPreview({ post }) {
               />
             </div>
             <span className="text-[11px] text-zinc-500 dark:text-zinc-400">
-              Location Here
+              {location}
             </span>
           </div>
         </div>
@@ -194,7 +206,7 @@ export default function InstagramPreview({ post }) {
         {/* 4. Caption: Username + Content inline */}
         <div className="text-[13px] leading-[1.4] text-zinc-900 dark:text-zinc-100">
           <div className={cn(!isExpanded && 'line-clamp-2')}>
-            <span className="font-bold mr-1.5 cursor-pointer">username</span>
+            <span className="font-bold mr-1.5 cursor-pointer">{handle}</span>
             <span className="text-zinc-800 dark:text-zinc-300">
               {content || 'No caption provided.'}
             </span>

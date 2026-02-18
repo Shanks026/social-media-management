@@ -167,7 +167,11 @@ export default function ManagementTab({ client }) {
           </div>
         </div>
 
-        <Button variant="secondary" size="sm" onClick={() => setEditOpen(true)}>
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => navigate(`/clients/${client.id}/edit`)} // Navigate instead of setEditOpen
+        >
           <Pencil className="size-3.5 mr-2" />
           Edit Profile
         </Button>

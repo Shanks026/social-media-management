@@ -244,87 +244,113 @@ export default function PostContent({
         </div>
 
         {/* 🛠️ Consolidated Button Group */}
-        <div className="shrink-0">
-          <ButtonGroup>
-            {/* Static Preview Button */}
-            <Button
-              variant="outline"
-              className="gap-2"
-              onClick={() => setIsSocialPreviewOpen(true)}
-            >
-              <Eye size={16} />
-              <span className="hidden sm:inline">Social Media Preview</span>
-              <span className="sm:hidden">Preview</span>
-            </Button>
-
-            {/* Actions Dropdown */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="gap-2 px-3">
-                  Actions
-                  <ChevronDownIcon size={14} className="opacity-50" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                {canEdit && (
-                  <DropdownMenuItem onClick={onEdit}>
-                    <Pencil size={14} className="mr-2" /> Edit Details
-                  </DropdownMenuItem>
+        <div className="flex items-center gap-3 shrink-0">
+          {/* 1. PRIMARY ACTION (Stand-alone for maximum focus) */}
+          <div className="hidden sm:block">
+            {post.status === 'DRAFT' && (
+              <Button
+                disabled={!canSendForApproval || isApprovalPending}
+                onClick={onSendForApproval}
+                className="gap-2 px-6 font-semibold shadow-sm transition-all hover:translate-y-[-1px]"
+              >
+                {isApprovalPending ? (
+                  <Loader2 size={16} className="animate-spin" />
+                ) : (
+                  <CheckCircle2 size={16} />
                 )}
+                Send for Approval
+              </Button>
+            )}
 
-                {!showHistory && (
-                  <DropdownMenuItem onClick={() => setShowHistory(true)}>
-                    <History size={14} className="mr-2" /> View Version History
-                  </DropdownMenuItem>
+            {post.status === 'SCHEDULED' && (
+              <Button
+                disabled={isPublishPending}
+                onClick={onPublish}
+                className="gap-2 px-6 font-semibold shadow-sm transition-all hover:translate-y-[-1px]"
+              >
+                {isPublishPending ? (
+                  <Loader2 size={16} className="animate-spin" />
+                ) : (
+                  <Play size={16} />
                 )}
+                Publish Now
+              </Button>
+            )}
 
+            {post.status === 'NEEDS_REVISION' && (
+              <Button
+                onClick={onCreateRevision}
+                disabled={isRevisionPending}
+                className="gap-2 px-6 font-semibold shadow-sm transition-all hover:translate-y-[-1px]"
+              >
+                {isRevisionPending ? (
+                  <Loader2 size={16} className="animate-spin" />
+                ) : (
+                  <Plus size={16} />
+                )}
+                Create New Version
+              </Button>
+            )}
+          </div>
+
+          {/* 2. SECONDARY ACTIONS (Grouped Dropdown) */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                className="gap-2 px-4 border-zinc-200 dark:border-zinc-800"
+              >
+                <span className="hidden sm:inline">More Actions</span>
+                <span className="sm:hidden">Actions</span>
+                <ChevronDownIcon size={14} className="opacity-50" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              {/* Mobile-only primary action (if you want it accessible on small screens) */}
+              <div className="sm:hidden">
                 {post.status === 'DRAFT' && (
                   <DropdownMenuItem
-                    disabled={!canSendForApproval || isApprovalPending}
                     onClick={onSendForApproval}
-                    className="font-semibold text-primary focus:text-primary"
+                    disabled={!canSendForApproval}
                   >
-                    {isApprovalPending ? (
-                      <Loader2 size={14} className="mr-2 animate-spin" />
-                    ) : (
-                      <CheckCircle2 size={14} className="mr-2" />
-                    )}
-                    Send for Approval
+                    <CheckCircle2 size={14} className="mr-2" /> Send for
+                    Approval
                   </DropdownMenuItem>
                 )}
-
                 {post.status === 'SCHEDULED' && (
-                  <DropdownMenuItem
-                    disabled={isPublishPending}
-                    onClick={onPublish}
-                    className="font-semibold"
-                  >
-                    {isPublishPending ? (
-                      <Loader2 size={14} className="mr-2 animate-spin" />
-                    ) : (
-                      <Play size={14} className="mr-2" />
-                    )}
-                    Publish Now
+                  <DropdownMenuItem onClick={onPublish}>
+                    <Play size={14} className="mr-2" /> Publish Now
                   </DropdownMenuItem>
                 )}
+              </div>
 
-                {post.status === 'NEEDS_REVISION' && (
-                  <DropdownMenuItem
-                    onClick={onCreateRevision}
-                    disabled={isRevisionPending}
-                    className="font-semibold"
-                  >
-                    {isRevisionPending ? (
-                      <Loader2 size={14} className="mr-2 animate-spin" />
-                    ) : (
-                      <Plus size={14} className="mr-2" />
-                    )}
-                    Create New Version
-                  </DropdownMenuItem>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </ButtonGroup>
+              <DropdownMenuItem onClick={() => setIsSocialPreviewOpen(true)}>
+                <Eye size={14} className="mr-2" /> Social Media Preview
+              </DropdownMenuItem>
+
+              {!showHistory && (
+                <DropdownMenuItem onClick={() => setShowHistory(true)}>
+                  <History size={14} className="mr-2" /> View Version History
+                </DropdownMenuItem>
+              )}
+
+              {canEdit && (
+                <DropdownMenuItem onClick={onEdit}>
+                  <Pencil size={14} className="mr-2" /> Edit Details
+                </DropdownMenuItem>
+              )}
+
+              {/* Optional: Add a separator for the delete action */}
+              <DropdownMenuItem
+                className="text-destructive focus:text-destructive"
+                onClick={() => {
+                  /* Trigger Delete Dialog */
+                }}
+              >
+                <Trash2 size={14} className="mr-2" /> Delete Post
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
@@ -455,6 +481,7 @@ export default function PostContent({
         isOpen={isSocialPreviewOpen}
         onOpenChange={setIsSocialPreviewOpen}
         post={post}
+        client={post.clients}
       />
     </div>
   )

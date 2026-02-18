@@ -31,41 +31,19 @@ import { calculatePeriodMetrics, formatCurrency } from '@/utils/finance'
 import { startOfMonth, endOfMonth, format } from 'date-fns'
 
 const PlatformIcon = ({ name }) => {
-  const icons = {
-    instagram: {
-      icon: <Instagram className="size-3.5 text-white" />,
-      bg: 'bg-[#E4405F]',
-    },
-    linkedin: {
-      icon: <Linkedin className="size-3.5 text-white" />,
-      bg: 'bg-[#0077B5]',
-    },
-    twitter: {
-      icon: <Twitter className="size-3.5 text-white dark:text-black" />,
-      bg: 'bg-black dark:bg-white',
-    },
-    facebook: {
-      icon: <Facebook className="size-3.5 text-white" />,
-      bg: 'bg-[#1877F2]',
-    },
-    youtube: {
-      icon: <Youtube className="size-3.5 text-white" />,
-      bg: 'bg-[#FF0000]',
-    },
-    google_business: {
-      icon: <Globe className="size-3.5 text-white" />,
-      bg: 'bg-[#4285F4]',
-    },
-  }
-
-  const platform = icons[name.toLowerCase()]
-  if (!platform) return null
+  // Map the id to the filename, handling your specific google_business naming
+  const fileName = name === 'google_business' ? 'google_busines' : name
+  const imgSrc = `/platformIcons/${fileName}.png`
 
   return (
-    <div
-      className={`flex h-8 w-8 items-center justify-center rounded-full border-2 border-background ${platform.bg} shadow-sm transition-transform hover:scale-110`}
-    >
-      {platform.icon}
+    <div className="flex h-8 w-8 items-center justify-center rounded-full border-white dark:border-[#1c1c1f] bg-white dark:bg-zinc-900 shadow-sm transition-transform hover:scale-110 overflow-hidden">
+      <img
+        src={imgSrc}
+        alt={name}
+        className="size-7 object-contain"
+        // Fallback for missing images
+        onError={(e) => (e.target.style.display = 'none')}
+      />
     </div>
   )
 }
@@ -195,7 +173,7 @@ function ClientCard({ client, onOpen, onDelete }) {
           <div className="flex justify-between gap-2 items-start mb-6">
             <div className="absolute top-4 right-4">{/* Badge removed */}</div>
             <div className="flex gap-4 items-center min-w-0">
-              <div className="h-14 w-14 shrink-0 rounded-2xl bg-white dark:bg-white/5 border border-gray-100 dark:border-white/10 flex items-center justify-center overflow-hidden shadow-sm transition-transform">
+              <div className="h-14 w-14 shrink-0 rounded-2xl bg-transparent flex items-center justify-center overflow-hidden transition-transform">
                 {client.logo_url ? (
                   <img
                     src={client.logo_url}

@@ -131,11 +131,17 @@ export async function createClient(payload) {
 /**
  * Update a client
  */
-export async function updateClient({ id, ...updates }) {
-  const { error } = await supabase.from('clients').update(updates).eq('id', id)
-  if (error) throw error
-}
+export const updateClient = async (id, data) => {
+  const { data: result, error } = await supabase
+    .from('clients')
+    .update(data) // 'data' must be a plain object { name: '...', ... }
+    .eq('id', id)
+    .select()
+    .single()
 
+  if (error) throw error
+  return result
+}
 /**
  * Delete a client, their history, and all associated media
  */

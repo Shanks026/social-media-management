@@ -16,6 +16,7 @@ import OverviewTab from './pages/finance/OverviewTab'
 import SubscriptionsTab from './pages/finance/SubscriptionsTab'
 import LedgerTab from './pages/finance/LedgerTab'
 import Posts from './pages/Posts'
+import CreateClientPage from './pages/clients/CreateClientPage'
 
 function AppRoutes() {
   const { session, user } = useAuth()
@@ -30,6 +31,8 @@ function AppRoutes() {
         <Route element={<AppShell user={user} />}>
           <Route path="/clients" element={<Clients />} />
           <Route path="/myorganazation" element={<MyOrganization />} />
+          <Route path="/clients/create" element={<CreateClientPage />} />
+          <Route path="/clients/:clientId/edit" element={<CreateClientPage />} />
           <Route path="/clients/:clientId" element={<ClientDetails />} />
           <Route
             path="/clients/:clientId/posts/:postId"
