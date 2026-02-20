@@ -66,21 +66,21 @@ const isVideoSource = (url) => {
  */
 const MediaItem = ({ url, className, isPreview = false }) => {
   const isVideo = isVideoSource(url)
+
   if (isVideo) {
     return (
       <div
         className={cn(
           'relative bg-black flex items-center justify-center',
-          isPreview ? 'w-auto h-auto' : 'h-full w-full',
+          'h-full w-full', // Always full height/width to contain the media properly
           className,
         )}
       >
         <video
           src={url}
           className={cn(
-            isPreview
-              ? 'max-h-[inherit] max-w-[inherit] object-contain'
-              : 'h-full w-full object-cover',
+            'h-full w-full',
+            isPreview ? 'object-contain' : 'object-cover', // scales huge while keeping aspect ratio
           )}
           muted={!isPreview}
           controls={isPreview}
@@ -103,9 +103,8 @@ const MediaItem = ({ url, className, isPreview = false }) => {
       src={url}
       alt="Media Asset"
       className={cn(
-        isPreview
-          ? 'h-full w-full object-contain'
-          : 'h-full w-full object-cover',
+        'h-full w-full',
+        isPreview ? 'object-contain' : 'object-cover', // scales huge while keeping aspect ratio
         className,
       )}
     />
@@ -321,7 +320,6 @@ export default function PostContent({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
-              {/* Mobile-only primary action (if you want it accessible on small screens) */}
               <div className="sm:hidden">
                 {post.status === 'DRAFT' && (
                   <DropdownMenuItem
@@ -355,7 +353,6 @@ export default function PostContent({
                 </DropdownMenuItem>
               )}
 
-              {/* Optional: Add a separator for the delete action */}
               <DropdownMenuItem
                 className="text-destructive focus:text-destructive"
                 onClick={() => {
@@ -407,42 +404,46 @@ export default function PostContent({
         {post.content}
       </p>
 
-      {/* Media Dialogs (Preview & Delete) stay the same ... */}
+      {/* Media Dialogs (Preview & Delete) */}
       <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
-        <DialogContent className="max-w-[90vw] w-[90vw] h-[85vh] p-0 bg-transparent border-none shadow-none focus:outline-none flex items-center justify-center">
-          {/* Large fixed container for immersive media preview */}
+        {/* Added sm:max-w-[85vw] to override default shadcn max-width constraints */}
+        <DialogContent className="max-w-[85] sm:max-w-[85vw] md:max-w-[85vw] w-[85vw] h-[85vh] p-0 bg-transparent border-none shadow-none focus:outline-none flex items-center justify-center">
           <div className="relative flex items-center justify-center rounded-2xl bg-black/95 overflow-hidden shadow-2xl border border-white/10 w-full h-full">
             {post.media_urls?.[activeIndex] && (
-              <MediaItem url={post.media_urls[activeIndex]} isPreview={true} />
+              <MediaItem
+                key={post.media_urls[activeIndex]}
+                url={post.media_urls[activeIndex]}
+                isPreview={true}
+              />
             )}
 
             {/* Navigation Overlay */}
             {post.media_urls?.length > 1 && (
               <>
-                <div className="absolute inset-0 flex items-center justify-between pointer-events-none px-4">
+                <div className="absolute inset-0 flex items-center justify-between pointer-events-none px-4 lg:px-12">
                   <button
                     onClick={(e) => {
                       e.stopPropagation()
                       handlePrev()
                     }}
-                    className="pointer-events-auto p-2 rounded-full bg-black/50 text-white hover:bg-black/70 backdrop-blur-sm transition-all hover:scale-110"
+                    className="pointer-events-auto p-3 rounded-full bg-black/50 text-white hover:bg-black/70 backdrop-blur-sm transition-all hover:scale-110"
                   >
-                    <ChevronLeft className="h-6 w-6" />
+                    <ChevronLeft className="h-8 w-8" />
                   </button>
                   <button
                     onClick={(e) => {
                       e.stopPropagation()
                       handleNext()
                     }}
-                    className="pointer-events-auto p-2 rounded-full bg-black/50 text-white hover:bg-black/70 backdrop-blur-sm transition-all hover:scale-110"
+                    className="pointer-events-auto p-3 rounded-full bg-black/50 text-white hover:bg-black/70 backdrop-blur-sm transition-all hover:scale-110"
                   >
-                    <ChevronRight className="h-6 w-6" />
+                    <ChevronRight className="h-8 w-8" />
                   </button>
                 </div>
 
                 {/* Counter */}
-                <div className="absolute top-4 right-4 pointer-events-none">
-                  <Badge className="bg-black/50 text-white border-white/10 backdrop-blur-md px-3 py-1 font-mono">
+                <div className="absolute top-8 right-8 pointer-events-none">
+                  <Badge className="bg-black/50 text-white border-white/10 backdrop-blur-md px-4 py-2 text-sm font-mono">
                     {activeIndex + 1} / {post.media_urls.length}
                   </Badge>
                 </div>

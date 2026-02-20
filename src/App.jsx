@@ -16,6 +16,7 @@ import OverviewTab from './pages/finance/OverviewTab'
 import SubscriptionsTab from './pages/finance/SubscriptionsTab'
 import LedgerTab from './pages/finance/LedgerTab'
 import Posts from './pages/Posts'
+import BillingUsage from './pages/billingAndUsage/BillingUsage'
 import CreateClientPage from './pages/clients/CreateClientPage'
 
 function AppRoutes() {
@@ -32,7 +33,10 @@ function AppRoutes() {
           <Route path="/clients" element={<Clients />} />
           <Route path="/myorganazation" element={<MyOrganization />} />
           <Route path="/clients/create" element={<CreateClientPage />} />
-          <Route path="/clients/:clientId/edit" element={<CreateClientPage />} />
+          <Route
+            path="/clients/:clientId/edit"
+            element={<CreateClientPage />}
+          />
           <Route path="/clients/:clientId" element={<ClientDetails />} />
           <Route
             path="/clients/:clientId/posts/:postId"
@@ -48,6 +52,7 @@ function AppRoutes() {
             <Route path="subscriptions" element={<SubscriptionsTab />} />
             <Route path="ledger" element={<LedgerTab />} />
           </Route>
+          <Route path="/billing" element={<BillingUsage />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="*" element={<Navigate to="/clients" replace />} />
         </Route>

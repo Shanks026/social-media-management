@@ -41,10 +41,19 @@ const MediaItem = ({ url, className, isPreview = false }) => {
 
   if (isVideo) {
     return (
-      <div className={cn('relative h-full w-full bg-black', className)}>
+      <div
+        className={cn(
+          'relative bg-black flex items-center justify-center',
+          'h-full w-full',
+          className,
+        )}
+      >
         <video
           src={url}
-          className="h-full w-full object-cover"
+          className={cn(
+            'h-full w-full',
+            isPreview ? 'object-contain' : 'object-cover',
+          )}
           muted={!isPreview}
           controls={isPreview}
           autoPlay={isPreview}
@@ -66,7 +75,11 @@ const MediaItem = ({ url, className, isPreview = false }) => {
     <img
       src={url}
       alt="Media"
-      className={cn('h-full w-full object-cover', className)}
+      className={cn(
+        'h-full w-full',
+        isPreview ? 'object-contain' : 'object-cover',
+        className,
+      )}
     />
   )
 }
@@ -229,45 +242,42 @@ export function CalendarPostCard({ post }) {
       {/* 2. The Dialog: Sibling to the Card, NOT a child */}
       <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
         <DialogContent
-          className="max-w-[90vw] lg:max-w-[1100px] h-[85vh] p-0 bg-transparent border-none shadow-none flex items-center justify-center overflow-hidden"
-          onClick={(e) => e.stopPropagation()} // Extra safety for the content area
+          className="max-w-[85vw] sm:max-w-[85vw] md:max-w-[85vw] w-[85vw] h-[85vh] p-0 bg-transparent border-none shadow-none focus:outline-none flex items-center justify-center"
+          onClick={(e) => e.stopPropagation()}
         >
-          <div className="relative w-full h-full flex items-center justify-center">
-            <div className="relative w-full h-full overflow-hidden rounded-3xl bg-black/95 flex items-center justify-center border border-white/10">
-              <div className="w-full h-full flex items-center justify-center">
-                {post.media_urls && post.media_urls.length > 0 && (
-                  <MediaItem
-                    url={post.media_urls[activeImageIndex]}
-                    className="object-contain"
-                    isPreview={true}
-                  />
-                )}
-              </div>
+          <div className="relative flex items-center justify-center rounded-2xl bg-black/95 overflow-hidden shadow-2xl border border-white/10 w-full h-full">
+            {post.media_urls?.[activeImageIndex] && (
+              <MediaItem
+                key={post.media_urls[activeImageIndex]}
+                url={post.media_urls[activeImageIndex]}
+                isPreview={true}
+              />
+            )}
 
-              {post.media_urls?.length > 1 && (
-                <>
-                  <div className="absolute inset-x-4 top-1/2 -translate-y-1/2 flex justify-between pointer-events-none z-50">
-                    <button
-                      onClick={handlePrev}
-                      className="pointer-events-auto p-4 rounded-2xl bg-black/40 text-white hover:bg-black/60 backdrop-blur-xl transition-all"
-                    >
-                      <ChevronLeft className="h-8 w-8" />
-                    </button>
-                    <button
-                      onClick={handleNext}
-                      className="pointer-events-auto p-4 rounded-2xl bg-black/40 text-white hover:bg-black/60 backdrop-blur-xl transition-all"
-                    >
-                      <ChevronRight className="h-8 w-8" />
-                    </button>
-                  </div>
-                  <div className="absolute top-6 left-1/2 -translate-x-1/2 z-50">
-                    <Badge className="bg-white/10 text-white border-none backdrop-blur-md px-4 py-1.5 font-mono">
-                      {activeImageIndex + 1} / {post.media_urls.length}
-                    </Badge>
-                  </div>
-                </>
-              )}
-            </div>
+            {post.media_urls?.length > 1 && (
+              <>
+                <div className="absolute inset-0 flex items-center justify-between pointer-events-none px-4 lg:px-12">
+                  <button
+                    onClick={handlePrev}
+                    className="pointer-events-auto p-3 rounded-full bg-black/50 text-white hover:bg-black/70 backdrop-blur-sm transition-all hover:scale-110"
+                  >
+                    <ChevronLeft className="h-8 w-8" />
+                  </button>
+                  <button
+                    onClick={handleNext}
+                    className="pointer-events-auto p-3 rounded-full bg-black/50 text-white hover:bg-black/70 backdrop-blur-sm transition-all hover:scale-110"
+                  >
+                    <ChevronRight className="h-8 w-8" />
+                  </button>
+                </div>
+
+                <div className="absolute top-8 right-8 pointer-events-none">
+                  <Badge className="bg-black/50 text-white border-white/10 backdrop-blur-md px-4 py-2 text-sm font-mono">
+                    {activeImageIndex + 1} / {post.media_urls.length}
+                  </Badge>
+                </div>
+              </>
+            )}
           </div>
         </DialogContent>
       </Dialog>

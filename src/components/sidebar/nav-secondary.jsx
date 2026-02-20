@@ -1,4 +1,10 @@
-import { Settings, ShieldCheck, LifeBuoy, Headphones } from 'lucide-react'
+import {
+  Settings,
+  ShieldCheck,
+  LifeBuoy,
+  Headphones,
+  CreditCard,
+} from 'lucide-react'
 import { NavLink, useLocation } from 'react-router-dom'
 import {
   SidebarGroup,
@@ -11,18 +17,16 @@ import {
 
 // Data-driven object for easy scaling
 const secondaryNavItems = [
-  // {
-  //   title: 'Support',
-  //   url: '/support',
-  //   icon: Headphones,
-  // },
+  {
+    title: 'Billing & Usage',
+    url: '/billing',
+    icon: CreditCard,
+  },
   {
     title: 'Settings',
     url: '/settings',
     icon: Settings,
   },
-  // You can easily add more items here in the future:
-  // { title: "Support", url: "/support", icon: LifeBuoy },
 ]
 
 export function NavSecondary() {

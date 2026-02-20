@@ -68,16 +68,15 @@ const MediaItem = ({ url, className, isPreview = false }) => {
       <div
         className={cn(
           'relative bg-black flex items-center justify-center',
-          isPreview ? 'w-auto h-auto' : 'h-full w-full',
+          'h-full w-full',
           className,
         )}
       >
         <video
           src={url}
           className={cn(
-            isPreview
-              ? 'max-h-[inherit] max-w-[inherit] object-contain'
-              : 'h-full w-full object-cover',
+            'h-full w-full',
+            isPreview ? 'object-contain' : 'object-cover',
           )}
           muted={!isPreview}
           controls={isPreview}
@@ -100,9 +99,8 @@ const MediaItem = ({ url, className, isPreview = false }) => {
       src={url}
       alt="Media"
       className={cn(
-        isPreview
-          ? 'w-auto h-auto max-h-[inherit] max-w-[inherit] object-contain'
-          : 'h-full w-full object-cover',
+        'h-full w-full',
+        isPreview ? 'object-contain' : 'object-cover',
         className,
       )}
     />
@@ -341,36 +339,37 @@ export default function DraftPostList({ clientId }) {
 
       <Dialog open={!!previewPost} onOpenChange={() => setPreviewPost(null)}>
         <DialogContent
-          className="max-w-[95vw] w-fit h-fit p-0 bg-transparent border-none shadow-none focus:outline-none flex items-center justify-center"
+          className="max-w-[85vw] sm:max-w-[85vw] md:max-w-[85vw] w-[85vw] h-[85vh] p-0 bg-transparent border-none shadow-none focus:outline-none flex items-center justify-center"
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="relative flex items-center justify-center rounded-2xl bg-black/95 overflow-hidden shadow-2xl border border-white/10 shrink-0 max-h-[90vh] max-w-[90vw]">
+          <div className="relative flex items-center justify-center rounded-2xl bg-black/95 overflow-hidden shadow-2xl border border-white/10 w-full h-full">
             {previewPost && (
               <MediaItem
+                key={previewPost.media_urls[activeImageIndex]}
                 url={previewPost.media_urls[activeImageIndex]}
-                className="w-auto h-auto max-h-[90vh] max-w-[90vw] object-contain"
                 isPreview={true}
               />
             )}
 
             {previewPost?.media_urls?.length > 1 && (
               <>
-                <div className="absolute inset-0 flex items-center justify-between pointer-events-none px-4">
+                <div className="absolute inset-0 flex items-center justify-between pointer-events-none px-4 lg:px-12">
                   <button
                     onClick={handlePrev}
-                    className="pointer-events-auto p-2 rounded-full bg-black/50 text-white hover:bg-black/70 backdrop-blur-sm transition-all hover:scale-110"
+                    className="pointer-events-auto p-3 rounded-full bg-black/50 text-white hover:bg-black/70 backdrop-blur-sm transition-all hover:scale-110"
                   >
-                    <ChevronLeft className="h-6 w-6" />
+                    <ChevronLeft className="h-8 w-8" />
                   </button>
                   <button
                     onClick={handleNext}
-                    className="pointer-events-auto p-2 rounded-full bg-black/50 text-white hover:bg-black/70 backdrop-blur-sm transition-all hover:scale-110"
+                    className="pointer-events-auto p-3 rounded-full bg-black/50 text-white hover:bg-black/70 backdrop-blur-sm transition-all hover:scale-110"
                   >
-                    <ChevronRight className="h-6 w-6" />
+                    <ChevronRight className="h-8 w-8" />
                   </button>
                 </div>
-                <div className="absolute top-4 right-4 pointer-events-none z-50">
-                  <Badge className="bg-black/50 text-white border-white/10 backdrop-blur-md px-3 py-1 font-mono">
+
+                <div className="absolute top-8 right-8 pointer-events-none">
+                  <Badge className="bg-black/50 text-white border-white/10 backdrop-blur-md px-4 py-2 text-sm font-mono">
                     {activeImageIndex + 1} / {previewPost.media_urls.length}
                   </Badge>
                 </div>

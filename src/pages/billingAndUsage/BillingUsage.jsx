@@ -1,19 +1,23 @@
 import { useEffect } from 'react'
-import { useHeader } from '../components/misc/header-context'
-import { User, Settings as SettingsIcon } from 'lucide-react'
+import { useHeader } from '../../components/misc/header-context'
+import { useSubscription } from '../../api/useSubscription'
+import { BarChart3, CreditCard, FileText } from 'lucide-react'
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { ComingSoon } from './clients/clientSections/ComingSoon'
+import { UsageTab } from './UsageTab'
+import { SubscriptionTab } from './TertiarySubscriptionTab'
+import { InvoicesTab } from './InvoicesTab'
 
-// --- Main Settings Page ---
+// --- Main Page ---
 
-export default function Settings() {
+export default function BillingUsage() {
   const { setHeader } = useHeader()
+  const { data: sub, isLoading } = useSubscription()
 
   useEffect(() => {
     setHeader({
-      title: 'Settings',
-      breadcrumbs: [{ label: 'Settings' }],
+      title: 'Billing & Usage',
+      breadcrumbs: [{ label: 'Billing & Usage' }],
     })
   }, [setHeader])
 
@@ -24,22 +28,24 @@ export default function Settings() {
           {/* PAGE HEADER */}
           <div className="space-y-1">
             <h1 className="text-3xl font-light tracking-tight text-foreground">
-              Settings
+              Billing & Usage
             </h1>
             <p className="text-sm text-muted-foreground font-light">
-              Manage your profile and workspace preferences.
+              Monitor your plan usage, manage your subscription, and view
+              invoices.
             </p>
           </div>
 
-          <Tabs defaultValue="profile" className="space-y-10">
+          <Tabs defaultValue="usage" className="space-y-10">
             <TabsList className="bg-transparent border-b border-white/5 rounded-none p-0 h-auto gap-8 w-full justify-start">
               {[
-                { value: 'profile', icon: User, label: 'My Profile' },
+                { value: 'usage', icon: BarChart3, label: 'Usage' },
                 {
-                  value: 'preferences',
-                  icon: SettingsIcon,
-                  label: 'Preferences',
+                  value: 'subscription',
+                  icon: CreditCard,
+                  label: 'Subscription',
                 },
+                { value: 'invoices', icon: FileText, label: 'Invoices' },
               ].map((tab) => (
                 <TabsTrigger
                   key={tab.value}
@@ -66,18 +72,28 @@ export default function Settings() {
               ))}
             </TabsList>
 
+            {/* ── Tab 1: Usage ── */}
             <TabsContent
-              value="profile"
-              className="pt-4 focus-visible:outline-none"
+              value="usage"
+              className="space-y-8 focus-visible:outline-none outline-none"
             >
-              <ComingSoon icon={User} title="Profile Settings" />
+              <UsageTab sub={sub} isLoading={isLoading} />
             </TabsContent>
 
+            {/* ── Tab 2: Subscription ── */}
             <TabsContent
-              value="preferences"
-              className="pt-4 focus-visible:outline-none"
+              value="subscription"
+              className="space-y-8 focus-visible:outline-none outline-none"
             >
-              <ComingSoon icon={SettingsIcon} title="Workspace Preferences" />
+              <SubscriptionTab sub={sub} isLoading={isLoading} />
+            </TabsContent>
+
+            {/* ── Tab 3: Invoices ── */}
+            <TabsContent
+              value="invoices"
+              className="space-y-8 focus-visible:outline-none outline-none"
+            >
+              <InvoicesTab />
             </TabsContent>
           </Tabs>
         </div>
