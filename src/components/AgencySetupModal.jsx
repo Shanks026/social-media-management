@@ -309,6 +309,8 @@ export function AgencySetupModal({
                           onChange={field.onChange}
                           register={form.register}
                           errors={errors}
+                          setValue={form.setValue}
+                          watch={form.watch}
                         />
                       )}
                     />

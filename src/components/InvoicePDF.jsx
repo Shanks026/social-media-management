@@ -8,6 +8,7 @@ import {
   Font,
 } from '@react-pdf/renderer'
 import { format } from 'date-fns'
+import { CURRENCY } from '@/utils/constants'
 
 /* ── Register Inter from Google Fonts ── */
 Font.register({
@@ -35,18 +36,10 @@ Font.register({
 /* ── Colour palette ── */
 const C = {
   bg: '#FFFFFF',
-  text: '#1a1a2e',
-  muted: '#64748b',
-  accent: '#6366f1',
-  accentLight: '#eef2ff',
-  border: '#e2e8f0',
-  success: '#059669',
-  warning: '#d97706',
-  danger: '#dc2626',
-  paidBg: '#ecfdf5',
-  sentBg: '#eff6ff',
-  overdueBg: '#fef2f2',
-  draftBg: '#f8fafc',
+  text: '#111827', // Darker almost black for main text
+  muted: '#6B7280', // Gray for labels
+  border: '#E5E7EB', // Light gray for dividers
+  tableHeader: '#F9FAFB',
 }
 
 /* ── Styles ── */
@@ -56,186 +49,210 @@ const s = StyleSheet.create({
     fontSize: 9,
     color: C.text,
     backgroundColor: C.bg,
-    paddingTop: 40,
+    paddingTop: 50,
     paddingBottom: 60,
     paddingHorizontal: 48,
   },
 
-  /* Header */
+  /* Dividers */
+  divider: {
+    borderBottomWidth: 1,
+    borderBottomColor: C.border,
+    marginVertical: 16,
+  },
+  thickDivider: {
+    borderBottomWidth: 2,
+    borderBottomColor: '#F3F4F6',
+    marginVertical: 20,
+  },
+
+  /* Header Section */
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 32,
+    marginBottom: 8,
   },
-  logo: { width: 48, height: 48, borderRadius: 8, objectFit: 'cover' },
-  agencyName: { fontSize: 18, fontWeight: 700, color: C.text, marginBottom: 2 },
-  agencyDetail: { fontSize: 8, color: C.muted },
   invoiceTitle: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: 700,
-    color: C.accent,
-    textAlign: 'right',
+    color: C.text,
     letterSpacing: -0.5,
   },
   invoiceNumber: {
-    fontSize: 10,
+    fontSize: 13,
     color: C.muted,
-    textAlign: 'right',
     marginTop: 4,
   },
-
-  /* Status badge */
-  statusBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-    fontSize: 8,
-    fontWeight: 600,
+  logo: { 
+    height: 24, 
+    objectFit: 'contain',
+    marginRight: 8,
+    borderRadius: 6
+  },
+  logoText: {
+    fontSize: 18,
+    fontWeight: 700,
+    letterSpacing: -0.5,
+    color: C.text
+  },
+  tertiaryLogoText: {
+    fontSize: 20,
+    fontWeight: 800,
+    letterSpacing: -0.5,
+    color: C.text,
+    textAlign: 'right'
+  },
+  arkLabsText: {
+    fontSize: 10,
+    fontWeight: 500,
+    color: C.muted,
     textAlign: 'right',
-    alignSelf: 'flex-end',
-    marginTop: 6,
+    marginTop: 2
   },
 
-  /* Info grid */
-  infoGrid: {
+  /* Typography Utilities */
+  label: {
+    fontSize: 8,
+    fontWeight: 500,
+    color: C.muted,
+    marginBottom: 4,
+  },
+  value: {
+    fontSize: 10,
+    fontWeight: 500,
+    color: C.text,
+  },
+  valueBold: {
+    fontSize: 10,
+    fontWeight: 600,
+    color: C.text,
+  },
+  textSm: {
+    fontSize: 9,
+    color: C.muted,
+    lineHeight: 1.5,
+  },
+
+  /* Meta Grid (Project, Dates) */
+  metaGrid: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 28,
-    gap: 16,
+    alignItems: 'flex-start',
   },
-  infoBox: { flex: 1 },
-  infoLabel: {
-    fontSize: 7,
-    fontWeight: 600,
-    color: C.muted,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    marginBottom: 6,
+
+  /* Address Grid (From, To) */
+  addressGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
   },
-  infoText: { fontSize: 9.5, fontWeight: 500, color: C.text, marginBottom: 2 },
-  infoSubtext: { fontSize: 8.5, color: C.muted },
+  addressBox: {
+    flex: 1,
+  },
 
   /* Table */
   tableHeader: {
     flexDirection: 'row',
-    backgroundColor: C.accentLight,
+    backgroundColor: C.tableHeader,
     borderRadius: 6,
-    paddingVertical: 8,
+    paddingVertical: 10,
     paddingHorizontal: 12,
-    marginBottom: 2,
+    marginBottom: 8,
   },
   tableHeaderCell: {
-    fontSize: 7,
+    fontSize: 9,
     fontWeight: 600,
-    color: C.accent,
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
+    color: C.text,
   },
   tableRow: {
     flexDirection: 'row',
-    paddingVertical: 10,
+    paddingVertical: 12,
     paddingHorizontal: 12,
-    borderBottomWidth: 0.5,
+    borderBottomWidth: 1,
     borderBottomColor: C.border,
   },
-  tableRowAlt: { backgroundColor: '#fafbfc' },
-  tableCell: { fontSize: 9, color: C.text },
-  tableCellMuted: { fontSize: 9, color: C.muted },
+  tableCell: { fontSize: 10, fontWeight: 500, color: C.text },
+  tableCellMuted: { fontSize: 10, color: C.text },
 
-  colDesc: { flex: 1 },
-  colQty: { width: 60, textAlign: 'center' },
-  colRate: { width: 80, textAlign: 'right' },
-  colAmount: { width: 80, textAlign: 'right' },
+  colDesc: { flex: 2 },
+  colQty: { width: 50, textAlign: 'center' },
+  colRate: { width: 90, textAlign: 'center' },
+  colAmount: { width: 90, textAlign: 'right' },
 
   /* Totals */
-  totalsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    marginTop: 16,
-  },
-  totalsBox: { width: 220 },
-  totalRow: {
+  totalContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 5,
+    alignItems: 'center',
+    paddingVertical: 16,
     paddingHorizontal: 12,
   },
-  totalLabel: { fontSize: 9, color: C.muted },
-  totalValue: { fontSize: 9, fontWeight: 500 },
-  totalRowGrand: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    backgroundColor: C.accent,
-    borderRadius: 6,
-    marginTop: 4,
-  },
-  totalLabelGrand: { fontSize: 11, fontWeight: 600, color: '#ffffff' },
-  totalValueGrand: { fontSize: 11, fontWeight: 700, color: '#ffffff' },
-
-  /* Notes & Payment terms */
-  notesSection: {
-    marginTop: 28,
-    paddingTop: 16,
-    borderTopWidth: 0.5,
-    borderTopColor: C.border,
-  },
-  sectionTitle: {
-    fontSize: 8,
+  totalLabel: {
+    fontSize: 12,
     fontWeight: 600,
-    color: C.muted,
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
-    marginBottom: 6,
+    color: C.text,
   },
-  notesText: { fontSize: 9, color: C.muted, lineHeight: 1.5 },
+  totalValue: {
+    fontSize: 12,
+    fontWeight: 600,
+    color: C.text,
+  },
 
-  /* Footer */
+  /* Note Box */
+  noteBox: {
+    borderWidth: 1,
+    borderColor: C.border,
+    borderRadius: 6,
+    padding: 12,
+    marginTop: 16,
+    backgroundColor: '#FAFAFA',
+  },
+  noteText: {
+    fontSize: 9,
+    color: C.text,
+    lineHeight: 1.5,
+  },
+
+  /* Bottom Section (Payment & Signature) */
+  bottomSection: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+    marginTop: 40,
+  },
+  paymentBox: {
+    flex: 1,
+  },
+  /* Branding Footer */
   footer: {
     position: 'absolute',
     bottom: 24,
     left: 48,
     right: 48,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderTopWidth: 0.5,
-    borderTopColor: C.border,
-    paddingTop: 12,
+    textAlign: 'center',
   },
-  footerText: { fontSize: 7, color: C.muted },
+  footerText: {
+    fontSize: 7,
+    color: C.muted,
+  },
 })
 
 /* ── Helpers ── */
 function fmtCurrency(val) {
-  return new Intl.NumberFormat('en-US', {
+  return new Intl.NumberFormat(CURRENCY.LOCALE, {
     style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 2,
+    currency: CURRENCY.CODE,
+    maximumFractionDigits: 0,
   }).format(val || 0)
 }
 
 function fmtDate(d) {
   if (!d) return '—'
   try {
-    return format(new Date(d), 'MMM d, yyyy')
+    return format(new Date(d), 'MMM dd, yyyy')
   } catch {
     return '—'
-  }
-}
-
-function getStatusStyle(status) {
-  switch (status) {
-    case 'PAID':
-      return { backgroundColor: C.paidBg, color: C.success }
-    case 'SENT':
-      return { backgroundColor: C.sentBg, color: '#2563eb' }
-    case 'OVERDUE':
-      return { backgroundColor: C.overdueBg, color: C.danger }
-    default:
-      return { backgroundColor: C.draftBg, color: C.muted }
   }
 }
 
@@ -247,119 +264,138 @@ export default function InvoicePDF({ invoice, agency = {} }) {
     0,
   )
   const total = invoice.total || subtotal
-  const statusStyle = getStatusStyle(invoice.status)
 
   return (
     <Document>
       <Page size="A4" style={s.page}>
+        
         {/* ─── Header ─── */}
         <View style={s.header}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-            {agency.logo_url && <Image src={agency.logo_url} style={s.logo} />}
-            <View>
-              <Text style={s.agencyName}>
-                {agency.agency_name || 'My Agency'}
-              </Text>
-              {agency.email && (
-                <Text style={s.agencyDetail}>{agency.email}</Text>
-              )}
-              {agency.mobile_number && (
-                <Text style={s.agencyDetail}>{agency.mobile_number}</Text>
-              )}
-            </View>
+          <View>
+            <Text style={s.invoiceTitle}>Invoice</Text>
+            <Text style={s.invoiceNumber}>#{invoice.invoice_number}</Text>
           </View>
-
           <View style={{ alignItems: 'flex-end' }}>
-            <Text style={s.invoiceTitle}>INVOICE</Text>
-            <Text style={s.invoiceNumber}>{invoice.invoice_number}</Text>
-            <View style={[s.statusBadge, statusStyle]}>
-              <Text>{invoice.status}</Text>
-            </View>
-          </View>
-        </View>
-
-        {/* ─── Info Grid ─── */}
-        <View style={s.infoGrid}>
-          <View style={s.infoBox}>
-            <Text style={s.infoLabel}>Bill To</Text>
-            <Text style={s.infoText}>{invoice.client?.name || 'Client'}</Text>
-            {invoice.client?.contact_email && (
-              <Text style={s.infoSubtext}>{invoice.client.contact_email}</Text>
+            {(agency.basic_whitelabel_enabled || agency.full_whitelabel_enabled) ? (
+              <View style={{ alignItems: 'flex-end' }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  {agency.logo_url && (
+                    <Image src={agency.logo_url} style={s.logo} />
+                  )}
+                  <Text style={s.logoText}>{agency.agency_name || 'Agency'}</Text>
+                </View>
+                {agency.basic_whitelabel_enabled && !agency.full_whitelabel_enabled && (
+                  <Text style={[s.arkLabsText, { marginTop: 4 }]}>Powered by Tertiary, Ark Labs 2026</Text>
+                )}
+              </View>
+            ) : (
+              <View>
+                <Text style={s.tertiaryLogoText}>Tertiary</Text>
+                <Text style={s.arkLabsText}>Ark Labs 2026</Text>
+              </View>
             )}
           </View>
+        </View>
 
-          <View style={s.infoBox}>
-            <Text style={s.infoLabel}>Issue Date</Text>
-            <Text style={s.infoText}>{fmtDate(invoice.issue_date)}</Text>
+        <View style={s.divider} />
+
+        {/* ─── Meta Grid (Project & Dates) ─── */}
+        <View style={s.metaGrid}>
+          <View style={{ flex: 1 }}>
+            <Text style={s.label}>Project</Text>
+            <Text style={s.valueBold}>{invoice.project_name || 'Service Retainer'}</Text>
           </View>
-
-          <View style={s.infoBox}>
-            <Text style={s.infoLabel}>Due Date</Text>
-            <Text style={s.infoText}>{fmtDate(invoice.due_date)}</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={s.label}>Category</Text>
+            <Text style={s.valueBold}>{invoice.category || 'Other'}</Text>
           </View>
-
-          <View style={s.infoBox}>
-            <Text style={s.infoLabel}>Payment Terms</Text>
-            <Text style={s.infoText}>
-              {invoice.payment_terms || 'Due on receipt'}
-            </Text>
+          <View style={{ width: 120 }}>
+            <Text style={[s.label, { textAlign: 'right' }]}>Issued Date</Text>
+            <Text style={[s.valueBold, { textAlign: 'right' }]}>{fmtDate(invoice.issue_date)}</Text>
+          </View>
+          <View style={{ width: 120 }}>
+            <Text style={[s.label, { textAlign: 'right' }]}>Due Date</Text>
+            <Text style={[s.valueBold, { textAlign: 'right' }]}>{fmtDate(invoice.due_date)}</Text>
           </View>
         </View>
+
+        <View style={s.thickDivider} />
+
+        {/* ─── Address Grid (From & To) ─── */}
+        <View style={s.addressGrid}>
+          <View style={s.addressBox}>
+            <Text style={s.label}>From</Text>
+            <View style={{ marginTop: 4 }}>
+              <Text style={s.valueBold}>{agency.agency_name || 'Agency Name'}</Text>
+              {agency.email && <Text style={s.textSm}>{agency.email}</Text>}
+              {agency.mobile_number && <Text style={s.textSm}>{agency.mobile_number}</Text>}
+            </View>
+          </View>
+
+          <View style={[s.addressBox, { alignItems: 'flex-end' }]}>
+            <Text style={[s.label, { textAlign: 'right' }]}>To</Text>
+            <View style={{ marginTop: 4, alignItems: 'flex-end' }}>
+              <Text style={[s.valueBold, { textAlign: 'right' }]}>{invoice.client?.name || 'Client Name'}</Text>
+              {invoice.client?.email && <Text style={[s.textSm, { textAlign: 'right' }]}>{invoice.client.email}</Text>}
+            </View>
+          </View>
+        </View>
+
+        <View style={s.thickDivider} />
 
         {/* ─── Items Table ─── */}
         <View style={s.tableHeader}>
           <Text style={[s.tableHeaderCell, s.colDesc]}>Description</Text>
-          <Text style={[s.tableHeaderCell, s.colQty]}>Qty</Text>
-          <Text style={[s.tableHeaderCell, s.colRate]}>Rate</Text>
+          <Text style={[s.tableHeaderCell, s.colQty]}>Units</Text>
+          <Text style={[s.tableHeaderCell, s.colRate]}>Price</Text>
           <Text style={[s.tableHeaderCell, s.colAmount]}>Amount</Text>
         </View>
 
         {items.map((item, idx) => (
-          <View key={idx} style={[s.tableRow, idx % 2 === 1 && s.tableRowAlt]}>
+          <View key={idx} style={s.tableRow}>
             <Text style={[s.tableCell, s.colDesc]}>
               {item.description || 'Line item'}
             </Text>
             <Text style={[s.tableCellMuted, s.colQty]}>
-              {item.quantity || 0}
+              {item.quantity || 1}
             </Text>
             <Text style={[s.tableCellMuted, s.colRate]}>
               {fmtCurrency(item.unit_price)}
             </Text>
-            <Text style={[s.tableCell, s.colAmount, { fontWeight: 500 }]}>
-              {fmtCurrency((item.quantity || 0) * (item.unit_price || 0))}
+            <Text style={[s.tableCell, s.colAmount]}>
+              {fmtCurrency((item.quantity || 1) * (item.unit_price || 0))}
             </Text>
           </View>
         ))}
 
-        {/* ─── Totals ─── */}
-        <View style={s.totalsContainer}>
-          <View style={s.totalsBox}>
-            <View style={s.totalRow}>
-              <Text style={s.totalLabel}>Subtotal</Text>
-              <Text style={s.totalValue}>{fmtCurrency(subtotal)}</Text>
-            </View>
-            <View style={s.totalRowGrand}>
-              <Text style={s.totalLabelGrand}>Total Due</Text>
-              <Text style={s.totalValueGrand}>{fmtCurrency(total)}</Text>
-            </View>
-          </View>
+        {/* ─── Total Amount ─── */}
+        <View style={s.totalContainer}>
+          <Text style={s.totalLabel}>Total Amount</Text>
+          <Text style={s.totalValue}>{fmtCurrency(total)}</Text>
         </View>
 
-        {/* ─── Notes ─── */}
+        {/* ─── Note Box ─── */}
         {invoice.notes && (
-          <View style={s.notesSection}>
-            <Text style={s.sectionTitle}>Notes</Text>
-            <Text style={s.notesText}>{invoice.notes}</Text>
+          <View style={s.noteBox}>
+            <Text style={s.noteText}>
+              <Text style={{ fontWeight: 600 }}>Note: </Text>
+              {invoice.notes}
+            </Text>
           </View>
         )}
 
-        {/* ─── Footer ─── */}
-        <View style={s.footer} fixed>
-          <Text style={s.footerText}>
-            {agency.agency_name || 'My Agency'} · {invoice.invoice_number}
-          </Text>
-          <Text style={s.footerText}>Generated on {fmtDate(new Date())}</Text>
-        </View>
+        {/* ─── Bottom Section (Payment Terms) ─── */}
+        {invoice.payment_terms && (
+          <View style={s.bottomSection}>
+            <View style={s.paymentBox}>
+              <Text style={[s.valueBold, { fontSize: 11, marginBottom: 8 }]}>Payment Terms</Text>
+              <Text style={s.textSm}>{invoice.payment_terms}</Text>
+            </View>
+          </View>
+        )}
+
+
+
       </Page>
     </Document>
   )

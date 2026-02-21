@@ -59,6 +59,8 @@ export function useSubscription() {
         agency_name: sub.agency_name || 'My Agency',
         logo_url: sub.logo_url,
         plan_name: sub.plan_name,
+        basic_whitelabel_enabled: sub.basic_whitelabel_enabled ?? false,
+        full_whitelabel_enabled: sub.full_whitelabel_enabled ?? false,
         client_count: count || 0,
         max_clients: sub.max_clients,
 

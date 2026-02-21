@@ -41,6 +41,7 @@ export default function PublicReview() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [feedback, setFeedback] = useState('')
   const [statusUpdated, setStatusUpdated] = useState(null)
+  const [agencySub, setAgencySub] = useState(null)
 
   // Full-screen Preview States
   const [isPreviewOpen, setIsPreviewOpen] = useState(false)
@@ -51,7 +52,34 @@ export default function PublicReview() {
       const { data, error } = await supabase.rpc('get_post_by_token', {
         p_token: token,
       })
-      if (data && data.length > 0) setPost(data[0])
+      if (data && data.length > 0) {
+        const postData = data[0]
+        setPost(postData)
+
+        // Attempt to fetch subscription for whitelabeling
+        let userId = postData.user_id
+        if (!userId && postData.id) {
+            // postData.id is post_version_id
+            const { data: pv } = await supabase.from('post_versions').select('client_id, created_by').eq('id', postData.id).maybeSingle()
+            userId = pv?.created_by
+            if (!userId && pv?.client_id) {
+              const { data: client } = await supabase.from('clients').select('user_id').eq('id', pv.client_id).maybeSingle()
+              if (client) userId = client.user_id
+            }
+        }
+
+        if (userId) {
+          const { data: sub } = await supabase
+            .from('agency_subscriptions')
+            .select('agency_name, logo_url, basic_whitelabel_enabled, full_whitelabel_enabled')
+            .eq('user_id', userId)
+            .maybeSingle()
+            
+          if (sub) {
+            setAgencySub(sub)
+          }
+        }
+      }
       setLoading(false)
     }
     fetchPost()
@@ -131,8 +159,32 @@ export default function PublicReview() {
   }
 
   return (
-    <div className="min-h-screen w-full bg-background font-sans text-foreground">
-      <div className="mx-auto max-w-7xl p-6 lg:p-16">
+    <div className="min-h-screen w-full bg-background font-sans text-foreground flex flex-col">
+      <div className="mx-auto max-w-7xl p-6 lg:p-16 w-full flex-1">
+        {/* Header Branding */}
+        {agencySub && (
+          <div className="mb-10 flex flex-col items-start gap-1">
+            {(agencySub.basic_whitelabel_enabled || agencySub.full_whitelabel_enabled) ? (
+              <div className="flex flex-col items-start">
+                <div className="flex items-center gap-4">
+                  {agencySub.logo_url && (
+                    <img src={agencySub.logo_url} alt="Agency Logo" className="h-12 w-auto object-contain rounded-lg" />
+                  )}
+                  <h2 className="text-2xl font-bold tracking-tight">{agencySub.agency_name || 'Agency'}</h2>
+                </div>
+                {agencySub.basic_whitelabel_enabled && !agencySub.full_whitelabel_enabled && (
+                  <p className="text-xs text-muted-foreground/60 mt-2">Powered by Tertiary, Ark Labs 2026</p>
+                )}
+              </div>
+            ) : (
+              <>
+                <h2 className="text-3xl font-extrabold tracking-tight text-primary">Tertiary</h2>
+                <p className="text-sm font-medium text-muted-foreground">Ark Labs 2026</p>
+              </>
+            )}
+          </div>
+        )}
+
         <div className="grid grid-cols-1 gap-12 lg:grid-cols-12">
           {/* LEFT SECTION: CONTENT & ACTIONS */}
           <div className="lg:col-span-7 space-y-8 order-1">
@@ -324,6 +376,8 @@ export default function PublicReview() {
           </div>
         </div>
       </div>
+
+
 
       {/* FULL-SCREEN PREVIEW DIALOG (Shared with PostContent approach) */}
       <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>

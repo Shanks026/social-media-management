@@ -46,6 +46,7 @@ import { EditInvoiceDialog } from './EditInvoiceDialog'
 import { toast } from 'sonner'
 import { useSubscription } from '@/api/useSubscription'
 import { downloadInvoicePDF } from '@/utils/downloadInvoicePDF'
+import { supabase } from '@/lib/supabase'
 
 const STATUS_OPTIONS = [
   { value: 'ALL', label: 'All Statuses' },
@@ -110,7 +111,17 @@ export default function InvoicesTab({ clientId, subTabs }) {
   // --- PDF download handler ---
   const handleDownloadPDF = async (invoice) => {
     try {
-      await downloadInvoicePDF(invoice, subscription || {})
+      // Fetch invoice items since the list query doesn't include them
+      const { data: items, error } = await supabase
+        .from('invoice_items')
+        .select('*')
+        .eq('invoice_id', invoice.id)
+        .order('created_at', { ascending: true })
+
+      if (error) throw error
+
+      const fullInvoice = { ...invoice, items: items || [] }
+      await downloadInvoicePDF(fullInvoice, subscription || {})
       toast.success('Invoice PDF downloaded')
     } catch (err) {
       console.error('PDF generation error:', err)
@@ -134,28 +145,32 @@ export default function InvoicesTab({ clientId, subTabs }) {
         </div>
       ),
     },
-    {
-      header: 'Client',
-      width: '20%',
-      render: (inv) => (
-        <div className="flex items-center gap-2">
-          {inv.client?.logo_url ? (
-            <img
-              src={inv.client.logo_url}
-              className="w-4 h-4 rounded-full border border-border shrink-0"
-              alt=""
-            />
-          ) : (
-            <div className="w-4 h-4 rounded-full bg-muted flex items-center justify-center text-[8px] font-bold text-muted-foreground shrink-0">
-              {inv.client?.name?.[0]}
-            </div>
-          )}
-          <span className="text-sm text-muted-foreground truncate">
-            {inv.client?.name || 'Unknown'}
-          </span>
-        </div>
-      ),
-    },
+    ...(clientId
+      ? []
+      : [
+          {
+            header: 'Client',
+            width: '20%',
+            render: (inv) => (
+              <div className="flex items-center gap-2">
+                {inv.client?.logo_url ? (
+                  <img
+                    src={inv.client.logo_url}
+                    className="w-4 h-4 rounded-full border border-border shrink-0"
+                    alt=""
+                  />
+                ) : (
+                  <div className="w-4 h-4 rounded-full bg-muted flex items-center justify-center text-[8px] font-bold text-muted-foreground shrink-0">
+                    {inv.client?.name?.[0]}
+                  </div>
+                )}
+                <span className="text-sm text-muted-foreground truncate">
+                  {inv.client?.name || 'Unknown'}
+                </span>
+              </div>
+            ),
+          },
+        ]),
     {
       header: 'Issue Date',
       width: '130px',
@@ -235,11 +250,9 @@ export default function InvoicesTab({ clientId, subTabs }) {
                 <span className="h-3.5 w-3.5 mr-2">✓</span> Mark as Paid
               </DropdownMenuItem>
             )}
-            {inv.status !== 'DRAFT' && (
-              <DropdownMenuItem onClick={() => handleDownloadPDF(inv)}>
-                <Download className="h-3.5 w-3.5 mr-2" /> Download PDF
-              </DropdownMenuItem>
-            )}
+            <DropdownMenuItem onClick={() => handleDownloadPDF(inv)}>
+              <Download className="h-3.5 w-3.5 mr-2" /> Download PDF
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
               className="text-destructive focus:text-destructive"
