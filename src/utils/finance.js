@@ -15,7 +15,7 @@ export function formatCurrency(amount) {
  * @param {Object} params
  * @param {Array} params.transactions - List of transactions
  * @param {Array} params.expenses - List of recurring expenses (from expenses table)
- * @param {Array} params.oneOffTransactions - Transactions of type EXPENSE
+ * @param {Array} [params.invoices] - List of invoices (for accrual revenue)
  * @param {Date} params.periodStart - Start of period
  * @param {Date} params.periodEnd - End of period
  * @param {string} params.method - 'CASH' or 'ACCRUAL'
@@ -47,6 +47,7 @@ export function calculateRecurringBurn(expenses, dateLimit) {
 export function calculatePeriodMetrics({
   transactions,
   expenses,
+  invoices = [],
   periodStart,
   periodEnd,
   method = 'CASH',
@@ -59,12 +60,21 @@ export function calculatePeriodMetrics({
   // 1. Calculate Monthly Burn (Subscriptions)
   const monthlyRecurring = calculateRecurringBurn(expenses, periodEnd)
 
+  // Track invoice IDs that already have a linked PAID transaction
+  // to avoid double-counting in accrual mode
+  const linkedInvoiceIds = new Set()
+  transactions.forEach((t) => {
+    if (t.invoice_id && t.status === 'PAID') {
+      linkedInvoiceIds.add(t.invoice_id)
+    }
+  })
+
   // 2. Iterate Transactions
   transactions.forEach((t) => {
     const amount = parseFloat(t.amount) || 0
-    const tDate = new Date(t.date) // Transaction Date
+    const tDate = new Date(t.date)
 
-    // Global counters
+    // Global counters (ledger pending/overdue)
     if (t.type === 'INCOME') {
       if (t.status === 'PENDING') pending += amount
       if (t.status === 'OVERDUE') overdue += amount
@@ -83,6 +93,23 @@ export function calculatePeriodMetrics({
       }
     }
   })
+
+  // 3. In ACCRUAL mode, include SENT/OVERDUE invoice amounts
+  //    These represent earned revenue that has been billed but not yet paid.
+  //    Only count invoices NOT already reflected via a linked PAID transaction.
+  if (method === 'ACCRUAL' && invoices.length > 0) {
+    invoices.forEach((inv) => {
+      if (
+        (inv.status === 'SENT' || inv.status === 'OVERDUE') &&
+        !linkedInvoiceIds.has(inv.id)
+      ) {
+        const invDate = new Date(inv.issue_date)
+        if (isWithinInterval(invDate, { start: periodStart, end: periodEnd })) {
+          revenue += parseFloat(inv.total) || 0
+        }
+      }
+    })
+  }
 
   const totalExpense = oneOffExpense + monthlyRecurring
   const profit = revenue - totalExpense

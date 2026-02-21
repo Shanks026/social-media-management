@@ -99,6 +99,11 @@ const STATUS_CONFIG = {
     className:
       'bg-rose-100 text-rose-800 dark:bg-rose-500/10 dark:text-rose-400',
   },
+  SENT: {
+    label: 'Sent',
+    icon: UploadCloud,
+    className: 'bg-sky-100 text-sky-800 dark:bg-sky-500/10 dark:text-sky-400',
+  },
 
   // Transaction Types (Optional if you want badges for them)
   INCOME: {

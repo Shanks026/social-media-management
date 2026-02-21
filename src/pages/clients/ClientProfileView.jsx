@@ -23,6 +23,7 @@ import { cn } from '@/lib/utils'
 import OverviewPage from '../finance/OverviewTab'
 import LedgerTab from '../finance/LedgerTab'
 import SubscriptionsTab from '../finance/SubscriptionsTab'
+import InvoicesTab from '../finance/InvoicesTab'
 
 const TABS_CONFIG = [
   { value: 'workflow', label: 'Workflow', icon: LayoutGrid },
@@ -63,6 +64,12 @@ export default function ClientProfileView({ client }) {
         className="rounded-md text-xs px-3 py-1.5 h-8"
       >
         Subscriptions
+      </TabsTrigger>
+      <TabsTrigger
+        value="invoices"
+        className="rounded-md text-xs px-3 py-1.5 h-8"
+      >
+        Invoices
       </TabsTrigger>
     </TabsList>
   )
@@ -157,6 +164,9 @@ export default function ClientProfileView({ client }) {
                 </TabsContent>
                 <TabsContent value="subscriptions" className="mt-0">
                   <SubscriptionsTab clientId={client.id} subTabs={subTabs} />
+                </TabsContent>
+                <TabsContent value="invoices" className="mt-0">
+                  <InvoicesTab clientId={client.id} subTabs={subTabs} />
                 </TabsContent>
               </Tabs>
             </TabsContent>

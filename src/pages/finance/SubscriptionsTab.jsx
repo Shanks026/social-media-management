@@ -177,12 +177,12 @@ export default function SubscriptionsTab({ clientId, subTabs }) {
   ]
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
+    <div className="space-y-6 animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         {subTabs ? (
           subTabs
         ) : (
-          <h2 className="text-2xl font-bold tracking-tight">Subscriptions</h2>
+          <h2 className="text-2xl font-normal">Subscriptions</h2>
         )}
         <div className="flex items-center gap-3">
           {!clientId && (

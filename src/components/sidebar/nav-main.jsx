@@ -9,6 +9,7 @@ import {
   ListOrdered,
   CreditCard,
   LayoutGrid,
+  FileText,
 } from 'lucide-react'
 import { NavLink, useLocation } from 'react-router-dom'
 import {
@@ -48,6 +49,7 @@ const navItems = [
         icon: CreditCard,
       },
       { title: 'Ledger', url: '/finance/ledger', icon: ListOrdered },
+      { title: 'Invoices', url: '/finance/invoices', icon: FileText },
     ],
   },
 ]

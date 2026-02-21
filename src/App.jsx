@@ -15,6 +15,7 @@ import FinanceLayout from './pages/finance/FinanceLayout'
 import OverviewTab from './pages/finance/OverviewTab'
 import SubscriptionsTab from './pages/finance/SubscriptionsTab'
 import LedgerTab from './pages/finance/LedgerTab'
+import InvoicesTab from './pages/finance/InvoicesTab'
 import Posts from './pages/Posts'
 import BillingUsage from './pages/billingAndUsage/BillingUsage'
 import CreateClientPage from './pages/clients/CreateClientPage'
@@ -51,6 +52,7 @@ function AppRoutes() {
             <Route path="overview" element={<OverviewTab />} />
             <Route path="subscriptions" element={<SubscriptionsTab />} />
             <Route path="ledger" element={<LedgerTab />} />
+            <Route path="invoices" element={<InvoicesTab />} />
           </Route>
           <Route path="/billing" element={<BillingUsage />} />
           <Route path="/settings" element={<Settings />} />

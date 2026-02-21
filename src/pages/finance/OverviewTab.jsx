@@ -53,6 +53,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 // API Hooks
 import { useTransactions } from '@/api/transactions'
 import { useExpenses } from '@/api/expenses'
+import { useInvoices } from '@/api/invoices'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 
@@ -88,6 +89,27 @@ export default function OverviewPage({ clientId, subTabs }) {
   })
   const internalAccount = clientData?.internalAccount
 
+  // Invoice data for pending KPI
+  const { data: invoices = [] } = useInvoices({
+    clientId: viewMode === 'SELECTED' ? clientId : undefined,
+  })
+
+  const outstandingInvoiceTotal = useMemo(() => {
+    let filtered = invoices
+    if (viewMode === 'INTERNAL' && internalAccount) {
+      filtered = invoices.filter(
+        (inv) => inv.client_id === internalAccount.id || !inv.client_id,
+      )
+    } else if (viewMode === 'CLIENTS' && internalAccount) {
+      filtered = invoices.filter(
+        (inv) => inv.client_id && inv.client_id !== internalAccount.id,
+      )
+    }
+    return filtered
+      .filter((inv) => inv.status === 'SENT' || inv.status === 'OVERDUE')
+      .reduce((sum, inv) => sum + (inv.total || 0), 0)
+  }, [invoices, viewMode, internalAccount])
+
   const dashboardData = useMemo(() => {
     if (loadingTx || loadingExp) return null
 
@@ -118,10 +140,23 @@ export default function OverviewPage({ clientId, subTabs }) {
       )
     }
 
-    // --- 2. Calculate Current Month Metrics via Utility ---
+    // --- 2. Filter Invoices based on View Mode ---
+    let filteredInvoices = invoices
+    if (viewMode === 'INTERNAL' && internalAccount) {
+      filteredInvoices = invoices.filter(
+        (inv) => inv.client_id === internalAccount.id || !inv.client_id,
+      )
+    } else if (viewMode === 'CLIENTS' && internalAccount) {
+      filteredInvoices = invoices.filter(
+        (inv) => inv.client_id && inv.client_id !== internalAccount.id,
+      )
+    }
+
+    // --- 3. Calculate Current Month Metrics via Utility ---
     const metrics = calculatePeriodMetrics({
       transactions: filteredTransactions,
       expenses: filteredExpenses,
+      invoices: filteredInvoices,
       periodStart: currentMonthStart,
       periodEnd: currentMonthEnd,
       method: accountingMethod,
@@ -138,6 +173,15 @@ export default function OverviewPage({ clientId, subTabs }) {
 
     // --- 5. Prepare Historical Chart Data ---
     const chartData = []
+
+    // Pre-collect linked invoice IDs (those with PAID transactions)
+    const linkedInvoiceIds = new Set()
+    filteredTransactions.forEach((t) => {
+      if (t.invoice_id && t.status === 'PAID') {
+        linkedInvoiceIds.add(t.invoice_id)
+      }
+    })
+
     for (let i = 5; i >= 0; i--) {
       const date = subMonths(today, i)
       const monthStart = startOfMonth(date)
@@ -160,6 +204,23 @@ export default function OverviewPage({ clientId, subTabs }) {
         }
       })
 
+      // In ACCRUAL mode, also include SENT/OVERDUE invoice amounts
+      if (accountingMethod === 'ACCRUAL') {
+        filteredInvoices.forEach((inv) => {
+          if (
+            (inv.status === 'SENT' || inv.status === 'OVERDUE') &&
+            !linkedInvoiceIds.has(inv.id)
+          ) {
+            const invDate = new Date(inv.issue_date)
+            if (
+              isWithinInterval(invDate, { start: monthStart, end: monthEnd })
+            ) {
+              incomeAccrual += parseFloat(inv.total) || 0
+            }
+          }
+        })
+      }
+
       const historicalRecurring = calculateRecurringBurn(
         filteredExpenses,
         monthEnd,
@@ -167,7 +228,6 @@ export default function OverviewPage({ clientId, subTabs }) {
 
       chartData.push({
         month: monthLabel,
-        // Chart also respects the toggle!
         income: accountingMethod === 'CASH' ? incomeCash : incomeAccrual,
         expenses: oneOffExpense + historicalRecurring,
       })
@@ -186,6 +246,7 @@ export default function OverviewPage({ clientId, subTabs }) {
   }, [
     transactions,
     expenses,
+    invoices,
     loadingTx,
     loadingExp,
     viewMode,
@@ -196,7 +257,7 @@ export default function OverviewPage({ clientId, subTabs }) {
   if (!dashboardData) return <DashboardSkeleton />
 
   return (
-    <div className="space-y-4 animate-in fade-in duration-500">
+    <div className="space-y-6 animate-in fade-in duration-500">
       {/* --- HEADER ACTIONS --- */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center gap-2">
@@ -325,7 +386,7 @@ export default function OverviewPage({ clientId, subTabs }) {
                     <Info className="h-3 w-3 text-amber-600/70" />
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>Total unpaid income from Ledger</p>
+                    <p>Unpaid ledger entries + outstanding invoices</p>
                   </TooltipContent>
                 </UITooltip>
               </TooltipProvider>
@@ -335,7 +396,9 @@ export default function OverviewPage({ clientId, subTabs }) {
           <CardContent>
             <div className="text-2xl font-bold tracking-tight text-amber-700 dark:text-amber-500">
               {formatCurrency(
-                dashboardData.pendingIncome + dashboardData.overdueIncome,
+                dashboardData.pendingIncome +
+                  dashboardData.overdueIncome +
+                  outstandingInvoiceTotal,
               )}
             </div>
             <p className="text-xs text-amber-600/70 dark:text-amber-400/70 mt-1">
