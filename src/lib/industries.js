@@ -23,6 +23,9 @@ export const INDUSTRY_OPTIONS = [
 
   // Catch-all
   { label: 'Other', value: 'Other', color: 'gray' },
+
+  // Internal
+  { label: 'Internal Workspace', value: 'Internal', color: 'slate' },
 ]
 
 // Helper to get color safely

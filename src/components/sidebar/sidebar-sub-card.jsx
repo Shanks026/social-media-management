@@ -5,10 +5,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { useNavigate } from 'react-router-dom'
 import { useSubscription } from '../../api/useSubscription'
 import { cn } from '@/lib/utils'
 
 export function SidebarSubCard() {
+  const navigate = useNavigate()
   const { state } = useSidebar()
   const { data: sub, isLoading } = useSubscription()
 
@@ -21,8 +23,10 @@ export function SidebarSubCard() {
   const currentClients = sub.client_count
   const storagePercent = sub.storage_display.percent
 
+  const clientPercent = (currentClients / clientLimit) * 100
+
   const isClientReached = currentClients >= clientLimit
-  const isClientNearing = currentClients === clientLimit - 1
+  const isClientNearing = clientPercent >= 80 && clientPercent < 100
 
   const isStorageReached = storagePercent >= 100
   const isStorageNearing = storagePercent >= 80 && storagePercent < 100
@@ -32,15 +36,6 @@ export function SidebarSubCard() {
     isClientReached || isClientNearing || isStorageReached || isStorageNearing
 
   if (!shouldShow) return null
-
-  /**
-   * Helper to format storage bytes
-   */
-  const formatStorage = (bytes) => {
-    const mb = bytes / (1024 * 1024)
-    if (mb < 1024) return `${mb.toFixed(1)} MB`
-    return `${(mb / 1024).toFixed(1)} GB`
-  }
 
   /**
    * Helper to get status colors based on thresholds
@@ -68,7 +63,7 @@ export function SidebarSubCard() {
   const storageStatus = getStatusClasses(storagePercent)
 
   return (
-    <div className="px-3 py-4">
+    <div className="px-3">
       <Card className="shadow-none border-muted bg-muted/50 py-0 gap-0 overflow-hidden">
         <CardHeader className="p-4 pb-2 space-y-3">
           <div className="flex flex-col gap-3 items-start">
@@ -129,8 +124,8 @@ export function SidebarSubCard() {
                   <Database size={12} /> Storage
                 </span>
                 <span className={storageStatus.text}>
-                  {formatStorage(sub.storage_used_bytes)} /{' '}
-                  {formatStorage(sub.storage_max_bytes)}
+                  {sub.storage_display.usage_value} {sub.storage_display.usage_unit} /{' '}
+                  {sub.storage_display.max_value} {sub.storage_display.max_unit}
                 </span>
               </div>
               <Progress
@@ -145,11 +140,7 @@ export function SidebarSubCard() {
             size="sm"
             className="w-full h-8 text-[11px] font-bold mt-2 shadow-sm uppercase tracking-wider"
             variant="default"
-            onClick={() =>
-              window.open(
-                'mailto:support@yourdomain.com?subject=Upgrade Plan Request',
-              )
-            }
+            onClick={() => navigate('/billing?tab=subscription&scroll=true')}
           >
             Manage
           </Button>

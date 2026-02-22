@@ -25,7 +25,6 @@ import {
 } from '@/components/ui/empty'
 
 // CreateClient import removed as it's now a dedicated page
-import EditClient from './EditClient'
 import ClientCard from './ClientCard'
 import { ClientCardSkeleton } from './ClientCardSkeleton'
 import {
@@ -53,7 +52,6 @@ export default function Clients() {
   }, [setHeader])
 
   // state for CreateClient modal removed
-  const [editClient, setEditClient] = useState(null)
 
   const search = searchParams.get('q') || ''
   const urgency = searchParams.get('urgency') || 'all'
@@ -91,6 +89,14 @@ export default function Clients() {
 
   const clients = data?.clients || []
   const counts = data?.counts || {}
+
+  const sortedClients = [...clients].sort((a, b) => {
+    if (a.is_internal && !b.is_internal) return -1
+    if (!a.is_internal && b.is_internal) return 1
+    return new Date(b.created_at || 0) - new Date(a.created_at || 0)
+  })
+
+  const realClientCount = clients.filter(c => !c.is_internal).length
 
   const deleteMutation = useMutation({
     mutationFn: deleteClient,
@@ -147,7 +153,7 @@ export default function Clients() {
             <h1 className="text-3xl font-light tracking-tight text-foreground">
               Clients{' '}
               <span className="text-muted-foreground/50 ml-2 font-extralight">
-                {clients.length}
+                {realClientCount}
               </span>
             </h1>
             <p className="text-sm text-muted-foreground font-light">
@@ -206,7 +212,7 @@ export default function Clients() {
         </div>
 
         {/* --- SECTION 3: THE CONTENT GRID --- */}
-        {clients.length === 0 ? (
+        {sortedClients.length === 0 ? (
           <Empty className="py-32 bg-card/20 rounded-[32px] border border-dashed border-border/60">
             <EmptyHeader className="flex flex-col items-center">
               <div className="h-20 w-20 rounded-full bg-primary/5 flex items-center justify-center mb-6">
@@ -248,7 +254,7 @@ export default function Clients() {
           </Empty>
         ) : (
           <div className="grid gap-6 grid-cols-[repeat(auto-fill,minmax(420px,1fr))] animate-in fade-in duration-500">
-            {clients.map((client) => (
+            {sortedClients.map((client) => (
               <ClientCard
                 key={client.id}
                 client={client}
@@ -262,9 +268,6 @@ export default function Clients() {
 
       {/* --- MODALS --- */}
       {/* CreateClient modal removed */}
-      {editClient && (
-        <EditClient client={editClient} onClose={() => setEditClient(null)} />
-      )}
     </div>
   )
 }

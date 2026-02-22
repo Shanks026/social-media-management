@@ -250,6 +250,7 @@ export const TierFilter = ({ value, onValueChange }) => {
         <SelectItem value="VIP">VIP</SelectItem>
         <SelectItem value="PRO">PRO</SelectItem>
         <SelectItem value="BASIC">Basic</SelectItem>
+        <SelectItem value="INTERNAL">Internal</SelectItem>
       </SelectContent>
     </Select>
   )

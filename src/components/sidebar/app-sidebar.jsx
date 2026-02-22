@@ -11,13 +11,11 @@ import {
 } from '@/components/ui/sidebar'
 import { Separator } from '../ui/separator'
 import CreateClient from '../../pages/clients/CreateClient'
-import EditClient from '../../pages/clients/EditClient'
 import { NavSecondary } from './nav-secondary'
 import { SidebarSubCard } from './sidebar-sub-card'
 
-export function AppSidebar({ user }) {
+export function AppSidebar({ user, agencySettings }) {
   const [createOpen, setCreateOpen] = useState(false)
-  const [editClient, setEditClient] = useState(null)
   const { isMobile, setOpen, open } = useSidebar()
 
   useEffect(() => {
@@ -33,7 +31,7 @@ export function AppSidebar({ user }) {
         collapsible="icon"
         variant="custom"
       >
-        <AppSidebarHeader />
+        <AppSidebarHeader agencySettings={agencySettings} />
         <Separator />
         {/* Main Content Area: Takes up all available height */}
         <SidebarContent className="flex flex-col flex-1 min-h-0 overflow-x-hidden">
@@ -43,26 +41,23 @@ export function AppSidebar({ user }) {
           <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
             <NavClients
               onCreateOpen={() => setCreateOpen(true)}
-              onEditClient={(client) => setEditClient(client)}
             />
           </div>
 
-          {/* <Separator className="mt-auto" /> */}
-          <SidebarSubCard />
-          {/* Settings Section: Now pinned just above the footer */}
-          <NavSecondary />
+          <div className="flex flex-col gap-0 overflow-hidden">
+            <SidebarSubCard />
+
+            <NavSecondary />
+          </div>
         </SidebarContent>
 
         <Separator />
-        <SidebarFooter className="flex-shrink-0">
+        <SidebarFooter className="shrink-0">
           <NavUser user={user} />
         </SidebarFooter>
       </Sidebar>
 
       <CreateClient open={createOpen} onOpenChange={setCreateOpen} />
-      {editClient && (
-        <EditClient client={editClient} onClose={() => setEditClient(null)} />
-      )}
     </>
   )
 }

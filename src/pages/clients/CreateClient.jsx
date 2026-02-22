@@ -44,7 +44,7 @@ const createClientSchema = z.object({
     .min(1, 'Mobile number is required')
     .regex(/^\+91[6-9]\d{9}$/, 'Must be a valid +91 number'),
   status: z.enum(['ACTIVE', 'PAUSED']),
-  tier: z.enum(['BASIC', 'PRO', 'VIP']),
+  tier: z.enum(['BASIC', 'PRO', 'VIP', 'INTERNAL']),
   logo_url: z.string().min(1, 'Client logo is required'),
   industry: z.string().min(1, 'Industry is required'),
   platforms: z.array(z.string()).min(1, 'Select at least one platform'),
@@ -90,7 +90,14 @@ const GRAY_CIRCLE = '#D1D5DB'
 const GRAY_TEXT = '#9CA3AF'
 const GRAY_LINE = '#F3F4F6' // Even lighter connector line
 
-export default function CreateClient({ open, onOpenChange }) {
+export default function CreateClient({
+  open,
+  onOpenChange,
+  customSubmit,
+  onSuccess,
+  title = 'Onboard a Client',
+  defaultValues = null
+}) {
   const queryClient = useQueryClient()
   const { user } = useAuth()
   const fileInputRef = useRef(null)
@@ -101,7 +108,7 @@ export default function CreateClient({ open, onOpenChange }) {
   const form = useForm({
     resolver: zodResolver(createClientSchema),
     mode: 'onSubmit',
-    defaultValues: {
+    defaultValues: defaultValues || {
       name: '',
       description: '',
       email: '',
@@ -134,8 +141,15 @@ export default function CreateClient({ open, onOpenChange }) {
   }, [selectedPlatforms, form])
 
   const mutation = useMutation({
-    mutationFn: createClient,
-    onSuccess: () => {
+    mutationFn: async (cleanValues) => {
+      if (customSubmit) return await customSubmit(cleanValues)
+      return await createClient({ ...cleanValues, user_id: user?.id })
+    },
+    onSuccess: (data) => {
+      if (onSuccess) {
+        onSuccess(data)
+        return
+      }
       queryClient.invalidateQueries({ queryKey: ['clients'] })
       if (user?.id) {
         queryClient.invalidateQueries({ queryKey: ['subscription', user.id] })
@@ -230,7 +244,7 @@ export default function CreateClient({ open, onOpenChange }) {
       >
         {/* Screen-reader accessible header (visually hidden) */}
         <DialogHeader className="sr-only">
-          <DialogTitle>Onboard a Client</DialogTitle>
+          <DialogTitle>{title}</DialogTitle>
           <DialogDescription>
             Step {currentStep} of 3: {STEPS[currentStep - 1].title}
           </DialogDescription>
@@ -244,7 +258,7 @@ export default function CreateClient({ open, onOpenChange }) {
           <div className="w-full sm:w-[320px] shrink-0 border-b sm:border-b-0 sm:border-r border-neutral-100/50 p-10 flex flex-col">
             {/* Header */}
             <p className="text-sm font-medium text-muted-foreground mb-2">
-              Onboard a Client
+              {title}
             </p>
             <h2 className="text-3xl font-medium tracking-tight mb-12 text-foreground">
               {STEPS[currentStep - 1].title}
@@ -452,6 +466,7 @@ export default function CreateClient({ open, onOpenChange }) {
                               <SelectItem value="BASIC">Basic</SelectItem>
                               <SelectItem value="PRO">Pro</SelectItem>
                               <SelectItem value="VIP">VIP</SelectItem>
+                              <SelectItem value="INTERNAL">Internal</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
@@ -597,6 +612,8 @@ export default function CreateClient({ open, onOpenChange }) {
                         <Loader2 className="mr-2 size-5 animate-spin" />
                         Creating...
                       </>
+                    ) : customSubmit ? (
+                      'Complete Setup'
                     ) : (
                       'Create Client'
                     )}

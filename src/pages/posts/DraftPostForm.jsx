@@ -173,8 +173,7 @@ export default function DraftPostForm({
   // State now stores objects: { url: string, type: 'image' | 'video' }
   const [previews, setPreviews] = useState([])
   const fileInputRef = useRef(null)
-  const isStorageFull =
-    subscription?.storage_used_bytes >= subscription?.storage_max_bytes
+  const isStorageFull = subscription?.storage_display?.percent >= 100
 
   const form = useForm({
     resolver: zodResolver(formSchema),

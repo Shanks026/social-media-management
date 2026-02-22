@@ -36,8 +36,6 @@ import {
   Share2,
 } from 'lucide-react'
 
-// Import the standardized Edit Dialog
-import EditClient from '../EditClient'
 
 /**
  * Helper to render brand-colored platform icons
@@ -87,7 +85,6 @@ export default function ManagementTab({ client }) {
   const queryClient = useQueryClient()
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
-  const [editOpen, setEditOpen] = useState(false)
 
   const deleteMutation = useMutation({
     mutationFn: deleteClient,
@@ -269,11 +266,6 @@ export default function ManagementTab({ client }) {
           </Button>
         </div>
       </section>
-
-      {/* Edit Dialog */}
-      {editOpen && (
-        <EditClient client={client} onClose={() => setEditOpen(false)} />
-      )}
 
       {/* Delete Confirmation */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

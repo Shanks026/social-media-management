@@ -8,6 +8,19 @@ const TierBadge = ({ tier }) => {
   const baseStyles =
     'inline-flex items-center justify-center py-0.5 px-1.5 rounded-md shrink-0 shadow-md font-bold tracking-wider uppercase'
 
+  if (normalizedTier === 'INTERNAL') {
+    return (
+      <div className={`${baseStyles}`}>
+        {/* Replacing Crown with verify.svg from public folder */}
+        <img 
+          src="/verify.png" 
+          alt="Verified" 
+          className="size-4.5" 
+        />
+      </div>
+    )
+  }
+
   if (normalizedTier === 'VIP') {
     return (
       <div className={`${baseStyles} bg-purple-600 text-white`}>
