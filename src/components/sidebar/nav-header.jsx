@@ -22,10 +22,14 @@ export function AppSidebarHeader({ agencySettings }) {
 
   // Logic: Check if branding is complete
   // Priority: Props (Real-time updates) > Subscription Query (Fallback)
-  const name = agencySettings?.name || agencySettings?.agency_name || sub?.agency_name || APP_NAME
+  const name =
+    agencySettings?.name ||
+    agencySettings?.agency_name ||
+    sub?.agency_name ||
+    APP_NAME
   const logo = agencySettings?.logo_url || sub?.logo_url
   const plan = agencySettings?.tier || sub?.plan_name || APP_TAGLINE
-  
+
   const isBrandingComplete = !!(name && logo && plan && name !== APP_NAME)
 
   const getInitials = (name) => {
@@ -51,11 +55,7 @@ export function AppSidebarHeader({ agencySettings }) {
               {isLoading ? (
                 <Skeleton className="size-full bg-white/10" />
               ) : logo ? (
-                <img
-                  src={logo}
-                  alt={name}
-                  className="size-full object-cover"
-                />
+                <img src={logo} alt={name} className="size-full object-cover" />
               ) : (
                 <div className="flex flex-col items-center justify-center">
                   {/* If it's the app fallback, show an icon, otherwise initials */}
@@ -87,10 +87,13 @@ export function AppSidebarHeader({ agencySettings }) {
                         {name}
                       </span>
                       {isBrandingComplete && (
-                        <ShieldCheck
-                          size={12}
-                          className="text-primary shrink-0"
-                        />
+                        <div>
+                          <img
+                            src="/verify.png"
+                            alt="Verified"
+                            className="size-3.5"
+                          />
+                        </div>
                       )}
                     </div>
                     <span className="text-xs text-muted-foreground truncate">

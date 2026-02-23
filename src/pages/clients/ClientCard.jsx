@@ -193,7 +193,7 @@ function ClientCard({ client, onOpen, onDelete }) {
                 )}
               </div>
               <div className="space-y-2 min-w-0">
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-2">
                   <h3 className="text-lg font-medium text-foreground tracking-tight leading-none truncate]">
                     {client.name}
                   </h3>
@@ -214,22 +214,22 @@ function ClientCard({ client, onOpen, onDelete }) {
                 <StatItem
                   count={pipeline.drafts}
                   label="Drafts"
-                  colorClass="bg-blue-500"
+                  colorClass="bg-blue-600"
                 />
                 <StatItem
                   count={pipeline.revisions}
                   label="Revisions"
-                  colorClass="bg-red-500"
+                  colorClass="bg-pink-600"
                 />
                 <StatItem
                   count={pipeline.pending}
                   label="Pending"
-                  colorClass="bg-amber-500"
+                  colorClass="bg-orange-600"
                 />
                 <StatItem
                   count={pipeline.scheduled}
                   label="Scheduled"
-                  colorClass="bg-purple-500"
+                  colorClass="bg-purple-600"
                 />
               </div>
             ) : (

@@ -72,24 +72,36 @@ export const SearchBar = ({ value, onChange }) => {
 }
 
 /* ----------------------------------------------------
-   2. Urgency Filter (normalized size)
+   Urgency Filter (Updated Logic & Styling)
 ---------------------------------------------------- */
-export const UrgencyFilter = ({ activeValue, onSelect, counts = {} }) => {
+export const UrgencyFilter = ({
+  activeValue = 'all',
+  onSelect,
+  counts = {},
+}) => {
+  // 1. Normalize counts to handle undefined/null safely from the RPC response
+  const safeCounts = {
+    all: counts?.all ?? 0,
+    urgent: counts?.urgent ?? 0,
+    upcoming: counts?.upcoming ?? 0,
+    idle: counts?.idle ?? 0,
+  }
+
   const options = [
     {
       label: 'All',
       value: 'all',
-      count: counts.all,
+      count: safeCounts.all,
     },
     {
       label: 'Urgent',
       value: 'urgent',
       icon: <AlertCircle className="size-4" />,
-      count: counts.urgent,
+      count: safeCounts.urgent,
       activeColor: 'text-red-600 dark:text-red-400',
-      // Persistent red logic remains here
+      // Dynamic color for the badge based on urgency
       persistentColor:
-        counts.urgent > 0
+        safeCounts.urgent > 0
           ? 'bg-red-100 text-red-600 dark:bg-red-900/30'
           : 'bg-muted text-muted-foreground',
     },
@@ -97,14 +109,14 @@ export const UrgencyFilter = ({ activeValue, onSelect, counts = {} }) => {
       label: 'Upcoming',
       value: 'upcoming',
       icon: <AlertTriangle className="size-4" />,
-      count: counts.upcoming,
+      count: safeCounts.upcoming,
       activeColor: 'text-amber-600 dark:text-amber-400',
     },
     {
       label: 'Idle',
       value: 'idle',
       icon: <Moon className="size-4" />,
-      count: counts.idle,
+      count: safeCounts.idle,
       activeColor: 'text-blue-600 dark:text-blue-400',
     },
   ]
@@ -112,7 +124,8 @@ export const UrgencyFilter = ({ activeValue, onSelect, counts = {} }) => {
   return (
     <div className="flex items-center gap-1 rounded-md border p-0.5 bg-background shadow-sm">
       {options.map((opt) => {
-        const isActive = activeValue === opt.value
+        // 2. Ensure case-insensitive comparison for URL parameter stability
+        const isActive = activeValue?.toLowerCase() === opt.value
         const isUrgentHighlight = opt.value === 'urgent' && opt.count > 0
 
         return (
@@ -123,20 +136,19 @@ export const UrgencyFilter = ({ activeValue, onSelect, counts = {} }) => {
               'h-8 px-3 py-1 inline-flex items-center gap-2 rounded-sm text-sm font-medium transition-all shrink-0',
               isActive
                 ? cn(
-                    'bg-muted/60 shadow-inner',
+                    'bg-muted shadow-inner',
                     opt.activeColor || 'text-foreground',
                   )
                 : isUrgentHighlight
-                  ? 'text-red-600 dark:text-red-400 hover:bg-muted/40'
+                  ? 'text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/10'
                   : 'text-muted-foreground hover:bg-muted/40',
             )}
           >
-            {/* Icons only colorize if active, or if it's the urgent highlight */}
             {opt.icon && (
               <span
                 className={cn(
                   'shrink-0',
-                  isActive || isUrgentHighlight ? '' : 'text-muted-foreground',
+                  !isActive && !isUrgentHighlight && 'text-muted-foreground/60',
                 )}
               >
                 {opt.icon}
@@ -145,18 +157,18 @@ export const UrgencyFilter = ({ activeValue, onSelect, counts = {} }) => {
 
             <span>{opt.label}</span>
 
-            {/* Count Badge Logic */}
+            {/* 3. Refined Count Badge Logic */}
             <span
               className={cn(
-                'text-[10px] px-1.5 py-0.5 rounded-full font-bold transition-colors min-w-[1.5rem] text-center',
+                'text-[10px] px-1.5 py-0.5 rounded-full font-bold transition-colors min-w-[1.25rem] text-center',
                 isActive
-                  ? 'bg-background shadow-sm' // Selected state (neutral background)
+                  ? 'bg-background shadow-sm text-foreground' // Neutral active state
                   : isUrgentHighlight
                     ? opt.persistentColor // Urgent stays red if count > 0
-                    : 'bg-muted text-muted-foreground', // Everything else neutral
+                    : 'bg-muted text-muted-foreground', // Default neutral
               )}
             >
-              {opt.count || 0}
+              {opt.count}
             </span>
           </button>
         )

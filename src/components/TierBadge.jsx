@@ -10,7 +10,7 @@ const TierBadge = ({ tier }) => {
 
   if (normalizedTier === 'INTERNAL') {
     return (
-      <div className={`${baseStyles}`}>
+      <div>
         {/* Replacing Crown with verify.svg from public folder */}
         <img 
           src="/verify.png" 

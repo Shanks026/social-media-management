@@ -96,7 +96,7 @@ export default function Clients() {
     return new Date(b.created_at || 0) - new Date(a.created_at || 0)
   })
 
-  const realClientCount = clients.filter(c => !c.is_internal).length
+  const realClientCount = clients.filter((c) => !c.is_internal).length
 
   const deleteMutation = useMutation({
     mutationFn: deleteClient,
@@ -164,9 +164,8 @@ export default function Clients() {
           <Button
             onClick={handleCreateClick}
             disabled={isSubLoading}
-            size="lg"
             className={cn(
-              'rounded-full px-6 shadow-sm transition-all duration-300 gap-2',
+              'transition-all duration-300',
               subscription?.is_client_limit_reached
                 ? 'bg-secondary text-secondary-foreground hover:bg-secondary/80 border border-border'
                 : 'bg-primary text-primary-foreground hover:shadow-md',
