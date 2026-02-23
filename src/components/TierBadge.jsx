@@ -6,7 +6,7 @@ const TierBadge = ({ tier }) => {
 
   const normalizedTier = tier.toUpperCase()
   const baseStyles =
-    'inline-flex items-center justify-center py-0.5 px-1.5 rounded-md shrink-0 shadow-md font-bold tracking-wider uppercase'
+    'inline-flex items-center justify-center py-0.5 px-1.5 rounded-md shrink-0 shadow-md font-bold tracking-wider uppercase ms-2'
 
   if (normalizedTier === 'INTERNAL') {
     return (
@@ -15,7 +15,7 @@ const TierBadge = ({ tier }) => {
         <img 
           src="/verify.png" 
           alt="Verified" 
-          className="size-4.5" 
+          className="size-4.5 ms-1" 
         />
       </div>
     )

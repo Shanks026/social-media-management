@@ -9,6 +9,7 @@ import { toast } from 'sonner'
 import { UserStar, X, Lock, Plus, Search } from 'lucide-react'
 
 import { fetchClients, deleteClient } from '@/api/clients'
+import { getUrgencyStatus } from '@/lib/client-helpers'
 import { useHeader } from '@/components/misc/header-context'
 import { useSubscription } from '../../api/useSubscription'
 
@@ -82,13 +83,42 @@ export default function Clients() {
   const resetFilters = () => setSearchParams({})
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ['clients', user.id, { search, urgency, industry, tier }],
-    queryFn: () => fetchClients({ search, urgency, industry, tier }),
+    queryKey: ['clients', user.id, { search, industry, tier }],
+    queryFn: () => fetchClients({ search, industry, tier, urgency: 'all' }), // Always fetch all for local counts
     enabled: !!user?.id,
   })
 
-  const clients = data?.clients || []
-  const counts = data?.counts || {}
+  const allClients = data?.clients || []
+
+  // 1. Calculate counts for ALL urgency buckets based on the current set of clients (matched by search/industry/tier)
+  const counts = {
+    all: allClients.length,
+    urgent: 0,
+    upcoming: 0,
+    idle: 0,
+  }
+
+  allClients.forEach((client) => {
+    const health = getUrgencyStatus(client.pipeline?.next_post_at)
+    if (!health) {
+      counts.idle++
+    } else if (health.label === 'Urgent' || health.label === 'Overdue') {
+      counts.urgent++
+    } else if (health.label === 'Warning') {
+      counts.upcoming++
+    }
+  })
+
+  // 2. Filter the displayed clients based on the selected urgency tab
+  const clients = allClients.filter((client) => {
+    if (urgency === 'all') return true
+    const health = getUrgencyStatus(client.pipeline?.next_post_at)
+    if (urgency === 'urgent')
+      return health?.label === 'Urgent' || health?.label === 'Overdue'
+    if (urgency === 'upcoming') return health?.label === 'Warning'
+    if (urgency === 'idle') return !health
+    return true
+  })
 
   const sortedClients = [...clients].sort((a, b) => {
     if (a.is_internal && !b.is_internal) return -1

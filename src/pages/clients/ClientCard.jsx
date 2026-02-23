@@ -193,7 +193,7 @@ function ClientCard({ client, onOpen, onDelete }) {
                 )}
               </div>
               <div className="space-y-2 min-w-0">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1">
                   <h3 className="text-lg font-medium text-foreground tracking-tight leading-none truncate]">
                     {client.name}
                   </h3>
@@ -301,7 +301,7 @@ function ClientCard({ client, onOpen, onDelete }) {
 
             <div className="flex items-center min-w-0">
               {health && nextPostFormatted ? (
-                <div className="flex items-center gap-2.5 px-3 py-1.5 bg-gray-100 dark:bg-white/5 rounded-full border border-gray-100 dark:border-white/5 shrink-0">
+                <div className="flex items-center gap-2.5 px-3 py-1 bg-gray-100 dark:bg-white/5 rounded-full border border-gray-100 dark:border-white/5 shrink-0">
                   <div
                     className={`size-2 rounded-full ${health.color} ${health.pulse ? 'animate-pulse shadow-[0_0_8px_rgba(0,0,0,0.1)]' : ''}`}
                   />
@@ -309,12 +309,12 @@ function ClientCard({ client, onOpen, onDelete }) {
                     <span className="text-muted-foreground font-semibold">
                       Next
                     </span>
-                    <span className="font-bold text-gray-900 dark:text-gray-100">
+                    <span className="font-medium text-gray-900 dark:text-gray-100">
                       {nextPostFormatted}
                     </span>
                     {health.label && (
                       <span
-                        className={`ml-1 mt-0.5 leading-none font-black ${health.color.replace('bg-', 'text-')}`}
+                        className={`ml-1 mt-0.5 leading-none font-medium ${health.color.replace('bg-', 'text-')}`}
                       >
                         {health.label.toUpperCase()}
                       </span>
