@@ -13,9 +13,11 @@ import CreateClientPage from '../../pages/clients/CreateClientPage'
 import WelcomeCarousel from '../WelcomeCarousel' // Import the new component
 import OnboardingPage from '../../pages/onboarding/Onboarding'
 import { Loader2 } from 'lucide-react'
+import { useMeetingReminders } from '../../hooks/useMeetingReminders'
 
 export function AppShell({ user }) {
   const queryClient = useQueryClient()
+  useMeetingReminders(user?.id)
   const [agencySettings, setAgencySettings] = useState(null)
   const [showWelcome, setShowWelcome] = useState(false)
   const [isSetupOpen, setIsSetupOpen] = useState(false)
