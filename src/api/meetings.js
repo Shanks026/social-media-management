@@ -51,6 +51,26 @@ export async function fetchUpcomingMeeting(clientId) {
 }
 
 /**
+ * Fetch the next few future meetings for a specific client.
+ */
+export async function fetchUpcomingMeetings(clientId, limit = 3) {
+  const { data, error } = await supabase
+    .from('meetings')
+    .select('*, clients!inner(name)')
+    .eq('client_id', clientId)
+    .gte('datetime', new Date().toISOString())
+    .order('datetime', { ascending: true })
+    .limit(limit)
+
+  if (error) throw error
+
+  return data.map(m => ({
+    ...m,
+    client_name: m.clients?.name
+  }))
+}
+
+/**
  * Fetch all meetings for today (for the reminder system).
  */
 export async function fetchTodayMeetings() {

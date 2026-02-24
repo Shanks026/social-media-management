@@ -30,7 +30,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { fetchClients } from '@/api/clients'
-import { createMeeting } from '@/api/meetings'
+import { createMeeting, updateMeeting } from '@/api/meetings'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Loader2, CalendarDays } from 'lucide-react'
@@ -45,6 +45,7 @@ const formSchema = z.object({
 export default function CreateMeetingDialog({
   children,
   defaultClientId,
+  editMeeting, // Pass a meeting object here to enable edit mode
   onSuccess,
 }) {
   const [open, setOpen] = useState(false)
@@ -61,41 +62,75 @@ export default function CreateMeetingDialog({
   defaultDate.setMinutes(0)
   defaultDate.setSeconds(0)
 
-  const localDatetime = new Date(
-    defaultDate.getTime() - defaultDate.getTimezoneOffset() * 60000,
-  )
-    .toISOString()
-    .slice(0, 16)
+  const localDatetime = editMeeting?.datetime 
+    ? new Date(
+        new Date(editMeeting.datetime).getTime() - new Date().getTimezoneOffset() * 60000,
+      ).toISOString().slice(0, 16)
+    : new Date(
+        defaultDate.getTime() - defaultDate.getTimezoneOffset() * 60000,
+      )
+        .toISOString()
+        .slice(0, 16)
 
   const form = useForm({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      client_id: defaultClientId || '',
-      title: '',
+      client_id: editMeeting?.client_id || defaultClientId || '',
+      title: editMeeting?.title || '',
       datetime: localDatetime,
-      notes: '',
+      notes: editMeeting?.notes || '',
     },
   })
 
-  const { mutate: create, isPending } = useMutation({
-    mutationFn: createMeeting,
+  // Watch for editMeeting changes to update form if it opens
+  React.useEffect(() => {
+    if (open && editMeeting) {
+      const editLocalDatetime = new Date(
+        new Date(editMeeting.datetime).getTime() - new Date().getTimezoneOffset() * 60000,
+      ).toISOString().slice(0, 16)
+
+      form.reset({
+        client_id: editMeeting.client_id || '',
+        title: editMeeting.title || '',
+        datetime: editLocalDatetime,
+        notes: editMeeting.notes || '',
+      })
+    } else if (open && !editMeeting) {
+      form.reset({
+        client_id: defaultClientId || '',
+        title: '',
+        datetime: new Date(
+          defaultDate.getTime() - defaultDate.getTimezoneOffset() * 60000,
+        ).toISOString().slice(0, 16),
+        notes: '',
+      })
+    }
+  }, [open, editMeeting, defaultClientId])
+
+  // Determine mutation based on edit mode
+  const mutationFn = editMeeting 
+    ? (payload) => updateMeeting(editMeeting.id, payload)
+    : createMeeting
+
+  const { mutate, isPending } = useMutation({
+    mutationFn,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['meetings'] })
       queryClient.invalidateQueries({ queryKey: ['upcomingMeeting'] })
       queryClient.invalidateQueries({ queryKey: ['todayMeetings'] })
-      toast.success('Meeting scheduled successfully')
+      toast.success(editMeeting ? 'Meeting updated successfully' : 'Meeting scheduled successfully')
       setOpen(false)
       form.reset()
       if (onSuccess) onSuccess()
     },
     onError: (error) => {
-      toast.error('Failed to schedule meeting: ' + error.message)
+      toast.error('Failed to save meeting: ' + error.message)
     },
   })
 
   function onSubmit(values) {
     const utcDate = new Date(values.datetime)
-    create({
+    mutate({
       ...values,
       datetime: utcDate.toISOString(),
     })
@@ -106,17 +141,23 @@ export default function CreateMeetingDialog({
       open={open}
       onOpenChange={(val) => {
         setOpen(val)
-        if (!val) form.reset()
-        else if (defaultClientId) form.setValue('client_id', defaultClientId)
+        if (!val) {
+          form.reset()
+        }
+        // Handled by useEffect now
       }}
     >
       <DialogTrigger asChild>{children}</DialogTrigger>
       {/* Slightly wider dialog for better desktop appearance */}
       <DialogContent className="sm:max-w-[480px]">
         <DialogHeader className="pb-2">
-          <DialogTitle className="text-xl">Schedule Meeting</DialogTitle>
+          <DialogTitle className="text-xl">
+            {editMeeting ? 'Edit Meeting' : 'Schedule Meeting'}
+          </DialogTitle>
           <DialogDescription>
-            Fill in the details below to set up a new client session.
+            {editMeeting 
+              ? 'Update the details for this client session.' 
+              : 'Fill in the details below to set up a new client session.'}
           </DialogDescription>
         </DialogHeader>
 
@@ -235,7 +276,7 @@ export default function CreateMeetingDialog({
                 ) : (
                   <CalendarDays className="mr-2 h-4 w-4" />
                 )}
-                Schedule
+                {editMeeting ? 'Save Changes' : 'Schedule'}
               </Button>
             </DialogFooter>
           </form>

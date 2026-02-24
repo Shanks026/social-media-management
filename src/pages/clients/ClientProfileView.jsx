@@ -5,6 +5,7 @@ import {
   Settings2,
   BarChart3,
   CircleDollarSign,
+  PieChart,
 } from 'lucide-react'
 
 // UI Components
@@ -12,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import TierBadge from '@/components/TierBadge'
 
 // Section Imports
+import OverviewTab from './clientSections/OverviewTab'
 import WorkflowTab from './clientSections/WorkflowTab'
 import ManagementTab from './clientSections/ManagementTab'
 import { ComingSoon } from './clientSections/ComingSoon'
@@ -26,6 +28,7 @@ import SubscriptionsTab from '../finance/SubscriptionsTab'
 import InvoicesTab from '../finance/InvoicesTab'
 
 const TABS_CONFIG = [
+  { value: 'overview', label: 'Overview', icon: PieChart },
   { value: 'workflow', label: 'Workflow', icon: LayoutGrid },
   { value: 'financials', label: 'Financials', icon: CircleDollarSign },
   { value: 'calendar', label: 'Calendar', icon: Calendar },
@@ -114,7 +117,7 @@ export default function ClientProfileView({ client }) {
         </div>
 
         {/* --- NAVIGATION & CONTENT --- */}
-        <Tabs defaultValue="workflow" className="w-full">
+        <Tabs defaultValue="overview" className="w-full">
           {/* Tab List: Clean, border-bottom navigation */}
           <TabsList className="bg-transparent h-auto w-full justify-start rounded-none p-0 gap-12 border-b border-border/40">
             {TABS_CONFIG.map((tab) => (
@@ -144,6 +147,13 @@ export default function ClientProfileView({ client }) {
           </TabsList>
           {/* Tab Content: Spaced and Animated */}
           <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
+            <TabsContent
+              value="overview"
+              className="mt-2 focus-visible:ring-0 outline-none"
+            >
+              <OverviewTab client={client} />
+            </TabsContent>
+
             <TabsContent
               value="workflow"
               className="mt-2 focus-visible:ring-0 outline-none"
