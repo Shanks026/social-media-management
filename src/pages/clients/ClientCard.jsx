@@ -168,10 +168,10 @@ function ClientCard({ client, onOpen, onDelete }) {
       <Card
         onClick={() => onOpen(client)}
         className={cn(
-          "group relative cursor-pointer shadow-none transition-all duration-300 py-2 border hover:bg-gray-100/50 dark:hover:bg-card h-full flex flex-col overflow-hidden",
+          "group relative cursor-pointer shadow-none transition-all duration-300 py-2 border border-dashed hover:bg-gray-100/50 dark:hover:bg-card h-full flex flex-col overflow-hidden",
           client.is_internal
-            ? " bg-gray-50 dark:bg-card/50 dark:border-border"
-            : "dark:bg-card/30 dark:border-none"
+            ? " bg-gray-50 dark:bg-card dark:border-border"
+            : "dark:bg-card/70 dark:border-none"
         )}
       >
         <CardContent className="p-6 flex flex-col flex-1 min-w-0">
@@ -218,17 +218,17 @@ function ClientCard({ client, onOpen, onDelete }) {
                 />
                 <StatItem
                   count={pipeline.revisions}
-                  label="Revisions"
+                  label="Rev."
                   colorClass="bg-pink-600"
                 />
                 <StatItem
                   count={pipeline.pending}
-                  label="Pending"
+                  label="Pend."
                   colorClass="bg-orange-600"
                 />
                 <StatItem
                   count={pipeline.scheduled}
-                  label="Scheduled"
+                  label="Sched."
                   colorClass="bg-purple-600"
                 />
               </div>

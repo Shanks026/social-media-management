@@ -152,7 +152,13 @@ export default function Clients() {
   }
 
   function handleOpenClient(client) {
-    navigate(`/clients/${client.id}`)
+    if (client.is_internal) {
+      // Route to the dedicated HQ
+      navigate('/myorganization') // or whatever your route is for MyOrganization
+    } else {
+      // Route to standard client view
+      navigate(`/clients/${client.id}`)
+    }
   }
 
   if (isLoading) {

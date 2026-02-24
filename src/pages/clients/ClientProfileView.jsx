@@ -29,7 +29,7 @@ const TABS_CONFIG = [
   { value: 'workflow', label: 'Workflow', icon: LayoutGrid },
   { value: 'financials', label: 'Financials', icon: CircleDollarSign },
   { value: 'calendar', label: 'Calendar', icon: Calendar },
-  { value: 'insights', label: 'Insights', icon: BarChart3 },
+  // { value: 'insights', label: 'Insights', icon: BarChart3 },
   { value: 'management', label: 'Settings', icon: Settings2 },
 ]
 
@@ -180,14 +180,14 @@ export default function ClientProfileView({ client }) {
               </div>
             </TabsContent>
 
-            <TabsContent
+            {/* <TabsContent
               value="insights"
               className="focus-visible:outline-none"
             >
               <div className="mt-12">
                 <ComingSoon icon={BarChart3} title="Performance Insights" />
               </div>
-            </TabsContent>
+            </TabsContent> */}
 
             <TabsContent
               value="management"
