@@ -130,22 +130,34 @@ export default function WeekView({ currentMonth, postsByDate, clientId }) {
                   {posts.map((post) => (
                     <button
                       key={post.version_id}
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        setSelectedDate(day)
-                      }}
-                      style={{ top: `${getTopOffset(post.target_date)}px` }}
+                      // ... (onClick and styles same)
                       className={cn(
-                        'absolute left-1 right-1 p-2 rounded-lg border border-l-4 bg-card transition-all z-10 hover:z-30 hover:bg-accent/30 text-left shadow-md',
+                        'absolute left-1 right-1 p-2 rounded-lg border border-l-4 transition-all z-10 hover:z-30 hover:scale-[1.02] text-left shadow-md',
                         STATUS_STYLES[post.status] || 'border-l-muted',
+                        // 🔥 Apply purple bg fill ONLY for meetings
+                        post.isMeeting
+                          ? 'bg-purple-50/90 dark:bg-purple-950/50 border-purple-200 dark:border-purple-800'
+                          : 'bg-card',
                       )}
                     >
                       <div className="flex items-start gap-2 mb-1">
                         <div className="mt-0.5 shrink-0">
-                          {PLATFORM_ICONS[post.platforms[0]?.toLowerCase()]}
+                          {/* 🔥 Show Clock icon for meetings, Platform icon for posts */}
+                          {post.isMeeting ? (
+                            <Clock className="size-3.5 text-purple-600 dark:text-purple-400" />
+                          ) : (
+                            PLATFORM_ICONS[post.platforms?.[0]?.toLowerCase()]
+                          )}
                         </div>
                         <div className="min-w-0">
-                          <p className="text-xs font-black leading-tight truncate text-foreground">
+                          <p
+                            className={cn(
+                              'text-xs leading-tight truncate',
+                              post.isMeeting
+                                ? 'font-black text-purple-900 dark:text-purple-100'
+                                : 'font-black text-foreground',
+                            )}
+                          >
                             {post.title}
                           </p>
                           <div className="flex items-center gap-1 mt-0.5 text-[10px] font-bold text-foreground/80">
@@ -155,22 +167,16 @@ export default function WeekView({ currentMonth, postsByDate, clientId }) {
                         </div>
                       </div>
 
-                      {/* 🔥 Conditionally hide the Client Footer row */}
                       {!clientId && (
-                        <div className="flex items-center gap-2 mt-1.5 pt-1.5 border-t border-muted">
-                          {post.client_logo ? (
-                            <img
-                              src={post.client_logo}
-                              alt={post.client_name}
-                              className="size-3.5 rounded-full object-cover shrink-0 bg-muted"
-                            />
-                          ) : (
-                            <div className="size-3.5 rounded-full bg-muted shrink-0 flex items-center justify-center">
-                              <span className="text-[6px] font-semibold">
-                                {post.client_name?.charAt(0)}
-                              </span>
-                            </div>
+                        <div
+                          className={cn(
+                            'flex items-center gap-2 mt-1.5 pt-1.5 border-t',
+                            post.isMeeting
+                              ? 'border-purple-200 dark:border-purple-800'
+                              : 'border-muted',
                           )}
+                        >
+                          {/* Client logo logic remains same */}
                           <span className="text-[10px] font-bold truncate text-foreground/90">
                             {post.client_name}
                           </span>

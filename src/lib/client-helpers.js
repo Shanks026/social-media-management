@@ -13,7 +13,7 @@ export function getUrgencyStatus(nextPostAt) {
 
   // Under 24h: Urgent (Red)
   if (diffInHours < 24) {
-    return { color: 'bg-red-500', label: 'Urgent', pulse: true }
+    return { color: 'bg-red-600', label: 'Urgent', pulse: true }
   }
 
   // Under 48h: Warning (Amber)

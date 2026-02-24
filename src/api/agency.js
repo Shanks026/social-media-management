@@ -147,7 +147,7 @@ export async function activateInternalWorkspace(brandingData) {
     mobile_number: brandingData.mobile_number,
     description: brandingData.description,
     status: 'ACTIVE',
-    tier: 'PRO',
+    tier: 'INTERNAL',
     is_internal: true,
   }
 

@@ -9,6 +9,7 @@ import { toast } from 'sonner'
 import { UserStar, X, Lock, Plus, Search } from 'lucide-react'
 
 import { fetchClients, deleteClient } from '@/api/clients'
+import { getUrgencyStatus } from '@/lib/client-helpers'
 import { useHeader } from '@/components/misc/header-context'
 import { useSubscription } from '../../api/useSubscription'
 
@@ -25,7 +26,6 @@ import {
 } from '@/components/ui/empty'
 
 // CreateClient import removed as it's now a dedicated page
-import EditClient from './EditClient'
 import ClientCard from './ClientCard'
 import { ClientCardSkeleton } from './ClientCardSkeleton'
 import {
@@ -53,7 +53,6 @@ export default function Clients() {
   }, [setHeader])
 
   // state for CreateClient modal removed
-  const [editClient, setEditClient] = useState(null)
 
   const search = searchParams.get('q') || ''
   const urgency = searchParams.get('urgency') || 'all'
@@ -84,13 +83,50 @@ export default function Clients() {
   const resetFilters = () => setSearchParams({})
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ['clients', user.id, { search, urgency, industry, tier }],
-    queryFn: () => fetchClients({ search, urgency, industry, tier }),
+    queryKey: ['clients', user.id, { search, industry, tier }],
+    queryFn: () => fetchClients({ search, industry, tier, urgency: 'all' }), // Always fetch all for local counts
     enabled: !!user?.id,
   })
 
-  const clients = data?.clients || []
-  const counts = data?.counts || {}
+  const allClients = data?.clients || []
+
+  // 1. Calculate counts for ALL urgency buckets based on the current set of clients (matched by search/industry/tier)
+  const counts = {
+    all: allClients.length,
+    urgent: 0,
+    upcoming: 0,
+    idle: 0,
+  }
+
+  allClients.forEach((client) => {
+    const health = getUrgencyStatus(client.pipeline?.next_post_at)
+    if (!health) {
+      counts.idle++
+    } else if (health.label === 'Urgent' || health.label === 'Overdue') {
+      counts.urgent++
+    } else if (health.label === 'Warning') {
+      counts.upcoming++
+    }
+  })
+
+  // 2. Filter the displayed clients based on the selected urgency tab
+  const clients = allClients.filter((client) => {
+    if (urgency === 'all') return true
+    const health = getUrgencyStatus(client.pipeline?.next_post_at)
+    if (urgency === 'urgent')
+      return health?.label === 'Urgent' || health?.label === 'Overdue'
+    if (urgency === 'upcoming') return health?.label === 'Warning'
+    if (urgency === 'idle') return !health
+    return true
+  })
+
+  const sortedClients = [...clients].sort((a, b) => {
+    if (a.is_internal && !b.is_internal) return -1
+    if (!a.is_internal && b.is_internal) return 1
+    return new Date(b.created_at || 0) - new Date(a.created_at || 0)
+  })
+
+  const realClientCount = clients.filter((c) => !c.is_internal).length
 
   const deleteMutation = useMutation({
     mutationFn: deleteClient,
@@ -116,7 +152,13 @@ export default function Clients() {
   }
 
   function handleOpenClient(client) {
-    navigate(`/clients/${client.id}`)
+    if (client.is_internal) {
+      // Route to the dedicated HQ
+      navigate('/myorganization') // or whatever your route is for MyOrganization
+    } else {
+      // Route to standard client view
+      navigate(`/clients/${client.id}`)
+    }
   }
 
   if (isLoading) {
@@ -147,7 +189,7 @@ export default function Clients() {
             <h1 className="text-3xl font-light tracking-tight text-foreground">
               Clients{' '}
               <span className="text-muted-foreground/50 ml-2 font-extralight">
-                {clients.length}
+                {realClientCount}
               </span>
             </h1>
             <p className="text-sm text-muted-foreground font-light">
@@ -158,9 +200,8 @@ export default function Clients() {
           <Button
             onClick={handleCreateClick}
             disabled={isSubLoading}
-            size="lg"
             className={cn(
-              'rounded-full px-6 shadow-sm transition-all duration-300 gap-2',
+              'transition-all duration-300',
               subscription?.is_client_limit_reached
                 ? 'bg-secondary text-secondary-foreground hover:bg-secondary/80 border border-border'
                 : 'bg-primary text-primary-foreground hover:shadow-md',
@@ -206,7 +247,7 @@ export default function Clients() {
         </div>
 
         {/* --- SECTION 3: THE CONTENT GRID --- */}
-        {clients.length === 0 ? (
+        {sortedClients.length === 0 ? (
           <Empty className="py-32 bg-card/20 rounded-[32px] border border-dashed border-border/60">
             <EmptyHeader className="flex flex-col items-center">
               <div className="h-20 w-20 rounded-full bg-primary/5 flex items-center justify-center mb-6">
@@ -248,7 +289,7 @@ export default function Clients() {
           </Empty>
         ) : (
           <div className="grid gap-6 grid-cols-[repeat(auto-fill,minmax(420px,1fr))] animate-in fade-in duration-500">
-            {clients.map((client) => (
+            {sortedClients.map((client) => (
               <ClientCard
                 key={client.id}
                 client={client}
@@ -262,9 +303,6 @@ export default function Clients() {
 
       {/* --- MODALS --- */}
       {/* CreateClient modal removed */}
-      {editClient && (
-        <EditClient client={editClient} onClose={() => setEditClient(null)} />
-      )}
     </div>
   )
 }

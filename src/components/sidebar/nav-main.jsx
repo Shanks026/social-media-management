@@ -32,7 +32,7 @@ import {
 
 // 1. Updated Config with Children
 const navItems = [
-  { title: 'My Organization', url: '/myorganazation', icon: Building2 },
+  { title: 'My Organization', url: '/myorganization', icon: Building2 },
   { title: 'Clients', url: '/clients', icon: UserStar },
   { title: 'Content Hub', url: '/posts', icon: LayoutGrid },
   { title: 'Calendar', url: '/calendar', icon: Calendar },

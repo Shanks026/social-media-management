@@ -20,6 +20,7 @@ import {
   Youtube,
   Twitter,
   Facebook,
+  Plus
 } from 'lucide-react'
 
 // UI & Context
@@ -37,6 +38,8 @@ import { fetchGlobalCalendar } from '@/api/posts'
 import { useAuth } from '@/context/AuthContext'
 import { useHeader } from '@/components/misc/header-context'
 import { cn } from '@/lib/utils'
+import { fetchMeetings } from '@/api/meetings'
+import CreateMeetingDialog from '@/components/CreateMeetingDialog'
 
 // Calendar Views
 import MonthView from './MonthView'
@@ -90,6 +93,12 @@ export default function ContentCalendar({
     enabled: !!user?.id,
   })
 
+  const { data: meetings = [], isLoading: isLoadingMeetings } = useQuery({
+    queryKey: ['meetings', clientId, format(currentDate, 'yyyy-MM-dd')],
+    queryFn: () => fetchMeetings({ clientId }),
+    enabled: !!user?.id,
+  })
+
   const calendarTitle = useMemo(() => {
     if (view === 'month') return format(currentDate, 'MMMM yyyy')
     const start = startOfWeek(currentDate)
@@ -117,7 +126,7 @@ export default function ContentCalendar({
   }, [posts])
 
   const filteredPosts = useMemo(() => {
-    return posts.filter((post) => {
+    const regularPosts = posts.filter((post) => {
       const matchesSearch = post.title
         ?.toLowerCase()
         .includes(searchQuery.toLowerCase())
@@ -134,7 +143,32 @@ export default function ContentCalendar({
 
       return matchesSearch && matchesStatus && matchesClient && matchesPlatform
     })
-  }, [posts, searchQuery, statusFilter, clientFilter, platformFilter, clientId])
+
+    const filteredMeetings = meetings.filter((meeting) => {
+      const matchesSearch = meeting.title
+        ?.toLowerCase()
+        .includes(searchQuery.toLowerCase())
+      
+      const matchesClient = clientId
+        ? String(meeting.client_id) === String(clientId)
+        : clientFilter === 'all' || meeting.client_name === clientFilter
+
+      // Meetings don't have these filters directly, but behave as 'SCHEDULED' and 'all' platforms
+      const matchesStatus = statusFilter === 'all' || statusFilter === 'SCHEDULED'
+      const matchesPlatform = platformFilter === 'all'
+      
+      return matchesSearch && matchesClient && matchesStatus && matchesPlatform
+    }).map(m => ({
+      ...m,
+      version_id: m.id,
+      target_date: m.datetime,
+      status: 'SCHEDULED', // Render like a scheduled post
+      isMeeting: true,
+      platforms: ['meeting'], // Give a pseudo platform
+    }))
+
+    return [...regularPosts, ...filteredMeetings]
+  }, [posts, meetings, searchQuery, statusFilter, clientFilter, platformFilter, clientId])
 
   const postsByDate = useMemo(() => {
     return filteredPosts.reduce((acc, post) => {
@@ -180,6 +214,11 @@ export default function ContentCalendar({
         </div>
 
         <div className="flex items-center gap-4">
+          <CreateMeetingDialog defaultClientId={clientId}>
+            <Button size="sm" className="h-9 px-3 text-xs font-semibold gap-2 hidden md:flex">
+              <Plus size={14} /> Schedule Meeting
+            </Button>
+          </CreateMeetingDialog>
           <div className="flex items-center border rounded-lg overflow-hidden bg-background shadow-sm">
             <Button
               variant="ghost"
@@ -302,14 +341,14 @@ export default function ContentCalendar({
           <MonthView
             currentMonth={currentDate}
             postsByDate={postsByDate}
-            isLoading={isLoading}
+            isLoading={isLoading || isLoadingMeetings}
             clientId={clientId}
           />
         ) : (
           <WeekView
             currentMonth={currentDate}
             postsByDate={postsByDate}
-            isLoading={isLoading}
+            isLoading={isLoading || isLoadingMeetings}
             clientId={clientId}
           />
         )}

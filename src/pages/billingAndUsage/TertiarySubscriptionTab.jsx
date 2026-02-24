@@ -1,4 +1,5 @@
-import { useRef, useState } from 'react'
+import { useRef, useState, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import {
   Zap,
   Rocket,
@@ -345,12 +346,43 @@ const LoadingSkeleton = () => (
 // ── Main Component ──
 
 export const SubscriptionTab = ({ sub, isLoading }) => {
+  const [searchParams, setSearchParams] = useSearchParams()
+
   // 1. Create a reference for the pricing section
   const plansSectionRef = useRef(null)
 
   // Upgrade request dialog state
   const [upgradeDialogOpen, setUpgradeDialogOpen] = useState(false)
   const [selectedPlan, setSelectedPlan] = useState(null)
+
+  // 2. Scroll function attached to the "Upgrade Plan" button
+  const scrollToPlans = () => {
+    plansSectionRef.current?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start',
+    })
+  }
+
+  // Handle scroll parameter on mount
+  useEffect(() => {
+    if (isLoading || !sub) return
+
+    if (searchParams.get('scroll') === 'true') {
+      // Small timeout to ensure everything is rendered
+      const timer = setTimeout(() => {
+        scrollToPlans()
+        
+        // Remove scroll param
+        setSearchParams((prev) => {
+          const nextParams = new URLSearchParams(prev)
+          nextParams.delete('scroll')
+          return nextParams
+        }, { replace: true })
+      }, 300)
+
+      return () => clearTimeout(timer)
+    }
+  }, [searchParams, setSearchParams, isLoading, sub])
 
   if (isLoading) return <LoadingSkeleton />
   if (!sub) return null
@@ -365,18 +397,8 @@ export const SubscriptionTab = ({ sub, isLoading }) => {
     setSelectedPlan(plan)
     setUpgradeDialogOpen(true)
   }
-
-  // 2. Scroll function attached to the "Upgrade Plan" button
-  const scrollToPlans = () => {
-    plansSectionRef.current?.scrollIntoView({
-      behavior: 'smooth',
-      block: 'start',
-    })
-  }
-
   return (
-    <div className="space-y-16">
-      {/* 3. Pass the dynamic plan and scroll function to the overview */}
+    <div className="space-y-12">
       <PlanOverview
         sub={sub}
         currentPlan={currentPlan}

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { cn } from '@/lib/utils'
 import {
   Dialog,
   DialogContent,
@@ -166,7 +167,12 @@ function ClientCard({ client, onOpen, onDelete }) {
     <>
       <Card
         onClick={() => onOpen(client)}
-        className="group relative cursor-pointer shadow-none border dark:border-none transition-all duration-300 py-2 border dark:bg-card/50 hover:bg-gray-100/50 dark:hover:bg-card h-full flex flex-col overflow-hidden"
+        className={cn(
+          "group relative cursor-pointer shadow-none transition-all duration-300 py-2 border border-dashed hover:bg-gray-100/50 dark:hover:bg-card h-full flex flex-col overflow-hidden",
+          client.is_internal
+            ? " bg-gray-50 dark:bg-card dark:border-border"
+            : "dark:bg-card/70 dark:border-none"
+        )}
       >
         <CardContent className="p-6 flex flex-col flex-1 min-w-0">
           {/* Header */}
@@ -187,7 +193,7 @@ function ClientCard({ client, onOpen, onDelete }) {
                 )}
               </div>
               <div className="space-y-2 min-w-0">
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1">
                   <h3 className="text-lg font-medium text-foreground tracking-tight leading-none truncate]">
                     {client.name}
                   </h3>
@@ -208,22 +214,22 @@ function ClientCard({ client, onOpen, onDelete }) {
                 <StatItem
                   count={pipeline.drafts}
                   label="Drafts"
-                  colorClass="bg-blue-500"
+                  colorClass="bg-blue-600"
                 />
                 <StatItem
                   count={pipeline.revisions}
-                  label="Revisions"
-                  colorClass="bg-red-500"
+                  label="Rev."
+                  colorClass="bg-pink-600"
                 />
                 <StatItem
                   count={pipeline.pending}
-                  label="Pending"
-                  colorClass="bg-amber-500"
+                  label="Pend."
+                  colorClass="bg-orange-600"
                 />
                 <StatItem
                   count={pipeline.scheduled}
-                  label="Scheduled"
-                  colorClass="bg-purple-500"
+                  label="Sched."
+                  colorClass="bg-purple-600"
                 />
               </div>
             ) : (
@@ -273,7 +279,7 @@ function ClientCard({ client, onOpen, onDelete }) {
           </div>
 
           {/* Footer */}
-          <div className="flex items-center justify-between pt-5 border-t border-gray-100 dark:border-white/5 mt-auto min-w-0">
+          <div className="flex items-center justify-between pt-5 border-t border-dashed border-gray-100 dark:border-white/5 mt-auto min-w-0">
             <div className="flex items-center -space-x-3 overflow-hidden">
               {platforms.length > 0 ? (
                 <>
@@ -295,7 +301,7 @@ function ClientCard({ client, onOpen, onDelete }) {
 
             <div className="flex items-center min-w-0">
               {health && nextPostFormatted ? (
-                <div className="flex items-center gap-2.5 px-3 py-1.5 bg-gray-100 dark:bg-white/5 rounded-full border border-gray-100 dark:border-white/5 shrink-0">
+                <div className="flex items-center gap-2.5 px-3 py-1 bg-gray-100 dark:bg-white/5 rounded-full border border-gray-100 dark:border-white/5 shrink-0">
                   <div
                     className={`size-2 rounded-full ${health.color} ${health.pulse ? 'animate-pulse shadow-[0_0_8px_rgba(0,0,0,0.1)]' : ''}`}
                   />
@@ -303,12 +309,12 @@ function ClientCard({ client, onOpen, onDelete }) {
                     <span className="text-muted-foreground font-semibold">
                       Next
                     </span>
-                    <span className="font-bold text-gray-900 dark:text-gray-100">
+                    <span className="font-medium text-gray-900 dark:text-gray-100">
                       {nextPostFormatted}
                     </span>
                     {health.label && (
                       <span
-                        className={`ml-1 mt-0.5 leading-none font-black ${health.color.replace('bg-', 'text-')}`}
+                        className={`ml-1 mt-0.5 leading-none font-medium ${health.color.replace('bg-', 'text-')}`}
                       >
                         {health.label.toUpperCase()}
                       </span>

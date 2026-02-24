@@ -32,7 +32,7 @@ function AppRoutes() {
       {session ? (
         <Route element={<AppShell user={user} />}>
           <Route path="/clients" element={<Clients />} />
-          <Route path="/myorganazation" element={<MyOrganization />} />
+          <Route path="/myorganization" element={<MyOrganization />} />
           <Route path="/clients/create" element={<CreateClientPage />} />
           <Route
             path="/clients/:clientId/edit"

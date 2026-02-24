@@ -1,5 +1,5 @@
 import { Plus, MoreHorizontal } from 'lucide-react'
-import { NavLink, useLocation } from 'react-router-dom'
+import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { fetchClients, deleteClient } from '@/api/clients'
 import {
@@ -19,10 +19,11 @@ import {
 } from '@/components/ui/popover'
 import { Skeleton } from '../ui/skeleton'
 
-export function NavClients({ onCreateOpen, onEditClient }) {
+export function NavClients({ onCreateOpen }) {
   const { state } = useSidebar()
   const queryClient = useQueryClient()
   const location = useLocation()
+  const navigate = useNavigate()
 
   // 1. Updated useQuery to receive the new object format { clients, counts }
   const { data, isLoading } = useQuery({
@@ -41,7 +42,7 @@ export function NavClients({ onCreateOpen, onEditClient }) {
   return (
     <SidebarGroup className="flex-1 min-h-0 flex flex-col overflow-x-hidden">
       {state === 'expanded' && (
-        <SidebarGroupLabel className="flex items-center justify-between px-2 flex-shrink-0">
+        <SidebarGroupLabel className="flex items-center justify-between px-2 shrink-0">
           Clients
           <button
             onClick={onCreateOpen}
@@ -114,7 +115,7 @@ export function NavClients({ onCreateOpen, onEditClient }) {
                             <PopoverContent side="right" className="w-32 p-1">
                               <button
                                 className="w-full text-left px-2 py-1.5 text-sm hover:bg-accent rounded"
-                                onClick={() => onEditClient(client)}
+                                onClick={() => navigate(`/clients/${client.id}/edit`)}
                               >
                                 Edit
                               </button>

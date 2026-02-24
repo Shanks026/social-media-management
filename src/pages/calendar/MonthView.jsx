@@ -9,7 +9,7 @@ import {
   isToday,
 } from 'date-fns'
 import { cn } from '@/lib/utils'
-import { Instagram, Linkedin, Youtube, Globe, Plus } from 'lucide-react'
+import { Instagram, Linkedin, Youtube, Globe, Plus, Clock } from 'lucide-react'
 import { useState } from 'react'
 import { DayDetailDialog } from './DayDetailDialog'
 
@@ -97,15 +97,31 @@ export default function MonthView({
                   <button
                     key={post.version_id}
                     className={cn(
-                      'w-full flex flex-col justify-center p-2 rounded-md border border-l-4 bg-card shadow-sm transition-all hover:bg-accent/50 text-left',
+                      'w-full flex flex-col justify-center p-2 rounded-md border border-l-4 shadow-sm transition-all hover:bg-accent/50 text-left',
                       STATUS_STYLES[post.status] || 'border-l-muted',
+                      // 🔥 Apply purple bg fill ONLY for meetings
+                      post.isMeeting
+                        ? 'bg-purple-50 dark:bg-purple-950/40 border-purple-200 dark:border-purple-800'
+                        : 'bg-card',
                     )}
                   >
-                    <span className="truncate text-[11px] font-medium leading-tight text-foreground">
-                      {post.title}
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      {/* 🔥 Show Clock only for meetings */}
+                      {post.isMeeting && (
+                        <Clock className="size-3 shrink-0 text-purple-600 dark:text-purple-400" />
+                      )}
+                      <span
+                        className={cn(
+                          'truncate text-[11px] leading-tight',
+                          post.isMeeting
+                            ? 'font-bold text-purple-900 dark:text-purple-100'
+                            : 'font-medium text-foreground',
+                        )}
+                      >
+                        {post.title}
+                      </span>
+                    </div>
 
-                    {/* 🔥 Conditionally hide Client Name */}
                     {!clientId && (
                       <span className="text-[9px] text-muted-foreground truncate mt-0.5">
                         {post.client_name}

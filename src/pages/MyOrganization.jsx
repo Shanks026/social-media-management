@@ -2,14 +2,15 @@ import { useEffect, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useHeader } from '@/components/misc/header-context'
 import { useAuth } from '@/context/AuthContext'
+import { useOutletContext } from 'react-router-dom'
 import { toast } from 'sonner'
 
 // API & Components
 import ClientProfileView from '@/pages/clients/ClientProfileView'
 import { Button } from '@/components/ui/button'
-import { AgencySetupModal } from '@/components/AgencySetupModal'
+import CreateClientPage from '@/pages/clients/CreateClientPage'
 import { fetchInternalClient } from '@/api/clients'
-import { activateInternalWorkspace, fetchAgencySettings } from '@/api/agency'
+import { activateInternalWorkspace, fetchAgencySettings, completeFullAgencySetup, setupBrandingOnly } from '@/api/agency'
 
 // UI Components
 import {
@@ -41,21 +42,16 @@ export default function MyOrganization() {
   const { setHeader } = useHeader()
   const { user } = useAuth()
   const queryClient = useQueryClient()
+  const { agencySettings, refreshAgency } = useOutletContext() || {}
 
   const [isActivating, setIsActivating] = useState(false)
   const [isSetupModalOpen, setIsSetupModalOpen] = useState(false)
   const [setupMode, setSetupMode] = useState('full') // 'full' or 'branding'
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false)
 
-  const { data: internalClient, isLoading: isClientLoading } = useQuery({
+  const { data: internalClient, isLoading: isClientLoading, isRefetching: isClientRefetching } = useQuery({
     queryKey: ['internal-client', user?.id],
     queryFn: fetchInternalClient,
-    enabled: !!user,
-  })
-
-  const { data: agencySettings, isLoading: isSettingsLoading } = useQuery({
-    queryKey: ['agency-settings', user?.id],
-    queryFn: fetchAgencySettings,
     enabled: !!user,
   })
 
@@ -76,7 +72,9 @@ export default function MyOrganization() {
     setIsActivating(true)
     try {
       await activateInternalWorkspace(agencySettings)
-      await queryClient.invalidateQueries(['internal-client'])
+      await queryClient.invalidateQueries({ queryKey: ['internal-client'] })
+      queryClient.invalidateQueries({ queryKey: ['clients'] })
+      if (refreshAgency) await refreshAgency()
       toast.success('Internal workspace activated.')
     } catch (err) {
       toast.error('Activation failed.')
@@ -85,10 +83,57 @@ export default function MyOrganization() {
     }
   }
 
-  if (isClientLoading || isSettingsLoading) return null
+  if (isClientLoading || isClientRefetching || isActivating) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-background">
+        <Loader2 className="size-6 animate-spin text-primary" />
+      </div>
+    )
+  }
 
   if (internalClient) {
     return <ClientProfileView client={internalClient} />
+  }
+
+  if (isSetupModalOpen) {
+    return (
+      <div className="h-full bg-background overflow-y-auto selection:bg-primary/10 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <CreateClientPage
+          standalone
+          customSubmit={async (data) => {
+            if (setupMode === 'branding') {
+              return await setupBrandingOnly(data)
+            } else {
+              return await completeFullAgencySetup(data)
+            }
+          }}
+          onSuccess={async () => {
+            // Wait for AppShell to fetch and update AppSidebar
+            if (refreshAgency) await refreshAgency()
+
+            if (setupMode !== 'branding') {
+              await queryClient.invalidateQueries({ queryKey: ['internal-client'] })
+              queryClient.invalidateQueries({ queryKey: ['clients'] })
+            }
+            // Then close the modal to reveal the newly branded workspace/settings
+            setIsSetupModalOpen(false)
+          }}
+          onCancel={() => setIsSetupModalOpen(false)}
+          defaultValues={{
+            name: '',
+            description: '',
+            email: user?.email || '',
+            mobile_number: '+91',
+            status: 'ACTIVE',
+            tier: 'INTERNAL',
+            logo_url: '',
+            platforms: [],
+            industry: 'Internal',
+            social_links: {},
+          }}
+        />
+      </div>
+    )
   }
 
   return (
@@ -119,9 +164,9 @@ export default function MyOrganization() {
                       <span className="font-normal italic">Workspace.</span>
                     </h2>
                     <p className="text-muted-foreground text-sm font-light leading-relaxed max-w-xl">
-                      Your agency identity is verified. Activate your internal
+                      Your agency identity is verified. Activate your operational
                       workspace to unlock a dedicated environment for your
-                      brand's social strategy and approval workflows.
+                      brand's social strategy and creative workflows.
                     </p>
                   </div>
 
@@ -246,18 +291,6 @@ export default function MyOrganization() {
         </DialogContent>
       </Dialog>
 
-      {isSetupModalOpen && (
-        <AgencySetupModal
-          user={user}
-          mode={setupMode}
-          onClose={() => setIsSetupModalOpen(false)}
-          onComplete={() => {
-            setIsSetupModalOpen(false)
-            queryClient.invalidateQueries(['internal-client'])
-            queryClient.invalidateQueries(['agency-settings'])
-          }}
-        />
-      )}
     </div>
   )
 }
@@ -269,7 +302,7 @@ function ChoiceCard({ icon, title, description, onClick, highlight = false }) {
       className={cn(
         'group relative p-8 rounded-[32px] border transition-all cursor-pointer flex flex-col items-center text-center space-y-4',
         highlight
-          ? 'border-primary/20 bg-primary/[0.02] hover:bg-primary/[0.04] hover:border-primary/40'
+          ? 'border-primary/20 bg-primary/2 hover:bg-primary/4 hover:border-primary/40'
           : 'border-border/60 bg-muted/5 hover:bg-muted/10 hover:border-border',
       )}
     >

@@ -42,7 +42,7 @@ const clientSchema = z.object({
     .min(1, 'Mobile number is required')
     .regex(/^\+91[6-9]\d{9}$/, 'Must be a valid +91 number'),
   status: z.enum(['ACTIVE', 'PAUSED']),
-  tier: z.enum(['BASIC', 'PRO', 'VIP']),
+  tier: z.enum(['BASIC', 'PRO', 'VIP', 'INTERNAL']),
   logo_url: z.string().min(1, 'Client logo is required'),
   industry: z.string().min(1, 'Industry is required'),
   platforms: z.array(z.string()).min(1, 'Select at least one platform'),
@@ -59,7 +59,7 @@ const clientSchema = z.object({
   ),
 })
 
-export default function CreateClientPage() {
+export default function CreateClientPage({ customSubmit, onSuccess, onCancel, standalone = false, defaultValues = null }) {
   const { clientId } = useParams()
   const isEditMode = !!clientId
   const navigate = useNavigate()
@@ -74,7 +74,7 @@ export default function CreateClientPage() {
   const form = useForm({
     resolver: zodResolver(clientSchema),
     mode: 'onSubmit',
-    defaultValues: {
+    defaultValues: defaultValues || {
       name: '',
       description: '',
       email: '',
@@ -97,6 +97,8 @@ export default function CreateClientPage() {
     watch,
   } = form
   const selectedPlatforms = form.watch('platforms')
+
+  const isInternalContext = standalone || defaultValues?.tier === 'INTERNAL' || form.getValues('tier') === 'INTERNAL'
 
   const { data: existingClient, isLoading } = useQuery({
     queryKey: ['client', clientId],
@@ -140,6 +142,7 @@ export default function CreateClientPage() {
   }, [selectedPlatforms, form])
 
   useEffect(() => {
+    if (standalone) return
     setHeader({
       title: isEditMode ? 'Edit Client' : 'Onboard New Client',
       breadcrumbs: [
@@ -159,11 +162,17 @@ export default function CreateClientPage() {
   }, [setHeader, isEditMode, existingClient, clientId])
 
   const mutation = useMutation({
-    mutationFn: (cleanValues) =>
-      isEditMode
+    mutationFn: (cleanValues) => {
+      if (customSubmit) return customSubmit(cleanValues)
+      return isEditMode
         ? updateClient(clientId, cleanValues) // Uses clientId from useParams
-        : createClient({ ...cleanValues, user_id: user?.id }),
-    onSuccess: () => {
+        : createClient({ ...cleanValues, user_id: user?.id })
+    },
+    onSuccess: (data) => {
+      if (onSuccess) {
+        onSuccess(data)
+        return
+      }
       queryClient.invalidateQueries({ queryKey: ['clients'] })
       if (clientId)
         queryClient.invalidateQueries({ queryKey: ['client', clientId] })
@@ -243,26 +252,20 @@ export default function CreateClientPage() {
         <div className="mx-auto max-w-4xl px-6 py-10 space-y-14 pb-32">
           {/* --- TOP NAVIGATION & TITLE --- */}
           <div className="space-y-6">
-            {/* <Button
-              variant="ghost"
-              size="sm"
-              type="button"
-              onClick={() => navigate('/clients')}
-              className="gap-2 -ml-2 text-muted-foreground hover:text-foreground"
-            >
-              <ChevronLeft className="size-4" />
-              Back to Clients
-            </Button> */}
             <div className="space-y-1">
               <h1 className="text-3xl font-normal tracking-tight">
-                {isEditMode
-                  ? `Edit ${existingClient?.name}`
-                  : 'Onboard New Client'}
+                {standalone
+                  ? 'Make it yours'
+                  : isEditMode
+                    ? `Edit ${existingClient?.name}`
+                    : 'Onboard New Client'}
               </h1>
               <p className="text-muted-foreground">
-                {isEditMode
-                  ? 'Update workspace settings and contact info.'
-                  : 'Setup branding, socials, and contact information.'}
+                {standalone
+                  ? 'Setup branding, socials, and contact information for your workspace.'
+                  : isEditMode
+                    ? 'Update workspace settings and contact info.'
+                    : 'Setup branding, socials, and contact information.'}
               </p>
             </div>
           </div>
@@ -353,16 +356,20 @@ export default function CreateClientPage() {
                         onValueChange={field.onChange}
                         value={field.value}
                         key={field.value} // Key ensures re-render on value change
+                        disabled={standalone}
                       >
                         <SelectTrigger className="w-full">
                           <SelectValue placeholder="Select industry" />
                         </SelectTrigger>
                         <SelectContent>
-                          {INDUSTRY_OPTIONS.map((opt) => (
-                            <SelectItem key={opt.value} value={opt.value}>
-                              {opt.label}
-                            </SelectItem>
-                          ))}
+                          {INDUSTRY_OPTIONS.map((opt) => {
+                            if (!isInternalContext && opt.value === 'Internal') return null
+                            return (
+                              <SelectItem key={opt.value} value={opt.value}>
+                                {opt.label}
+                              </SelectItem>
+                            )
+                          })}
                         </SelectContent>
                       </Select>
                     )}
@@ -407,6 +414,7 @@ export default function CreateClientPage() {
                           onValueChange={field.onChange}
                           value={field.value}
                           key={field.value}
+                          disabled={standalone}
                         >
                           <SelectTrigger className="w-full">
                             <SelectValue />
@@ -415,6 +423,9 @@ export default function CreateClientPage() {
                             <SelectItem value="BASIC">Basic</SelectItem>
                             <SelectItem value="PRO">Pro</SelectItem>
                             <SelectItem value="VIP">VIP</SelectItem>
+                            {isInternalContext && (
+                              <SelectItem value="INTERNAL">Internal</SelectItem>
+                            )}
                           </SelectContent>
                         </Select>
                       )}
@@ -501,7 +512,7 @@ export default function CreateClientPage() {
               variant="outline"
               type="button"
               size="lg"
-              onClick={() => navigate(-1)} // Go back
+              onClick={() => (onCancel ? onCancel() : navigate(-1))} // Go back
             >
               Cancel
             </Button>
@@ -512,6 +523,8 @@ export default function CreateClientPage() {
             >
               {mutation.isPending ? (
                 <Loader2 className="mr-2 size-4 animate-spin" />
+              ) : standalone ? (
+                'Complete Setup'
               ) : isEditMode ? (
                 'Save Changes'
               ) : (

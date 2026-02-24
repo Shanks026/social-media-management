@@ -113,6 +113,51 @@ export function CalendarPostCard({ post }) {
 
   if (!post) return null
 
+  if (post.isMeeting) {
+    return (
+      <div
+        className="flex flex-col bg-card border border-blue-200 dark:border-blue-900 rounded-xl overflow-hidden shadow-sm"
+      >
+        <div className="p-6 flex flex-col flex-1">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2.5 min-w-0">
+               <div className="size-6 rounded-md bg-blue-100 dark:bg-blue-900 flex items-center justify-center shrink-0">
+                  <span className="text-xs font-bold text-blue-600 dark:text-blue-300">
+                     {post.client_name?.charAt(0) || 'M'}
+                  </span>
+               </div>
+              <span className="text-xs font-semibold text-foreground truncate">
+                {post.client_name}
+              </span>
+            </div>
+            <Badge variant="outline" className="border-blue-500 text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/50">Meeting</Badge>
+          </div>
+
+          <div className="mb-6 space-y-2">
+            <h4 className="text-base font-semibold tracking-tight leading-tight text-foreground line-clamp-1">
+              {post.title}
+            </h4>
+            <p className="text-sm font-normal text-muted-foreground leading-[1.6] line-clamp-2 min-h-10">
+              {post.notes || 'No agenda provided'}
+            </p>
+          </div>
+
+          <div className="flex items-center justify-between mt-auto pt-5 border-t border-border/50">
+             <div />
+            <div className="flex items-center gap-4 text-foreground">
+              <div className="flex items-center gap-1.5 bg-muted/50 px-2 py-1 rounded-md">
+                <Clock size={14} className="text-blue-500" />
+                <span className="text-xs font-semibold">
+                  {format(new Date(post.target_date), 'p')}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   const handlePrev = (e) => {
     e?.stopPropagation()
     setActiveImageIndex((prev) =>

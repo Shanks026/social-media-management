@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useHeader } from '../../components/misc/header-context'
 import { useSubscription } from '../../api/useSubscription'
 import { BarChart3, CreditCard, FileText } from 'lucide-react'
@@ -13,6 +14,13 @@ import { InvoicesTab } from './InvoicesTab'
 export default function BillingUsage() {
   const { setHeader } = useHeader()
   const { data: sub, isLoading } = useSubscription()
+  const [searchParams, setSearchParams] = useSearchParams()
+
+  const activeTab = searchParams.get('tab') || 'usage'
+
+  const handleTabChange = (value) => {
+    setSearchParams({ tab: value }, { replace: true })
+  }
 
   useEffect(() => {
     setHeader({
@@ -36,7 +44,11 @@ export default function BillingUsage() {
             </p>
           </div>
 
-          <Tabs defaultValue="usage" className="space-y-10">
+          <Tabs 
+            value={activeTab} 
+            onValueChange={handleTabChange}
+            className="space-y-10"
+          >
             <TabsList className="bg-transparent border-b border-white/5 rounded-none p-0 h-auto gap-8 w-full justify-start">
               {[
                 { value: 'usage', icon: BarChart3, label: 'Usage' },
