@@ -114,13 +114,24 @@ export function AddSubscriptionDialog({
   }, [editingData, open, form, defaultClientId])
 
   function onSubmit(data) {
+    // If no client is explicitly selected, default to the internal account.
+    // This ensures agency-wide tools (Slack, Figma, etc.) are always attributed
+    // to the internal account instead of being orphaned as null.
+    const sanitizedData = {
+      ...data,
+      assigned_client_id:
+        data.assigned_client_id && data.assigned_client_id !== ''
+          ? data.assigned_client_id
+          : internalAccount?.id || null,
+    }
+
     if (editingData) {
       updateExpense(
-        { id: editingData.id, updates: data },
+        { id: editingData.id, updates: sanitizedData },
         { onSuccess: () => onOpenChange(false) },
       )
     } else {
-      createExpense(data, { onSuccess: () => onOpenChange(false) })
+      createExpense(sanitizedData, { onSuccess: () => onOpenChange(false) })
     }
   }
 

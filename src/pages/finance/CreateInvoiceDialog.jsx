@@ -8,6 +8,9 @@ import { useClients } from '@/api/clients'
 import { useSubscription } from '@/api/useSubscription'
 import { cn } from '@/lib/utils'
 
+// Constants
+import { INCOME_CATEGORIES } from '@/utils/constants'
+
 // UI Components
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -38,21 +41,20 @@ import { toast } from 'sonner'
 import HTMLInvoicePreview from '@/components/HTMLInvoicePreview'
 
 const PAYMENT_TERMS = ['Due on Receipt', 'Net 15', 'Net 30', 'Net 60']
-const INCOME_CATEGORIES = [
-  'Monthly Retainer',
-  'Setup / Onboarding',
-  'Performance / Success Fee',
-  'Ad Budget Reimbursement',
-  'Creative Project',
-  'Consulting / Audit',
-  'Other',
-]
+// INCOME_CATEGORIES imported from @/utils/constants
 const EMPTY_ITEM = { description: '', quantity: 1, unit_price: 0 }
 
+/**
+ * prefill: { category?: string, amount?: string, description?: string }
+ * Used when redirected from AddTransactionDialog for invoice-required categories.
+ */
 export function CreateInvoiceDialog({
   open,
   onOpenChange,
   preselectedClientId,
+  prefill = null,
+  // Called after successful invoice creation. Use to e.g. navigate to /finance/invoices.
+  onSuccess: onSuccessCallback = null,
 }) {
   const { data: clientData } = useClients()
   const { data: nextNumber } = useNextInvoiceNumber()
@@ -81,18 +83,25 @@ export function CreateInvoiceDialog({
     }
   }, [issueDate])
 
-  // --- Reset form when dialog opens ---
+  // --- Reset form when dialog opens (apply prefill if provided) ---
   useEffect(() => {
     if (open) {
       setClientId(preselectedClientId || '')
       setIssueDate(new Date())
       setDueDate(null)
-      setCategory('')
+      setCategory(prefill?.category || '')
       setPaymentTerms('')
       setNotes('')
-      setItems([{ ...EMPTY_ITEM }])
+      // Pre-fill first line item if amount/description provided
+      const prefillAmount = parseFloat(prefill?.amount) || 0
+      const prefillDesc = prefill?.description || prefill?.category || ''
+      setItems([
+        prefillAmount > 0 || prefillDesc
+          ? { description: prefillDesc, quantity: 1, unit_price: prefillAmount }
+          : { ...EMPTY_ITEM },
+      ])
     }
-  }, [open, preselectedClientId])
+  }, [open, preselectedClientId, prefill])
 
   // --- Line item handlers ---
   const updateItem = (index, field, value) => {
@@ -210,6 +219,7 @@ export function CreateInvoiceDialog({
         onSuccess: () => {
           toast.success('Invoice created as draft')
           onOpenChange(false)
+          onSuccessCallback?.()
         },
         onError: (err) => {
           toast.error(`Failed to create invoice: ${err.message}`)
@@ -521,7 +531,7 @@ export function CreateInvoiceDialog({
             <div className="shrink-0 flex justify-end gap-3 px-8 py-5 border-t border-border/50 bg-background">
               <Button
                 variant="outline"
-                onClick={() => handleOpenChange(false)}
+                onClick={() => onOpenChange(false)}
                 disabled={isPending}
               >
                 Cancel

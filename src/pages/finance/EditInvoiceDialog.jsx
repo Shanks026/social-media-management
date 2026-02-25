@@ -245,6 +245,7 @@ export function EditInvoiceDialog({ open, onOpenChange, invoiceId }) {
     if (dueDate) updates.due_date = format(dueDate, 'yyyy-MM-dd')
     updates.notes = notes || null
     updates.payment_terms = paymentTerms || null
+    updates.category = category || null
 
     if (isDraft) {
       updates.client_id = clientId

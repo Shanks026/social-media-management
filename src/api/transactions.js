@@ -10,7 +10,7 @@ export const transactionKeys = {
 }
 
 // --- 1. FETCH TRANSACTIONS (Ledger) ---
-export function useTransactions(filters = {}) {
+export function useTransactions(filters = {}, options = {}) {
   const { user } = useAuth()
   const { clientId, limit } = filters
 
@@ -55,6 +55,7 @@ export function useTransactions(filters = {}) {
       return data
     },
     enabled: !!user,
+    ...options,
   })
 }
 

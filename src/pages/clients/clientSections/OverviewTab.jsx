@@ -1,8 +1,10 @@
 import React, { useState } from 'react'
-import { Plus, FileText, Calendar as CalendarIcon, AlertCircle, Sparkles, CheckCircle2, Bell, Circle } from 'lucide-react'
+import { useSearchParams, useNavigate } from 'react-router-dom'
+import { Plus, FileText, Calendar as CalendarIcon, AlertCircle, Sparkles, CheckCircle2, Bell, Circle, Clock, ArrowUpRight, ArrowDownRight, CircleDollarSign } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Skeleton } from '@/components/ui/skeleton'
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, LabelList } from 'recharts'
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
 import { SUPPORTED_PLATFORMS } from '@/lib/platforms'
@@ -11,8 +13,8 @@ import { fetchAllPostsByClient } from '@/api/posts'
 import { useInvoices } from '@/api/invoices'
 import { fetchUpcomingMeetings, deleteMeeting } from '@/api/meetings'
 import { useClientMetrics } from '@/api/clients'
-import { useTransactions } from '@/api/transactions'
-import { useExpenses } from '@/api/expenses'
+import { useTransactions, useFinanceOverview } from '@/api/transactions'
+import { useExpenses, useBurnRate } from '@/api/expenses'
 import { toast } from 'sonner'
 import { calculatePeriodMetrics, formatCurrency } from '@/utils/finance'
 import { format, isToday, isTomorrow, differenceInDays, startOfMonth, endOfMonth } from 'date-fns'
@@ -23,6 +25,8 @@ import CreateDraftPost from '../../posts/DraftPostForm'
 import { CreateInvoiceDialog } from '../../finance/CreateInvoiceDialog'
 import CreateMeetingDialog from '@/components/CreateMeetingDialog'
 import CreateNoteDialog from '@/components/CreateNoteDialog'
+import { AddTransactionDialog } from '@/pages/finance/AddTransactionDialog'
+
 
 const platformChartConfig = {
   posts: { label: 'Posts' },
@@ -56,6 +60,11 @@ export default function OverviewTab({ client }) {
   // Dialog States
   const [createPostOpen, setCreatePostOpen] = useState(false)
   const [createInvoiceOpen, setCreateInvoiceOpen] = useState(false)
+  const [createTransactionOpen, setCreateTransactionOpen] = useState(false)
+  const [invoicePrefill, setInvoicePrefill] = useState(null)
+  
+  const [searchParams, setSearchParams] = useSearchParams()
+  const navigate = useNavigate()
 
   // Edit Meeting Dialog State
   const [editingMeeting, setEditingMeeting] = useState(null)
@@ -98,9 +107,10 @@ export default function OverviewTab({ client }) {
   }, [posts])
 
   // We fetch all invoices to calculate pending ones and MRR (latest monthly retainer)
-  const { data: invoices = [], isLoading: isLoadingInvoices } = useInvoices({
-    client_id: client.id,
-  })
+  const { data: invoices = [], isLoading: isLoadingInvoices } = useInvoices(
+    { clientId: client.id },
+    { enabled: !client?.is_internal }
+  )
 
   const { data: upcomingMeetings = [], isLoading: isLoadingMeetings } = useQuery({
     queryKey: ['upcomingMeetings', client.id],
@@ -147,12 +157,31 @@ export default function OverviewTab({ client }) {
     },
   })
 
-  // Financial Metrics
+  // Financial Metrics (for external client card — from DB view, all-time)
   const { data: metrics, isLoading: isLoadingMetrics } = useClientMetrics(client.id)
 
-  const start = startOfMonth(new Date())
-  const end = endOfMonth(new Date())
+  // Stabilize date objects to prevent useMemo/useQuery churn on every render.
+  const start = React.useMemo(() => startOfMonth(new Date()), [])
+  const end = React.useMemo(() => endOfMonth(new Date()), [])
 
+  // For internal client: use the same proven hooks as Finance → All tab.
+  // useFinanceOverview reads from view_finance_overview (DB pre-aggregation).
+  // useBurnRate reads from view_monthly_burn_rate.
+  // Both are disabled for external clients to avoid wasteful requests.
+  const { data: financeOverview, isLoading: isLoadingFinanceOverview } = useFinanceOverview()
+  const { data: burnRate = 0, isLoading: isLoadingBurnRate } = useBurnRate()
+
+  // Derive agency-wide metrics for the internal client card.
+  // revenue = all PAID INCOME transactions (all-time cash)
+  // expenses = all one-off EXPENSE transactions + monthly recurring burn
+  const agencyRevenue    = Number(financeOverview?.total_income ?? 0)
+  const agencyOneOff    = Number(financeOverview?.total_one_off_expenses ?? 0)
+  const agencyBurn      = Number(burnRate)
+  const agencyExpenses  = agencyOneOff + agencyBurn
+  const agencyNetProfit = agencyRevenue - agencyExpenses
+  const isLoadingAgencyMetrics = isLoadingFinanceOverview || isLoadingBurnRate
+
+  // For external client card: client-scoped transactions & expenses (current month)
   const { data: transactions = [] } = useTransactions({
     clientId: client.id,
     startDate: format(start, 'yyyy-MM-dd'),
@@ -161,6 +190,11 @@ export default function OverviewTab({ client }) {
 
   const { data: expenses = [] } = useExpenses({
     clientId: client.id,
+  })
+
+  const { data: recentTransactions = [], isLoading: isLoadingRecentTransactions } = useTransactions({
+    clientId: client.id,
+    limit: 5,
   })
 
   // --- Calculations ---
@@ -219,6 +253,10 @@ export default function OverviewTab({ client }) {
 
   const margin = currentMetrics.margin
 
+  // All-time net profit from DB view (for external client card)
+  const clientNetProfit = (metrics?.total_revenue || 0) - (metrics?.one_off_costs || 0) - (metrics?.monthly_recurring_costs || 0)
+  const clientNetProfitPositive = clientNetProfit >= 0
+
   // Margin Conditional Formatting
   let marginColorClass = 'text-primary'
   if (margin === 0) {
@@ -260,7 +298,17 @@ export default function OverviewTab({ client }) {
       </CardHeader>
       <CardContent className="flex flex-col flex-1">
         {isLoadingNotes ? (
-          <div className="py-8 text-center text-sm text-muted-foreground">Loading...</div>
+          <div className="space-y-3">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="flex items-start gap-3 py-1">
+                <Skeleton className="h-5 w-5 rounded-full shrink-0" />
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-4 w-3/4" />
+                  <Skeleton className="h-3 w-1/2" />
+                </div>
+              </div>
+            ))}
+          </div>
         ) : notes.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center text-center py-6 gap-2">
             <div className="h-10 w-10 border border-dashed rounded-full flex items-center justify-center text-muted-foreground">
@@ -302,6 +350,96 @@ export default function OverviewTab({ client }) {
     </Card>
   )
 
+  const RecentTransactionsCard = (
+    <Card className="border-none shadow-sm ring-1 ring-border/50 bg-card/50 flex flex-col gap-2 h-full">
+      <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
+        <CardTitle className="text-lg font-medium flex items-center gap-2">
+          <Clock className="h-4 w-4" />
+          Recent Transactions
+        </CardTitle>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-8 text-[11px] text-muted-foreground hover:text-foreground px-2 -mr-2"
+          onClick={() => {
+            setSearchParams((prev) => {
+              prev.set('tab', 'financials')
+              prev.set('subtab', 'ledger')
+              return prev
+            }, { replace: false })
+          }}
+        >
+          View Ledger <ArrowUpRight className="ml-1 h-3 w-3" />
+        </Button>
+      </CardHeader>
+      <CardContent className="flex flex-col flex-1">
+        {isLoadingRecentTransactions ? (
+          <div className="space-y-4 mt-2">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <div key={i} className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Skeleton className="h-8 w-8 rounded-full" />
+                  <div className="space-y-2">
+                    <Skeleton className="h-3 w-24" />
+                    <Skeleton className="h-2 w-16" />
+                  </div>
+                </div>
+                <Skeleton className="h-3 w-12" />
+              </div>
+            ))}
+          </div>
+        ) : recentTransactions.length === 0 ? (
+          <div className="flex-1 flex flex-col items-center justify-center text-center py-6 gap-2">
+            <div className="h-10 w-10 border border-dashed rounded-full flex items-center justify-center text-muted-foreground">
+              <CircleDollarSign className="h-4 w-4 opacity-50" />
+            </div>
+            <p className="text-sm text-muted-foreground">No recent transactions</p>
+          </div>
+        ) : (
+          <div className="space-y-3 mt-1">
+            {recentTransactions.map((tx) => (
+              <div key={tx.id} className="flex items-center justify-between py-1 group">
+                <div className="flex items-center gap-3 overflow-hidden">
+                  <div
+                    className={`h-8 w-8 rounded-full flex items-center justify-center shrink-0 ${
+                      tx.type === 'INCOME'
+                        ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-500'
+                        : 'bg-rose-500/10 text-rose-600 dark:text-rose-500'
+                    }`}
+                  >
+                    {tx.type === 'INCOME' ? (
+                      <ArrowUpRight className="h-4 w-4" />
+                    ) : (
+                      <ArrowDownRight className="h-4 w-4" />
+                    )}
+                  </div>
+                  <div className="min-w-0 pr-2">
+                    <p className="font-medium text-[13px] group-hover:text-primary transition-colors truncate">
+                      {tx.description || tx.category}
+                    </p>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">
+                      {format(new Date(tx.date), 'MMM d, yyyy')}
+                    </p>
+                  </div>
+                </div>
+                <div
+                  className={`text-sm tracking-tight font-medium shrink-0 ${
+                    tx.type === 'INCOME'
+                      ? 'text-emerald-600 dark:text-emerald-500'
+                      : 'text-rose-600 dark:text-rose-500'
+                  }`}
+                >
+                  {tx.type === 'INCOME' ? '+' : '-'}
+                  {formatCurrency(tx.amount)}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  )
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 animate-in fade-in duration-500">
       
@@ -313,7 +451,17 @@ export default function OverviewTab({ client }) {
         </CardHeader>
         <CardContent className="flex-1 flex flex-col justify-between">
           {isLoadingPosts ? (
-            <div className="h-64 flex items-center justify-center text-sm text-muted-foreground">Loading...</div>
+            <div className="h-[280px] w-full mt-2 flex flex-col items-center justify-center">
+              <Skeleton className="h-[200px] w-[200px] rounded-full" />
+              <div className="w-full flex justify-between mt-6 px-4">
+                <div className="flex items-center gap-2"><Skeleton className="h-3 w-3 rounded-full" /><Skeleton className="h-3 w-16" /></div>
+                <Skeleton className="h-3 w-8" />
+              </div>
+              <div className="w-full flex justify-between mt-3 px-4">
+                <div className="flex items-center gap-2"><Skeleton className="h-3 w-3 rounded-full" /><Skeleton className="h-3 w-16" /></div>
+                <Skeleton className="h-3 w-8" />
+              </div>
+            </div>
           ) : totalPosts === 0 ? (
             <div className="h-64 flex items-center justify-center text-sm text-muted-foreground flex-col gap-2">
               <div className="h-12 w-12 rounded-full bg-muted/50 flex items-center justify-center">
@@ -402,33 +550,22 @@ export default function OverviewTab({ client }) {
           {/* COLUMN 2: FINANCIALS (TOP) & QUICK ACTIONS (BOTTOM) */}
           <div className="col-span-1 lg:col-span-1 flex flex-col gap-4">
 
- <Card className="border-none bg-card/50 shadow-sm ring-1 ring-primary/10 gap-2">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-lg font-medium flex items-center gap-2">
-                  <Sparkles className="h-4 w-4 text-primary" />
-                  Quick Actions
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Button 
-                  className="w-full justify-start h-12 text-sm shadow-sm"
-                  onClick={() => setCreatePostOpen(true)}
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create Post
-                </Button>
-              </CardContent>
-            </Card>
+          
 
             <Card className="border-none shadow-sm ring-1 ring-border/50 bg-card/50 flex-1 flex flex-col gap-2">
               <CardHeader className="pb-2">
-                <CardTitle className="text-lg font-medium">Internal Financials</CardTitle>
+                <CardTitle className="text-lg font-medium">Agency Financials</CardTitle>
+                <p className="text-xs text-muted-foreground">Consolidated — all clients · this month</p>
               </CardHeader>
               <CardContent className="flex-1 flex flex-col justify-start space-y-6">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground mb-1">Net Profit</p>
-                  <div className="text-2xl font-bold tracking-tight text-emerald-600 dark:text-emerald-500">
-                    {isLoadingMetrics ? '-' : formatCurrency(metrics?.profit || 0)}
+                  <div className={`text-2xl font-bold tracking-tight ${
+                    agencyNetProfit >= 0
+                      ? 'text-emerald-600 dark:text-emerald-500'
+                      : 'text-rose-600 dark:text-rose-500'
+                  }`}>
+                    {isLoadingAgencyMetrics ? <Skeleton className="h-8 w-24" /> : formatCurrency(agencyNetProfit)}
                   </div>
                 </div>
                 
@@ -438,7 +575,7 @@ export default function OverviewTab({ client }) {
                       Total Revenue
                     </span>
                     <span className="text-lg font-bold text-primary">
-                      {isLoadingMetrics ? '-' : formatCurrency(metrics?.total_revenue || 0)}
+                      {isLoadingAgencyMetrics ? <Skeleton className="h-6 w-20" /> : formatCurrency(agencyRevenue)}
                     </span>
                   </div>
                   <div className="flex flex-col gap-1">
@@ -446,19 +583,44 @@ export default function OverviewTab({ client }) {
                       Total Expenses
                     </span>
                     <span className="text-lg font-bold text-rose-600 dark:text-rose-500">
-                      {isLoadingMetrics ? '-' : formatCurrency(metrics?.total_expenses || 0)}
+                      {isLoadingAgencyMetrics ? <Skeleton className="h-6 w-20" /> : formatCurrency(agencyExpenses)}
                     </span>
                   </div>
                 </div>
               </CardContent>
             </Card>
-
+ {NotesCard}
            
           </div>
 
           {/* COLUMN 3: NOTES & REMINDERS */}
           <div className="col-span-1 lg:col-span-1 flex flex-col gap-4">
-            {NotesCard}
+            <Card className="border-none bg-card/50 shadow-sm ring-1 ring-primary/10 gap-2">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg font-medium flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-primary" />
+                  Quick Actions
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <Button 
+                  className="w-full justify-start h-12 text-sm shadow-sm"
+                  onClick={() => setCreatePostOpen(true)}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create Post
+                </Button>
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-start h-12 text-sm bg-background/50 hover:bg-background"
+                  onClick={() => setCreateTransactionOpen(true)}
+                >
+                  <CircleDollarSign className="h-4 w-4 mr-2 text-muted-foreground" />
+                  Record Transaction
+                </Button>
+              </CardContent>
+            </Card>
+           {RecentTransactionsCard}
           </div>
         </>
       ) : (
@@ -474,7 +636,7 @@ export default function OverviewTab({ client }) {
                 <div>
                   <p className="text-sm font-medium text-muted-foreground mb-1">Monthly Recurring Rate</p>
                   <div className="text-2xl font-bold tracking-tight text-emerald-600 dark:text-emerald-500">
-                    {isLoadingInvoices ? '-' : formatCurrency(mrr)}
+                    {isLoadingInvoices ? <Skeleton className="h-8 w-24" /> : formatCurrency(mrr)}
                   </div>
                 </div>
                 
@@ -482,11 +644,29 @@ export default function OverviewTab({ client }) {
                   <p className="text-sm font-medium text-muted-foreground mb-1">Pending Invoices</p>
                   <div className="flex items-center justify-between">
                     <span className="text-lg font-medium text-amber-600 dark:text-amber-500">
-                      {isLoadingInvoices ? '-' : formatCurrency(pendingInvoicesTotal)}
+                      {isLoadingInvoices ? <Skeleton className="h-6 w-20" /> : formatCurrency(pendingInvoicesTotal)}
                     </span>
-                    <Badge variant={pendingInvoices.length > 0 ? "secondary" : "outline"} className={pendingInvoices.length > 0 ? "bg-amber-500/10 text-amber-600 hover:bg-amber-500/20" : ""}>
-                      {pendingInvoices.length} Pending
-                    </Badge>
+                    {isLoadingInvoices ? (
+                      <Skeleton className="h-5 w-16 rounded-full" />
+                    ) : (
+                      <Badge variant={pendingInvoices.length > 0 ? "secondary" : "outline"} className={pendingInvoices.length > 0 ? "bg-amber-500/10 text-amber-600 hover:bg-amber-500/20" : ""}>
+                        {pendingInvoices.length} Pending
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+
+                {/* All-time net profit from this client */}
+                <div className="pt-4 border-t border-dashed border-border/40">
+                  <p className="text-sm font-medium text-muted-foreground mb-1">
+                    Net Profit <span className="text-[10px] opacity-60">(All-time)</span>
+                  </p>
+                  <div className={`text-lg font-bold ${
+                    clientNetProfitPositive
+                      ? 'text-emerald-600 dark:text-emerald-500'
+                      : 'text-rose-600 dark:text-rose-500'
+                  }`}>
+                    {isLoadingMetrics ? <Skeleton className="h-6 w-24" /> : formatCurrency(clientNetProfit)}
                   </div>
                 </div>
 
@@ -494,10 +674,10 @@ export default function OverviewTab({ client }) {
                 <div className="grid grid-cols-3 gap-2 pt-4 border-t border-dashed border-border/40">
                   <div className="flex flex-col gap-0.5">
                     <span className="text-[11px] font-medium text-muted-foreground truncate">
-                      Lifetime Value <span className="text-[9px] opacity-70">(Cash)</span>
+                      Total Revenue <span className="text-[9px] opacity-70">(Cash)</span>
                     </span>
                     <span className="text-sm font-bold text-primary">
-                       {isLoadingMetrics ? '-' : formatCurrency(metrics?.total_revenue || 0)}
+                       {isLoadingMetrics ? <Skeleton className="h-5 w-16" /> : formatCurrency(metrics?.total_revenue || 0)}
                     </span>
                   </div>
                   <div className="flex flex-col gap-0.5">
@@ -505,8 +685,12 @@ export default function OverviewTab({ client }) {
                       Monthly Burn
                     </span>
                     <span className="text-sm font-bold text-primary">
-                      {isLoadingMetrics ? '-' : formatCurrency(metrics?.monthly_recurring_costs || 0)}
-                      <span className="text-[10px] text-primary/70 font-medium ml-0.5">/mo</span>
+                      {isLoadingMetrics ? <Skeleton className="h-5 w-16" /> : (
+                        <>
+                          {formatCurrency(metrics?.monthly_recurring_costs || 0)}
+                          <span className="text-[10px] text-primary/70 font-medium ml-0.5">/mo</span>
+                        </>
+                      )}
                     </span>
                   </div>
                   <div className="flex flex-col gap-0.5">
@@ -514,7 +698,7 @@ export default function OverviewTab({ client }) {
                       Margin <span className="text-[9px] opacity-70">(Mo.)</span>
                     </span>
                     <span className={`text-sm font-bold ${marginColorClass}`}>
-                      {margin.toFixed(0)}%
+                      {isLoadingMetrics ? <Skeleton className="h-5 w-12" /> : `${margin.toFixed(0)}%`}
                     </span>
                   </div>
                 </div>
@@ -528,7 +712,17 @@ export default function OverviewTab({ client }) {
               </CardHeader>
               <CardContent className="flex-1 flex flex-col">
                 {isLoadingMeetings ? (
-                  <div className="py-8 text-center text-sm text-muted-foreground">Loading...</div>
+                  <div className="space-y-4 py-2">
+                    {[...Array(3)].map((_, i) => (
+                      <div key={i} className="flex items-start justify-between">
+                        <div className="space-y-2">
+                          <Skeleton className="h-4 w-32" />
+                          <Skeleton className="h-3 w-16" />
+                        </div>
+                        <Skeleton className="h-5 w-16 rounded-full" />
+                      </div>
+                    ))}
+                  </div>
                 ) : upcomingMeetings.length === 0 ? (
                   <div className="flex-1 flex flex-col items-center justify-center text-center py-6 gap-2">
                     <div className="h-10 w-10 border border-dashed rounded-full flex items-center justify-center text-muted-foreground">
@@ -616,6 +810,16 @@ export default function OverviewTab({ client }) {
                   <Plus className="h-4 w-4 mr-2" />
                   Create Post
                 </Button>
+
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-start h-12 text-sm bg-background/50 hover:bg-background"
+                  onClick={() => setCreateTransactionOpen(true)}
+                >
+                  <CircleDollarSign className="h-4 w-4 mr-2 text-muted-foreground" />
+                  Record Transaction
+                </Button>
+
                 <Button 
                   variant="outline" 
                   className="w-full justify-start h-12 text-sm bg-background/50 hover:bg-background"
@@ -642,41 +846,103 @@ export default function OverviewTab({ client }) {
         </>
       )}
 
-      {/* NEW ROW: SOCIAL MEDIA USAGE (FULL WIDTH - Extends across all 3 columns) */}
-      <div className="col-span-1 md:col-span-2 lg:col-span-3">
-        <Card className="border-none shadow-sm ring-1 ring-border/50 bg-card/50">
-          <CardHeader>
-            <CardTitle className="text-lg font-medium">Social Media Usage</CardTitle>
-            <CardDescription>Post distribution across platforms</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ChartContainer config={platformChartConfig} className="h-[250px] w-full">
-              <BarChart
-                data={platformData}
-                layout="vertical"
-                margin={{ top: 0, right: 30, bottom: 0, left: 10 }}
-              >
-                <YAxis 
-                  dataKey="platform"
-                  type="category" 
-                  tickLine={false}
-                  axisLine={false}
-                  width={40}
-                  tick={<CustomPlatformTick />}
-                />
-                <XAxis dataKey="posts" type="number" hide />
-                <ChartTooltip cursor={{ fill: 'rgba(0,0,0,0.05)' }} content={<ChartTooltipContent hideIndicator />} />
-                <Bar dataKey="posts" radius={[0, 4, 4, 0]} barSize={32}>
-                  <LabelList dataKey="posts" position="right" className="fill-foreground font-medium text-xs" />
-                  {platformData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.fill} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ChartContainer>
-          </CardContent>
-        </Card>
-      </div>
+      {/* NEW ROW: SOCIAL MEDIA USAGE & RECENT TRANSACTIONS */}
+      {client?.is_internal ? (
+        <div className="col-span-1 md:col-span-2 lg:col-span-3">
+          <Card className="border-none shadow-sm ring-1 ring-border/50 bg-card/50">
+            <CardHeader>
+              <CardTitle className="text-lg font-medium">Social Media Usage</CardTitle>
+              <CardDescription>Post distribution across platforms</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {isLoadingPosts ? (
+                <div className="h-[250px] w-full flex flex-col gap-6 py-4 px-2">
+                  <div className="flex items-center gap-4"><Skeleton className="h-6 w-24 shrink-0" /><Skeleton className="h-4 w-[80%]" /></div>
+                  <div className="flex items-center gap-4"><Skeleton className="h-6 w-24 shrink-0" /><Skeleton className="h-4 w-[60%]" /></div>
+                  <div className="flex items-center gap-4"><Skeleton className="h-6 w-24 shrink-0" /><Skeleton className="h-4 w-[70%]" /></div>
+                  <div className="flex items-center gap-4"><Skeleton className="h-6 w-24 shrink-0" /><Skeleton className="h-4 w-[40%]" /></div>
+                  <div className="flex items-center gap-4"><Skeleton className="h-6 w-24 shrink-0" /><Skeleton className="h-4 w-[90%]" /></div>
+                </div>
+              ) : (
+                <ChartContainer config={platformChartConfig} className="h-[250px] w-full">
+                  <BarChart
+                    data={platformData}
+                    layout="vertical"
+                    margin={{ top: 0, right: 30, bottom: 0, left: 10 }}
+                  >
+                    <YAxis 
+                      dataKey="platform"
+                      type="category" 
+                      tickLine={false}
+                      axisLine={false}
+                      width={40}
+                      tick={<CustomPlatformTick />}
+                    />
+                    <XAxis dataKey="posts" type="number" hide />
+                    <ChartTooltip cursor={{ fill: 'rgba(0,0,0,0.05)' }} content={<ChartTooltipContent hideIndicator />} />
+                    <Bar dataKey="posts" radius={[0, 4, 4, 0]} barSize={32}>
+                      <LabelList dataKey="posts" position="right" className="fill-foreground font-medium text-xs" />
+                      {platformData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.fill} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ChartContainer>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      ) : (
+        <>
+          <div className="col-span-1 lg:col-span-2">
+            <Card className="border-none shadow-sm ring-1 ring-border/50 bg-card/50 h-full flex flex-col">
+              <CardHeader>
+                <CardTitle className="text-lg font-medium">Social Media Usage</CardTitle>
+                <CardDescription>Post distribution across platforms</CardDescription>
+              </CardHeader>
+              <CardContent className="flex-1">
+                {isLoadingPosts ? (
+                  <div className="h-[250px] w-full flex flex-col gap-6 py-4 px-2">
+                    <div className="flex items-center gap-4"><Skeleton className="h-6 w-24 shrink-0" /><Skeleton className="h-4 w-[80%]" /></div>
+                    <div className="flex items-center gap-4"><Skeleton className="h-6 w-24 shrink-0" /><Skeleton className="h-4 w-[60%]" /></div>
+                    <div className="flex items-center gap-4"><Skeleton className="h-6 w-24 shrink-0" /><Skeleton className="h-4 w-[70%]" /></div>
+                    <div className="flex items-center gap-4"><Skeleton className="h-6 w-24 shrink-0" /><Skeleton className="h-4 w-[40%]" /></div>
+                    <div className="flex items-center gap-4"><Skeleton className="h-6 w-24 shrink-0" /><Skeleton className="h-4 w-[90%]" /></div>
+                  </div>
+                ) : (
+                  <ChartContainer config={platformChartConfig} className="h-[250px] w-full">
+                    <BarChart
+                      data={platformData}
+                      layout="vertical"
+                      margin={{ top: 0, right: 30, bottom: 0, left: 10 }}
+                    >
+                      <YAxis 
+                        dataKey="platform"
+                        type="category" 
+                        tickLine={false}
+                        axisLine={false}
+                        width={40}
+                        tick={<CustomPlatformTick />}
+                      />
+                      <XAxis dataKey="posts" type="number" hide />
+                      <ChartTooltip cursor={{ fill: 'rgba(0,0,0,0.05)' }} content={<ChartTooltipContent hideIndicator />} />
+                      <Bar dataKey="posts" radius={[0, 4, 4, 0]} barSize={32}>
+                        <LabelList dataKey="posts" position="right" className="fill-foreground font-medium text-xs" />
+                        {platformData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.fill} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ChartContainer>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+          <div className="col-span-1 lg:col-span-1">
+            {RecentTransactionsCard}
+          </div>
+        </>
+      )}
 
       {/* Hidden Dialogs that are triggered by state */}
       <CreateDraftPost
@@ -686,9 +952,24 @@ export default function OverviewTab({ client }) {
       />
       
       <CreateInvoiceDialog
-        preselectedClientId={client.id}
+        preselectedClientId={invoicePrefill?.clientId || client.id}
         open={createInvoiceOpen}
-        onOpenChange={setCreateInvoiceOpen}
+        onOpenChange={(val) => {
+          setCreateInvoiceOpen(val)
+          if (!val) setInvoicePrefill(null)
+        }}
+        prefill={invoicePrefill}
+        onSuccess={() => navigate('/finance/invoices')}
+      />
+
+      <AddTransactionDialog 
+        open={createTransactionOpen} 
+        onOpenChange={setCreateTransactionOpen}
+        defaultClientId={client.id}
+        onCreateInvoice={(prefill) => {
+          setInvoicePrefill(prefill)
+          setCreateInvoiceOpen(true)
+        }}
       />
     </div>
   )

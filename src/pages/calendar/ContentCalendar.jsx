@@ -214,11 +214,7 @@ export default function ContentCalendar({
         </div>
 
         <div className="flex items-center gap-4">
-          <CreateMeetingDialog defaultClientId={clientId}>
-            <Button size="sm" className="h-9 px-3 text-xs font-semibold gap-2 hidden md:flex">
-              <Plus size={14} /> Schedule Meeting
-            </Button>
-          </CreateMeetingDialog>
+         
           <div className="flex items-center border rounded-lg overflow-hidden bg-background shadow-sm">
             <Button
               variant="ghost"
@@ -273,6 +269,20 @@ export default function ContentCalendar({
         </div>
 
         <div className="flex items-center gap-2">
+
+           {(searchQuery ||
+            statusFilter !== 'all' ||
+            (!clientId && clientFilter !== 'all') ||
+            platformFilter !== 'all') && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={resetFilters}
+              className="h-9 px-3 text-xs font-bold text-destructive hover:bg-destructive/5"
+            >
+              <X size={14} className="mr-2" /> Reset
+            </Button>
+          )}
           {!clientId && (
             <Select value={clientFilter} onValueChange={setClientFilter}>
               <SelectTrigger className="w-36 h-9 text-xs shadow-none">
@@ -320,19 +330,13 @@ export default function ContentCalendar({
             </SelectContent>
           </Select>
 
-          {(searchQuery ||
-            statusFilter !== 'all' ||
-            (!clientId && clientFilter !== 'all') ||
-            platformFilter !== 'all') && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={resetFilters}
-              className="h-9 px-3 text-xs font-bold text-destructive hover:bg-destructive/5"
-            >
-              <X size={14} className="mr-2" /> Reset
+           <CreateMeetingDialog defaultClientId={clientId}>
+            <Button size="sm" className="h-9 px-3 text-xs font-semibold gap-2 hidden md:flex">
+              <Plus size={14} /> Schedule Meeting
             </Button>
-          )}
+          </CreateMeetingDialog>
+
+         
         </div>
       </div>
 

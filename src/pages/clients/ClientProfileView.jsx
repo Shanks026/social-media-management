@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import {
   LayoutGrid,
   Calendar,
@@ -22,7 +23,7 @@ import ContentCalendar from '../calendar/ContentCalendar'
 import { cn } from '@/lib/utils'
 
 // Finance Imports
-import OverviewPage from '../finance/OverviewTab'
+import OverviewPage from '../finance/FinancialOverviewTab'
 import LedgerTab from '../finance/LedgerTab'
 import SubscriptionsTab from '../finance/SubscriptionsTab'
 import InvoicesTab from '../finance/InvoicesTab'
@@ -48,6 +49,34 @@ export default function ClientProfileView({ client }) {
         .slice(0, 2)
     : 'CL'
 
+  const [searchParams, setSearchParams] = useSearchParams()
+  
+  // Get active tabs from URL or default to 'overview'
+  const activeTab = searchParams.get('tab') || 'overview'
+  const activeSubTab = searchParams.get('subtab') || 'overview'
+
+  const handleTabChange = (value) => {
+    setSearchParams((prev) => {
+      prev.set('tab', value)
+      // When switching main tabs, maybe clear subtab if it's not financials to keep URL clean,
+      // or optionally preserve it if returning to financials. For now, clear it if not financials.
+      if (value !== 'financials') {
+        prev.delete('subtab')
+      } else if (!prev.has('subtab')) {
+        // If switching to financials and no subtab is set, default to overview
+        prev.set('subtab', 'overview')
+      }
+      return prev
+    }, { replace: true }) // use replace to not bloat history on every click
+  }
+
+  const handleSubTabChange = (value) => {
+    setSearchParams((prev) => {
+      prev.set('subtab', value)
+      return prev
+    }, { replace: true })
+  }
+
   const subTabs = (
     <TabsList className="bg-muted/20 p-1 rounded-lg w-fit h-auto">
       <TabsTrigger
@@ -68,12 +97,14 @@ export default function ClientProfileView({ client }) {
       >
         Subscriptions
       </TabsTrigger>
-      <TabsTrigger
-        value="invoices"
-        className="rounded-md text-xs px-3 py-1.5 h-8"
-      >
-        Invoices
-      </TabsTrigger>
+      {!client.is_internal && (
+        <TabsTrigger
+          value="invoices"
+          className="rounded-md text-xs px-3 py-1.5 h-8"
+        >
+          Invoices
+        </TabsTrigger>
+      )}
     </TabsList>
   )
 
@@ -117,7 +148,7 @@ export default function ClientProfileView({ client }) {
         </div>
 
         {/* --- NAVIGATION & CONTENT --- */}
-        <Tabs defaultValue="overview" className="w-full">
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
           {/* Tab List: Clean, border-bottom navigation */}
           <TabsList className="bg-transparent h-auto w-full justify-start rounded-none p-0 gap-12 border-b border-border/40">
             {TABS_CONFIG.map((tab) => (
@@ -165,9 +196,9 @@ export default function ClientProfileView({ client }) {
               value="financials"
               className="mt-2 focus-visible:outline-none"
             >
-              <Tabs defaultValue="overview" className="w-full">
+              <Tabs value={activeSubTab} onValueChange={handleSubTabChange} className="w-full">
                 <TabsContent value="overview" className="mt-0">
-                  <OverviewPage clientId={client.id} subTabs={subTabs} />
+                  <OverviewPage clientId={client.id} client={client} subTabs={subTabs} />
                 </TabsContent>
                 <TabsContent value="ledger" className="mt-0">
                   <LedgerTab clientId={client.id} subTabs={subTabs} />
@@ -175,9 +206,11 @@ export default function ClientProfileView({ client }) {
                 <TabsContent value="subscriptions" className="mt-0">
                   <SubscriptionsTab clientId={client.id} subTabs={subTabs} />
                 </TabsContent>
-                <TabsContent value="invoices" className="mt-0">
-                  <InvoicesTab clientId={client.id} subTabs={subTabs} />
-                </TabsContent>
+                {!client.is_internal && (
+                  <TabsContent value="invoices" className="mt-0">
+                    <InvoicesTab clientId={client.id} subTabs={subTabs} />
+                  </TabsContent>
+                )}
               </Tabs>
             </TabsContent>
 

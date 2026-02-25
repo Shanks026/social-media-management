@@ -9,7 +9,7 @@ export const expenseKeys = {
 }
 
 // --- 1. FETCH ALL EXPENSES ---
-export function useExpenses(filters = {}) {
+export function useExpenses(filters = {}, options = {}) {
   const { user } = useAuth()
 
   return useQuery({
@@ -49,6 +49,7 @@ export function useExpenses(filters = {}) {
       return data
     },
     enabled: !!user,
+    ...options,
   })
 }
 
