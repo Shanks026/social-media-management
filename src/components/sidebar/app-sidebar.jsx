@@ -57,7 +57,7 @@ export function AppSidebar({ user, agencySettings }) {
         </SidebarFooter>
       </Sidebar>
 
-      <CreateClient open={createOpen} onOpenChange={setCreateOpen} />
+      {/* <CreateClient open={createOpen} onOpenChange={setCreateOpen} /> */}
     </>
   )
 }

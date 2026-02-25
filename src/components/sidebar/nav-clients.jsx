@@ -39,13 +39,17 @@ export function NavClients({ onCreateOpen }) {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['clients'] }),
   })
 
+  const handleCreateClient = () => {
+    navigate('/clients/create')
+  }
+
   return (
     <SidebarGroup className="flex-1 min-h-0 flex flex-col overflow-x-hidden">
       {state === 'expanded' && (
         <SidebarGroupLabel className="flex items-center justify-between px-2 shrink-0">
           Clients
           <button
-            onClick={onCreateOpen}
+            onClick={handleCreateClient}
             className="p-1 hover:bg-accent rounded-md transition-colors"
           >
             <Plus className="size-4" />
@@ -115,7 +119,9 @@ export function NavClients({ onCreateOpen }) {
                             <PopoverContent side="right" className="w-32 p-1">
                               <button
                                 className="w-full text-left px-2 py-1.5 text-sm hover:bg-accent rounded"
-                                onClick={() => navigate(`/clients/${client.id}/edit`)}
+                                onClick={() =>
+                                  navigate(`/clients/${client.id}/edit`)
+                                }
                               >
                                 Edit
                               </button>

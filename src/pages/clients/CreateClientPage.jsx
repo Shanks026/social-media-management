@@ -450,6 +450,7 @@ export default function CreateClientPage({ customSubmit, onSuccess, onCancel, st
                     register={form.register}
                     errors={errors}
                     watch={watch}
+                    setValue={form.setValue}
                   />
                 )}
               />
