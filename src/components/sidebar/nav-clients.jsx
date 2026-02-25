@@ -19,7 +19,7 @@ import {
 } from '@/components/ui/popover'
 import { Skeleton } from '../ui/skeleton'
 
-export function NavClients({ onCreateOpen }) {
+export function NavClients() {
   const { state } = useSidebar()
   const queryClient = useQueryClient()
   const location = useLocation()
