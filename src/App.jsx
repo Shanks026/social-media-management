@@ -19,6 +19,7 @@ import InvoicesTab from './pages/finance/InvoicesTab'
 import Posts from './pages/Posts'
 import BillingUsage from './pages/billingAndUsage/BillingUsage'
 import CreateClientPage from './pages/clients/CreateClientPage'
+import NotesAndReminders from './pages/NotesAndReminders'
 
 function AppRoutes() {
   const { session, user } = useAuth()
@@ -44,6 +45,7 @@ function AppRoutes() {
             element={<PostDetails />}
           />
           <Route path="/posts" element={<Posts />} />
+          <Route path="/operations/notes" element={<NotesAndReminders />} />
           <Route path="/calendar" element={<SocialCalendar />} />
           <Route path="/finance" element={<FinanceLayout />}>
             {/* Redirect /finance to /finance/overview */}

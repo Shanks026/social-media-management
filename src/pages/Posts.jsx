@@ -291,12 +291,12 @@ export default function Posts() {
 
   // ─── Render ──────────────────────────────────
   return (
-    <div className="p-8 max-w-[1440px] mx-auto space-y-8">
+    <div className="p-8 max-w-[1440px] mx-auto space-y-6">
       {/* ── Header ─────────────────────── */}
       <div className="flex items-center justify-between">
         <div className="space-y-1">
           <h1 className="text-3xl font-normal tracking-tight text-foreground">
-            Content Hub
+            Posts
           </h1>
           <p className="text-sm text-muted-foreground">
             Manage all posts across your organization

@@ -10,6 +10,10 @@ import {
   CreditCard,
   LayoutGrid,
   FileText,
+  Layers,
+  Newspaper,
+  StickyNote,
+  Bell,
 } from 'lucide-react'
 import { NavLink, useLocation } from 'react-router-dom'
 import {
@@ -30,17 +34,27 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible'
 
-// 1. Updated Config with Children
 const navItems = [
   { title: 'My Organization', url: '/myorganization', icon: Building2 },
   { title: 'Clients', url: '/clients', icon: UserStar },
-  { title: 'Content Hub', url: '/posts', icon: LayoutGrid },
+  {
+    title: 'Operations',
+    url: '/operations',
+    icon: Layers,
+    items: [
+      { title: 'Posts', url: '/posts', icon: Newspaper },
+      {
+        title: 'Notes & Reminders',
+        url: '/operations/notes',
+        icon: Bell,
+      },
+    ],
+  },
   { title: 'Calendar', url: '/calendar', icon: Calendar },
   {
     title: 'Finance',
     url: '/finance',
     icon: Banknote,
-    // Add sub-menu items here
     items: [
       { title: 'Overview', url: '/finance/overview', icon: PieChart },
       {
@@ -66,19 +80,17 @@ export function NavMain() {
       <SidebarGroupContent>
         <SidebarMenu>
           {navItems.map((item) => {
-            // Check if this item is currently active (or one of its children is)
             const isChildActive = item.items?.some(
               (sub) => location.pathname === sub.url,
             )
             const isMainActive = location.pathname === item.url || isChildActive
 
-            // RENDER ITEM WITH CHILDREN
             if (item.items && item.items.length > 0) {
               return (
                 <Collapsible
                   key={item.title}
                   asChild
-                  defaultOpen={isChildActive} // Auto-open if we are on a finance page
+                  defaultOpen={isChildActive}
                   className="group/collapsible"
                 >
                   <SidebarMenuItem>
@@ -117,7 +129,6 @@ export function NavMain() {
               )
             }
 
-            // RENDER STANDARD ITEM
             return (
               <SidebarMenuItem key={item.title}>
                 <SidebarMenuButton
