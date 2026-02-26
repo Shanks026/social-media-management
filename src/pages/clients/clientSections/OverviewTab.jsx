@@ -977,7 +977,7 @@ export default function OverviewTab({ client }) {
                           </div>
 
                           <div className="flex items-center gap-2 mt-3 pt-3 border-t border-border/40">
-                            <CreateMeetingDialog editMeeting={meeting}>
+                            <CreateMeetingDialog editMeeting={meeting} defaultClientId={client.id} lockClient={true}>
                               <Button
                                 variant="outline"
                                 size="sm"
@@ -1042,7 +1042,7 @@ export default function OverviewTab({ client }) {
                   Create Invoice
                 </Button>
 
-                <CreateMeetingDialog defaultClientId={client.id}>
+                <CreateMeetingDialog defaultClientId={client.id} lockClient={true}>
                   <Button
                     variant="outline"
                     className="w-full justify-start h-12 text-sm bg-background/50 hover:bg-background"

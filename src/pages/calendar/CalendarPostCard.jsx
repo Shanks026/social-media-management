@@ -19,6 +19,11 @@ import { cn } from '@/lib/utils'
 import StatusBadge from '@/components/StatusBadge'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { useNavigate } from 'react-router-dom'
+import { Button } from '@/components/ui/button'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
+import { deleteMeeting } from '@/api/meetings'
+import CreateMeetingDialog from '@/components/CreateMeetingDialog'
 
 /**
  * Helper to check if a URL is a video
@@ -104,8 +109,24 @@ const PlatformIcon = ({ name }) => {
 
 export function CalendarPostCard({ post }) {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const [isPreviewOpen, setIsPreviewOpen] = useState(false)
   const [activeImageIndex, setActiveImageIndex] = useState(0)
+
+  const { mutate: handleDeleteMeeting, isPending: isDeletingMeeting } =
+    useMutation({
+      mutationFn: () => deleteMeeting(post.id),
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ['meetings'] })
+        queryClient.invalidateQueries({ queryKey: ['todayMeetings'] })
+        queryClient.invalidateQueries({ queryKey: ['upcomingMeetings'] })
+        queryClient.invalidateQueries({ queryKey: ['calendar'] })
+        toast.success('Meeting marked as done')
+      },
+      onError: (error) => {
+        toast.error('Failed to update meeting: ' + error.message)
+      },
+    })
 
   const handleCardClick = () => {
     navigate(`/clients/${post.client_id}/posts/${post.version_id}`)
@@ -143,7 +164,25 @@ export function CalendarPostCard({ post }) {
           </div>
 
           <div className="flex items-center justify-between mt-auto pt-5 border-t border-border/50">
-             <div />
+            <div className="flex items-center gap-2">
+              <CreateMeetingDialog editMeeting={post} defaultClientId={post.client_id}>
+                <Button variant="outline" size="sm" className="h-7 text-xs px-2" onClick={(e) => e.stopPropagation()}>
+                  Reschedule
+                </Button>
+              </CreateMeetingDialog>
+              <Button
+                variant="secondary"
+                size="sm"
+                className="h-7 text-xs px-2"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handleDeleteMeeting()
+                }}
+                disabled={isDeletingMeeting}
+              >
+                Mark as done
+              </Button>
+            </div>
             <div className="flex items-center gap-4 text-foreground">
               <div className="flex items-center gap-1.5 bg-muted/50 px-2 py-1 rounded-md">
                 <Clock size={14} className="text-blue-500" />

@@ -39,6 +39,7 @@ import { useAuth } from '@/context/AuthContext'
 import { useHeader } from '@/components/misc/header-context'
 import { cn } from '@/lib/utils'
 import { fetchMeetings } from '@/api/meetings'
+import { useClients } from '@/api/clients'
 import CreateMeetingDialog from '@/components/CreateMeetingDialog'
 
 // Calendar Views
@@ -93,10 +94,14 @@ export default function ContentCalendar({
     enabled: !!user?.id,
   })
 
+  const { data: clientsData } = useClients()
+  const isInternalClient =
+    clientId && String(clientsData?.internalAccount?.id) === String(clientId)
+
   const { data: meetings = [], isLoading: isLoadingMeetings } = useQuery({
     queryKey: ['meetings', clientId, format(currentDate, 'yyyy-MM-dd')],
     queryFn: () => fetchMeetings({ clientId }),
-    enabled: !!user?.id,
+    enabled: !!user?.id && !isInternalClient,
   })
 
   const calendarTitle = useMemo(() => {
@@ -165,6 +170,8 @@ export default function ContentCalendar({
       status: 'SCHEDULED', // Render like a scheduled post
       isMeeting: true,
       platforms: ['meeting'], // Give a pseudo platform
+      client_name: m.client_name || 'Unknown Client',
+      client_logo_url: null, // Since logo isn't fetched, default to null for fallback
     }))
 
     return [...regularPosts, ...filteredMeetings]
@@ -330,11 +337,13 @@ export default function ContentCalendar({
             </SelectContent>
           </Select>
 
-           <CreateMeetingDialog defaultClientId={clientId}>
-            <Button size="sm" className="h-9 px-3 text-xs font-semibold gap-2 hidden md:flex">
-              <Plus size={14} /> Schedule Meeting
-            </Button>
-          </CreateMeetingDialog>
+          {!isInternalClient && (
+            <CreateMeetingDialog defaultClientId={clientId} lockClient={!!clientId}>
+              <Button size="sm" className="h-9 px-3 text-xs font-semibold gap-2 hidden md:flex">
+                <Plus size={14} /> Schedule Meeting
+              </Button>
+            </CreateMeetingDialog>
+          )}
 
          
         </div>

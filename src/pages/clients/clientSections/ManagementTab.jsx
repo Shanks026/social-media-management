@@ -2,10 +2,8 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { deleteClient } from '@/api/clients'
-import { fetchUpcomingMeeting } from '@/api/meetings'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
-import CreateMeetingDialog from '@/components/CreateMeetingDialog'
 
 // Constants & Helpers
 import { INDUSTRY_OPTIONS } from '../../../lib/industries'
@@ -90,12 +88,6 @@ export default function ManagementTab({ client }) {
   const queryClient = useQueryClient()
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
-
-  const { data: upcomingMeeting, isLoading: loadingMeeting } = useQuery({
-    queryKey: ['upcomingMeeting', client.id],
-    queryFn: () => fetchUpcomingMeeting(client.id),
-    enabled: !!client.id,
-  })
 
   const deleteMutation = useMutation({
     mutationFn: deleteClient,
@@ -185,36 +177,7 @@ export default function ManagementTab({ client }) {
         </Button>
       </section>
 
-      {/* Upcoming Meeting Widget */}
-      <section className="px-4">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-5 rounded-2xl border bg-card shadow-sm">
-          <div className="flex items-center gap-4">
-            <div className="p-3 bg-blue-100 dark:bg-blue-900/50 border border-blue-200 dark:border-blue-800 rounded-xl shrink-0">
-              <Calendar className="size-5 text-blue-600 dark:text-blue-400" />
-            </div>
-            <div>
-              <h3 className="text-sm font-bold tracking-tight text-foreground">
-                Next Upcoming Meeting
-              </h3>
-              {loadingMeeting ? (
-                <p className="text-xs font-medium text-muted-foreground mt-0.5">Loading...</p>
-              ) : upcomingMeeting ? (
-                <p className="text-sm font-medium text-muted-foreground mt-0.5 line-clamp-1">
-                  <span className="text-foreground mr-1">{upcomingMeeting.title}</span> &bull; {format(new Date(upcomingMeeting.datetime), 'MMM d, yyyy - h:mm a')}
-                </p>
-              ) : (
-                <p className="text-xs font-medium text-muted-foreground mt-0.5">No meetings scheduled.</p>
-              )}
-            </div>
-          </div>
-          <CreateMeetingDialog defaultClientId={client.id}>
-            <Button variant="outline" size="sm" className="h-9 px-4 text-xs font-semibold sm:flex w-full sm:w-auto mt-2 sm:mt-0">
-              <Plus className="mr-2 size-3.5" />
-              Schedule Meeting
-            </Button>
-          </CreateMeetingDialog>
-        </div>
-      </section>
+
 
       {/* 2. Unified Information Grid */}
       <section className="grid grid-cols-1 md:grid-cols-3 gap-x-16 gap-y-10 px-4">

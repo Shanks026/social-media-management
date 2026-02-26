@@ -302,7 +302,148 @@ export default function Posts() {
             Manage all posts across your organization
           </p>
         </div>
-        <div className="flex items-center gap-3">
+      </div>
+
+      {/* ── Controls Row ─────────────────── */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        {/* Search */}
+        <div className="relative w-full sm:max-w-sm group shrink-0">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+          <Input
+            placeholder="Search content..."
+            className="pl-9 h-9 bg-background border-border/60 shadow-none focus-visible:ring-1 w-full"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+
+        {/* Filters and Actions */}
+        <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto sm:justify-end">
+          {/* Scope */}
+          <Select
+            value={scope}
+            onValueChange={(v) => {
+              setScope(v)
+              setSelectedClient('all')
+            }}
+          >
+            <SelectTrigger className="w-[170px] h-9 text-xs font-semibold shadow-none">
+              <Filter size={14} className="mr-1.5 shrink-0 opacity-50" />
+              <SelectValue placeholder="Scope" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Posts</SelectItem>
+              <SelectItem value="INTERNAL">
+                <div className="flex items-center gap-2">
+                  <Building2 size={12} />
+                  My Agency Only
+                </div>
+              </SelectItem>
+              <SelectItem value="CLIENTS">
+                <div className="flex items-center gap-2">
+                  <Users size={12} />
+                  Client Work Only
+                </div>
+              </SelectItem>
+            </SelectContent>
+          </Select>
+
+          {/* Client Select */}
+          <Select value={selectedClient} onValueChange={setSelectedClient}>
+            <SelectTrigger className="w-[170px] h-9 text-xs font-semibold shadow-none">
+              <SelectValue placeholder="Client" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Clients</SelectItem>
+              {clientOptions.map((c) => (
+                <SelectItem key={c.id} value={c.id}>
+                  <div className="flex items-center gap-2">
+                    {c.logo_url ? (
+                      <img
+                        src={c.logo_url}
+                        alt=""
+                        className="size-4 rounded object-cover"
+                      />
+                    ) : (
+                      <div className="size-4 rounded bg-muted" />
+                    )}
+                    <span className="truncate">{c.name}</span>
+                    {c.is_internal && (
+                      <Badge
+                        variant="secondary"
+                        className="text-[9px] px-1 py-0 ml-1"
+                      >
+                        INT
+                      </Badge>
+                    )}
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {/* Platform */}
+          <Select value={platform} onValueChange={setPlatform}>
+            <SelectTrigger className="w-[145px] h-9 text-xs font-semibold shadow-none">
+              <SelectValue placeholder="Platform" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Platforms</SelectItem>
+              {PLATFORMS.map((p) => (
+                <SelectItem key={p.id} value={p.id}>
+                  <div className="flex items-center gap-2">
+                    <p.icon size={12} />
+                    {p.label}
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {/* Date Range Picker */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className={cn(
+                  'h-9 gap-2 text-xs font-semibold shadow-none',
+                  dateRange.from && 'text-primary border-primary/30',
+                )}
+              >
+                <CalendarIcon size={14} />
+                {dateRange.from
+                  ? dateRange.to
+                    ? `${format(dateRange.from, 'MMM d')} - ${format(dateRange.to, 'MMM d')}`
+                    : format(dateRange.from, 'MMM d')
+                  : 'Date Range'}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="range"
+                selected={dateRange}
+                onSelect={(range) =>
+                  setDateRange(range || { from: undefined, to: undefined })
+                }
+                numberOfMonths={2}
+              />
+            </PopoverContent>
+          </Popover>
+
+          {/* Reset */}
+          {hasActiveFilters && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={resetFilters}
+              className="h-9 px-3 text-xs font-bold text-destructive hover:bg-destructive/5"
+            >
+              <X size={14} className="mr-1.5" />
+              Reset
+            </Button>
+          )}
+
           {/* View Mode Toggle */}
           <div className="flex items-center border rounded-lg overflow-hidden bg-background">
             <Button
@@ -329,150 +470,11 @@ export default function Posts() {
             </Button>
           </div>
 
-          <Button onClick={() => navigate('/clients')} className="gap-2">
+          <Button onClick={() => navigate('/clients')} className="gap-2 h-9">
             <Plus size={16} />
             New Post
           </Button>
         </div>
-      </div>
-
-      {/* ── Filter Bar ─────────────────── */}
-      <div className="flex flex-wrap items-center gap-3">
-        {/* Search */}
-        <div className="relative flex-1 min-w-[200px] max-w-sm group">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-          <Input
-            placeholder="Search content..."
-            className="pl-9 h-9 bg-background border-border/60 shadow-none focus-visible:ring-1"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </div>
-
-        {/* Scope */}
-        <Select
-          value={scope}
-          onValueChange={(v) => {
-            setScope(v)
-            setSelectedClient('all')
-          }}
-        >
-          <SelectTrigger className="w-[170px] h-9 text-xs font-semibold shadow-none">
-            <Filter size={14} className="mr-1.5 shrink-0 opacity-50" />
-            <SelectValue placeholder="Scope" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Posts</SelectItem>
-            <SelectItem value="INTERNAL">
-              <div className="flex items-center gap-2">
-                <Building2 size={12} />
-                My Agency Only
-              </div>
-            </SelectItem>
-            <SelectItem value="CLIENTS">
-              <div className="flex items-center gap-2">
-                <Users size={12} />
-                Client Work Only
-              </div>
-            </SelectItem>
-          </SelectContent>
-        </Select>
-
-        {/* Client Select */}
-        <Select value={selectedClient} onValueChange={setSelectedClient}>
-          <SelectTrigger className="w-[170px] h-9 text-xs font-semibold shadow-none">
-            <SelectValue placeholder="Client" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Clients</SelectItem>
-            {clientOptions.map((c) => (
-              <SelectItem key={c.id} value={c.id}>
-                <div className="flex items-center gap-2">
-                  {c.logo_url ? (
-                    <img
-                      src={c.logo_url}
-                      alt=""
-                      className="size-4 rounded object-cover"
-                    />
-                  ) : (
-                    <div className="size-4 rounded bg-muted" />
-                  )}
-                  <span className="truncate">{c.name}</span>
-                  {c.is_internal && (
-                    <Badge
-                      variant="secondary"
-                      className="text-[9px] px-1 py-0 ml-1"
-                    >
-                      INT
-                    </Badge>
-                  )}
-                </div>
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        {/* Platform */}
-        <Select value={platform} onValueChange={setPlatform}>
-          <SelectTrigger className="w-[145px] h-9 text-xs font-semibold shadow-none">
-            <SelectValue placeholder="Platform" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Platforms</SelectItem>
-            {PLATFORMS.map((p) => (
-              <SelectItem key={p.id} value={p.id}>
-                <div className="flex items-center gap-2">
-                  <p.icon size={12} />
-                  {p.label}
-                </div>
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        {/* Date Range Picker */}
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button
-              variant="outline"
-              size="sm"
-              className={cn(
-                'h-9 gap-2 text-xs font-semibold shadow-none',
-                dateRange.from && 'text-primary border-primary/30',
-              )}
-            >
-              <CalendarIcon size={14} />
-              {dateRange.from
-                ? dateRange.to
-                  ? `${format(dateRange.from, 'MMM d')} - ${format(dateRange.to, 'MMM d')}`
-                  : format(dateRange.from, 'MMM d')
-                : 'Date Range'}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0" align="start">
-            <Calendar
-              mode="range"
-              selected={dateRange}
-              onSelect={(range) =>
-                setDateRange(range || { from: undefined, to: undefined })
-              }
-              numberOfMonths={2}
-            />
-          </PopoverContent>
-        </Popover>
-
-        {/* Reset */}
-        {hasActiveFilters && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={resetFilters}
-            className="h-9 px-3 text-xs font-bold text-destructive hover:bg-destructive/5"
-          >
-            <X size={14} className="mr-1.5" />
-            Reset
-          </Button>
-        )}
       </div>
 
       {/* ── Tabs ──────────────────────── */}

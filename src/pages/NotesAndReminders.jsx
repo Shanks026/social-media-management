@@ -12,6 +12,7 @@ import {
   RotateCcw,
   Pencil,
   Trash2,
+  Search,
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { toast } from 'sonner'
@@ -19,6 +20,7 @@ import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Input } from '@/components/ui/input'
 import {
   Select,
   SelectContent,
@@ -26,7 +28,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -133,9 +134,9 @@ function NoteCard({ note, clientMap }) {
               {client.is_internal && (
                 <Badge
                   variant="secondary"
-                  className="text-[9px] px-1 py-0 shrink-0"
+                  className="text-[10px] px-1.5 py-0.5 shrink-0"
                 >
-                  INT
+                  Int
                 </Badge>
               )}
             </div>
@@ -182,7 +183,7 @@ function NoteCard({ note, clientMap }) {
         </div>
 
         {/* ── Row 3: Subtitle ── */}
-        <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed px-4 pt-2 min-h-[2.5rem]">
+        <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed px-4 pt-2 min-h-10">
           {note.content || '—'}
         </p>
 
@@ -339,6 +340,7 @@ export default function NotesAndReminders() {
 
   const [statusTab, setStatusTab] = useState('ALL')
   const [selectedClient, setSelectedClient] = useState('all')
+  const [search, setSearch] = useState('')
 
   useEffect(() => {
     setHeader({
@@ -387,13 +389,20 @@ export default function NotesAndReminders() {
 
   // ── Filtering & Grouping ──────────────────────────────────────────────────
 
-  const filteredNotes = useMemo(
-    () =>
-      allNotes.filter(
-        (note) => statusTab === 'ALL' || note.status === statusTab,
-      ),
-    [allNotes, statusTab],
-  )
+  const filteredNotes = useMemo(() => {
+    return allNotes.filter((note) => {
+      if (statusTab !== 'ALL' && note.status !== statusTab) return false
+      
+      if (search.trim()) {
+        const query = search.toLowerCase()
+        const matchesTitle = note.title?.toLowerCase().includes(query)
+        const matchesContent = note.content?.toLowerCase().includes(query)
+        if (!matchesTitle && !matchesContent) return false
+      }
+      
+      return true
+    })
+  }, [allNotes, statusTab, search])
 
   // Fix: each status goes into its own bucket — ARCHIVED never touches nonTodoNotes
   const { overdueNotes, upcomingNotes, doneNotes, archivedNotes } =
@@ -441,89 +450,102 @@ export default function NotesAndReminders() {
 
   return (
     <div className="p-8 max-w-[1440px] mx-auto space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="space-y-1">
-          <h1 className="text-3xl font-normal tracking-tight text-foreground">
-            Notes & Reminders
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            All notes and reminders across your organization
-          </p>
+      {/* ── Header ─────────────────────── */}
+      <div className="flex flex-col gap-2">
+        <h1 className="text-3xl font-normal tracking-tight text-foreground">
+          Notes & Reminders
+        </h1>
+        <p className="text-sm text-muted-foreground">
+          All notes and reminders across your organization
+        </p>
+      </div>
+
+      {/* ── Controls Row ─────────────────── */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        {/* Search */}
+        <div className="relative w-full sm:max-w-sm group shrink-0">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+          <Input
+            placeholder="Search notes..."
+            className="pl-9 h-9 bg-background border-border/60 shadow-none focus-visible:ring-1 w-full"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
         </div>
-        <CreateNoteDialog
-          clientId={defaultClientId}
-          onSuccess={() =>
-            queryClient.invalidateQueries({ queryKey: ['global-notes'] })
-          }
-        >
-          <Button className="gap-2">
-            <Plus size={16} />
-            New Note
-          </Button>
-        </CreateNoteDialog>
-      </div>
 
-      {/* Filter bar */}
-      <div className="flex items-center gap-3">
-        <Select value={selectedClient} onValueChange={setSelectedClient}>
-          <SelectTrigger className="w-[200px] h-9 text-xs font-semibold shadow-none">
-            <Filter size={14} className="mr-1.5 shrink-0 opacity-50" />
-            <SelectValue placeholder="Client" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Clients</SelectItem>
-            {allClients.map((c) => (
-              <SelectItem key={c.id} value={c.id}>
-                <div className="flex items-center gap-2">
-                  <ClientAvatar client={c} size="sm" />
-                  <span className="truncate">{c.name}</span>
-                  {c.is_internal && (
-                    <Badge
-                      variant="secondary"
-                      className="text-[9px] px-1 py-0 ml-1"
-                    >
-                      INT
-                    </Badge>
+        {/* Filters and Actions */}
+        <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto sm:justify-end">
+          <div className="flex items-center gap-1 rounded-md border p-0.5 bg-background shadow-sm">
+            {STATUS_TABS.map((tab) => {
+              const isActive = statusTab === tab.key;
+              return (
+                <button
+                  key={tab.key}
+                  onClick={() => setStatusTab(tab.key)}
+                  className={cn(
+                    'h-8 px-3 py-1 inline-flex items-center gap-2 rounded-sm text-xs font-medium transition-all shrink-0',
+                    isActive
+                      ? 'bg-muted shadow-inner text-foreground'
+                      : 'text-muted-foreground hover:bg-muted/40'
                   )}
-                </div>
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Status Tabs */}
-      <Tabs value={statusTab} onValueChange={setStatusTab} className="w-full">
-        <TabsList className="bg-transparent h-auto w-full justify-start rounded-none p-0 gap-8 border-b border-border/40">
-          {STATUS_TABS.map((tab) => (
-            <TabsTrigger
-              key={tab.key}
-              value={tab.key}
-              className="
-                relative rounded-none bg-transparent px-0 pb-3 pt-0 text-sm font-medium transition-none
-                shadow-none border-b-2 border-transparent text-muted-foreground
-                flex-none w-fit gap-2
-                data-[state=active]:bg-transparent dark:data-[state=active]:bg-transparent
-                data-[state=active]:text-black dark:data-[state=active]:text-white
-                data-[state=active]:border-black dark:data-[state=active]:border-white
-                data-[state=active]:shadow-none data-[state=active]:border-x-0
-                data-[state=active]:border-t-0 focus-visible:ring-0
-              "
-            >
-              {tab.label}
-              {counts[tab.key] > 0 && (
-                <Badge
-                  variant="secondary"
-                  className="text-[10px] px-1.5 py-0 min-w-[20px] text-center"
                 >
-                  {counts[tab.key]}
-                </Badge>
-              )}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-      </Tabs>
+                  <span>{tab.label}</span>
+                  {counts[tab.key] > 0 && (
+                    <span
+                      className={cn(
+                        'text-[10px] px-1.5 py-0.5 rounded-full font-bold transition-colors min-w-5 text-center',
+                        isActive
+                          ? 'bg-background shadow-sm text-foreground'
+                          : 'bg-muted text-muted-foreground'
+                      )}
+                    >
+                      {counts[tab.key]}
+                    </span>
+                  )}
+                </button>
+              )
+            })}
+          </div>
+
+          <Select value={selectedClient} onValueChange={setSelectedClient}>
+            <SelectTrigger className="w-[180px] h-9 text-xs font-semibold shadow-none bg-background">
+              <div className='flex items-center gap-2'><Filter size={14} className="shrink-0 opacity-50" />
+              <SelectValue placeholder="Client" /></div>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Clients</SelectItem>
+              {allClients.map((c) => (
+                <SelectItem key={c.id} value={c.id}>
+                  <div className="flex items-center gap-2">
+                    <ClientAvatar client={c} size="sm" />
+                    <span className="truncate">{c.name}</span>
+                    {c.is_internal && (
+                      <Badge
+                        variant="secondary"
+                        className="text-[9px] px-1 py-0 ml-1"
+                      >
+                        INT
+                      </Badge>
+                    )}
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <CreateNoteDialog
+            clientId={defaultClientId}
+            onSuccess={() =>
+              queryClient.invalidateQueries({ queryKey: ['global-notes'] })
+            }
+          >
+            <Button className="gap-2 h-9 text-xs">
+              <Plus size={16} />
+              New Note
+            </Button>
+          </CreateNoteDialog>
+        </div>
+      </div>
 
       {/* Notes grid */}
       {isLoadingNotes || isLoadingClients ? (

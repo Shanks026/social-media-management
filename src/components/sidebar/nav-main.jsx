@@ -14,6 +14,8 @@ import {
   Newspaper,
   StickyNote,
   Bell,
+  Users,
+  Video,
 } from 'lucide-react'
 import { NavLink, useLocation } from 'react-router-dom'
 import {
@@ -47,6 +49,11 @@ const navItems = [
         title: 'Notes & Reminders',
         url: '/operations/notes',
         icon: Bell,
+      },
+      {
+        title: 'Meetings',
+        url: '/operations/meetings',
+        icon: Video,
       },
     ],
   },
@@ -99,7 +106,7 @@ export function NavMain() {
                         tooltip={item.title}
                         isActive={isMainActive}
                       >
-                        <item.icon className="size-4 shrink-0" />
+                        <item.icon className="size-4 me-0.5 shrink-0" />
                         <span>{item.title}</span>
                         <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
                       </SidebarMenuButton>
@@ -115,7 +122,7 @@ export function NavMain() {
                             >
                               <NavLink to={subItem.url}>
                                 {subItem.icon && (
-                                  <subItem.icon className="size-3.5 mr-2 opacity-70" />
+                                  <subItem.icon className="size-3.5 me-0.5 opacity-70" />
                                 )}
                                 <span>{subItem.title}</span>
                               </NavLink>

@@ -127,10 +127,18 @@ export default function WeekView({ currentMonth, postsByDate, clientId }) {
                     />
                   ))}
 
-                  {posts.map((post) => (
+                  {posts.map((post) => {
+                    const topPos = getTopOffset(post.target_date)
+                    // Set a default height, e.g., 60px or 1 hour duration.
+                    const heightStr = post.isMeeting ? '60px' : '60px'
+                    return (
                     <button
                       key={post.version_id}
-                      // ... (onClick and styles same)
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setSelectedDate(day)
+                      }}
+                      style={{ top: `${topPos}px`, height: heightStr }}
                       className={cn(
                         'absolute left-1 right-1 p-2 rounded-lg border border-l-4 transition-all z-10 hover:z-30 hover:scale-[1.02] text-left shadow-md',
                         STATUS_STYLES[post.status] || 'border-l-muted',
@@ -183,7 +191,8 @@ export default function WeekView({ currentMonth, postsByDate, clientId }) {
                         </div>
                       )}
                     </button>
-                  ))}
+                    )
+                  })}
                 </div>
               )
             })}
