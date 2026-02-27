@@ -77,6 +77,10 @@ function MeetingCard({ meeting, clientMap }) {
   const isMeetingPast = isPast(new Date(meeting.datetime))
   const client = clientMap[meeting.client_id]
 
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }, [])
+
   return (
     <>
       <div
@@ -109,9 +113,9 @@ function MeetingCard({ meeting, clientMap }) {
             variant="outline"
             className={cn(
               'text-[10px] px-2 py-0.5 shrink-0 font-semibold border-transparent',
-              isMeetingPast 
+              isMeetingPast
                 ? 'bg-muted text-muted-foreground'
-                : 'bg-blue-500/10 text-blue-600 dark:text-blue-400'
+                : 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
             )}
           >
             {isMeetingPast ? 'Past' : 'Upcoming'}
@@ -184,7 +188,8 @@ function MeetingCard({ meeting, clientMap }) {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete meeting?</AlertDialogTitle>
             <AlertDialogDescription>
-              "{meeting.title}" will be permanently deleted. This cannot be undone.
+              "{meeting.title}" will be permanently deleted. This cannot be
+              undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -214,7 +219,11 @@ function MeetingsGroup({ title, meetings, clientMap }) {
       </p>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {meetings.map((meeting) => (
-          <MeetingCard key={meeting.id} meeting={meeting} clientMap={clientMap} />
+          <MeetingCard
+            key={meeting.id}
+            meeting={meeting}
+            clientMap={clientMap}
+          />
         ))}
       </div>
     </div>
@@ -245,7 +254,7 @@ export default function MeetingsPage() {
 
   const { data: clientsData, isLoading: isLoadingClients } = useClients()
 
- const allClients = useMemo(() => {
+  const allClients = useMemo(() => {
     if (!clientsData) return []
     return clientsData.realClients || []
   }, [clientsData])
@@ -257,10 +266,12 @@ export default function MeetingsPage() {
 
   const defaultClientId = clientsData?.internalAccount?.id ?? null
 
- const { data: allMeetings = [], isLoading: isLoadingMeetings } = useQuery({
+  const { data: allMeetings = [], isLoading: isLoadingMeetings } = useQuery({
     queryKey: ['global-meetings', selectedClient],
     queryFn: async () => {
-      return await fetchMeetings(selectedClient !== 'all' ? { clientId: selectedClient } : {})
+      return await fetchMeetings(
+        selectedClient !== 'all' ? { clientId: selectedClient } : {},
+      )
     },
   })
   // ── Filtering & Grouping ──────────────────────────────────────────────────
@@ -295,9 +306,13 @@ export default function MeetingsPage() {
     })
 
     // Sort upcoming ascending (closest first)
-    upcoming.sort((a, b) => new Date(a.datetime).getTime() - new Date(b.datetime).getTime())
+    upcoming.sort(
+      (a, b) => new Date(a.datetime).getTime() - new Date(b.datetime).getTime(),
+    )
     // Sort past descending (most recent first)
-    past.sort((a, b) => new Date(b.datetime).getTime() - new Date(a.datetime).getTime())
+    past.sort(
+      (a, b) => new Date(b.datetime).getTime() - new Date(a.datetime).getTime(),
+    )
 
     return { upcomingMeetings: upcoming, pastMeetings: past }
   }, [filteredMeetings])
@@ -348,7 +363,7 @@ export default function MeetingsPage() {
           {/* Status Tabs */}
           <div className="flex items-center gap-1 rounded-md border p-0.5 bg-background shadow-sm w-full sm:w-auto overflow-x-auto">
             {STATUS_TABS.map((tab) => {
-              const isActive = statusTab === tab.key;
+              const isActive = statusTab === tab.key
               return (
                 <button
                   key={tab.key}
@@ -357,15 +372,19 @@ export default function MeetingsPage() {
                     'h-8 px-3 py-1 inline-flex items-center justify-center gap-2 rounded-sm text-xs font-medium transition-all flex-1 sm:flex-none whitespace-nowrap',
                     isActive
                       ? 'bg-muted shadow-inner text-foreground'
-                      : 'text-muted-foreground hover:bg-muted/40'
+                      : 'text-muted-foreground hover:bg-muted/40',
                   )}
                 >
                   <span>{tab.label}</span>
                   {counts[tab.key] > 0 && (
-                    <span className={cn(
-                      'text-[10px] px-1.5 py-0.5 rounded-full font-bold min-w-5 text-center',
-                      isActive ? 'bg-background text-foreground' : 'bg-muted text-muted-foreground'
-                    )}>
+                    <span
+                      className={cn(
+                        'text-[10px] px-1.5 py-0.5 rounded-full font-bold min-w-5 text-center',
+                        isActive
+                          ? 'bg-background text-foreground'
+                          : 'bg-muted text-muted-foreground',
+                      )}
+                    >
                       {counts[tab.key]}
                     </span>
                   )}
@@ -375,27 +394,27 @@ export default function MeetingsPage() {
           </div>
 
           {/* Client Select: Now Responsive */}
-       <Select value={selectedClient} onValueChange={setSelectedClient}>
-  <SelectTrigger className="w-full sm:w-[200px] h-9 text-xs font-semibold shadow-none bg-background overflow-hidden">
-    <div className="flex items-center gap-2 min-w-0 w-full">
-      <Filter size={14} className="shrink-0 opacity-50" />
-      <span className="truncate flex-1 text-left">
-        <SelectValue placeholder="Filter by Client" />
-      </span>
-    </div>
-  </SelectTrigger>
-  <SelectContent>
-    <SelectItem value="all">All Clients</SelectItem>
-    {allClients.map((c) => (
-      <SelectItem key={c.id} value={c.id}>
-        <div className="flex items-center gap-2">
-          <ClientAvatar client={c} size="sm" />
-          <span className="truncate">{c.name}</span>
-        </div>
-      </SelectItem>
-    ))}
-  </SelectContent>
-</Select>
+          <Select value={selectedClient} onValueChange={setSelectedClient}>
+            <SelectTrigger className="w-full sm:w-[200px] h-9 text-xs font-semibold shadow-none bg-background overflow-hidden">
+              <div className="flex items-center gap-2 min-w-0 w-full">
+                <Filter size={14} className="shrink-0 opacity-50" />
+                <span className="truncate flex-1 text-left">
+                  <SelectValue placeholder="Filter by Client" />
+                </span>
+              </div>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Clients</SelectItem>
+              {allClients.map((c) => (
+                <SelectItem key={c.id} value={c.id}>
+                  <div className="flex items-center gap-2">
+                    <ClientAvatar client={c} size="sm" />
+                    <span className="truncate">{c.name}</span>
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
           {/* Create Button */}
           <CreateMeetingDialog

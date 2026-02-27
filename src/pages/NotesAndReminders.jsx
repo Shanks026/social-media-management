@@ -60,12 +60,12 @@ const STATUS_CONFIG = {
   TODO: {
     label: 'To Do',
     className:
-      'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-transparent',
+      'bg-blue-500/10 text-blue-700 dark:text-blue-400 border-transparent',
   },
   DONE: {
     label: 'Done',
     className:
-      'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-transparent',
+      'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-transparent',
   },
   ARCHIVED: {
     label: 'Archived',
@@ -114,6 +114,10 @@ function NoteCard({ note, clientMap }) {
     if (note.status === 'TODO') setStatus('DONE')
     else if (note.status === 'DONE') setStatus('TODO')
   }
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }, [])
 
   return (
     <>
@@ -392,14 +396,14 @@ export default function NotesAndReminders() {
   const filteredNotes = useMemo(() => {
     return allNotes.filter((note) => {
       if (statusTab !== 'ALL' && note.status !== statusTab) return false
-      
+
       if (search.trim()) {
         const query = search.toLowerCase()
         const matchesTitle = note.title?.toLowerCase().includes(query)
         const matchesContent = note.content?.toLowerCase().includes(query)
         if (!matchesTitle && !matchesContent) return false
       }
-      
+
       return true
     })
   }, [allNotes, statusTab, search])
@@ -477,7 +481,7 @@ export default function NotesAndReminders() {
         <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto sm:justify-end">
           <div className="flex items-center gap-1 rounded-md border p-0.5 bg-background shadow-sm">
             {STATUS_TABS.map((tab) => {
-              const isActive = statusTab === tab.key;
+              const isActive = statusTab === tab.key
               return (
                 <button
                   key={tab.key}
@@ -486,7 +490,7 @@ export default function NotesAndReminders() {
                     'h-8 px-3 py-1 inline-flex items-center gap-2 rounded-sm text-xs font-medium transition-all shrink-0',
                     isActive
                       ? 'bg-muted shadow-inner text-foreground'
-                      : 'text-muted-foreground hover:bg-muted/40'
+                      : 'text-muted-foreground hover:bg-muted/40',
                   )}
                 >
                   <span>{tab.label}</span>
@@ -496,7 +500,7 @@ export default function NotesAndReminders() {
                         'text-[10px] px-1.5 py-0.5 rounded-full font-bold transition-colors min-w-5 text-center',
                         isActive
                           ? 'bg-background shadow-sm text-foreground'
-                          : 'bg-muted text-muted-foreground'
+                          : 'bg-muted text-muted-foreground',
                       )}
                     >
                       {counts[tab.key]}
@@ -509,8 +513,10 @@ export default function NotesAndReminders() {
 
           <Select value={selectedClient} onValueChange={setSelectedClient}>
             <SelectTrigger className="w-[180px] h-9 text-xs font-semibold shadow-none bg-background">
-              <div className='flex items-center gap-2'><Filter size={14} className="shrink-0 opacity-50" />
-              <SelectValue placeholder="Client" /></div>
+              <div className="flex items-center gap-2">
+                <Filter size={14} className="shrink-0 opacity-50" />
+                <SelectValue placeholder="Client" />
+              </div>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Clients</SelectItem>

@@ -68,7 +68,6 @@ import CreateNoteDialog from '@/components/CreateNoteDialog'
 import { AddTransactionDialog } from '@/pages/finance/AddTransactionDialog'
 import NoteRow from '@/components/NoteRow'
 
-
 const platformChartConfig = {
   posts: { label: 'Posts' },
   ...SUPPORTED_PLATFORMS.reduce((acc, p) => {
@@ -170,7 +169,7 @@ export default function OverviewTab({ client }) {
   const { data: upcomingMeetings = [], isLoading: isLoadingMeetings } =
     useQuery({
       queryKey: ['upcomingMeetings', client.id],
-      queryFn: () => fetchUpcomingMeetings(client.id, 3),
+      queryFn: () => fetchUpcomingMeetings(client.id, 10),
     })
 
   // Notes
@@ -180,7 +179,9 @@ export default function OverviewTab({ client }) {
   })
 
   // Toast logic for reminders
-  const notifiedNotesRef = React.useRef(new Set())
+  const notifiedNotesRef = React.useRef(
+    new Set(JSON.parse(localStorage.getItem('notifiedNoteIds') || '[]')),
+  )
   React.useEffect(() => {
     if (!notes || notes.length === 0) return
 
@@ -190,7 +191,6 @@ export default function OverviewTab({ client }) {
         const timeDiffMs = dueDate.getTime() - new Date().getTime()
         const hoursDiff = timeDiffMs / (1000 * 60 * 60)
 
-        // If due within 24 hours and haven't notified yet
         if (
           hoursDiff > 0 &&
           hoursDiff <= 24 &&
@@ -199,16 +199,20 @@ export default function OverviewTab({ client }) {
           toast.info(
             `Reminder: "${note.title}" is due in ${Math.round(hoursDiff)} hours!`,
             {
-              icon: <Bell className="h-4 w-4" />,
+              icon: <Bell className="h-4 w-4 text-yellow-400" />,
               duration: 8000,
             },
           )
           notifiedNotesRef.current.add(note.id)
+          // Persist to localStorage so it survives remounts
+          localStorage.setItem(
+            'notifiedNoteIds',
+            JSON.stringify([...notifiedNotesRef.current]),
+          )
         }
       }
     })
   }, [notes])
-
   // Notes Mutation
   const { mutate: toggleNoteStatus, isPending: isTogglingNote } = useMutation({
     mutationFn: ({ noteId, newStatus }) => updateNoteStatus(noteId, newStatus),
@@ -373,7 +377,9 @@ export default function OverviewTab({ client }) {
       },
     })
 
-  // Reusable Notes Card
+  const visibleNotes = notes.filter((n) => n.status !== 'ARCHIVED').slice(0, 3)
+  const extraNotes = notes.filter((n) => n.status !== 'ARCHIVED').length - 2
+
   const NotesCard = (
     <Card className="border-none shadow-sm ring-1 ring-border/50 bg-card/50 flex flex-col gap-2 h-full">
       <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
@@ -389,7 +395,7 @@ export default function OverviewTab({ client }) {
       <CardContent className="flex flex-col flex-1">
         {isLoadingNotes ? (
           <div className="space-y-3">
-            {[1, 2, 3].map((i) => (
+            {[1, 2].map((i) => (
               <div key={i} className="flex items-start gap-3 py-1">
                 <Skeleton className="h-5 w-5 rounded-full shrink-0" />
                 <div className="flex-1 space-y-2">
@@ -399,7 +405,7 @@ export default function OverviewTab({ client }) {
               </div>
             ))}
           </div>
-        ) : notes.length === 0 ? (
+        ) : visibleNotes.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center text-center py-6 gap-2">
             <div className="h-10 w-10 border border-dashed rounded-full flex items-center justify-center text-muted-foreground">
               <FileText className="h-4 w-4 opacity-50" />
@@ -407,31 +413,36 @@ export default function OverviewTab({ client }) {
             <p className="text-sm text-muted-foreground">No pending notes</p>
           </div>
         ) : (
-          // Only show TODO + DONE (not ARCHIVED) in the widget — keep it actionable
-          <div className="space-y-0.5 max-h-[280px] overflow-y-auto pr-1 custom-scrollbar">
-            {notes
-              .filter((n) => n.status !== 'ARCHIVED')
-              .map((note) => (
-                <NoteRow
-                  key={note.id}
-                  note={note}
-                  // No clientMap or showClient — we're already in client context
-                />
+          <div className="flex flex-col gap-0.5">
+            <div className="space-y-0.5">
+              {visibleNotes.map((note) => (
+                <NoteRow key={note.id} note={note} />
               ))}
-            {notes.some((n) => n.status === 'ARCHIVED') && (
-              <p className="text-[11px] text-muted-foreground px-4 pt-2">
-                {notes.filter((n) => n.status === 'ARCHIVED').length} archived
-                note
-                {notes.filter((n) => n.status === 'ARCHIVED').length !== 1 &&
-                  's'}{' '}
-                hidden
-              </p>
+            </div>
+
+            {extraNotes > 0 && (
+              <div className="flex items-center justify-between mt-3 pt-3 border-t border-dashed">
+                <span className="text-xs text-muted-foreground">
+                  +{extraNotes} more note{extraNotes !== 1 && 's'}
+                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 text-xs px-2 text-muted-foreground hover:text-foreground"
+                  onClick={() => navigate('/operations/notes')}
+                >
+                  View all notes <ArrowUpRight className="ml-1 h-3 w-3" />
+                </Button>
+              </div>
             )}
           </div>
         )}
       </CardContent>
     </Card>
   )
+
+  const visibleMeetings = upcomingMeetings.slice(0, 2)
+  const extraMeetings = upcomingMeetings.length - 2
 
   const RecentTransactionsCard = (
     <Card className="border-none shadow-sm ring-1 ring-border/50 bg-card/50 flex flex-col gap-2 h-full">
@@ -914,7 +925,7 @@ export default function OverviewTab({ client }) {
               <CardContent className="flex-1 flex flex-col">
                 {isLoadingMeetings ? (
                   <div className="space-y-4 py-2">
-                    {[...Array(3)].map((_, i) => (
+                    {[...Array(2)].map((_, i) => (
                       <div key={i} className="flex items-start justify-between">
                         <div className="space-y-2">
                           <Skeleton className="h-4 w-32" />
@@ -924,7 +935,7 @@ export default function OverviewTab({ client }) {
                       </div>
                     ))}
                   </div>
-                ) : upcomingMeetings.length === 0 ? (
+                ) : visibleMeetings.length === 0 ? (
                   <div className="flex-1 flex flex-col items-center justify-center text-center py-6 gap-2">
                     <div className="h-10 w-10 border border-dashed rounded-full flex items-center justify-center text-muted-foreground">
                       <CalendarIcon className="h-4 w-4" />
@@ -934,71 +945,94 @@ export default function OverviewTab({ client }) {
                     </p>
                   </div>
                 ) : (
-                  <div className="space-y-4">
-                    {upcomingMeetings.map((meeting) => {
-                      const meetingDate = new Date(meeting.datetime)
-                      let dateLabel = format(meetingDate, 'MMM d, yyyy')
-                      let variant = 'outline'
+                  <div className="flex flex-col gap-0">
+                    <div className="space-y-6">
+                      {visibleMeetings.map((meeting) => {
+                        const meetingDate = new Date(meeting.datetime)
+                        let dateLabel = format(meetingDate, 'MMM d, yyyy')
+                        let variant = 'outline'
 
-                      if (isToday(meetingDate)) {
-                        dateLabel = 'Today'
-                        variant = 'default'
-                      } else if (isTomorrow(meetingDate)) {
-                        dateLabel = 'Tomorrow'
-                        variant = 'secondary'
-                      } else {
-                        const days = differenceInDays(meetingDate, new Date())
-                        if (days < 7) {
-                          dateLabel = `In ${days} Days`
+                        if (isToday(meetingDate)) {
+                          dateLabel = 'Today'
+                          variant = 'default'
+                        } else if (isTomorrow(meetingDate)) {
+                          dateLabel = 'Tomorrow'
                           variant = 'secondary'
+                        } else {
+                          const days = differenceInDays(meetingDate, new Date())
+                          if (days < 7) {
+                            dateLabel = `In ${days} Days`
+                            variant = 'secondary'
+                          }
                         }
-                      }
 
-                      return (
-                        <div
-                          key={meeting.id}
-                          className=" hover:bg-background/80 transition-colors"
-                        >
-                          <div className="flex items-start justify-between mb-2">
-                            <div className="min-w-0 pr-4">
-                              <p className="font-medium text-sm truncate">
-                                {meeting.title}
-                              </p>
-                              <p className="text-xs text-muted-foreground mt-0.5">
-                                {format(meetingDate, 'h:mm a')}
-                              </p>
+                        return (
+                          <div
+                            key={meeting.id}
+                            className="hover:bg-background/80 transition-colors border-b border-dashed pb-6"
+                          >
+                            <div className="flex items-start justify-between mb-2">
+                              <div className="min-w-0 pr-4">
+                                <p className="font-medium text-sm truncate">
+                                  {meeting.title}
+                                </p>
+                                <p className="text-xs text-muted-foreground mt-0.5">
+                                  {format(meetingDate, 'h:mm a')}
+                                </p>
+                              </div>
+                              <Badge
+                                variant={variant}
+                                className="text-[10px] px-1.5 py-0 h-5"
+                              >
+                                {dateLabel}
+                              </Badge>
                             </div>
-                            <Badge
-                              variant={variant}
-                              className="text-[10px] px-1.5 py-0 h-5"
-                            >
-                              {dateLabel}
-                            </Badge>
-                          </div>
-
-                          <div className="flex items-center gap-2 mt-3 pt-3 border-t border-border/40">
-                            <CreateMeetingDialog editMeeting={meeting} defaultClientId={client.id} lockClient={true}>
+                            <div className="flex items-center gap-2 mt-3 border-border/40">
+                              <CreateMeetingDialog
+                                editMeeting={meeting}
+                                defaultClientId={client.id}
+                                lockClient={true}
+                              >
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="flex-1 h-7 text-xs"
+                                >
+                                  Reschedule
+                                </Button>
+                              </CreateMeetingDialog>
                               <Button
-                                variant="outline"
+                                variant="secondary"
                                 size="sm"
                                 className="flex-1 h-7 text-xs"
+                                onClick={() => markMeetingDone(meeting.id)}
+                                disabled={isCompletingMeeting}
                               >
-                                Reschedule
+                                Mark as done
                               </Button>
-                            </CreateMeetingDialog>
-                            <Button
-                              variant="secondary"
-                              size="sm"
-                              className="flex-1 h-7 text-xs"
-                              onClick={() => markMeetingDone(meeting.id)}
-                              disabled={isCompletingMeeting}
-                            >
-                              Mark as done
-                            </Button>
+                            </div>
                           </div>
-                        </div>
-                      )
-                    })}
+                        )
+                      })}
+                    </div>
+
+                    {extraMeetings > 0 && (
+                      <div className="flex items-center justify-between mt-4 pt-3">
+                        <span className="text-xs text-muted-foreground">
+                          +{extraMeetings} more meeting
+                          {extraMeetings !== 1 && 's'}
+                        </span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 text-xs px-2 text-muted-foreground hover:text-foreground"
+                          onClick={() => navigate('/operations/meetings')}
+                        >
+                          View all meetings{' '}
+                          <ArrowUpRight className="ml-1 h-3 w-3" />
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 )}
               </CardContent>
@@ -1042,7 +1076,10 @@ export default function OverviewTab({ client }) {
                   Create Invoice
                 </Button>
 
-                <CreateMeetingDialog defaultClientId={client.id} lockClient={true}>
+                <CreateMeetingDialog
+                  defaultClientId={client.id}
+                  lockClient={true}
+                >
                   <Button
                     variant="outline"
                     className="w-full justify-start h-12 text-sm bg-background/50 hover:bg-background"

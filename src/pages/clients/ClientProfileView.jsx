@@ -116,7 +116,7 @@ export default function ClientProfileView({ client }) {
       <div className="px-8 pt-6 pb-10 space-y-6 max-w-[1440px] mx-auto animate-in fade-in duration-700">
         {/* --- HEADER SECTION: Google-esque Lightweight Typography --- */}
         <div className="flex items-center gap-6">
-          <div className="h-16 w-16 shrink-0 rounded-[22px] bg-muted/20 border border-border/40 flex items-center justify-center overflow-hidden shadow-sm transition-transform hover:scale-[1.02]">
+          <div className="h-16 w-16 shrink-0 rounded-2xl bg-muted/20 border border-border/40 flex items-center justify-center overflow-hidden shadow-sm transition-transform hover:scale-[1.02]">
             {client.logo_url ? (
               <img
                 src={client.logo_url}
