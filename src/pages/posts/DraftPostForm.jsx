@@ -137,7 +137,10 @@ const formSchema = z
     content: z.string().min(1, 'Post content is required'),
     platforms: z.array(z.string()).min(1, 'Select at least one platform'),
     images: z.array(z.any()).max(MAX_FILES).default([]),
-    target_date: z.date().optional(),
+    target_date: z.date({
+      required_error: 'Schedule date and time are required',
+      invalid_type_error: 'Please select a valid date and time',
+    }),
   })
   .superRefine((data, ctx) => {
     if (data.platforms.includes('youtube')) {
@@ -504,7 +507,7 @@ export default function DraftPostForm({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-sm font-semibold">
-                      Target Platforms
+                      Target Platforms <span className="text-destructive">*</span>
                     </FormLabel>
                     <div className="flex flex-wrap gap-2 pt-2">
                       {isClientLoading ? (
@@ -632,7 +635,9 @@ export default function DraftPostForm({
                   name="target_date"
                   render={({ field }) => (
                     <FormItem className="flex flex-col">
-                      <FormLabel>Proposed Schedule Date</FormLabel>
+                      <FormLabel>
+                        Proposed Schedule Date <span className="text-destructive">*</span>
+                      </FormLabel>
                       <Popover>
                         <PopoverTrigger asChild>
                           <FormControl>
@@ -671,7 +676,9 @@ export default function DraftPostForm({
 
                 {/* Time Picker */}
                 <FormItem className="flex flex-col">
-                  <FormLabel>Time</FormLabel>
+                  <FormLabel>
+                    Time <span className="text-destructive">*</span>
+                  </FormLabel>
                   <Select
                     disabled={!form.watch('target_date')}
                     value={
@@ -718,7 +725,9 @@ export default function DraftPostForm({
                 name="title"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Title</FormLabel>
+                    <FormLabel>
+                      Title <span className="text-destructive">*</span>
+                    </FormLabel>
                     <FormControl>
                       <Input placeholder="Enter post title" {...field} />
                     </FormControl>
@@ -732,7 +741,9 @@ export default function DraftPostForm({
                 name="content"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Caption</FormLabel>
+                    <FormLabel>
+                      Caption <span className="text-destructive">*</span>
+                    </FormLabel>
                     <FormControl>
                       <Textarea
                         placeholder="Write your post content..."

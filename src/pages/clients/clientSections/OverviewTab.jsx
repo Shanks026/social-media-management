@@ -946,7 +946,7 @@ export default function OverviewTab({ client }) {
                   </div>
                 ) : (
                   <div className="flex flex-col gap-0">
-                    <div className="space-y-6">
+                    <div className="space-y-4">
                       {visibleMeetings.map((meeting) => {
                         const meetingDate = new Date(meeting.datetime)
                         let dateLabel = format(meetingDate, 'MMM d, yyyy')
@@ -969,7 +969,7 @@ export default function OverviewTab({ client }) {
                         return (
                           <div
                             key={meeting.id}
-                            className="hover:bg-background/80 transition-colors border-b border-dashed pb-6"
+                            className="hover:bg-background/80 transition-colors border-b border-dashed pb-4"
                           >
                             <div className="flex items-start justify-between mb-2">
                               <div className="min-w-0 pr-4">

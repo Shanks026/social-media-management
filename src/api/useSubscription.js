@@ -56,7 +56,7 @@ export function useSubscription() {
       }
 
       return {
-        agency_name: sub.agency_name || 'Tertiary',
+        agency_name: sub.agency_name || 'Tercero',
         logo_url: sub.logo_url,
         plan_name: sub.plan_name,
         basic_whitelabel_enabled: sub.basic_whitelabel_enabled ?? false,

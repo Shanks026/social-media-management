@@ -18,6 +18,7 @@ import {
   PopoverContent,
 } from '@/components/ui/popover'
 import { Skeleton } from '../ui/skeleton'
+import TierBadge from '@/components/TierBadge'
 
 export function NavClients() {
   const { state } = useSidebar()
@@ -33,6 +34,8 @@ export function NavClients() {
 
   // 2. Safe extraction of the array for the map function
   const clients = data?.clients || []
+  const internalClients = clients.filter((c) => c.is_internal)
+  const regularClients = clients.filter((c) => !c.is_internal)
 
   const deleteMutation = useMutation({
     mutationFn: deleteClient,
@@ -41,6 +44,70 @@ export function NavClients() {
 
   const handleCreateClient = () => {
     navigate('/clients/create')
+  }
+
+  const renderClientItem = (client) => {
+    const clientUrl = `/clients/${client.id}`
+    const isCurrentlyActive = location.pathname === clientUrl
+
+    return (
+      <SidebarMenuItem key={client.id}>
+        <SidebarMenuButton
+          asChild
+          tooltip={client.name}
+          isActive={isCurrentlyActive}
+          className={`group/item flex items-center h-9 ${
+            state === 'collapsed' ? 'justify-center p-0' : 'px-2 gap-3'
+          }`}
+        >
+          <NavLink to={clientUrl} className="flex items-center min-w-0 w-full">
+            <Avatar className="size-5 shrink-0 rounded-sm">
+              <AvatarImage src={client.logo_url} className="object-cover" />
+              <AvatarFallback className="text-[10px] bg-primary/10 text-primary">
+                {client.name.substring(0, 2).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+
+            {state === 'expanded' && (
+              <>
+                <div className="flex items-center min-w-0 flex-1 pr-2">
+                  <span className="truncate">{client.name}</span>
+                  {/* {client.is_internal && <TierBadge tier="INTERNAL" />} */}
+                </div>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                      }}
+                      className="opacity-0 group-hover/item:opacity-100 p-1 ml-auto shrink-0 hover:bg-black/10 dark:hover:bg-white/10 rounded-md transition-opacity"
+                    >
+                      <MoreHorizontal className="size-4 text-muted-foreground" />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent side="right" className="w-32 p-1">
+                    <button
+                      className="w-full text-left px-2 py-1.5 text-sm hover:bg-accent rounded"
+                      onClick={() => navigate(`/clients/${client.id}/edit`)}
+                    >
+                      Edit
+                    </button>
+                    <button
+                      className="w-full text-left px-2 py-1.5 text-sm text-destructive hover:bg-accent rounded"
+                      onClick={() => deleteMutation.mutate(client.id)}
+                    >
+                      Delete
+                    </button>
+                  </PopoverContent>
+                </Popover>
+              </>
+            )}
+          </NavLink>
+        </SidebarMenuButton>
+      </SidebarMenuItem>
+    )
   }
 
   return (
@@ -60,86 +127,21 @@ export function NavClients() {
       <SidebarGroupContent className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
         <SidebarMenu>
           {/* 3. Logic check: Display skeletons if loading */}
-          {isLoading && (
+          {isLoading ? (
             <div className="px-2 space-y-2">
               {[1, 2, 3].map((i) => (
                 <Skeleton key={i} className="h-8 w-full rounded-md" />
               ))}
             </div>
+          ) : (
+            <>
+              {internalClients.map(renderClientItem)}
+              {internalClients.length > 0 && regularClients.length > 0 && (
+                <div className="opacity-70 h-px bg-sidebar-border mx-2 mix-blend-multiply dark:mix-blend-screen" />
+              )}
+              {regularClients.map(renderClientItem)}
+            </>
           )}
-
-          {/* 4. Map through the extracted clients array */}
-          {!isLoading &&
-            clients.map((client) => {
-              const clientUrl = `/clients/${client.id}`
-              const isCurrentlyActive = location.pathname === clientUrl
-
-              return (
-                <SidebarMenuItem key={client.id}>
-                  <SidebarMenuButton
-                    asChild
-                    tooltip={client.name}
-                    isActive={isCurrentlyActive}
-                    className={`group/item flex items-center h-9 ${
-                      state === 'collapsed'
-                        ? 'justify-center p-0'
-                        : 'px-2 gap-3'
-                    }`}
-                  >
-                    <NavLink
-                      to={clientUrl}
-                      className="flex items-center min-w-0 w-full"
-                    >
-                      <Avatar className="size-5 shrink-0 rounded-sm">
-                        <AvatarImage
-                          src={client.logo_url}
-                          className="object-cover"
-                        />
-                        <AvatarFallback className="text-[10px] bg-primary/10 text-primary">
-                          {client.name.substring(0, 2).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-
-                      {state === 'expanded' && (
-                        <>
-                          <span className="truncate flex-1">{client.name}</span>
-                          <Popover>
-                            <PopoverTrigger asChild>
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.preventDefault()
-                                  e.stopPropagation()
-                                }}
-                                className="opacity-0 group-hover/item:opacity-100 p-1 ml-auto shrink-0 hover:bg-black/10 dark:hover:bg-white/10 rounded-md transition-opacity"
-                              >
-                                <MoreHorizontal className="size-4 text-muted-foreground" />
-                              </button>
-                            </PopoverTrigger>
-                            <PopoverContent side="right" className="w-32 p-1">
-                              <button
-                                className="w-full text-left px-2 py-1.5 text-sm hover:bg-accent rounded"
-                                onClick={() =>
-                                  navigate(`/clients/${client.id}/edit`)
-                                }
-                              >
-                                Edit
-                              </button>
-                              <button
-                                className="w-full text-left px-2 py-1.5 text-sm text-destructive hover:bg-accent rounded"
-                                onClick={() => deleteMutation.mutate(client.id)}
-                              >
-                                Delete
-                              </button>
-                            </PopoverContent>
-                          </Popover>
-                        </>
-                      )}
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              )
-            })}
         </SidebarMenu>
       </SidebarGroupContent>
     </SidebarGroup>

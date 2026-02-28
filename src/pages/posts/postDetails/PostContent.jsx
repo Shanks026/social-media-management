@@ -113,14 +113,17 @@ const MediaItem = ({ url, className, isPreview = false }) => {
 
 export default function PostContent({
   post,
+  isInternal,
   showHistory,
   setShowHistory,
   onSendForApproval,
+  onApproveAndSchedule,
   onPublish,
   onCreateRevision,
   isRevisionPending,
   isApprovalPending,
   isPublishPending,
+  isApproveSchedulePending,
   onEdit,
 }) {
   const notesRef = useRef(null)
@@ -135,6 +138,9 @@ export default function PostContent({
 
   const canEdit = post.status === 'DRAFT' || post.status === 'PENDING_APPROVAL'
   const canSendForApproval =
+    post.status === 'DRAFT' && post.content && post.media_urls?.length > 0
+  // Internal posts approve in-place; same readiness guard
+  const canApproveAndSchedule =
     post.status === 'DRAFT' && post.content && post.media_urls?.length > 0
 
   // Keyboard Navigation
@@ -260,37 +266,73 @@ export default function PostContent({
         {/* 🛠️ Consolidated Button Group */}
         <div className="flex items-center gap-3 shrink-0">
           {/* 1. PRIMARY ACTION (Stand-alone for maximum focus) */}
-          <div className="hidden sm:block">
+          <div className="hidden sm:flex items-center gap-2">
+
+            {/* DRAFT — internal: Approve & Schedule | external: Send for Approval */}
             {post.status === 'DRAFT' && (
-              <Button
-                disabled={!canSendForApproval || isApprovalPending}
-                onClick={onSendForApproval}
-                className="gap-2 px-6 font-semibold shadow-sm transition-all hover:translate-y-[-1px]"
-              >
-                {isApprovalPending ? (
-                  <Loader2 size={16} className="animate-spin" />
-                ) : (
-                  <CheckCircle2 size={16} />
-                )}
-                Send for Approval
-              </Button>
+              isInternal ? (
+                <Button
+                  disabled={!canApproveAndSchedule || isApproveSchedulePending}
+                  onClick={onApproveAndSchedule}
+                  className="gap-2 px-6 font-semibold shadow-sm transition-all hover:translate-y-[-1px]"
+                >
+                  {isApproveSchedulePending ? (
+                    <Loader2 size={16} className="animate-spin" />
+                  ) : (
+                    <CheckCircle2 size={16} />
+                  )}
+                  Approve & Schedule
+                </Button>
+              ) : (
+                <Button
+                  disabled={!canSendForApproval || isApprovalPending}
+                  onClick={onSendForApproval}
+                  className="gap-2 px-6 font-semibold shadow-sm transition-all hover:translate-y-[-1px]"
+                >
+                  {isApprovalPending ? (
+                    <Loader2 size={16} className="animate-spin" />
+                  ) : (
+                    <CheckCircle2 size={16} />
+                  )}
+                  Send for Approval
+                </Button>
+              )
             )}
 
+            {/* SCHEDULED — both get Publish Now; internal also gets Create New Version */}
             {post.status === 'SCHEDULED' && (
-              <Button
-                disabled={isPublishPending}
-                onClick={onPublish}
-                className="gap-2 px-6 font-semibold shadow-sm transition-all hover:translate-y-[-1px]"
-              >
-                {isPublishPending ? (
-                  <Loader2 size={16} className="animate-spin" />
-                ) : (
-                  <Play size={16} />
+              <>
+                {isInternal && (
+                  <Button
+                    variant="outline"
+                    onClick={onCreateRevision}
+                    disabled={isRevisionPending}
+                    className="gap-2 px-5 font-semibold"
+                  >
+                    {isRevisionPending ? (
+                      <Loader2 size={16} className="animate-spin" />
+                    ) : (
+                      <Plus size={16} />
+                    )}
+                    New Version
+                  </Button>
                 )}
-                Publish Now
-              </Button>
+                <Button
+                  disabled={isPublishPending}
+                  onClick={onPublish}
+                  className="gap-2 px-6 font-semibold shadow-sm transition-all hover:translate-y-[-1px]"
+                >
+                  {isPublishPending ? (
+                    <Loader2 size={16} className="animate-spin" />
+                  ) : (
+                    <Play size={16} />
+                  )}
+                  Publish Now
+                </Button>
+              </>
             )}
 
+            {/* NEEDS_REVISION — external only (internal never reaches this) */}
             {post.status === 'NEEDS_REVISION' && (
               <Button
                 onClick={onCreateRevision}
@@ -303,6 +345,23 @@ export default function PostContent({
                   <Plus size={16} />
                 )}
                 Create New Version
+              </Button>
+            )}
+
+            {/* PUBLISHED — internal can start a new version */}
+            {post.status === 'PUBLISHED' && isInternal && (
+              <Button
+                variant="outline"
+                onClick={onCreateRevision}
+                disabled={isRevisionPending}
+                className="gap-2 px-5 font-semibold"
+              >
+                {isRevisionPending ? (
+                  <Loader2 size={16} className="animate-spin" />
+                ) : (
+                  <Plus size={16} />
+                )}
+                New Version
               </Button>
             )}
           </div>
@@ -322,17 +381,37 @@ export default function PostContent({
             <DropdownMenuContent align="end" className="w-56">
               <div className="sm:hidden">
                 {post.status === 'DRAFT' && (
-                  <DropdownMenuItem
-                    onClick={onSendForApproval}
-                    disabled={!canSendForApproval}
-                  >
-                    <CheckCircle2 size={14} className="mr-2" /> Send for
-                    Approval
-                  </DropdownMenuItem>
+                  isInternal ? (
+                    <DropdownMenuItem
+                      onClick={onApproveAndSchedule}
+                      disabled={!canApproveAndSchedule}
+                    >
+                      <CheckCircle2 size={14} className="mr-2" /> Approve &amp; Schedule
+                    </DropdownMenuItem>
+                  ) : (
+                    <DropdownMenuItem
+                      onClick={onSendForApproval}
+                      disabled={!canSendForApproval}
+                    >
+                      <CheckCircle2 size={14} className="mr-2" /> Send for Approval
+                    </DropdownMenuItem>
+                  )
                 )}
                 {post.status === 'SCHEDULED' && (
-                  <DropdownMenuItem onClick={onPublish}>
-                    <Play size={14} className="mr-2" /> Publish Now
+                  <>
+                    <DropdownMenuItem onClick={onPublish}>
+                      <Play size={14} className="mr-2" /> Publish Now
+                    </DropdownMenuItem>
+                    {isInternal && (
+                      <DropdownMenuItem onClick={onCreateRevision}>
+                        <Plus size={14} className="mr-2" /> New Version
+                      </DropdownMenuItem>
+                    )}
+                  </>
+                )}
+                {post.status === 'PUBLISHED' && isInternal && (
+                  <DropdownMenuItem onClick={onCreateRevision}>
+                    <Plus size={14} className="mr-2" /> New Version
                   </DropdownMenuItem>
                 )}
               </div>

@@ -24,13 +24,13 @@ export default function OnboardingPage({ user, onComplete, onSkip }) {
         <div className="max-w-4xl w-full space-y-10 animate-in fade-in zoom-in-95 duration-700">
           <div className="space-y-4 text-center">
             <h1 className="text-4xl md:text-5xl font-medium tracking-tight mb-2">
-              Welcome to Tertiary
+              Welcome to Tercero
             </h1>
             <h2 className="text-3xl md:text-4xl font-medium tracking-tight text-muted-foreground">
               Make it yours
             </h2>
             <p className="text-lg text-muted-foreground p-2">
-              How would you like to begin your journey with Tertiary?
+              How would you like to begin your journey with Tercero?
             </p>
           </div>
 

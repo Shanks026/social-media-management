@@ -17,7 +17,7 @@ export default function LoginPage() {
           <div className="bg-white/10 backdrop-blur-md p-2 rounded-lg">
             <GalleryVerticalEnd className="size-6 text-white" />
           </div>
-          <span className="text-xl font-medium tracking-tight">Tertiary</span>
+          <span className="text-xl font-medium tracking-tight">Tercero</span>
         </div>
       </div>
 
@@ -28,7 +28,7 @@ export default function LoginPage() {
             <div className="bg-primary text-primary-foreground flex size-9 items-center justify-center rounded-xl">
               <GalleryVerticalEnd className="size-5" />
             </div>
-            <span>Tertiary</span>
+            <span>Tercero</span>
           </a>
         </div>
 

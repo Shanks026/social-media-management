@@ -11,9 +11,9 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Layout } from 'lucide-react'
 
 // Application Defaults
-const APP_NAME = 'Tertiary'
+const APP_NAME = 'Tercero'
 const APP_TAGLINE = 'Development'
-const DEFAULT_ICON = '/TertiaryLogo.svg' // Path to your public folder icon
+const DEFAULT_ICON = '/TerceroLogo.svg' // Path to your public folder icon
 
 export function AppSidebarHeader({ agencySettings }) {
   const { state, isMobile } = useSidebar()
@@ -51,7 +51,7 @@ export function AppSidebarHeader({ agencySettings }) {
           >
             {/* LOGO SECTION */}
             <div
-              className={`flex shrink-0 items-center justify-center transition-all duration-300 overflow-hidden rounded-lg shadow-sm border bg-background ${
+              className={`flex shrink-0 items-center justify-center transition-all duration-300 overflow-hidden rounded-lg shadow-sm bg-background ${
                 isCollapsed ? 'size-8' : 'size-9'
               }`}
             >
@@ -70,8 +70,8 @@ export function AppSidebarHeader({ agencySettings }) {
               ) : name === APP_NAME || !name ? (
                 <img
                   src={DEFAULT_ICON}
-                  alt="Tertiary Logo"
-                  className="size-full object-contain p-0.5 transition-all duration-300"
+                  alt="Tercero Logo"
+                  className="size-full object-contain transition-all duration-300"
                 />
               ) : (
                 <div className="flex size-full items-center justify-center bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 rounded-lg">

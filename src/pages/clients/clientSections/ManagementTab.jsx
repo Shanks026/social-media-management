@@ -10,6 +10,7 @@ import { INDUSTRY_OPTIONS } from '../../../lib/industries'
 
 // UI Components
 import { Button } from '@/components/ui/button'
+import { Separator } from '@/components/ui/separator'
 import {
   Dialog,
   DialogContent,
@@ -23,65 +24,12 @@ import {
   Mail,
   Phone,
   ShieldCheck,
-  Briefcase,
-  Crown,
-  Zap,
   Globe,
   Pencil,
   ExternalLink,
-  Instagram,
-  Linkedin,
-  Twitter,
-  Facebook,
-  Youtube,
-  Share2,
-  Calendar,
-  Plus
+  CalendarDays,
 } from 'lucide-react'
 
-
-/**
- * Helper to render brand-colored platform icons
- */
-const PlatformIcon = ({ name }) => {
-  const icons = {
-    instagram: {
-      icon: <Instagram className="size-3.5 text-white" />,
-      bg: 'bg-[#E4405F]',
-    },
-    linkedin: {
-      icon: <Linkedin className="size-3.5 text-white" />,
-      bg: 'bg-[#0077B5]',
-    },
-    twitter: {
-      icon: <Twitter className="size-3.5 text-white dark:text-black" />,
-      bg: 'bg-black dark:bg-white',
-    },
-    facebook: {
-      icon: <Facebook className="size-3.5 text-white" />,
-      bg: 'bg-[#1877F2]',
-    },
-    youtube: {
-      icon: <Youtube className="size-3.5 text-white" />,
-      bg: 'bg-[#FF0000]',
-    },
-    google_business: {
-      icon: <Globe className="size-3.5 text-white" />,
-      bg: 'bg-yellow-500',
-    },
-  }
-
-  const platform = icons[name.toLowerCase()]
-  if (!platform) return null
-
-  return (
-    <div
-      className={`flex h-7 w-7 items-center justify-center rounded-full shadow-sm transition-transform hover:scale-110 ${platform.bg}`}
-    >
-      {platform.icon}
-    </div>
-  )
-}
 
 export default function ManagementTab({ client }) {
   const navigate = useNavigate()
@@ -106,168 +54,185 @@ export default function ManagementTab({ client }) {
     return industry ? industry.label : value || 'Not Specified'
   }
 
-  const DetailItem = ({
-    icon: Icon,
-    label,
-    value,
-    colorClass = 'text-foreground',
-    isLink = false,
-  }) => (
-    <div className="flex flex-col gap-2">
-      <div className="flex items-center gap-2 text-muted-foreground/70">
-        <Icon className="size-3.5" />
-        <span className="text-xs font-bold uppercase tracking-wide">
-          {label}
-        </span>
-      </div>
-      {isLink && value ? (
-        <a
-          href={value.startsWith('http') ? value : `https://${value}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-sm font-semibold flex items-center gap-1.5 hover:text-primary transition-colors group"
-        >
-          {value.replace(/(^\w+:|^)\/\//, '')}
-          <ExternalLink className="size-3 opacity-0 group-hover:opacity-100 transition-opacity" />
-        </a>
-      ) : (
-        <span className={`text-sm font-semibold truncate ${colorClass}`}>
-          {value || 'Not provided'}
-        </span>
-      )}
-    </div>
-  )
 
   const tier = client.tier?.toUpperCase() || 'BASIC'
   const platforms = client.platforms || []
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8 py-4">
-      {/* 1. Brand Identity Row */}
-      <section className="flex flex-col md:flex-row items-start justify-between gap-6 px-4">
-        <div className="flex items-start gap-6">
-          <div className="relative h-20 w-20 shrink-0 rounded-2xl border bg-muted/20 flex items-center justify-center overflow-hidden">
-            {client.logo_url ? (
-              <img
-                src={client.logo_url}
-                alt={client.name}
-                className="h-full w-full object-cover"
-              />
-            ) : (
-              <span className="text-xl font-bold text-muted-foreground/40">
-                {client.name?.slice(0, 2).toUpperCase()}
-              </span>
-            )}
-          </div>
-          <div className="space-y-1.5 py-1">
-            <h2 className="text-2xl font-bold tracking-tight">{client.name}</h2>
-            <p className="text-sm text-muted-foreground leading-relaxed max-w-xl">
-              {client.description || 'No workspace description provided.'}
+    <div className="max-w-4xl mx-auto space-y-14 py-4 animate-in fade-in slide-in-from-bottom-4 duration-700">
+      {/* 1. Client Profile Row */}
+      <section className="space-y-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <h2 className="text-2xl font-normal tracking-tight">
+              Client Profile
+            </h2>
+            <p className="text-sm text-muted-foreground font-light">
+              {client.description || 'Workspace details and contact information.'}
             </p>
           </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate(`/clients/${client.id}/edit`)}
+            className="gap-2 w-fit shrink-0"
+          >
+            <Pencil size={14} />
+            Edit Profile
+          </Button>
         </div>
 
-        <Button
-          variant="secondary"
-          size="sm"
-          onClick={() => navigate(`/clients/${client.id}/edit`)} // Navigate instead of setEditOpen
-        >
-          <Pencil className="size-3.5 mr-2" />
-          Edit Profile
-        </Button>
-      </section>
-
-
-
-      {/* 2. Unified Information Grid */}
-      <section className="grid grid-cols-1 md:grid-cols-3 gap-x-16 gap-y-10 px-4">
-        <DetailItem
-          icon={ShieldCheck}
-          label="Account Status"
-          value={client.status === 'ACTIVE' ? 'Active' : 'Paused'}
-          colorClass={
-            client.status === 'ACTIVE' ? 'text-green-600' : 'text-amber-600'
-          }
-        />
-        <DetailItem
-          icon={tier === 'VIP' ? Crown : tier === 'PRO' ? Zap : Briefcase}
-          label="Service Tier"
-          value={tier}
-          colorClass={
-            tier === 'VIP'
-              ? 'text-purple-600'
-              : tier === 'PRO'
-                ? 'text-amber-500'
-                : ''
-          }
-        />
-
-        {/* Industry Sector (Dynamic from helper) */}
-        <DetailItem
-          icon={Briefcase}
-          label="Industry"
-          value={getIndustryLabel(client.industry)}
-        />
-
-        <DetailItem icon={Mail} label="Primary Email" value={client.email} />
-
-        <DetailItem icon={Phone} label="Contact" value={client.mobile_number} />
-
-        {/* Active Social Channels */}
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center gap-2 text-muted-foreground/70">
-            <Share2 className="size-3.5" />
-            <span className="text-xs font-bold uppercase tracking-wide">
-              Active Channels
-            </span>
+        <div className="flex flex-col md:flex-row gap-8 items-center md:items-start">
+          <div className="shrink-0">
+            <div className="relative flex size-32 items-center justify-center rounded-2xl border border-border bg-muted/20 overflow-hidden shadow-sm">
+              {client.logo_url ? (
+                <img
+                  src={client.logo_url}
+                  alt={client.name}
+                  className="size-full object-cover"
+                />
+              ) : (
+                <span className="text-4xl font-bold text-muted-foreground/40">
+                  {client.name?.slice(0, 2).toUpperCase()}
+                </span>
+              )}
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            {platforms.length > 0 ? (
-              platforms.map((p) => <PlatformIcon key={p} name={p} />)
-            ) : (
-              <span className="text-sm font-semibold text-muted-foreground/50">
-                None linked
-              </span>
-            )}
+
+          <div className="flex-1 w-full space-y-6">
+            <div className="space-y-1 text-center md:text-left">
+              <h3 className="text-xl font-medium tracking-tight">
+                {client.name}
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                {getIndustryLabel(client.industry)}
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 w-full">
+              <InfoRow
+                icon={<ShieldCheck size={16} />}
+                label="Account Status"
+                value={
+                  <span className={client.status === 'ACTIVE' ? 'text-green-600 font-medium' : 'text-amber-600 font-medium'}>
+                    {client.status === 'ACTIVE' ? 'Active' : 'Paused'}
+                  </span>
+                }
+              />
+              <InfoRow
+                icon={<ShieldCheck size={16} />}
+                label="Account Tier"
+                value={<span className="font-medium text-primary">{tier}</span>}
+              />
+              <InfoRow
+                icon={<Mail size={16} />}
+                label="Primary Email"
+                value={client.email || '—'}
+              />
+              <InfoRow
+                icon={<Phone size={16} />}
+                label="Contact Number"
+                value={client.mobile_number || '—'}
+              />
+              <InfoRow
+                icon={<Globe size={16} />}
+                label="Official Website"
+                value={
+                  client.website ? (
+                    <a
+                      href={client.website.startsWith('http') ? client.website : `https://${client.website}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="hover:text-primary transition-colors flex items-center gap-1 group truncate"
+                    >
+                      <span className="truncate">{client.website.replace(/(^\w+:|^)\/\//, '')}</span>
+                      <ExternalLink className="size-3 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+                    </a>
+                  ) : (
+                    '—'
+                  )
+                }
+              />
+              <InfoRow
+                icon={<CalendarDays size={16} />}
+                label="Created"
+                value={
+                  client.created_at ? format(new Date(client.created_at), 'MMMM d, yyyy') : '—'
+                }
+              />
+            </div>
           </div>
         </div>
-
-        <DetailItem
-          icon={Globe}
-          label="Official Website"
-          value={client.website}
-          isLink
-        />
       </section>
 
-      <hr className="mx-4 border-dashed opacity-50" />
+      <Separator className="opacity-50" />
+
+      {/* 2. Platforms */}
+      <section className="space-y-6">
+        <div className="space-y-1">
+          <h2 className="text-2xl font-normal tracking-tight">Platforms</h2>
+          <p className="text-sm text-muted-foreground font-light">
+            Social platforms linked to this workspace.
+          </p>
+        </div>
+
+        {platforms.length > 0 ? (
+          <div className="flex flex-wrap gap-3">
+            {platforms.map((p) => {
+              const pId = p.toLowerCase()
+              return (
+                <div
+                  key={pId}
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border bg-card/50"
+                >
+                  <img
+                    src={`/platformIcons/${pId === 'google_business' ? 'google_busines' : pId}.png`}
+                    alt={p}
+                    className="size-4 object-contain"
+                  />
+                  <span className="text-sm font-medium capitalize">{p.replace('_', ' ')}</span>
+                </div>
+              )
+            })}
+          </div>
+        ) : (
+          <div className="flex items-center gap-3 text-sm text-muted-foreground py-4">
+            <Globe size={16} />
+            No platforms configured yet.
+          </div>
+        )}
+      </section>
+
+      <Separator className="opacity-50" />
 
       {/* 3. Danger Zone */}
-      <section className="mx-4 space-y-4">
-        <div className="flex items-center gap-3">
-          <Trash2 className="size-4 text-destructive" />
-          <h3 className="text-sm font-bold text-destructive uppercase tracking-widest">
+      <section className="space-y-6">
+        <div className="space-y-1">
+          <h2 className="text-lg font-medium text-destructive tracking-tight">
             Danger Zone
-          </h3>
+          </h2>
+          <p className="text-sm text-muted-foreground font-light">
+            Irreversible actions. Please proceed with caution.
+          </p>
         </div>
 
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 p-6 rounded-2xl border border-destructive/20 bg-destructive/5">
-          <div className="space-y-1">
-            <p className="text-base font-bold text-destructive">
+        <div className="flex items-center justify-between rounded-xl border border-destructive/20 bg-destructive/5 px-5 py-4">
+          <div className="space-y-0.5">
+            <p className="text-sm font-semibold text-foreground">
               Delete Workspace
             </p>
-            <p className="text-sm text-muted-foreground max-w-lg leading-relaxed">
-              Once deleted, all posts, history, and media for {client.name} will
-              be removed from our servers. This action is irreversible.
+            <p className="text-xs text-muted-foreground">
+              Once deleted, all posts, history, and media for {client.name} will be removed.
             </p>
           </div>
           <Button
             variant="destructive"
             size="sm"
-            className="h-9 px-6 text-sm font-bold shadow-sm"
+            className="gap-2 shrink-0"
             onClick={() => setDeleteDialogOpen(true)}
           >
-            Delete Permanently
+            <Trash2 size={14} />
+            Delete
           </Button>
         </div>
       </section>
@@ -283,12 +248,13 @@ export default function ManagementTab({ client }) {
               You will lose access to all draft and scheduled posts.
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="mt-4 gap-2">
-            <Button variant="ghost" onClick={() => setDeleteDialogOpen(false)}>
+          <DialogFooter className="mt-4 gap-2 flex-col sm:flex-row">
+            <Button variant="ghost" onClick={() => setDeleteDialogOpen(false)} className="w-full sm:w-auto">
               Cancel
             </Button>
             <Button
               variant="destructive"
+              className="w-full sm:w-auto"
               onClick={() => deleteMutation.mutate(client.id)}
               disabled={deleteMutation.isPending}
             >
@@ -297,6 +263,22 @@ export default function ManagementTab({ client }) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </div>
+  )
+}
+
+function InfoRow({ icon, label, value }) {
+  return (
+    <div className="flex items-start gap-4">
+      <div className="mt-0.5 h-9 w-9 shrink-0 rounded-lg bg-secondary/50 flex items-center justify-center text-muted-foreground">
+        {icon}
+      </div>
+      <div className="space-y-1 min-w-0">
+        <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+          {label}
+        </p>
+        <div className="text-sm text-foreground truncate max-w-[200px] sm:max-w-xs">{value}</div>
+      </div>
     </div>
   )
 }

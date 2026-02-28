@@ -23,9 +23,9 @@ export default function WelcomeCarousel({
 
   const SLIDES = [
     {
-      title: `Welcome to Tertiary, ${userName}`,
+      title: `Welcome to Tercero, ${userName}`,
       description:
-        "Tertiary is designed to be the backbone of your agency. Let's take a quick tour of your new workspace.",
+        "Tercero is designed to be the backbone of your agency. Let's take a quick tour of your new workspace.",
       icon: <Sparkles className="size-7 text-primary/70" />,
       buttonText: 'See how it works',
     },

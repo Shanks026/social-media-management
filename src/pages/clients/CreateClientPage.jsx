@@ -17,8 +17,9 @@ import {
   SelectItem,
 } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
-import { Loader2, ChevronLeft, Camera, ImagePlus } from 'lucide-react'
+import { Loader2, ChevronLeft, Camera, ImagePlus, AlertTriangle, ArrowRight } from 'lucide-react'
 import { toast } from 'sonner'
+import { Link } from 'react-router-dom'
 
 // Form & Validation
 import { Controller, useForm } from 'react-hook-form'
@@ -70,6 +71,21 @@ export default function CreateClientPage({ customSubmit, onSuccess, onCancel, st
 
   const [isUploading, setIsUploading] = useState(false)
   const [previewUrl, setPreviewUrl] = useState(null)
+  const [agencyBrandingMissing, setAgencyBrandingMissing] = useState(false)
+
+  // Check if agency brand identity is configured (only relevant for external client creation)
+  useEffect(() => {
+    if (isEditMode || standalone) return
+    async function checkAgencyBranding() {
+      const { data } = await supabase
+        .from('agency_subscriptions')
+        .select('agency_name')
+        .eq('user_id', user?.id)
+        .maybeSingle()
+      if (!data?.agency_name) setAgencyBrandingMissing(true)
+    }
+    checkAgencyBranding()
+  }, [isEditMode, standalone, user?.id])
 
   const form = useForm({
     resolver: zodResolver(clientSchema),
@@ -270,6 +286,26 @@ export default function CreateClientPage({ customSubmit, onSuccess, onCancel, st
             </div>
           </div>
 
+          {/* Agency branding soft prompt — shown only for new external client creation */}
+          {agencyBrandingMissing && !isEditMode && !standalone && (
+            <div className="flex items-start gap-4 rounded-xl border border-amber-500/20 bg-amber-500/5 px-5 py-4 text-sm">
+              <AlertTriangle size={18} className="mt-0.5 shrink-0 text-amber-500" />
+              <div className="flex-1 space-y-0.5">
+                <p className="font-semibold text-foreground">Your agency brand isn't set up yet</p>
+                <p className="text-muted-foreground">
+                  The welcome email sent to this client will display <strong>"Tercero"</strong> instead of your agency name.
+                  Complete your brand identity first for a fully white-labeled experience.
+                </p>
+              </div>
+              <Link
+                to="/myorganization"
+                className="shrink-0 flex items-center gap-1 text-xs font-semibold text-amber-500 hover:text-amber-400 transition-colors mt-0.5"
+              >
+                Set up <ArrowRight size={13} />
+              </Link>
+            </div>
+          )}
+
           {/* SECTION: Branding */}
           <section className="space-y-8">
             <h2 className="text-2xl font-normal">Branding & Identity</h2>
@@ -356,7 +392,7 @@ export default function CreateClientPage({ customSubmit, onSuccess, onCancel, st
                         onValueChange={field.onChange}
                         value={field.value}
                         key={field.value} // Key ensures re-render on value change
-                        disabled={standalone}
+                        disabled={isInternalContext}
                       >
                         <SelectTrigger className="w-full">
                           <SelectValue placeholder="Select industry" />
@@ -414,7 +450,7 @@ export default function CreateClientPage({ customSubmit, onSuccess, onCancel, st
                           onValueChange={field.onChange}
                           value={field.value}
                           key={field.value}
-                          disabled={standalone}
+                          disabled={isInternalContext}
                         >
                           <SelectTrigger className="w-full">
                             <SelectValue />

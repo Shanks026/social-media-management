@@ -1,11 +1,10 @@
 import { useEffect } from 'react'
 import { useHeader } from '../components/misc/header-context'
-import { User, Settings as SettingsIcon } from 'lucide-react'
-
+import { User, Building2 } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { ComingSoon } from './clients/clientSections/ComingSoon'
 
-// --- Main Settings Page ---
+import ProfileSettings from './settings/ProfileSettings'
+import AgencySettings from './settings/AgencySettings'
 
 export default function Settings() {
   const { setHeader } = useHeader()
@@ -27,19 +26,15 @@ export default function Settings() {
               Settings
             </h1>
             <p className="text-sm text-muted-foreground font-light">
-              Manage your profile and workspace preferences.
+              Manage your profile and agency workspace.
             </p>
           </div>
 
           <Tabs defaultValue="profile" className="space-y-10">
             <TabsList className="bg-transparent border-b border-white/5 rounded-none p-0 h-auto gap-8 w-full justify-start">
               {[
-                { value: 'profile', icon: User, label: 'My Profile' },
-                {
-                  value: 'preferences',
-                  icon: SettingsIcon,
-                  label: 'Preferences',
-                },
+                { value: 'profile', icon: User, label: 'Profile' },
+                { value: 'agency', icon: Building2, label: 'Agency' },
               ].map((tab) => (
                 <TabsTrigger
                   key={tab.value}
@@ -70,14 +65,14 @@ export default function Settings() {
               value="profile"
               className="pt-4 focus-visible:outline-none"
             >
-              <ComingSoon icon={User} title="Profile Settings" />
+              <ProfileSettings />
             </TabsContent>
 
             <TabsContent
-              value="preferences"
+              value="agency"
               className="pt-4 focus-visible:outline-none"
             >
-              <ComingSoon icon={SettingsIcon} title="Workspace Preferences" />
+              <AgencySettings />
             </TabsContent>
           </Tabs>
         </div>

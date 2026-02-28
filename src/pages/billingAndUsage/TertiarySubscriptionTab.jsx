@@ -28,7 +28,7 @@ import { PlanOverview } from './PlanOverview'
 
 // ── Plan data ──
 
-const plans = [
+export const plans = [
   {
     id: 'ignite',
     name: 'Ignite',
@@ -106,7 +106,7 @@ const UpgradeRequestDialog = ({
 
   if (!targetPlan) return null
 
-  const prefilledMessage = `Dear Tertiary Admin,
+  const prefilledMessage = `Dear Tercero Admin,
 
 I would like to request a plan upgrade for my agency account.
 
@@ -398,7 +398,7 @@ export const SubscriptionTab = ({ sub, isLoading }) => {
     setUpgradeDialogOpen(true)
   }
   return (
-    <div className="space-y-12">
+    <div className="space-y-10">
       <PlanOverview
         sub={sub}
         currentPlan={currentPlan}

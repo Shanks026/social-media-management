@@ -37,12 +37,7 @@ const STATUS_CONFIG = {
     className:
       'bg-pink-100 text-pink-800 dark:bg-pink-500/10 dark:text-pink-400',
   },
-  APPROVED: {
-    label: 'Approved',
-    icon: CheckCircle2,
-    className:
-      'bg-lime-100 text-lime-800 dark:bg-lime-500/10 dark:text-lime-400',
-  },
+
   ARCHIVED: {
     label: 'Archived - Read Only',
     icon: Archive,

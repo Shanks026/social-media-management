@@ -27,9 +27,12 @@ export default function PostDetails() {
   const [isRevisionConfirmOpen, setIsRevisionConfirmOpen] = useState(false)
   const [adminNotes, setAdminNotes] = useState('')
 
+  // Internal lifecycle: Approve & Schedule dialog state
+  const [isApproveScheduleOpen, setIsApproveScheduleOpen] = useState(false)
+  const [approveDate, setApproveDate] = useState(null)
+
   // --- Queries ---
 
-  // Unified Query: Fetches either by Post ID (Parent) or Version ID (Specific)
   const {
     data: post,
     isLoading,
@@ -40,6 +43,9 @@ export default function PostDetails() {
     retry: false,
   })
 
+  // Derive whether this post belongs to an internal client
+  const isInternal = post?.clients?.is_internal === true
+
   // Fetches the sidebar history based on the post_id found in the query above
   const { data: versions } = useQuery({
     queryKey: ['post-versions-list', post?.actual_post_id],
@@ -48,7 +54,7 @@ export default function PostDetails() {
       const { data, error: vError } = await supabase
         .from('post_versions')
         .select('id, version_number, status, created_at')
-        .eq('post_id', post.actual_post_id) // Use the parent post reference
+        .eq('post_id', post.actual_post_id)
         .order('version_number', { ascending: false })
       if (vError) throw vError
       return data
@@ -59,39 +65,26 @@ export default function PostDetails() {
 
   const createRevisionMutation = useMutation({
     mutationFn: () => {
-      // Check if user exists before calling the RPC
       if (!user?.id)
         throw new Error('You must be logged in to create a revision')
-
-      return createRevision(
-        post.id,
-        user.id, // Now 'user' is defined and we pass the ID
-        adminNotes,
-      )
+      return createRevision(post.id, user.id, adminNotes)
     },
     onSuccess: (newVersionId) => {
       toast.success('New version created')
       setIsRevisionConfirmOpen(false)
       setAdminNotes('')
 
-      // 1. Invalidate history so the sidebar updates
       queryClient.invalidateQueries({
         queryKey: ['post-versions-list', post?.actual_post_id],
       })
-
-      // 2. CRITICAL FIX: Invalidate the query for the CURRENT (Old) version.
-      // This forces a re-fetch when you navigate back to this ID, updating status to 'ARCHIVED'.
       queryClient.invalidateQueries({
         queryKey: ['post-version', post.id],
       })
-
-      // Optional: You can also manually set the cache for the old version to be instant
       queryClient.setQueryData(['post-version', post.id], (oldData) => {
         if (!oldData) return oldData
         return { ...oldData, status: 'ARCHIVED' }
       })
 
-      // Navigate to the new version's detail page
       navigate(`/clients/${clientId}/posts/${newVersionId}`)
     },
     onError: (err) => {
@@ -104,9 +97,7 @@ export default function PostDetails() {
     mutationFn: async (versionId) => {
       const { data, error: rpcError } = await supabase.rpc(
         'send_post_for_approval',
-        {
-          p_post_version_id: versionId,
-        },
+        { p_post_version_id: versionId },
       )
       if (rpcError) throw rpcError
       return data
@@ -119,13 +110,35 @@ export default function PostDetails() {
     onError: (err) => toast.error(err.message),
   })
 
+  // Internal only: directly schedule without client approval
+  const approveAndScheduleMutation = useMutation({
+    mutationFn: async (versionId) => {
+      if (!approveDate) throw new Error('Please select a publish date.')
+      const { error: upError } = await supabase
+        .from('post_versions')
+        .update({
+          status: 'SCHEDULED',
+          target_date: approveDate.toISOString(),
+        })
+        .eq('id', versionId)
+      if (upError) throw upError
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['post-version', postId] })
+      toast.success('Post scheduled successfully')
+      setIsApproveScheduleOpen(false)
+      setApproveDate(null)
+    },
+    onError: (err) => toast.error(err.message),
+  })
+
   const markAsPublishedMutation = useMutation({
     mutationFn: async (versionId) => {
       const { error: upError } = await supabase
         .from('post_versions')
         .update({
           status: 'PUBLISHED',
-          published_at: new Date().toISOString(), // <--- Capture timestamp
+          published_at: new Date().toISOString(),
         })
         .eq('id', versionId)
       if (upError) throw upError
@@ -168,15 +181,21 @@ export default function PostDetails() {
     <div className="flex flex-col lg:flex-row h-full">
       <PostContent
         post={post}
+        isInternal={isInternal}
         showHistory={showHistory}
         setShowHistory={setShowHistory}
         onSendForApproval={() => setIsConfirmOpen(true)}
+        onApproveAndSchedule={() => {
+          if (post.target_date) setApproveDate(new Date(post.target_date))
+          setIsApproveScheduleOpen(true)
+        }}
         onPublish={() => setIsPublishConfirmOpen(true)}
         onCreateRevision={() => setIsRevisionConfirmOpen(true)}
         onEdit={() => setIsEditOpen(true)}
         isRevisionPending={createRevisionMutation.isPending}
         isApprovalPending={sendForApprovalMutation.isPending}
         isPublishPending={markAsPublishedMutation.isPending}
+        isApproveSchedulePending={approveAndScheduleMutation.isPending}
       />
 
       <DraftPostForm
@@ -195,9 +214,9 @@ export default function PostDetails() {
         />
       )}
 
-      {/* Dialogs mapping stays largely the same */}
       <PostActionDialogs
         post={post}
+        isInternal={isInternal}
         isConfirmOpen={isConfirmOpen}
         setIsConfirmOpen={setIsConfirmOpen}
         isPublishConfirmOpen={isPublishConfirmOpen}
@@ -212,6 +231,12 @@ export default function PostDetails() {
         isRevisionPending={createRevisionMutation.isPending}
         adminNotes={adminNotes}
         setAdminNotes={setAdminNotes}
+        isApproveScheduleOpen={isApproveScheduleOpen}
+        setIsApproveScheduleOpen={setIsApproveScheduleOpen}
+        approveDate={approveDate}
+        setApproveDate={setApproveDate}
+        onConfirmApproveSchedule={() => approveAndScheduleMutation.mutate(post.id)}
+        isApproveSchedulePending={approveAndScheduleMutation.isPending}
       />
     </div>
   )
