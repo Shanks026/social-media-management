@@ -291,6 +291,9 @@ export default function OverviewTab({ client }) {
     fill: chartConfig[name].color,
   }))
 
+  // Filter out the zero values specifically for the Pie chart to avoid uneven padding accumulation
+  const pieChartData = chartData.filter(d => d.value > 0)
+
   const totalPosts = posts.filter((post) => {
     const status = post.status?.replace('_', ' ') || 'DRAFT'
     return ALLOWED_STATUSES.includes(status)
@@ -585,7 +588,7 @@ export default function OverviewTab({ client }) {
                 <ChartContainer config={chartConfig} className="h-full w-full">
                   <PieChart>
                     <Pie
-                      data={chartData}
+                      data={pieChartData}
                       cx="50%"
                       cy="80%"
                       startAngle={180}
@@ -598,7 +601,7 @@ export default function OverviewTab({ client }) {
                       nameKey="name"
                       stroke="none"
                     >
-                      {chartData.map((entry, index) => (
+                      {pieChartData.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={entry.fill} />
                       ))}
                     </Pie>
