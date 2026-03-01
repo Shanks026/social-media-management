@@ -1,6 +1,4 @@
-import { useEffect, useState } from "react";
 import { Outlet } from "react-router-dom";
-import { supabase } from "@/lib/supabase";
 
 import { AppSidebar } from "./components/sidebar/app-sidebar";
 import { AppHeader } from "./AppHeader";

@@ -119,6 +119,7 @@ const PLATFORM_CONFIG = {
 }
 
 // Helper to check if a file/preview is a video
+// eslint-disable-next-line no-unused-vars
 const isVideoContent = (fileOrPreview) => {
   if (!fileOrPreview) return false
   // Check if it's our preview object
@@ -143,7 +144,7 @@ const formSchema = z
     }),
     client_id: z.string().optional(),
   })
-  .superRefine((data, ctx) => {
+  .superRefine((data) => {
     if (data.platforms.includes('youtube')) {
       // Check if there is at least one video in images
       // Note: 'images' in form state contains File objects.
@@ -192,6 +193,7 @@ export default function DraftPostForm({
     },
   })
 
+  // eslint-disable-next-line react-hooks/incompatible-library
   const formClientId = form.watch('client_id')
   const effectiveClientId = clientId || formClientId
 

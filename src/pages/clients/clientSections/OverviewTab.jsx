@@ -624,48 +624,46 @@ export default function OverviewTab({ client }) {
               </div>
 
               {/* Legend */}
-              <div className="grid grid-cols-2 gap-y-2 gap-x-4 mt-2">
+              <div className="flex flex-col gap-2.5 mt-4 w-full px-1">
                 {chartData.map((data, idx) => (
                   <div
                     key={idx}
-                    className="flex items-center justify-between text-sm"
+                    className="flex items-center justify-between text-xs"
                   >
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2.5">
                       <div
-                        className="h-2 w-2 rounded-full"
+                        className="h-2.5 w-2.5 rounded-full shrink-0"
                         style={{ backgroundColor: data.fill }}
                       />
                       <span className="text-muted-foreground capitalize">
                         {data.name.toLowerCase()}
                       </span>
                     </div>
-                    <span className="font-medium">{data.value}</span>
+                    <span className="font-semibold tabular-nums">{data.value}</span>
                   </div>
                 ))}
               </div>
 
               {/* Bottleneck Alert */}
-              <div className="mt-6 pt-4 border-t border-border/40">
+              <div className="mt-4 pt-3 border-t border-border/40 px-1">
                 {needsRevisionCount > 0 ? (
-                  <div className="flex items-start gap-2 text-destructive bg-destructive/10 p-3 rounded-lg text-sm font-medium">
-                    <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-                    <span>
-                      {needsRevisionCount} post{needsRevisionCount !== 1 && 's'}{' '}
-                      require immediate revision
+                  <div className="flex items-center gap-2 border-l-2 border-destructive pl-3">
+                    <AlertCircle className="h-3.5 w-3.5 text-destructive shrink-0" />
+                    <span className="text-xs text-destructive font-medium">
+                      {needsRevisionCount} post{needsRevisionCount !== 1 && 's'} require immediate revision
                     </span>
                   </div>
                 ) : pendingApprovalCount > 0 ? (
-                  <div className="flex items-start gap-2 text-amber-600 dark:text-amber-500 bg-amber-500/10 p-3 rounded-lg text-sm font-medium">
-                    <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-                    <span>
-                      {pendingApprovalCount} post
-                      {pendingApprovalCount !== 1 && 's'} pending approval
+                  <div className="flex items-center gap-2 border-l-2 border-amber-500 pl-3">
+                    <AlertCircle className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+                    <span className="text-xs text-amber-600 dark:text-amber-400 font-medium">
+                      {pendingApprovalCount} post{pendingApprovalCount !== 1 && 's'} awaiting approval
                     </span>
                   </div>
                 ) : (
-                  <div className="flex items-start gap-2 text-emerald-600 dark:text-emerald-500 bg-emerald-500/10 p-3 rounded-lg text-sm font-medium">
-                    <CheckCircle2 className="h-4 w-4 shrink-0 mt-0.5" />
-                    <span>Pipeline is looking good!</span>
+                  <div className="flex items-center gap-2 border-l-2 border-emerald-500 pl-3">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                    <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">Pipeline is looking good!</span>
                   </div>
                 )}
               </div>

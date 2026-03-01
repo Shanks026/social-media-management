@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { format } from 'date-fns'
 import { toast } from 'sonner'
@@ -128,8 +128,6 @@ export default function PostContent({
 }) {
   const notesRef = useRef(null)
   const queryClient = useQueryClient()
-  const { user } = useAuth()
-
   // States
   const [isPreviewOpen, setIsPreviewOpen] = useState(false)
   const [isSocialPreviewOpen, setIsSocialPreviewOpen] = useState(false)
@@ -143,6 +141,13 @@ export default function PostContent({
   const canApproveAndSchedule =
     post.status === 'DRAFT' && post.content && post.media_urls?.length > 0
 
+  const handlePrev = useCallback(() => {
+    setActiveIndex((p) => (p === 0 ? post.media_urls.length - 1 : p - 1))
+  }, [post.media_urls])
+  const handleNext = useCallback(() => {
+    setActiveIndex((p) => (p === post.media_urls.length - 1 ? 0 : p + 1))
+  }, [post.media_urls])
+
   // Keyboard Navigation
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -152,12 +157,7 @@ export default function PostContent({
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isPreviewOpen, post.media_urls])
-
-  const handlePrev = () =>
-    setActiveIndex((p) => (p === 0 ? post.media_urls.length - 1 : p - 1))
-  const handleNext = () =>
-    setActiveIndex((p) => (p === post.media_urls.length - 1 ? 0 : p + 1))
+  }, [isPreviewOpen, post.media_urls, handlePrev, handleNext])
 
   const deleteMediaMutation = useMutation({
     mutationFn: (url) => deleteIndividualMedia(post.id, url, post.media_urls),
@@ -228,7 +228,7 @@ export default function PostContent({
 
               {post.status === 'PUBLISHED' ? (
                 <div className="flex items-center gap-2 text-sm">
-                  <div className="h-4 w-[1px] bg-border hidden sm:block" />
+                  <div className="h-4 w-px bg-border hidden sm:block" />
                   <CheckCircle2 size={14} className="text-lime-600" />
                   <span className="font-medium">Published:</span>
                   <Badge variant="secondary">
@@ -238,7 +238,7 @@ export default function PostContent({
               ) : (
                 post.target_date && (
                   <div className="flex items-center gap-2 text-sm">
-                    <div className="h-4 w-[1px] bg-border hidden sm:block" />
+                    <div className="h-4 w-px bg-border hidden sm:block" />
                     {post.status === 'SCHEDULED' ? (
                       <Clock size={14} className="text-violet-600" />
                     ) : (
@@ -274,7 +274,7 @@ export default function PostContent({
                 <Button
                   disabled={!canApproveAndSchedule || isApproveSchedulePending}
                   onClick={onApproveAndSchedule}
-                  className="gap-2 px-6 font-semibold shadow-sm transition-all hover:translate-y-[-1px]"
+                  className="gap-2 px-6 font-semibold shadow-sm transition-all hover:-translate-y-px"
                 >
                   {isApproveSchedulePending ? (
                     <Loader2 size={16} className="animate-spin" />
@@ -287,7 +287,7 @@ export default function PostContent({
                 <Button
                   disabled={!canSendForApproval || isApprovalPending}
                   onClick={onSendForApproval}
-                  className="gap-2 px-6 font-semibold shadow-sm transition-all hover:translate-y-[-1px]"
+                  className="gap-2 px-6 font-semibold shadow-sm transition-all hover:-translate-y-px"
                 >
                   {isApprovalPending ? (
                     <Loader2 size={16} className="animate-spin" />
@@ -320,7 +320,7 @@ export default function PostContent({
                 <Button
                   disabled={isPublishPending}
                   onClick={onPublish}
-                  className="gap-2 px-6 font-semibold shadow-sm transition-all hover:translate-y-[-1px]"
+                  className="gap-2 px-6 font-semibold shadow-sm transition-all hover:-translate-y-px"
                 >
                   {isPublishPending ? (
                     <Loader2 size={16} className="animate-spin" />
@@ -337,7 +337,7 @@ export default function PostContent({
               <Button
                 onClick={onCreateRevision}
                 disabled={isRevisionPending}
-                className="gap-2 px-6 font-semibold shadow-sm transition-all hover:translate-y-[-1px]"
+                className="gap-2 px-6 font-semibold shadow-sm transition-all hover:-translate-y-px"
               >
                 {isRevisionPending ? (
                   <Loader2 size={16} className="animate-spin" />

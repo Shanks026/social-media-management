@@ -12,13 +12,6 @@ import {
   AlertTriangle,
   Play,
   Clock,
-  Layers,
-  Instagram,
-  Linkedin,
-  Twitter,
-  Facebook,
-  Youtube,
-  Globe,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -48,7 +41,6 @@ import {
 } from '@/components/ui/empty'
 import { toast } from 'sonner'
 import { useNavigate } from 'react-router-dom'
-import { useAuth } from '@/context/AuthContext'
 import { cn } from '@/lib/utils'
 import { getUrgencyStatus } from '@/lib/client-helpers'
 
@@ -128,7 +120,6 @@ const PlatformIcon = ({ name }) => {
 
 export default function DraftPostList({ clientId }) {
   const queryClient = useQueryClient()
-  const { user } = useAuth()
   const navigate = useNavigate()
 
   const [previewPost, setPreviewPost] = useState(null)
@@ -168,7 +159,10 @@ export default function DraftPostList({ clientId }) {
   })
 
   useEffect(() => {
-    if (!previewPost) setActiveImageIndex(0)
+    if (!previewPost) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setActiveImageIndex(0)
+    }
   }, [previewPost])
 
   const handlePrev = (e) => {

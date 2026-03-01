@@ -19,7 +19,6 @@ const getStatusDotColor = (status) => {
 
 export default function VersionSidebar({
   versions,
-  currentPostId,
   currentVersionId,
   clientId,
   onClose,

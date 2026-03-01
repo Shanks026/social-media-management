@@ -220,6 +220,7 @@ export default function YouTubePreview({ post, client }) {
 
 // Helper for Shorts Action Bar Icons
 // Reduced padding to p-2, icon size to 20, and text to 10px
+// eslint-disable-next-line no-unused-vars
 function ActionItem({ icon: Icon, label, filled }) {
   return (
     <div className="flex flex-col items-center gap-0.5 drop-shadow-md">

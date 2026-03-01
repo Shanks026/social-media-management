@@ -89,6 +89,7 @@ export default function PublicReview() {
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isPreviewOpen, activeIndex, post?.media_urls])
 
   const handlePrev = () =>

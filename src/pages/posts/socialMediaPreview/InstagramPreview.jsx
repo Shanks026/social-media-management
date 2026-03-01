@@ -49,12 +49,11 @@ const isVideoSource = (url) => {
 export default function InstagramPreview({ post, client }) {
   const [isExpanded, setIsExpanded] = useState(false)
   const [isLiked, setIsLiked] = useState(false)
-  const [currentSlide, setCurrentSlide] = useState(0)
+  const [currentSlide] = useState(0)
   const [aspectRatio, setAspectRatio] = useState(1 / 1)
   const [isReel, setIsReel] = useState(false)
 
   const mediaUrls = post?.media_urls || []
-  const hasMultipleMedia = mediaUrls.length > 1
   const content = post?.content || ''
   const currentMedia = mediaUrls[currentSlide]
 

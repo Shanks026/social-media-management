@@ -21,6 +21,7 @@ import BillingUsage from './pages/billingAndUsage/BillingUsage'
 import CreateClientPage from './pages/clients/CreateClientPage'
 import NotesAndReminders from './pages/NotesAndReminders'
 import MeetingsPage from './pages/MeetingsPage'
+import Dashboard from './pages/dashboard/Dashboard'
 
 
 function AppRoutes() {
@@ -34,6 +35,7 @@ function AppRoutes() {
 
       {session ? (
         <Route element={<AppShell user={user} />}>
+          <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/clients" element={<Clients />} />
           <Route path="/myorganization" element={<MyOrganization />} />
           <Route path="/clients/create" element={<CreateClientPage />} />

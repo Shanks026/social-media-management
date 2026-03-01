@@ -28,7 +28,6 @@ import { format } from 'date-fns'
 
 export default function PostActionDialogs({
   post,
-  isInternal,
   isConfirmOpen,
   setIsConfirmOpen,
   isPublishConfirmOpen,

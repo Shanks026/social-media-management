@@ -127,7 +127,7 @@ export default function ProfileSettings() {
       })
       if (error) throw error
       toast.success('Profile updated!')
-    } catch (err) {
+    } catch {
       toast.error('Failed to update profile.')
     } finally {
       setIsSaving(false)

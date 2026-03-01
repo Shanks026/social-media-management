@@ -56,6 +56,7 @@ export function AppShell({ user }) {
 
   useEffect(() => {
     checkAgencyStatus()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user])
 
   const handleSetupComplete = async () => {

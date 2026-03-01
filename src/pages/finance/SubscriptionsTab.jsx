@@ -15,7 +15,6 @@ import { useExpenses, useDeleteExpense, useRenewSubscription, useUpdateExpense }
 import { formatCurrency } from '@/utils/finance'
 import { supabase } from '@/lib/supabase'
 import { useQuery } from '@tanstack/react-query'
-import { cn } from '@/lib/utils'
 
 // Components
 import { Button } from '@/components/ui/button'

@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 import { useState, useEffect, useMemo } from 'react'
 import {
   Dialog,
@@ -85,7 +86,7 @@ export default function EditNoteDialog({
     ]
   }, [clientsData])
 
-  const selectedClient = allClients.find((c) => c.id === selectedClientId)
+  // const selectedClient = allClients.find((c) => c.id === selectedClientId)
 
   const mutation = useMutation({
     mutationFn: (updates) => updateNote(note.id, updates),

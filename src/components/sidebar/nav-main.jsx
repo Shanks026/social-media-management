@@ -16,6 +16,7 @@ import {
   Bell,
   Users,
   Video,
+  LayoutDashboard,
 } from 'lucide-react'
 import { NavLink, useLocation } from 'react-router-dom'
 import {
@@ -37,6 +38,7 @@ import {
 } from '@/components/ui/collapsible'
 
 const navItems = [
+  { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
   { title: 'My Organization', url: '/myorganization', icon: Building2 },
   { title: 'Clients', url: '/clients', icon: UserStar },
   {

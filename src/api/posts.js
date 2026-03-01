@@ -116,7 +116,6 @@ export async function fetchPostDetails(id) {
 export async function createDraftPost({
   clientId,
   content, // Coming from form.content
-  images, // Usually what the form holds before they are URLs
   mediaUrls, // If they are already uploaded
   platforms,
   title,

@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import {
   MessageCircle,
   Repeat2,
@@ -23,23 +22,12 @@ const isVideoSource = (url) => {
 }
 
 export default function TwitterPreview({ post, client }) {
-  const [currentSlide, setCurrentSlide] = useState(0)
 
   const mediaUrls = post?.media_urls || []
   const content = post?.content || ''
   const handle = client?.social_links?.twitter?.handle || 'username'
   const displayName = client?.name || 'Display Name'
   const logo = client?.logo_url
-
-  const handleNext = (e) => {
-    e.stopPropagation()
-    setCurrentSlide((prev) => (prev === mediaUrls.length - 1 ? 0 : prev + 1))
-  }
-
-  const handlePrev = (e) => {
-    e.stopPropagation()
-    setCurrentSlide((prev) => (prev === 0 ? mediaUrls.length - 1 : prev - 1))
-  }
 
   return (
     <div className="mx-auto w-full max-w-[420px] overflow-hidden rounded-xl border border-zinc-200 bg-white p-4 shadow-xl dark:border-zinc-800 dark:bg-black transition-colors duration-200">
@@ -118,17 +106,14 @@ export default function TwitterPreview({ post, client }) {
             ))}
           </div>
 
-          {/* Carousel arrows if more than 4 images (or simple UX decision to use carousel) */}
           {mediaUrls.length > 4 && (
             <div className="absolute inset-0 flex items-center justify-between px-2 opacity-0 group-hover:opacity-100 transition-opacity">
               <button
-                onClick={handlePrev}
                 className="bg-black/50 text-white rounded-full p-1"
               >
                 <ChevronLeft size={16} />
               </button>
               <button
-                onClick={handleNext}
                 className="bg-black/50 text-white rounded-full p-1"
               >
                 <ChevronRight size={16} />

@@ -31,7 +31,6 @@ const STATUS_STYLES = {
 export default function MonthView({
   currentMonth,
   postsByDate,
-  isLoading,
   clientId,
 }) {
   const [selectedDate, setSelectedDate] = useState(null)
@@ -133,7 +132,7 @@ export default function MonthView({
                 {/* Styled "More" Indicator */}
                 {remainingCount > 0 && (
                   <button className="w-full py-1.5 px-2 rounded-md bg-muted/30 hover:bg-primary/10 hover:text-primary text-[10px] font-black text-muted-foreground border border-dashed border-muted-foreground/20 flex items-center justify-center gap-1 transition-all">
-                    <Plus size={10} className="stroke-[3]" />
+                    <Plus size={10} className="stroke-3" />
                     {remainingCount} more
                   </button>
                 )}

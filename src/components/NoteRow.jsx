@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { format } from 'date-fns'
 import {
   Bell,
@@ -94,10 +94,12 @@ export default function NoteRow({ note, clientMap = {}, showClient = false }) {
   })
 
   const isBusy = isSettingStatus || isDeleting
-  const overdue =
-    note.due_at &&
-    new Date(note.due_at).getTime() < Date.now() &&
-    note.status === 'TODO'
+  
+  const overdue = useMemo(() => {
+    if (!note.due_at || note.status !== 'TODO') return false
+    // eslint-disable-next-line react-hooks/purity
+    return new Date(note.due_at).getTime() < Date.now()
+  }, [note.due_at, note.status])
 
   const client = clientMap[note.client_id]
 

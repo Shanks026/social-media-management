@@ -105,6 +105,7 @@ function NoteCard({ note, clientMap }) {
   const isBusy = isSettingStatus || isDeleting
   const overdue =
     note.due_at &&
+    // eslint-disable-next-line react-hooks/purity
     new Date(note.due_at).getTime() < Date.now() &&
     note.status === 'TODO'
   const client = clientMap[note.client_id]
@@ -411,6 +412,7 @@ export default function NotesAndReminders() {
   // Fix: each status goes into its own bucket — ARCHIVED never touches nonTodoNotes
   const { overdueNotes, upcomingNotes, doneNotes, archivedNotes } =
     useMemo(() => {
+      // eslint-disable-next-line react-hooks/purity
       const now = Date.now()
       const overdue = [],
         upcoming = [],

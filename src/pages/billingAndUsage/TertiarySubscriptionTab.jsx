@@ -501,7 +501,7 @@ export const SubscriptionTab = ({ sub, isLoading }) => {
                   label: 'Cost Per Extra Client',
                   values: ['₹400 / mo', '₹400 / mo', '₹370 / mo'],
                 },
-              ].map((row, idx) => (
+              ].map((row) => (
                 <tr
                   key={row.label}
                   className="border-b border-border/20 transition-colors hover:bg-muted/10"
