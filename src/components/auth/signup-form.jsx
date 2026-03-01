@@ -39,7 +39,7 @@ export function SignupForm({ className, ...props }) {
     if (error) {
       setError(error.message)
     } else if (data?.session) {
-      navigate('/clients')
+      navigate('/dashboard')
     } else {
       setError('Success! Please check your email to confirm your account.')
     }

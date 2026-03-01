@@ -30,7 +30,7 @@ export function LoginForm({ className, ...props }) {
     if (error) {
       setError(error.message)
     } else if (data?.session) {
-      navigate('/clients')
+      navigate('/dashboard')
     }
   }
 
