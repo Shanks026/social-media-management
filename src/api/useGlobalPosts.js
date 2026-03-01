@@ -83,6 +83,7 @@ function normalizePosts(data) {
       const c = row.clients
       return {
         id: row.id,
+        actual_post_id: row.id,
         client_id: row.client_id,
         version_id: v.id,
         title: v.title,

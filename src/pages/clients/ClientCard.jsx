@@ -259,7 +259,7 @@ function ClientCard({ client, onOpen, onDelete }) {
                   </div>
                 )}
               </div>
-              <div className="space-y-2 min-w-0">
+              <div className="space-y-3 min-w-0">
                 <div className="flex items-center gap-1">
                   <h3 className="text-lg font-medium text-foreground tracking-tight leading-none truncate]">
                     {client.name}
@@ -314,17 +314,22 @@ function ClientCard({ client, onOpen, onDelete }) {
             ) : (
               <div className="grid grid-cols-3 gap-4 py-4 border-t border-dashed border-gray-100 dark:border-white/5">
                 {/* Column 1: LTV */}
-                <div className="flex flex-col gap-0.5">
-                  <span className="text-[11px] font-medium text-muted-foreground truncate">
-                    Total Revenue{' '}
-                    <span className="text-[9px] opacity-70">(Cash)</span>
-                  </span>
-                  <span className="text-sm font-bold text-foreground">
-                    {metrics?.total_revenue
-                      ? formatCurrency(metrics.total_revenue)
-                      : formatCurrency(0)}
-                  </span>
-                </div>
+              <div className="flex flex-col gap-0.5">
+  <span className="text-[11px] font-medium text-muted-foreground truncate">
+    Total Revenue{' '}
+    <span className="text-[9px] opacity-70">(Cash)</span>
+  </span>
+  <span 
+    className={cn(
+      "text-sm font-bold",
+      (metrics?.total_revenue || 0) > 0 
+        ? "text-emerald-600 dark:text-emerald-500" 
+        : "text-primary"
+    )}
+  >
+    {formatCurrency(metrics?.total_revenue || 0)}
+  </span>
+</div>
 
                 {/* Column 2: Burn */}
                 <div className="flex flex-col gap-0.5">

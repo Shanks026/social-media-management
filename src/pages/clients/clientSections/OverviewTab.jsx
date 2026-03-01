@@ -389,7 +389,7 @@ export default function OverviewTab({ client }) {
         <CardTitle className="text-lg font-medium flex items-center gap-2">
           Notes & Reminders
         </CardTitle>
-        <CreateNoteDialog clientId={client.id}>
+        <CreateNoteDialog clientId={client.id} lockClient={true}>
           <Button variant="ghost" size="icon" className="h-8 w-8 -mr-2">
             <Plus className="h-4 w-4" />
           </Button>
@@ -924,6 +924,11 @@ export default function OverviewTab({ client }) {
                 <CardTitle className="text-lg font-medium">
                   Upcoming Meetings
                 </CardTitle>
+                <CreateMeetingDialog defaultClientId={client.id} lockClient={true}>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 -mr-2">
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </CreateMeetingDialog>
               </CardHeader>
               <CardContent className="flex-1 flex flex-col">
                 {isLoadingMeetings ? (
@@ -1270,7 +1275,10 @@ export default function OverviewTab({ client }) {
           if (!val) setInvoicePrefill(null)
         }}
         prefill={invoicePrefill}
-        onSuccess={() => navigate('/finance/invoices')}
+        onSuccess={() => {
+          // The dialog itself calls onOpenChange(false) which clears prefill
+          navigate(`/clients/${client.id}?tab=financials&subtab=invoices`)
+        }}
       />
 
       <AddTransactionDialog

@@ -9,20 +9,38 @@ import {
   Facebook,
   Youtube,
   Globe,
-  Play,
   Eye,
   ChevronLeft,
   ChevronRight,
+  MoreVertical,
+  Edit2,
+  Trash2,
+  AlertTriangle,
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
+import { getUrgencyStatus } from '@/lib/client-helpers'
 import StatusBadge from '@/components/StatusBadge'
-import { Dialog, DialogContent } from '@/components/ui/dialog'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { deleteMeeting } from '@/api/meetings'
+import { deletePost } from '@/api/posts'
 import CreateMeetingDialog from '@/components/CreateMeetingDialog'
 
 /**
@@ -95,11 +113,11 @@ const PlatformIcon = ({ name }) => {
   const imgSrc = `/platformIcons/${fileName}.png`
 
   return (
-    <div className="flex h-7 w-7 items-center justify-center rounded-full border-white dark:border-[#1c1c1f] bg-white dark:bg-zinc-900 shadow-sm transition-transform hover:scale-110 overflow-hidden">
+    <div className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-card bg-white dark:bg-zinc-900 shadow-sm transition-transform hover:scale-110 overflow-hidden relative z-10">
       <img
         src={imgSrc}
         alt={name}
-        className="size-6 object-contain"
+        className="size-5 object-contain"
         // Fallback for missing images
         onError={(e) => (e.target.style.display = 'none')}
       />
@@ -112,6 +130,7 @@ export function CalendarPostCard({ post }) {
   const queryClient = useQueryClient()
   const [isPreviewOpen, setIsPreviewOpen] = useState(false)
   const [activeImageIndex, setActiveImageIndex] = useState(0)
+  const [postToDelete, setPostToDelete] = useState(null)
 
   const { mutate: handleDeleteMeeting, isPending: isDeletingMeeting } =
     useMutation({
@@ -128,6 +147,25 @@ export function CalendarPostCard({ post }) {
       },
     })
 
+  const { mutate: handleDeletePost, isPending: isDeletingPost } = useMutation({
+    mutationFn: (postId) => deletePost(postId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['draft-posts', post?.client_id] })
+      queryClient.invalidateQueries({ queryKey: ['posts', post?.client_id] })
+      queryClient.invalidateQueries({ queryKey: ['global-posts'] })
+      queryClient.invalidateQueries({ queryKey: ['calendar'] })
+      queryClient.invalidateQueries({ queryKey: ['global-calendar'] })
+      queryClient.invalidateQueries({ queryKey: ['global-post-counts'] })
+      queryClient.invalidateQueries({ queryKey: ['postCounts', post?.client_id] })
+      toast.success('Post deleted successfully')
+      setPostToDelete(null)
+    },
+    onError: (error) => {
+      toast.error('Failed to delete post: ' + error.message)
+      setPostToDelete(null)
+    }
+  })
+
   const handleCardClick = () => {
     navigate(`/clients/${post.client_id}/posts/${post.version_id}`)
   }
@@ -137,33 +175,41 @@ export function CalendarPostCard({ post }) {
   if (post.isMeeting) {
     return (
       <div
-        className="flex flex-col bg-card border border-blue-200 dark:border-blue-900 rounded-xl overflow-hidden shadow-sm"
+        className="flex flex-col bg-card/50 shadow-sm rounded-2xl px-6 py-8 transition-all duration-200 border border-blue-200/50 dark:border-blue-900/50"
       >
-        <div className="p-6 flex flex-col flex-1">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2.5 min-w-0">
-               <div className="size-6 rounded-md bg-blue-100 dark:bg-blue-900 flex items-center justify-center shrink-0">
-                  <span className="text-xs font-bold text-blue-600 dark:text-blue-300">
-                     {post.client_name?.charAt(0) || 'M'}
-                  </span>
-               </div>
-              <span className="text-xs font-semibold text-foreground truncate">
-                {post.client_name}
-              </span>
-            </div>
-            <Badge variant="outline" className="border-blue-500 text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/50">Meeting</Badge>
+        {/* Header */}
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="border-blue-500 text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/50 rounded-full px-2.5 py-0.5 border-none font-medium">
+              Meeting
+            </Badge>
           </div>
-
-          <div className="mb-6 space-y-2">
-            <h4 className="text-base font-semibold tracking-tight leading-tight text-foreground line-clamp-1">
-              {post.title}
-            </h4>
-            <p className="text-sm font-normal text-muted-foreground leading-[1.6] line-clamp-2 min-h-10">
-              {post.notes || 'No agenda provided'}
-            </p>
+          <div className="flex items-center gap-2 min-w-0" onClick={(e) => e.stopPropagation()}>
+             <div className="size-5 rounded-md bg-blue-100 dark:bg-blue-900 flex items-center justify-center shrink-0 ring-1 ring-border">
+                <span className="text-[10px] font-bold text-blue-600 dark:text-blue-300">
+                   {post.client_name?.charAt(0) || 'M'}
+                </span>
+             </div>
+            <span className="text-xs font-semibold text-foreground truncate max-w-[100px]">
+              {post.client_name}
+            </span>
           </div>
+        </div>
 
-          <div className="flex items-center justify-between mt-auto pt-5 border-t border-border/50">
+        {/* Title */}
+        <h3 className="text-lg font-medium tracking-tight text-foreground mb-6 line-clamp-1">
+          {post.title}
+        </h3>
+
+        {/* Description */}
+        <p className="text-sm text-muted-foreground leading-relaxed line-clamp-2 mb-6 min-h-10">
+          {post.notes || 'No agenda provided'}
+        </p>
+
+        {/* Dotted Divider & Footer */}
+        <div className="mt-auto">
+          <hr className="border-t border-dashed border-border mb-4" />
+          <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <CreateMeetingDialog editMeeting={post} defaultClientId={post.client_id}>
                 <Button variant="outline" size="sm" className="h-7 text-xs px-2" onClick={(e) => e.stopPropagation()}>
@@ -183,13 +229,14 @@ export function CalendarPostCard({ post }) {
                 Mark as done
               </Button>
             </div>
-            <div className="flex items-center gap-4 text-foreground">
-              <div className="flex items-center gap-1.5 bg-muted/50 px-2 py-1 rounded-md">
+            {/* Date Badge */}
+            <div className="bg-muted/50 rounded-full px-3 py-1.5 flex items-center justify-center">
+              <span className="text-[13px] font-medium text-muted-foreground tracking-tight flex items-center gap-1.5">
                 <Clock size={14} className="text-blue-500" />
-                <span className="text-xs font-semibold">
-                  {format(new Date(post.target_date), 'p')}
-                </span>
-              </div>
+                {post.target_date
+                  ? format(new Date(post.target_date), "d MMMM yyyy '•' h:mm a")
+                  : 'No Date Set'}
+              </span>
             </div>
           </div>
         </div>
@@ -253,16 +300,103 @@ export function CalendarPostCard({ post }) {
     )
   }
 
+  const platformsArr = Array.isArray(post.platforms) ? post.platforms : []
+  const displayedPlatforms = platformsArr.slice(0, 3)
+  const remainingPlatforms = platformsArr.length - 3
+
+  // Status mapping
+  const postStatus = post.status || 'DRAFT'
+  // Determine action visibility
+  // Edit is allowed for: DRAFT, PENDING_APPROVAL, NEEDS_REVISION, SCHEDULED
+  const canEdit = ['DRAFT', 'PENDING_APPROVAL', 'NEEDS_REVISION', 'SCHEDULED'].includes(postStatus)
+  // Delete is allowed for EVERYTHING EXCEPT PUBLISHED
+  const canDelete = postStatus !== 'PUBLISHED'
+
+  // Calculate health
+  const isCompleted = ['PUBLISHED', 'ARCHIVED'].includes(postStatus)
+  const health = !isCompleted ? getUrgencyStatus(post.target_date) : null
+
   return (
     <>
       {/* 1. The Main Clickable Card */}
       <div
         onClick={handleCardClick}
-        className="flex flex-col bg-card border rounded-xl overflow-hidden hover:bg-muted/30 transition-colors duration-200 cursor-pointer"
+        className="flex flex-col bg-card/50 border dark:border-none rounded-2xl px-6 py-8 transition-all duration-200 cursor-pointer group"
       >
+        {/* Header: Status, Version & ClientInfo */}
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <StatusBadge status={post.status || 'DRAFT'} />
+            <Badge variant="secondary" className="rounded-full text-muted-foreground hover:bg-muted/80 text-xs px-2.5 py-0.5 border-none font-medium font-mono">
+              v{post.version_number || '1'}
+            </Badge>
+          </div>
+          <div className="flex items-center gap-3 min-w-0" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-2 min-w-0">
+              {post.client_logo && (
+                <img
+                  src={post.client_logo}
+                  alt=""
+                  className="size-5 rounded-lg object-cover ring-1 ring-border shrink-0"
+                  onError={(e) => (e.target.style.display = 'none')}
+                />
+              )}
+              <span className="text-xs font-semibold text-foreground truncate max-w-[100px]">
+                {post.client_name}
+              </span>
+            </div>
+
+            {/* Dropdown Menu for Actions */}
+            {(canEdit || canDelete) && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-muted-foreground hover:bg-muted"
+                  >
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-40 rounded-xl">
+                  {canEdit && (
+                    <DropdownMenuItem
+                      className="cursor-pointer font-medium text-foreground py-2"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        navigate(
+                          `/clients/${post.client_id}/posts/${post.version_id}`
+                        )
+                      }}
+                    >
+                      <Edit2 className="h-4 w-4 mr-2" /> Edit Post
+                    </DropdownMenuItem>
+                  )}
+                  {canDelete && (
+                    <DropdownMenuItem
+                      className="cursor-pointer font-medium text-destructive focus:bg-destructive/10 focus:text-destructive py-2"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setPostToDelete(post)
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" /> Delete Post
+                    </DropdownMenuItem>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          </div>
+        </div>
+
+        {/* Title */}
+        <h3 className="text-lg font-medium tracking-tight text-foreground mb-6 line-clamp-1">
+          {post.title || 'Untitled Draft'}
+        </h3>
+
         {/* Media Preview Section */}
         <div
-          className="relative aspect-video bg-muted overflow-hidden shrink-0 group/media cursor-pointer"
+          className="relative aspect-video bg-muted/40 rounded-xl overflow-hidden mb-6 shrink-0 group/media border border-border/40 cursor-pointer"
           onClick={(e) => {
             e.stopPropagation() // Prevents CardClick when clicking to open preview
             setIsPreviewOpen(true)
@@ -276,48 +410,69 @@ export function CalendarPostCard({ post }) {
           </div>
         </div>
 
-        <div className="p-6 flex flex-col flex-1">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <img
-                src={post.client_logo}
-                alt=""
-                className="size-5 rounded-lg object-cover ring-1 ring-border"
-              />
-              <span className="text-xs font-semibold text-foreground truncate">
-                {post.client_name}
-              </span>
-            </div>
-            <StatusBadge status={post.status} />
-          </div>
+        {/* Description */}
+        <p className="text-sm text-muted-foreground leading-relaxed line-clamp-2 mb-6">
+          {post.content || 'No description provided.'}
+        </p>
 
-          <div className="mb-6 space-y-2">
-            <h4 className="text-base font-semibold tracking-tight leading-tight text-foreground line-clamp-1">
-              {post.title}
-            </h4>
-            <p className="text-sm font-normal text-muted-foreground leading-[1.6] line-clamp-2">
-              {post.content}
-            </p>
-          </div>
-
-          <div className="flex items-center justify-between mt-auto pt-5 border-t border-border/50">
-            <div className="flex items-center -space-x-2">
-              {post.platforms.map((p) => (
-                <PlatformIcon key={p} name={p} />
-              ))}
-            </div>
-
-            <div className="flex items-center gap-4 text-foreground">
-              <div className="flex items-center gap-1.5">
-                <Clock size={14} />
-                <span className="text-xs font-semibold">
-                  {format(new Date(post.target_date), 'p')}
-                </span>
+        {/* Dotted Divider & Footer */}
+        <div className="mt-auto">
+          <hr className="border-t border-dashed border-border mb-4" />
+          
+          <div className="flex items-center justify-between">
+            {/* Platforms */}
+            <div className="flex items-center">
+              <div className="flex -space-x-2">
+                {displayedPlatforms.map((p, idx) => (
+                  <PlatformIcon key={`${p}-${idx}`} name={p} />
+                ))}
               </div>
+              {remainingPlatforms > 0 && (
+                <span className="text-xs font-medium text-muted-foreground ml-2">
+                  +{remainingPlatforms}
+                </span>
+              )}
+            </div>
 
-              <Badge variant="secondary" className="text-xs">
-                <Layers size={10} className="me-1" />v{post.version_number}
-              </Badge>
+            {/* Date Badge and Urgency Info */}
+            <div
+              className={cn(
+                "rounded-full px-3 py-1.5 flex items-center justify-center gap-2 border shadow-sm",
+                health?.label === 'Overdue'
+                  ? "bg-destructive/10 border-destructive/20 text-destructive"
+                  : "bg-muted/50 border-border/50 text-muted-foreground"
+              )}
+            >
+              {health && health.color && (
+                <div className="flex items-center gap-1.5">
+                  <div className="relative flex h-2 w-2 items-center justify-center">
+                    {health.pulse && (
+                      <span
+                        className={cn(
+                          'absolute inline-flex h-full w-full animate-ping rounded-full opacity-75',
+                          health.color
+                        )}
+                      />
+                    )}
+                    <span
+                      className={cn(
+                        'relative inline-flex h-2 w-2 rounded-full',
+                        health.color
+                      )}
+                    />
+                  </div>
+                  {['Overdue', 'Urgent'].includes(health.label) && (
+                    <span className="text-[10px] font-bold uppercase tracking-wider whitespace-nowrap">
+                      {health.label}
+                    </span>
+                  )}
+                </div>
+              )}
+              <span className="text-[13px] font-medium tracking-tight whitespace-nowrap">
+                {post.target_date
+                  ? format(new Date(post.target_date), "d MMMM yyyy '•' h:mm a")
+                  : 'No Date Set'}
+              </span>
             </div>
           </div>
         </div>
@@ -363,6 +518,52 @@ export function CalendarPostCard({ post }) {
               </>
             )}
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* 3. Delete Confirmation Dialog */}
+      <Dialog
+        open={!!postToDelete}
+        onOpenChange={(open) => !open && setPostToDelete(null)}
+      >
+        <DialogContent
+          className="sm:max-w-[425px] rounded-2xl"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <DialogHeader>
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-red-100 dark:bg-red-900/30 rounded-full">
+                <AlertTriangle className="h-6 w-6 text-red-600 dark:text-red-400" />
+              </div>
+              <DialogTitle className="text-xl">Delete Post</DialogTitle>
+            </div>
+            <DialogDescription className="pt-4 text-base">
+              Are you sure you want to delete{' '}
+              <span className="font-semibold text-foreground">
+                "{postToDelete?.title || 'Untitled Draft'}"
+              </span>
+              ? This action cannot be undone and all media will be permanently
+              deleted.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 mt-6">
+            <Button
+              variant="outline"
+              onClick={() => setPostToDelete(null)}
+              disabled={isDeletingPost}
+  
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => handleDeletePost(postToDelete?.actual_post_id || postToDelete?.id)}
+              disabled={isDeletingPost}
+              
+            >
+              {isDeletingPost ? 'Deleting...' : 'Delete Post'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </>

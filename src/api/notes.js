@@ -43,6 +43,18 @@ export async function updateNoteStatus(noteId, status) {
   return data
 }
 
+export async function updateNote(noteId, updates) {
+  const { data, error } = await supabase
+    .from('client_notes')
+    .update(updates)
+    .eq('id', noteId)
+    .select()
+    .single()
+
+  if (error) throw error
+  return data
+}
+
 export async function deleteNote(noteId) {
   const { error } = await supabase
     .from('client_notes')

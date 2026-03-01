@@ -3,7 +3,8 @@ import { format, isBefore, startOfDay } from 'date-fns'
 import { Calendar as CalendarIcon, Plus, Trash2, FileText } from 'lucide-react'
 
 // API
-import { useCreateInvoice, useNextInvoiceNumber } from '@/api/invoices'
+import { useQueryClient } from '@tanstack/react-query'
+import { useCreateInvoice, useNextInvoiceNumber, invoiceKeys } from '@/api/invoices'
 import { useClients } from '@/api/clients'
 import { useSubscription } from '@/api/useSubscription'
 import { cn } from '@/lib/utils'
@@ -56,6 +57,7 @@ export function CreateInvoiceDialog({
   // Called after successful invoice creation. Use to e.g. navigate to /finance/invoices.
   onSuccess: onSuccessCallback = null,
 }) {
+  const queryClient = useQueryClient()
   const { data: clientData } = useClients()
   const { data: nextNumber } = useNextInvoiceNumber()
   const { mutate: createInvoice, isPending } = useCreateInvoice()
@@ -218,8 +220,15 @@ export function CreateInvoiceDialog({
       {
         onSuccess: () => {
           toast.success('Invoice created as draft')
+          // Prefetch the client's invoices to avoid flicker on navigation
+          queryClient.prefetchQuery({
+            queryKey: invoiceKeys.list({ clientId, status: undefined }),
+          })
           onOpenChange(false)
-          onSuccessCallback?.()
+          // Small delay for the dialog to start closing before the page transition
+          if (onSuccessCallback) {
+            setTimeout(onSuccessCallback, 50)
+          }
         },
         onError: (err) => {
           toast.error(`Failed to create invoice: ${err.message}`)

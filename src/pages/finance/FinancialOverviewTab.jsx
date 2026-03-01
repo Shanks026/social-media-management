@@ -72,6 +72,7 @@ const chartConfig = {
 export default function OverviewPage({ clientId, client, subTabs }) {
   const [viewMode, setViewMode] = useState(clientId ? 'SELECTED' : 'ALL')
   const [accountingMethod, setAccountingMethod] = useState('CASH') // CASH, ACCRUAL
+  const [chartRange, setChartRange] = useState('3M') // 3M, 6M, 12M
 
   // Determine if we are viewing an internal client (affects which KPIs to show)
   const isInternalClientView = !!clientId && !!client?.is_internal
@@ -195,7 +196,8 @@ export default function OverviewPage({ clientId, client, subTabs }) {
       }
     })
 
-    for (let i = 5; i >= 0; i--) {
+    const rangeMonths = parseInt(chartRange.replace('M', ''))
+    for (let i = rangeMonths - 1; i >= 0; i--) {
       const date = subMonths(today, i)
       const monthStart = startOfMonth(date)
       const monthEnd = endOfMonth(date)
@@ -257,7 +259,6 @@ export default function OverviewPage({ clientId, client, subTabs }) {
       filteredTransactions,
     }
   }, [
-    transactions,
     expenses,
     invoices,
     loadingTx,
@@ -265,6 +266,7 @@ export default function OverviewPage({ clientId, client, subTabs }) {
     viewMode,
     internalAccount,
     accountingMethod,
+    chartRange,
   ])
 
   if (!dashboardData) return <DashboardSkeleton />
@@ -462,15 +464,30 @@ export default function OverviewPage({ clientId, client, subTabs }) {
         {/* CHART */}
         <Card className="lg:col-span-2 rounded-2xl border-border/50 shadow-sm flex flex-col h-[400px] bg-card/50 dark:bg-card/20">
           <CardHeader className="pb-2 shrink-0">
-            <CardTitle className="text-lg font-medium tracking-normal text-foreground">
-              Profitability Trend
-            </CardTitle>
-            <p className="text-sm text-muted-foreground font-light">
-              {accountingMethod === 'CASH'
-                ? 'Cash Collected'
-                : 'Total Invoiced'}{' '}
-              vs Expenses (Last 6 Months)
-            </p>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <CardTitle className="text-lg font-medium tracking-normal text-foreground">
+                  Profitability Trend
+                </CardTitle>
+                <p className="text-sm text-muted-foreground font-light">
+                  {accountingMethod === 'CASH'
+                    ? 'Cash Collected'
+                    : 'Total Invoiced'}{' '}
+                  vs Expenses (Last {chartRange.replace('M', ' ')} Months)
+                </p>
+              </div>
+              <Tabs
+                value={chartRange}
+                onValueChange={setChartRange}
+                className="w-full sm:w-auto"
+              >
+                <TabsList className="h-8 bg-muted/50 p-0.5 border">
+                  <TabsTrigger value="3M" className="text-[10px] h-7 px-2">3M</TabsTrigger>
+                  <TabsTrigger value="6M" className="text-[10px] h-7 px-2">6M</TabsTrigger>
+                  <TabsTrigger value="12M" className="text-[10px] h-7 px-2">12M</TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
           </CardHeader>
           <CardContent className="flex-1 min-h-0">
             <ChartContainer config={chartConfig} className="w-full h-full">
@@ -521,7 +538,7 @@ export default function OverviewPage({ clientId, client, subTabs }) {
           </CardContent>
         </Card>
 
-        {/* SIDE PANEL: Pending Invoices (external) OR Top Expenses (internal) */}
+        {/* SIDE PANEL */}
         {isInternalClientView ? (
           <Card className="rounded-xl bg-card/50 dark:bg-card/20 border-border/50 shadow-sm gap-0 flex flex-col">
             <CardHeader className="px-6 shrink-0">
@@ -584,7 +601,6 @@ export default function OverviewPage({ clientId, client, subTabs }) {
                 </div>
               </div>
             </CardHeader>
-
             <CardContent className="flex-1 overflow-auto px-6 custom-scrollbar">
               <div className="space-y-0 pb-4">
                 {dashboardData.filteredTransactions.filter(

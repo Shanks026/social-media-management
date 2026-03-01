@@ -133,15 +133,15 @@ export default function CreateNoteDialog({
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       {children && <DialogTrigger asChild>{children}</DialogTrigger>}
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-[480px]">
+        <DialogHeader className="pb-2">
           <DialogTitle>Add Note or Reminder</DialogTitle>
           <DialogDescription>
             Create a private note or set a due date for a reminder.
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="grid gap-5 py-4">
           {/* ── Client ── */}
           <div className="space-y-2">
             <Label>
@@ -168,7 +168,7 @@ export default function CreateNoteDialog({
                 onValueChange={setSelectedClientId}
                 disabled={isLoadingClients}
               >
-                <SelectTrigger className="h-9 text-sm">
+                <SelectTrigger className="h-9 text-sm w-full">
                   <SelectValue placeholder="Select a client…" />
                 </SelectTrigger>
                 <SelectContent>
@@ -231,7 +231,7 @@ export default function CreateNoteDialog({
             />
           </div>
 
-          <DialogFooter className="pt-4">
+          <DialogFooter className="pt-2">
             <Button
               type="button"
               variant="outline"

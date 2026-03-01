@@ -267,7 +267,9 @@ export function AddTransactionDialog({
                   name="amount"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Amount (₹)</FormLabel>
+                      <FormLabel>
+                        Amount (₹) <span className="text-destructive">*</span>
+                      </FormLabel>
                       <FormControl>
                         <Input placeholder="0.00" {...field} />
                       </FormControl>
@@ -280,7 +282,9 @@ export function AddTransactionDialog({
                   name="date"
                   render={({ field }) => (
                     <FormItem className="flex flex-col">
-                      <FormLabel className="mb-1">Date</FormLabel>
+                      <FormLabel className="mb-1">
+                        Date <span className="text-destructive">*</span>
+                      </FormLabel>
                       <Popover>
                         <PopoverTrigger asChild>
                           <FormControl>
@@ -356,7 +360,17 @@ export function AddTransactionDialog({
                           {clients.map((c) => (
                             <SelectItem key={c.id} value={c.id}>
                               <div className="flex items-center gap-2">
-                                <User className="h-4 w-4 text-muted-foreground" />
+                                {c.logo_url ? (
+                                  <img
+                                    src={c.logo_url}
+                                    alt=""
+                                    className="size-4 rounded-sm object-cover"
+                                  />
+                                ) : (
+                                  <div className="size-4 rounded-sm bg-muted flex items-center justify-center text-[8px] font-bold text-muted-foreground uppercase">
+                                    {c.name?.[0]}
+                                  </div>
+                                )}
                                 <span>{c.name}</span>
                               </div>
                             </SelectItem>
@@ -372,7 +386,9 @@ export function AddTransactionDialog({
                   name="category"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Category</FormLabel>
+                      <FormLabel>
+                        Category <span className="text-destructive">*</span>
+                      </FormLabel>
                       <Select
                         onValueChange={field.onChange}
                         value={field.value}
@@ -408,7 +424,9 @@ export function AddTransactionDialog({
                 name="description"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Description</FormLabel>
+                    <FormLabel>
+                      Description <span className="text-destructive">*</span>
+                    </FormLabel>
                     <FormControl>
                       <Textarea
                         placeholder="Enter details..."

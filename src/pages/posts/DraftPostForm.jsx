@@ -141,6 +141,7 @@ const formSchema = z
       required_error: 'Schedule date and time are required',
       invalid_type_error: 'Please select a valid date and time',
     }),
+    client_id: z.string().optional(),
   })
   .superRefine((data, ctx) => {
     if (data.platforms.includes('youtube')) {
@@ -164,6 +165,7 @@ const formSchema = z
 
 export default function DraftPostForm({
   clientId,
+  availableClients = [],
   open,
   onOpenChange,
   initialData = null,
@@ -186,8 +188,12 @@ export default function DraftPostForm({
       platforms: [],
       images: [],
       target_date: undefined,
+      client_id: '',
     },
   })
+
+  const formClientId = form.watch('client_id')
+  const effectiveClientId = clientId || formClientId
 
   // Derived state for validation
   const watchedPlatforms = form.watch('platforms') || []
@@ -209,6 +215,7 @@ export default function DraftPostForm({
         target_date: initialData.target_date
           ? new Date(initialData.target_date)
           : undefined,
+        client_id: initialData.client_id || '',
       })
 
       // Initialize with correct types for remote URLs
@@ -221,15 +228,23 @@ export default function DraftPostForm({
   }, [initialData, open, form])
 
   const { data: client, isLoading: isClientLoading } = useQuery({
-    queryKey: ['client', clientId],
-    queryFn: () => fetchClientById(clientId),
-    enabled: !!clientId && open,
+    queryKey: ['client', effectiveClientId],
+    queryFn: () => fetchClientById(effectiveClientId),
+    enabled: !!effectiveClientId && open,
   })
 
   const availablePlatforms = client?.platforms || []
 
   // Custom Submit Handler to enforce Youtube Constraint
   const onSubmit = (values) => {
+    if (!effectiveClientId) {
+      form.setError('client_id', {
+        type: 'manual',
+        message: 'Please select a target client.',
+      })
+      return
+    }
+
     if (values.platforms.includes('youtube') && !hasVideo) {
       form.setError('platforms', {
         type: 'manual',
@@ -261,7 +276,7 @@ export default function DraftPostForm({
       }
 
       const uploadPromises = (values.images || []).map((file) =>
-        uploadPostImage({ file, clientId }),
+        uploadPostImage({ file, clientId: effectiveClientId }),
       )
       const newMediaUrls = await Promise.all(uploadPromises)
 
@@ -272,7 +287,7 @@ export default function DraftPostForm({
       const finalMediaUrls = [...existingRemoteUrls, ...newMediaUrls]
 
       const payload = {
-        clientId,
+        clientId: effectiveClientId,
         title: values.title,
         content: values.content,
         mediaUrls: finalMediaUrls,
@@ -286,7 +301,9 @@ export default function DraftPostForm({
       return createDraftPost(payload)
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['draft-posts', clientId] })
+      queryClient.invalidateQueries({ queryKey: ['draft-posts', effectiveClientId] })
+      queryClient.invalidateQueries({ queryKey: ['posts', effectiveClientId] })
+      queryClient.invalidateQueries({ queryKey: ['global-posts'] })
       queryClient.invalidateQueries({ queryKey: ['subscription', user?.id] })
       if (isEditMode)
         queryClient.invalidateQueries({
@@ -500,6 +517,52 @@ export default function DraftPostForm({
                 />
               </div>
 
+
+              {!clientId && availableClients.length > 0 && (
+                <FormField
+                  control={form.control}
+                  name="client_id"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>
+                        Target Client <span className="text-destructive">*</span>
+                      </FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select a client for this post" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {availableClients.map((c) => (
+                            <SelectItem key={c.id} value={c.id}>
+                              <div className="flex items-center gap-2">
+                                {c.logo_url ? (
+                                  <img
+                                    src={c.logo_url}
+                                    alt=""
+                                    className="size-4 rounded-sm object-cover"
+                                  />
+                                ) : (
+                                  <div className="size-4 rounded-sm bg-muted flex items-center justify-center text-[8px] font-bold text-muted-foreground uppercase">
+                                    {c.name?.[0]}
+                                  </div>
+                                )}
+                                <span>{c.name}</span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+
               {/* Platform Select */}
               <FormField
                 control={form.control}
@@ -510,7 +573,11 @@ export default function DraftPostForm({
                       Target Platforms <span className="text-destructive">*</span>
                     </FormLabel>
                     <div className="flex flex-wrap gap-2 pt-2">
-                      {isClientLoading ? (
+                      {!effectiveClientId ? (
+                        <p className="text-xs text-muted-foreground italic">
+                          Select client to choose platform
+                        </p>
+                      ) : isClientLoading ? (
                         <Skeleton className="h-8 w-32" />
                       ) : (
                         Object.entries(PLATFORM_CONFIG)

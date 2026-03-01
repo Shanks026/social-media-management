@@ -139,7 +139,6 @@ export default function ClientProfileView({ client }) {
             </div>
             <div className="flex items-center gap-2">
               <IndustryBadge industryValue={client.industry} />
-              <span className="text-[10px] text-muted-foreground/30">•</span>
               {/* <span className="text-xs text-muted-foreground font-light tracking-wide italic">
                 Active Client Workspace
               </span> */}

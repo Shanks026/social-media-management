@@ -141,7 +141,7 @@ export default function CreateMeetingDialog({
     mutationFn,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['meetings'] })
-      queryClient.invalidateQueries({ queryKey: ['upcomingMeeting'] })
+      queryClient.invalidateQueries({ queryKey: ['upcomingMeetings'] })
       queryClient.invalidateQueries({ queryKey: ['todayMeetings'] })
       toast.success(editMeeting ? 'Meeting updated successfully' : 'Meeting scheduled successfully')
       setOpen(false)

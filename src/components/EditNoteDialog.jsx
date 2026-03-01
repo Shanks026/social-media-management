@@ -22,7 +22,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { Building2 } from 'lucide-react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { createNote } from '@/api/notes'
+import { updateNote } from '@/api/notes'
 import { useClients } from '@/api/clients'
 import { toast } from 'sonner'
 
@@ -45,41 +45,35 @@ function ClientAvatar({ client }) {
 
 /**
  * Props:
- *  - clientId    string | null  — Pre-selects a client on open.
- *  - lockClient  boolean        — When true, hides the selector and shows a
- *                                 read-only pill. Pass this from OverviewTab.
- *                                 Omit (or false) from the global page so the
- *                                 user can freely choose any client.
- *  - children                  — Trigger element.
- *  - open / onOpenChange       — Controlled open state (optional).
+ *  - note        object         — The note to edit.
+ *  - open / onOpenChange       — Controlled open state.
  *  - onSuccess   () => void    — Called after a successful save (optional).
  */
-export default function CreateNoteDialog({
-  clientId,
-  lockClient = false,
-  children,
+export default function EditNoteDialog({
+  note,
   open,
   onOpenChange,
   onSuccess,
 }) {
-  const [internalOpen, setInternalOpen] = useState(false)
-  const isControlled = open !== undefined && onOpenChange !== undefined
-  const isOpen = isControlled ? open : internalOpen
-  const setIsOpen = isControlled ? onOpenChange : setInternalOpen
-
   const queryClient = useQueryClient()
-
-  const [selectedClientId, setSelectedClientId] = useState(clientId ?? '')
-  const [title, setTitle] = useState('')
-  const [content, setContent] = useState('')
+  const [selectedClientId, setSelectedClientId] = useState(note?.client_id ?? '')
+  const [title, setTitle] = useState(note?.title ?? '')
+  const [content, setContent] = useState(note?.content ?? '')
   const [dueAt, setDueAt] = useState('')
 
-  // Re-apply the default whenever the dialog opens or clientId changes
+  // Sync state when note changes or dialog opens
   useEffect(() => {
-    if (isOpen) {
-      setSelectedClientId(clientId ?? '')
+    if (open && note) {
+      setSelectedClientId(note.client_id)
+      setTitle(note.title)
+      setContent(note.content ?? '')
+      
+      const dateStr = note.due_at 
+        ? new Date(note.due_at).toISOString().slice(0, 16) 
+        : ''
+      setDueAt(dateStr)
     }
-  }, [isOpen, clientId])
+  }, [open, note])
 
   const { data: clientsData, isLoading: isLoadingClients } = useClients()
 
@@ -94,26 +88,18 @@ export default function CreateNoteDialog({
   const selectedClient = allClients.find((c) => c.id === selectedClientId)
 
   const mutation = useMutation({
-    mutationFn: (newNote) => createNote(newNote),
+    mutationFn: (updates) => updateNote(note.id, updates),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['global-notes'] })
       queryClient.invalidateQueries({
         queryKey: ['client-notes', selectedClientId],
       })
-      toast.success('Note added successfully')
-      resetForm()
-      setIsOpen(false)
+      toast.success('Note updated successfully')
+      onOpenChange(false)
       onSuccess?.()
     },
-    onError: (err) => toast.error('Failed to add note: ' + err.message),
+    onError: (err) => toast.error('Failed to update note: ' + err.message),
   })
-
-  const resetForm = () => {
-    setTitle('')
-    setContent('')
-    setDueAt('')
-    if (!lockClient) setSelectedClientId(clientId ?? '')
-  }
 
   const handleSubmit = (e) => {
     e.preventDefault()
@@ -126,80 +112,62 @@ export default function CreateNoteDialog({
       title,
       content: content || null,
       due_at: dueAt ? new Date(dueAt).toISOString() : null,
-      status: 'TODO',
     })
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      {children && <DialogTrigger asChild>{children}</DialogTrigger>}
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>Add Note or Reminder</DialogTitle>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[480px]">
+        <DialogHeader className="pb-2">
+          <DialogTitle>Edit Note or Reminder</DialogTitle>
           <DialogDescription>
-            Create a private note or set a due date for a reminder.
+            Update your private note or reminder details.
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="grid gap-5 py-4">
           {/* ── Client ── */}
           <div className="space-y-2">
             <Label>
               Client <span className="text-destructive">*</span>
             </Label>
-
-            {lockClient && selectedClient ? (
-              // Read-only pill — used when opened from a specific client's OverviewTab
-              <div className="flex items-center gap-2 h-9 px-3 rounded-md border bg-muted/40 text-sm">
-                <ClientAvatar client={selectedClient} />
-                <span className="font-medium text-foreground">
-                  {selectedClient.name}
-                </span>
-                {selectedClient.is_internal && (
-                  <Badge variant="secondary" className="text-[9px] px-1 py-0">
-                    Internal
-                  </Badge>
-                )}
-              </div>
-            ) : (
-              // Free selector — used from the global Notes & Reminders page
-              <Select
-                value={selectedClientId}
-                onValueChange={setSelectedClientId}
-                disabled={isLoadingClients}
-              >
-                <SelectTrigger className="h-9 text-sm">
-                  <SelectValue placeholder="Select a client…" />
-                </SelectTrigger>
-                <SelectContent>
-                  {allClients.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      <div className="flex items-center gap-2">
-                        <ClientAvatar client={c} />
-                        <span className="truncate">{c.name}</span>
-                        {c.is_internal && (
-                          <Badge
-                            variant="secondary"
-                            className="text-[9px] px-1 py-0 ml-1"
-                          >
-                            Internal
-                          </Badge>
-                        )}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
+            
+            <Select
+              value={selectedClientId}
+              onValueChange={setSelectedClientId}
+              disabled={isLoadingClients}
+            >
+              <SelectTrigger className="h-9 text-sm w-full">
+                <SelectValue placeholder="Select a client…" />
+              </SelectTrigger>
+              <SelectContent>
+                {allClients.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    <div className="flex items-center gap-2">
+                      <ClientAvatar client={c} />
+                      <span className="truncate">{c.name}</span>
+                      {c.is_internal && (
+                        <Badge
+                          variant="secondary"
+                          className="text-[9px] px-1 py-0 ml-1"
+                        >
+                          Internal
+                        </Badge>
+                      )}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* ── Title ── */}
           <div className="space-y-2">
-            <Label htmlFor="note-title">
+            <Label htmlFor="edit-note-title">
               Title <span className="text-destructive">*</span>
             </Label>
             <Input
-              id="note-title"
+              id="edit-note-title"
               placeholder="e.g., Follow up on signed agreement"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
@@ -209,9 +177,9 @@ export default function CreateNoteDialog({
 
           {/* ── Details ── */}
           <div className="space-y-2">
-            <Label htmlFor="note-content">Details (Optional)</Label>
+            <Label htmlFor="edit-note-content">Details (Optional)</Label>
             <Textarea
-              id="note-content"
+              id="edit-note-content"
               placeholder="Any extra context or links..."
               value={content}
               onChange={(e) => setContent(e.target.value)}
@@ -222,23 +190,20 @@ export default function CreateNoteDialog({
 
           {/* ── Due date ── */}
           <div className="space-y-2">
-            <Label htmlFor="note-due">Due Date & Time (Optional)</Label>
+            <Label htmlFor="edit-note-due">Due Date & Time (Optional)</Label>
             <Input
-              id="note-due"
+              id="edit-note-due"
               type="datetime-local"
               value={dueAt}
               onChange={(e) => setDueAt(e.target.value)}
             />
           </div>
 
-          <DialogFooter className="pt-4">
+          <DialogFooter className="pt-2">
             <Button
               type="button"
               variant="outline"
-              onClick={() => {
-                resetForm()
-                setIsOpen(false)
-              }}
+              onClick={() => onOpenChange(false)}
               disabled={mutation.isPending}
             >
               Cancel
@@ -249,7 +214,7 @@ export default function CreateNoteDialog({
                 mutation.isPending || !title.trim() || !selectedClientId
               }
             >
-              {mutation.isPending ? 'Saving...' : 'Save Note'}
+              {mutation.isPending ? 'Saving...' : 'Save Changes'}
             </Button>
           </DialogFooter>
         </form>

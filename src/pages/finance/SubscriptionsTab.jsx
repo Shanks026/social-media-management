@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { format, isBefore, startOfToday } from 'date-fns'
+import { format, isBefore, startOfToday, differenceInDays } from 'date-fns'
 import {
   Plus,
   Trash2,
@@ -11,7 +11,7 @@ import {
 } from 'lucide-react'
 
 // API & Libs
-import { useExpenses, useDeleteExpense } from '@/api/expenses'
+import { useExpenses, useDeleteExpense, useRenewSubscription, useUpdateExpense } from '@/api/expenses'
 import { formatCurrency } from '@/utils/finance'
 import { supabase } from '@/lib/supabase'
 import { useQuery } from '@tanstack/react-query'
@@ -31,6 +31,8 @@ import { Badge } from '@/components/ui/badge'
 import StatusBadge from '@/components/StatusBadge'
 import { CustomTable } from '@/components/CustomTable'
 import { AddSubscriptionDialog } from './AddSubscriptionDialog'
+import { Switch } from '@/components/ui/switch'
+import { toast } from 'sonner'
 
 export default function SubscriptionsTab({ clientId, subTabs }) {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -41,6 +43,8 @@ export default function SubscriptionsTab({ clientId, subTabs }) {
     clientId,
   })
   const { mutate: deleteExpense } = useDeleteExpense()
+  const { mutate: renewSubscription } = useRenewSubscription()
+  const { mutate: updateExpense } = useUpdateExpense()
 
   const { data: clientData } = useQuery({
     queryKey: ['clients-list'],
@@ -73,18 +77,36 @@ export default function SubscriptionsTab({ clientId, subTabs }) {
   const metrics = useMemo(() => {
     let monthlyBurn = 0
     filteredExpenses.forEach((e) => {
+      // Only include active subscriptions in burn rate
+      if (!e.is_active) return;
+      
       const cost = parseFloat(e.cost)
       if (e.billing_cycle === 'MONTHLY') monthlyBurn += cost
       else if (e.billing_cycle === 'QUARTERLY') monthlyBurn += cost / 3
       else if (e.billing_cycle === 'YEARLY') monthlyBurn += cost / 12
     })
     const nextBill = filteredExpenses
-      .filter((e) => !isBefore(new Date(e.next_billing_date), startOfToday()))
+      .filter((e) => e.is_active && !isBefore(new Date(e.next_billing_date), startOfToday()))
       .sort(
         (a, b) => new Date(a.next_billing_date) - new Date(b.next_billing_date),
       )[0]
     return { monthlyBurn, nextBill }
   }, [filteredExpenses])
+
+  const handleToggleStatus = (id, currentStatus) => {
+    updateExpense({ id, updates: { is_active: !currentStatus } })
+  }
+
+  const handleMarkAsPaid = (expense) => {
+    renewSubscription(expense.id, {
+      onSuccess: () => {
+        toast.success(`Marked ${expense.name} as paid! Next billing date updated.`)
+      },
+      onError: () => {
+        toast.error('Failed to update billing date.')
+      }
+    })
+  }
 
   const columns = [
     {
@@ -146,15 +168,40 @@ export default function SubscriptionsTab({ clientId, subTabs }) {
         ),
     },
     {
+      header: 'Status',
+      width: '10%',
+      render: (e) => (
+        <Switch 
+          checked={e.is_active !== false} 
+          onCheckedChange={() => handleToggleStatus(e.id, e.is_active !== false)}
+          aria-label="Toggle active status"
+        />
+      ),
+    },
+    {
       header: 'Actions',
       width: '100px', // Fixed width for actions is best
       headerClassName: 'text-right pr-6',
       cellClassName: 'text-right pr-6',
-      render: (e) => (
-        <div className="flex justify-end gap-1">
+      render: (e) => {
+        const isDueSoon = differenceInDays(new Date(e.next_billing_date), startOfToday()) <= 3
+        return (
+          <div className="flex justify-end gap-1">
+            {e.is_active !== false && isDueSoon && (
+              <Button
+                variant="ghost"
+              size="icon"
+              title="Mark as Paid"
+              onClick={() => handleMarkAsPaid(e)}
+              className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50"
+            >
+              <TrendingUp className="h-4 w-4" />
+            </Button>
+          )}
           <Button
             variant="ghost"
             size="icon"
+            title="Edit"
             onClick={() => {
               setEditingExpense(e)
               setIsDialogOpen(true)
@@ -166,13 +213,15 @@ export default function SubscriptionsTab({ clientId, subTabs }) {
           <Button
             variant="ghost"
             size="icon"
+            title="Delete"
             onClick={() => deleteExpense(e.id)}
-            className="h-8 w-8 text-destructive"
+            className="h-8 w-8 text-destructive hover:bg-destructive/10"
           >
             <Trash2 className="h-4 w-4" />
           </Button>
         </div>
-      ),
+        )
+      },
     },
   ]
 

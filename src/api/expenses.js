@@ -29,6 +29,7 @@ export function useExpenses(filters = {}, options = {}) {
           next_billing_date,
           category,
           created_at,
+          is_active,
           assigned_client_id,
           assigned_client:assigned_client_id (
             id,
@@ -96,6 +97,7 @@ export function useCreateExpense() {
         billing_cycle: formData.billing_cycle,
         next_billing_date: formData.next_billing_date,
         category: formData.category,
+        is_active: formData.is_active !== undefined ? formData.is_active : true,
         assigned_client_id: sanitizedClientId,
       }
 
@@ -159,6 +161,23 @@ export function useDeleteExpense() {
 
       if (error) throw error
       return true
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(expenseKeys.all)
+    },
+  })
+}
+
+// --- 6. RENEW SUBSCRIPTION ---
+export function useRenewSubscription() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (id) => {
+      const { data, error } = await supabase.rpc('advance_expense_billing_date', { expense_id: id })
+
+      if (error) throw error
+      return data
     },
     onSuccess: () => {
       queryClient.invalidateQueries(expenseKeys.all)

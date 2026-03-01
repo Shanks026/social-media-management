@@ -46,9 +46,9 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
 
-// App Components
 import { CustomTable } from '@/components/CustomTable'
 import { CalendarPostCard } from '@/pages/calendar/CalendarPostCard'
+import DraftPostForm from '@/pages/posts/DraftPostForm'
 import StatusBadge from '@/components/StatusBadge'
 import { useHeader } from '@/components/misc/header-context'
 import { useGlobalPosts, usePostCounts } from '@/api/useGlobalPosts'
@@ -109,6 +109,9 @@ export default function Posts() {
 
   // View mode
   const [viewMode, setViewMode] = useState('card') // 'card' | 'table'
+
+  // Create post modal state
+  const [isCreatePostOpen, setIsCreatePostOpen] = useState(false)
 
   // Filter states
   const [search, setSearch] = useState('')
@@ -470,7 +473,7 @@ export default function Posts() {
             </Button>
           </div>
 
-          <Button onClick={() => navigate('/clients')} className="gap-2 h-9">
+          <Button onClick={() => setIsCreatePostOpen(true)} className="gap-2 h-9">
             <Plus size={16} />
             New Post
           </Button>
@@ -506,7 +509,7 @@ export default function Posts() {
                 {count !== undefined && count > 0 && (
                   <Badge
                     variant="secondary"
-                    className="text-[10px] px-1.5 py-0 min-w-[20px] text-center"
+                    className="text-xs px-1.5 py-0 min-w-[20px] text-center"
                   >
                     {count}
                   </Badge>
@@ -528,11 +531,11 @@ export default function Posts() {
       ) : (
         <>
           {isLoading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+            <div className="grid gap-6 grid-cols-[repeat(auto-fill,minmax(350px,1fr))]">
               {Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} className="rounded-xl border overflow-hidden">
+                <div key={i} className="rounded-2xl border overflow-hidden bg-card/50">
                   <Skeleton className="aspect-video w-full" />
-                  <div className="p-6 space-y-3">
+                  <div className="p-8 space-y-4">
                     <Skeleton className="h-4 w-3/4" />
                     <Skeleton className="h-3 w-full" />
                     <Skeleton className="h-3 w-1/2" />
@@ -564,7 +567,7 @@ export default function Posts() {
               )}
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-5">
+            <div className="grid gap-6 grid-cols-[repeat(auto-fill,minmax(350px,1fr))]">
               {posts.map((post) => (
                 <CalendarPostCard key={post.id} post={post} />
               ))}
@@ -572,6 +575,12 @@ export default function Posts() {
           )}
         </>
       )}
+
+      <DraftPostForm
+        open={isCreatePostOpen}
+        onOpenChange={setIsCreatePostOpen}
+        availableClients={clientOptions}
+      />
     </div>
   )
 }
