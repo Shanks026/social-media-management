@@ -41,7 +41,7 @@ import {
 
 import { useHeader } from '@/components/misc/header-context'
 import { useClients } from '@/api/clients'
-import { fetchClientNotes, updateNoteStatus, deleteNote } from '@/api/notes'
+import { fetchAllNotes, updateNoteStatus, deleteNote } from '@/api/notes'
 import CreateNoteDialog from '@/components/CreateNoteDialog'
 import EditNoteDialog from '@/components/EditNoteDialog'
 import { ClientAvatar } from '@/components/NoteRow'
@@ -108,7 +108,7 @@ function NoteCard({ note, clientMap }) {
     // eslint-disable-next-line react-hooks/purity
     new Date(note.due_at).getTime() < Date.now() &&
     note.status === 'TODO'
-  const client = clientMap[note.client_id]
+  const client = clientMap[String(note.client_id)]
   const statusCfg = STATUS_CONFIG[note.status] ?? STATUS_CONFIG.TODO
 
   const handleCircleClick = () => {
@@ -124,106 +124,102 @@ function NoteCard({ note, clientMap }) {
     <>
       <div
         className={cn(
-          'flex flex-col rounded-xl border bg-card shadow-sm ring-1 ring-border/50 overflow-hidden',
+          'group flex flex-col bg-card/50 rounded-xl shadow-sm ring-1 ring-border/50 overflow-hidden transition-all hover:shadow-md',
           note.status === 'ARCHIVED' && 'opacity-60',
         )}
       >
-        {/* ── Row 1: Client + Status badge ── */}
-        <div className="flex items-center justify-between gap-2 px-4 pt-4">
-          {client ? (
-            <div className="flex items-center gap-1.5 min-w-0">
-              <ClientAvatar client={client} size="sm" />
-              <span className="text-[11px] text-muted-foreground font-medium truncate max-w-[120px]">
-                {client.name}
-              </span>
-              {client.is_internal && (
-                <Badge
-                  variant="secondary"
-                  className="text-[10px] px-1.5 py-0.5 shrink-0"
+        <div className="px-5 pt-5 pb-4 flex flex-col flex-1">
+          {/* Title Row */}
+          <div className="flex items-start justify-between gap-3 mb-1.5">
+            <div className="flex items-start gap-3 min-w-0">
+              {note.status !== 'ARCHIVED' ? (
+                <button
+                  onClick={handleCircleClick}
+                  disabled={isBusy}
+                  className="mt-0.5 shrink-0 text-muted-foreground hover:text-primary transition-colors disabled:opacity-50"
                 >
-                  Int
-                </Badge>
-              )}
-            </div>
-          ) : (
-            <div />
-          )}
-          <Badge
-            variant="outline"
-            className={cn(
-              'text-[10px] px-2 py-0.5 shrink-0 font-semibold',
-              statusCfg.className,
-            )}
-          >
-            {statusCfg.label}
-          </Badge>
-        </div>
-
-        {/* ── Row 2: Circle icon + Title ── */}
-        <div className="flex items-start gap-2.5 px-4 pt-3">
-          {/* Circle toggle — hidden for ARCHIVED */}
-          {note.status !== 'ARCHIVED' ? (
-            <button
-              onClick={handleCircleClick}
-              disabled={isBusy}
-              className="mt-0.5 shrink-0 text-muted-foreground hover:text-primary transition-colors disabled:opacity-50"
-            >
-              {note.status === 'TODO' ? (
-                <Circle className="size-4" />
+                  {note.status === 'TODO' ? (
+                    <Circle className="size-5 stroke-[2.5]" />
+                  ) : (
+                    <CheckCircle2 className="size-5 text-emerald-500 stroke-[2.5]" />
+                  )}
+                </button>
               ) : (
-                <CheckCircle2 className="size-4 text-emerald-500" />
+                <div className="size-5 mt-0.5 shrink-0" />
               )}
-            </button>
-          ) : (
-            <div className="size-4 mt-0.5 shrink-0" />
-          )}
-          <p
-            className={cn(
-              'text-sm font-semibold leading-snug line-clamp-2',
-              note.status === 'DONE' && 'line-through text-muted-foreground',
-            )}
-          >
-            {note.title}
-          </p>
-        </div>
-
-        {/* ── Row 3: Subtitle ── */}
-        <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed px-4 pt-2 min-h-10">
-          {note.content || '—'}
-        </p>
-
-        {/* ── Row 4: Due date ── */}
-        <div
-          className={cn(
-            'flex items-center gap-1.5 text-[11px] font-medium px-4 pt-2 pb-3',
-            overdue
-              ? 'text-destructive'
-              : note.due_at
-                ? 'text-muted-foreground'
-                : 'text-muted-foreground/40',
-          )}
-        >
-          <Bell className="size-3 shrink-0" />
-          {note.due_at ? (
-            <>
-              {format(new Date(note.due_at), 'MMM d, h:mm a')}
-              {overdue && (
-                <Badge
-                  variant="destructive"
-                  className="text-[9px] px-1 py-0 ml-1"
+              <div className="flex flex-col gap-1 min-w-0">
+                <p
+                  className={cn(
+                    'text-sm font-semibold leading-snug',
+                    note.status === 'DONE' &&
+                      'line-through text-muted-foreground',
+                  )}
                 >
-                  Overdue
-                </Badge>
+                  {note.title}
+                </p>
+                {note.content && (
+                  <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
+                    {note.content}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <Badge
+              variant="outline"
+              className={cn(
+                'text-[10px] px-2 py-0.5 shrink-0 font-medium',
+                statusCfg.className,
               )}
-            </>
-          ) : (
-            'No due date'
-          )}
+            >
+              {statusCfg.label}
+            </Badge>
+          </div>
+
+          <div className="mt-auto pt-4">
+            <div className="border-t border-dashed border-border/60 mb-4" />
+
+            <div className="flex flex-wrap items-center justify-between gap-2 pl-1">
+              {client ? (
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <ClientAvatar client={client} size="sm" />
+                  <span className="text-xs font-medium text-foreground truncate max-w-[120px]">
+                    {client.name}
+                  </span>
+                  {client.is_internal && (
+                    <Badge
+                      variant="secondary"
+                      className="text-[9px] px-1 py-0 shrink-0"
+                    >
+                      INT
+                    </Badge>
+                  )}
+                </div>
+              ) : (
+                <div className="flex items-center gap-1.5 text-muted-foreground/50 italic text-[10px]">
+                  <Building2 className="size-3" />
+                  <span>No client linked</span>
+                </div>
+              )}
+
+              <div
+                className={cn(
+                  'flex items-center gap-1.5 text-[11px] font-medium shrink-0',
+                  overdue ? 'text-destructive' : 'text-muted-foreground',
+                )}
+              >
+                <Bell className="size-3.5" />
+                {note.due_at
+                  ? format(new Date(note.due_at), 'MMM d, h:mm a')
+                  : '-'}
+              </div>
+            </div>
+          </div>
         </div>
 
-        {/* ── Row 5: Actions ── */}
-        <div className="flex items-center gap-1 px-3 py-2 border-t border-border/40 bg-muted/20">
-          {note.status === 'ARCHIVED' ? (
+        {/* Actions Bar */}
+        <div className="flex items-center gap-1 px-4 py-2.5 border-t border-border/40 bg-muted/20">
+          {note.status === 'ARCHIVED' && (
             <Button
               variant="ghost"
               size="sm"
@@ -231,26 +227,7 @@ function NoteCard({ note, clientMap }) {
               onClick={() => setStatus('TODO')}
               disabled={isBusy}
             >
-              <RotateCcw className="size-3" /> Restore
-            </Button>
-          ) : (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 px-2 text-xs text-muted-foreground hover:text-primary gap-1.5"
-              onClick={handleCircleClick}
-              disabled={isBusy}
-            >
-              {note.status === 'TODO' ? (
-                <>
-                  <Circle className="size-3" /> Mark done
-                </>
-              ) : (
-                <>
-                  <CheckCircle2 className="size-3 text-emerald-500" /> Mark to
-                  do
-                </>
-              )}
+              <RotateCcw className="size-3.5" /> Restore
             </Button>
           )}
 
@@ -369,28 +346,32 @@ export default function NotesAndReminders() {
     ]
   }, [clientsData])
 
-  const clientMap = useMemo(
-    () => Object.fromEntries(allClients.map((c) => [c.id, c])),
-    [allClients],
-  )
+  const clientMap = useMemo(() => {
+    const map = Object.fromEntries(allClients.map((c) => [c.id, c]))
+    // Specifically handle null client_id to map to internal account
+    map['null'] = clientsData?.internalAccount
+      ? { ...clientsData.internalAccount, name: clientsData.internalAccount.name || 'Internal' }
+      : { id: null, name: 'Internal', is_internal: true }
+    return map
+  }, [allClients, clientsData])
 
   const defaultClientId = clientsData?.internalAccount?.id ?? null
 
-  const clientIdsToFetch = useMemo(() => {
-    if (selectedClient !== 'all') return [selectedClient]
-    return allClients.map((c) => c.id)
-  }, [selectedClient, allClients])
-
-  const { data: allNotes = [], isLoading: isLoadingNotes } = useQuery({
-    queryKey: ['global-notes', clientIdsToFetch],
-    queryFn: async () => {
-      const results = await Promise.all(
-        clientIdsToFetch.map((id) => fetchClientNotes(id)),
-      )
-      return results.flat()
-    },
-    enabled: clientIdsToFetch.length > 0,
+  const { data: fetchedNotes = [], isLoading: isLoadingNotes } = useQuery({
+    queryKey: ['global-notes'],
+    queryFn: fetchAllNotes,
   })
+
+  const allNotes = useMemo(() => {
+    if (selectedClient === 'all') return fetchedNotes
+    // if a note is explicitly assigned to null, and the internal client is selected:
+    if (selectedClient === defaultClientId) {
+      return fetchedNotes.filter(
+        (n) => n.client_id === selectedClient || n.client_id === null,
+      )
+    }
+    return fetchedNotes.filter((n) => n.client_id === selectedClient)
+  }, [fetchedNotes, selectedClient, defaultClientId])
 
   // ── Filtering & Grouping ──────────────────────────────────────────────────
 

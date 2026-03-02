@@ -58,7 +58,11 @@ import {
   startOfMonth,
   endOfMonth,
 } from 'date-fns'
-import { fetchClientNotes, updateNoteStatus } from '@/api/notes'
+import {
+  fetchClientNotes,
+  fetchInternalClientNotes,
+  updateNoteStatus,
+} from '@/api/notes'
 
 // Dialogs
 import CreateDraftPost from '../../posts/DraftPostForm'
@@ -172,10 +176,13 @@ export default function OverviewTab({ client }) {
       queryFn: () => fetchUpcomingMeetings(client.id, 10),
     })
 
-  // Notes
+  // Notes — internal client also pulls in legacy notes with client_id IS NULL
   const { data: notes = [], isLoading: isLoadingNotes } = useQuery({
     queryKey: ['client-notes', client.id],
-    queryFn: () => fetchClientNotes(client.id),
+    queryFn: () =>
+      client.is_internal
+        ? fetchInternalClientNotes(client.id)
+        : fetchClientNotes(client.id),
   })
 
   // Toast logic for reminders
@@ -292,7 +299,7 @@ export default function OverviewTab({ client }) {
   }))
 
   // Filter out the zero values specifically for the Pie chart to avoid uneven padding accumulation
-  const pieChartData = chartData.filter(d => d.value > 0)
+  const pieChartData = chartData.filter((d) => d.value > 0)
 
   const totalPosts = posts.filter((post) => {
     const status = post.status?.replace('_', ' ') || 'DRAFT'
@@ -384,7 +391,7 @@ export default function OverviewTab({ client }) {
   const extraNotes = notes.filter((n) => n.status !== 'ARCHIVED').length - 2
 
   const NotesCard = (
-    <Card className="border-none shadow-sm ring-1 ring-border/50 bg-card/50 flex flex-col gap-2 h-full">
+    <Card className="@container border-none shadow-sm ring-1 ring-border/50 bg-card/50 flex flex-col gap-2 h-full">
       <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
         <CardTitle className="text-lg font-medium flex items-center gap-2">
           Notes & Reminders
@@ -416,15 +423,15 @@ export default function OverviewTab({ client }) {
             <p className="text-sm text-muted-foreground">No pending notes</p>
           </div>
         ) : (
-          <div className="flex flex-col gap-0.5">
-            <div className="space-y-0.5">
+          <div className="flex flex-col gap-0.5 mt-2">
+            <div className="flex flex-col gap-3">
               {visibleNotes.map((note) => (
-                <NoteRow key={note.id} note={note} />
+                <NoteRow key={note.id} note={note} variant="client-card" />
               ))}
             </div>
 
             {extraNotes > 0 && (
-              <div className="flex items-center justify-between mt-3 pt-3 border-t border-dashed">
+              <div className="flex items-center justify-between mt-3 pt-3 border-t border-dashed border-border/40">
                 <span className="text-xs text-muted-foreground">
                   +{extraNotes} more note{extraNotes !== 1 && 's'}
                 </span>
@@ -639,7 +646,9 @@ export default function OverviewTab({ client }) {
                         {data.name.toLowerCase()}
                       </span>
                     </div>
-                    <span className="font-semibold tabular-nums">{data.value}</span>
+                    <span className="font-semibold tabular-nums">
+                      {data.value}
+                    </span>
                   </div>
                 ))}
               </div>
@@ -650,20 +659,24 @@ export default function OverviewTab({ client }) {
                   <div className="flex items-center gap-2 border-l-2 border-destructive pl-3">
                     <AlertCircle className="h-3.5 w-3.5 text-destructive shrink-0" />
                     <span className="text-xs text-destructive font-medium">
-                      {needsRevisionCount} post{needsRevisionCount !== 1 && 's'} require immediate revision
+                      {needsRevisionCount} post{needsRevisionCount !== 1 && 's'}{' '}
+                      require immediate revision
                     </span>
                   </div>
                 ) : pendingApprovalCount > 0 ? (
                   <div className="flex items-center gap-2 border-l-2 border-amber-500 pl-3">
                     <AlertCircle className="h-3.5 w-3.5 text-amber-500 shrink-0" />
                     <span className="text-xs text-amber-600 dark:text-amber-400 font-medium">
-                      {pendingApprovalCount} post{pendingApprovalCount !== 1 && 's'} awaiting approval
+                      {pendingApprovalCount} post
+                      {pendingApprovalCount !== 1 && 's'} awaiting approval
                     </span>
                   </div>
                 ) : (
                   <div className="flex items-center gap-2 border-l-2 border-emerald-500 pl-3">
                     <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
-                    <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">Pipeline is looking good!</span>
+                    <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+                      Pipeline is looking good!
+                    </span>
                   </div>
                 )}
               </div>
@@ -922,7 +935,10 @@ export default function OverviewTab({ client }) {
                 <CardTitle className="text-lg font-medium">
                   Upcoming Meetings
                 </CardTitle>
-                <CreateMeetingDialog defaultClientId={client.id} lockClient={true}>
+                <CreateMeetingDialog
+                  defaultClientId={client.id}
+                  lockClient={true}
+                >
                   <Button variant="ghost" size="icon" className="h-8 w-8 -mr-2">
                     <Plus className="h-4 w-4" />
                   </Button>
@@ -972,27 +988,50 @@ export default function OverviewTab({ client }) {
                           }
                         }
 
+                        // Extract month and day for the square block
+                        const monthStr = format(
+                          meetingDate,
+                          'MMM',
+                        ).toUpperCase()
+                        const dayStr = format(meetingDate, 'dd')
+
                         return (
                           <div
                             key={meeting.id}
-                            className="hover:bg-background/80 transition-colors border-b border-dashed pb-4"
+                            className="hover:bg-background/80 transition-colors border-b border-dashed pb-4 mb-4 last:mb-0 last:pb-0 last:border-0"
                           >
-                            <div className="flex items-start justify-between mb-2">
-                              <div className="min-w-0 pr-4">
-                                <p className="font-medium text-sm truncate">
-                                  {meeting.title}
-                                </p>
-                                <p className="text-xs text-muted-foreground mt-0.5">
+                            <div className="flex items-start gap-4 mb-2">
+                              {/* ─── DATE SQUARE BLOCK ─── */}
+                              <div className="flex flex-col items-center justify-center w-12 h-12 shrink-0 rounded-lg border border-border bg-muted/40 shadow-sm transition-colors group-hover:bg-muted/60">
+                                <span className="text-[10px] font-medium text-muted-foreground leading-none tracking-wider mb-1">
+                                  {monthStr}
+                                </span>
+                                <span className="text-lg font-bold text-foreground leading-none">
+                                  {dayStr}
+                                </span>
+                              </div>
+
+                              {/* ─── CONTENT AREA ─── */}
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-start justify-between gap-2">
+                                  <p className="font-medium text-sm truncate text-foreground">
+                                    {meeting.title}
+                                  </p>
+                                  <Badge
+                                    variant={variant}
+                                    className="text-[10px] px-1.5 py-0 h-5 shrink-0"
+                                  >
+                                    {dateLabel}
+                                  </Badge>
+                                </div>
+
+                                <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1.5">
+                                  <Clock className="h-3 w-3 shrink-0" />
                                   {format(meetingDate, 'h:mm a')}
                                 </p>
                               </div>
-                              <Badge
-                                variant={variant}
-                                className="text-[10px] px-1.5 py-0 h-5"
-                              >
-                                {dateLabel}
-                              </Badge>
                             </div>
+
                             <div className="flex items-center gap-2 mt-3 border-border/40">
                               <CreateMeetingDialog
                                 editMeeting={meeting}

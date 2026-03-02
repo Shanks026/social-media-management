@@ -26,23 +26,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { createNote } from '@/api/notes'
 import { useClients } from '@/api/clients'
 import { toast } from 'sonner'
-
-function ClientAvatar({ client }) {
-  if (client?.logo_url) {
-    return (
-      <img
-        src={client.logo_url}
-        alt=""
-        className="size-4 rounded object-cover ring-1 ring-border shrink-0"
-      />
-    )
-  }
-  return (
-    <div className="size-4 rounded bg-muted flex items-center justify-center shrink-0">
-      <Building2 className="size-2.5 text-muted-foreground" />
-    </div>
-  )
-}
+import { ClientAvatar } from './NoteRow'
 
 /**
  * Props:
@@ -70,19 +54,21 @@ export default function CreateNoteDialog({
 
   const queryClient = useQueryClient()
 
-  const [selectedClientId, setSelectedClientId] = useState(clientId ?? '')
+  const { data: clientsData, isLoading: isLoadingClients } = useClients()
+
+  const defaultSelectId = clientId || (clientsData?.internalAccount?.id ?? '')
+
+  const [selectedClientId, setSelectedClientId] = useState(defaultSelectId)
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
   const [dueAt, setDueAt] = useState('')
 
-  // Re-apply the default whenever the dialog opens or clientId changes
+  // Re-apply the default whenever the dialog opens or dependencies change
   useEffect(() => {
     if (isOpen) {
-      setSelectedClientId(clientId ?? '')
+      setSelectedClientId(clientId || (clientsData?.internalAccount?.id ?? ''))
     }
-  }, [isOpen, clientId])
-
-  const { data: clientsData, isLoading: isLoadingClients } = useClients()
+  }, [isOpen, clientId, clientsData?.internalAccount?.id])
 
   const allClients = useMemo(() => {
     if (!clientsData) return []
@@ -113,17 +99,19 @@ export default function CreateNoteDialog({
     setTitle('')
     setContent('')
     setDueAt('')
-    if (!lockClient) setSelectedClientId(clientId ?? '')
+    if (!lockClient)
+      setSelectedClientId(clientId || (clientsData?.internalAccount?.id ?? ''))
   }
 
   const handleSubmit = (e) => {
     e.preventDefault()
-    if (!selectedClientId) {
-      toast.error('Please select a client')
-      return
-    }
+
+    // Fallback to internal account if nothing is selected. If none exists, pass null.
+    const finalClientId =
+      selectedClientId || clientsData?.internalAccount?.id || null
+
     mutation.mutate({
-      client_id: selectedClientId,
+      client_id: finalClientId,
       title,
       content: content || null,
       due_at: dueAt ? new Date(dueAt).toISOString() : null,
@@ -145,9 +133,7 @@ export default function CreateNoteDialog({
         <form onSubmit={handleSubmit} className="grid gap-5 py-4">
           {/* ── Client ── */}
           <div className="space-y-2">
-            <Label>
-              Client <span className="text-destructive">*</span>
-            </Label>
+            <Label>Client</Label>
 
             {lockClient && selectedClient ? (
               // Read-only pill — used when opened from a specific client's OverviewTab
@@ -170,7 +156,7 @@ export default function CreateNoteDialog({
                 disabled={isLoadingClients}
               >
                 <SelectTrigger className="h-9 text-sm w-full">
-                  <SelectValue placeholder="Select a client…" />
+                  <SelectValue placeholder="Internal (Default)" />
                 </SelectTrigger>
                 <SelectContent>
                   {allClients.map((c) => (
@@ -246,9 +232,7 @@ export default function CreateNoteDialog({
             </Button>
             <Button
               type="submit"
-              disabled={
-                mutation.isPending || !title.trim() || !selectedClientId
-              }
+              disabled={mutation.isPending || !title.trim()}
             >
               {mutation.isPending ? 'Saving...' : 'Save Note'}
             </Button>

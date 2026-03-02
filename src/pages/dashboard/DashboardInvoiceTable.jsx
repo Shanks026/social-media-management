@@ -121,7 +121,7 @@ export default function DashboardInvoiceTable() {
           View All <ArrowUpRight className="ml-1 h-3 w-3" />
         </Button>
       </CardHeader>
-      <CardContent className="flex-1 overflow-hidden p-0 rounded-b-2xl">
+      <CardContent className="flex-1 overflow-hidden px-6 rounded-b-2xl">
         <CustomTable
           columns={columns}
           data={tableData}

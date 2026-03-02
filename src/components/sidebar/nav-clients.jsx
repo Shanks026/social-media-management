@@ -39,7 +39,10 @@ export function NavClients() {
 
   const deleteMutation = useMutation({
     mutationFn: deleteClient,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['clients'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['clients'] })
+      queryClient.invalidateQueries({ queryKey: ['subscription'] })
+    },
   })
 
   const handleCreateClient = () => {

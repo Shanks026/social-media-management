@@ -26,23 +26,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { updateNote } from '@/api/notes'
 import { useClients } from '@/api/clients'
 import { toast } from 'sonner'
-
-function ClientAvatar({ client }) {
-  if (client?.logo_url) {
-    return (
-      <img
-        src={client.logo_url}
-        alt=""
-        className="size-4 rounded object-cover ring-1 ring-border shrink-0"
-      />
-    )
-  }
-  return (
-    <div className="size-4 rounded bg-muted flex items-center justify-center shrink-0">
-      <Building2 className="size-2.5 text-muted-foreground" />
-    </div>
-  )
-}
+import { ClientAvatar } from './NoteRow'
 
 /**
  * Props:
@@ -57,7 +41,9 @@ export default function EditNoteDialog({
   onSuccess,
 }) {
   const queryClient = useQueryClient()
-  const [selectedClientId, setSelectedClientId] = useState(note?.client_id ?? '')
+  const [selectedClientId, setSelectedClientId] = useState(
+    note?.client_id || '',
+  )
   const [title, setTitle] = useState(note?.title ?? '')
   const [content, setContent] = useState(note?.content ?? '')
   const [dueAt, setDueAt] = useState('')
@@ -65,12 +51,12 @@ export default function EditNoteDialog({
   // Sync state when note changes or dialog opens
   useEffect(() => {
     if (open && note) {
-      setSelectedClientId(note.client_id)
+      setSelectedClientId(note.client_id || '')
       setTitle(note.title)
       setContent(note.content ?? '')
-      
-      const dateStr = note.due_at 
-        ? new Date(note.due_at).toISOString().slice(0, 16) 
+
+      const dateStr = note.due_at
+        ? new Date(note.due_at).toISOString().slice(0, 16)
         : ''
       setDueAt(dateStr)
     }
@@ -104,12 +90,13 @@ export default function EditNoteDialog({
 
   const handleSubmit = (e) => {
     e.preventDefault()
-    if (!selectedClientId) {
-      toast.error('Please select a client')
-      return
-    }
+
+    // Fallback to internal account if nothing is selected. If none exists, pass null.
+    const finalClientId =
+      selectedClientId || clientsData?.internalAccount?.id || null
+
     mutation.mutate({
-      client_id: selectedClientId,
+      client_id: finalClientId,
       title,
       content: content || null,
       due_at: dueAt ? new Date(dueAt).toISOString() : null,
@@ -129,17 +116,15 @@ export default function EditNoteDialog({
         <form onSubmit={handleSubmit} className="grid gap-5 py-4">
           {/* ── Client ── */}
           <div className="space-y-2">
-            <Label>
-              Client <span className="text-destructive">*</span>
-            </Label>
-            
+            <Label>Client</Label>
+
             <Select
               value={selectedClientId}
               onValueChange={setSelectedClientId}
               disabled={isLoadingClients}
             >
               <SelectTrigger className="h-9 text-sm w-full">
-                <SelectValue placeholder="Select a client…" />
+                <SelectValue placeholder="Internal (Default)" />
               </SelectTrigger>
               <SelectContent>
                 {allClients.map((c) => (
@@ -211,9 +196,7 @@ export default function EditNoteDialog({
             </Button>
             <Button
               type="submit"
-              disabled={
-                mutation.isPending || !title.trim() || !selectedClientId
-              }
+              disabled={mutation.isPending || !title.trim()}
             >
               {mutation.isPending ? 'Saving...' : 'Save Changes'}
             </Button>
