@@ -92,7 +92,7 @@ function MeetingCard({ meeting, clientMap }) {
         <div className="px-5 pt-5 pb-4 flex flex-col flex-1">
           <div className="flex items-start gap-4 w-full">
             {/* ── DATE SQUARE BLOCK ── */}
-            <div className="flex flex-col items-center justify-center w-12 h-12 shrink-0 rounded-lg border border-border bg-muted/40 shadow-sm transition-colors group-hover:bg-muted/60 mt-0.5">
+            <div className="flex flex-col items-center justify-center w-12 h-12 shrink-0 rounded-lg border border-border bg-muted/40 transition-colors group-hover:bg-muted/60 mt-0.5">
               <span className="text-[10px] font-medium text-muted-foreground leading-none tracking-wider mb-1">
                 {format(new Date(meeting.datetime), 'MMM').toUpperCase()}
               </span>
@@ -102,7 +102,7 @@ function MeetingCard({ meeting, clientMap }) {
             </div>
 
             <div className="flex flex-col min-w-0 flex-1">
-              <div className="flex items-start justify-between gap-2">
+              <div className="flex items-start justify-between gap-2 mt-1">
                 <p
                   className={cn(
                     'text-sm font-semibold leading-snug line-clamp-2',
@@ -238,7 +238,7 @@ function MeetingsGroup({ title, meetings, clientMap }) {
       <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
         {title}
       </p>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-4">
         {meetings.map((meeting) => (
           <MeetingCard
             key={meeting.id}
@@ -284,8 +284,6 @@ export default function MeetingsPage() {
     () => Object.fromEntries(allClients.map((c) => [c.id, c])),
     [allClients],
   )
-
-  const defaultClientId = clientsData?.internalAccount?.id ?? null
 
   const { data: allMeetings = [], isLoading: isLoadingMeetings } = useQuery({
     queryKey: ['global-meetings', selectedClient],
@@ -454,7 +452,7 @@ export default function MeetingsPage() {
 
       {/* Meetings grid */}
       {isLoadingMeetings || isLoadingClients ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-4">
           {[...Array(8)].map((_, i) => (
             <div
               key={i}

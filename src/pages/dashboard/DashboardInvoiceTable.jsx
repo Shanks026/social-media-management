@@ -102,7 +102,7 @@ export default function DashboardInvoiceTable() {
   ]
 
   return (
-    <Card className="rounded-2xl border-none shadow-sm flex flex-col h-full bg-card/50 dark:bg-card/20 ring-1 ring-border/50">
+    <Card className="rounded-2xl border-none shadow-sm flex flex-col h-full bg-card/50 dark:bg-card/30 ring-1 ring-border/50">
       <CardHeader className="pb-2 shrink-0 flex flex-row items-center justify-between">
         <div>
           <CardTitle className="text-lg font-medium tracking-normal text-foreground">

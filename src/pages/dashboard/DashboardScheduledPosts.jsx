@@ -101,7 +101,7 @@ export default function DashboardScheduledPosts() {
   const extraPosts = scheduledPosts.length - 3
 
   return (
-    <Card className="border-none shadow-sm ring-1 ring-border/50 bg-card/50 flex flex-col gap-2 h-full">
+    <Card className="border-none shadow-sm ring-1 ring-border/50 bg-card/50 dark:bg-card/30 flex flex-col gap-2 h-full">
       <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
         <CardTitle className="text-lg font-medium">Post Releases</CardTitle>
         <Button variant="ghost" size="icon" className="h-8 w-8 -mr-2" onClick={() => navigate('/posts')}>

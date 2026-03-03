@@ -24,7 +24,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 
-import NoteRow from '@/components/NoteRow'
+import NoteRow, { ClientAvatar } from '@/components/NoteRow'
 import CreateMeetingDialog from '@/components/CreateMeetingDialog'
 import CreateNoteDialog from '@/components/CreateNoteDialog'
 import { deleteMeeting } from '@/api/meetings'
@@ -39,89 +39,126 @@ function MeetingItem({
 }) {
   const meetingDate = new Date(meeting.datetime)
   let dateLabel = format(meetingDate, 'MMM d, yyyy')
-  let variant = 'outline'
+  let badgeVariant = 'outline'
 
   if (isToday(meetingDate)) {
     dateLabel = 'Today'
-    variant = 'default'
+    badgeVariant = 'default'
   } else if (isTomorrow(meetingDate)) {
     dateLabel = 'Tomorrow'
-    variant = 'secondary'
+    badgeVariant = 'secondary'
   } else {
     const days = differenceInDays(meetingDate, new Date())
-    if (days < 7) {
-      dateLabel = `In ${days} Days`
-      variant = 'secondary'
+    if (days > 0 && days < 7) {
+      dateLabel = `${days} Days`
+      badgeVariant = 'secondary'
     }
   }
 
   const client = clientsMap[meeting.client_id]
-
-  // Extract month and day for the square block
   const monthStr = format(meetingDate, 'MMM').toUpperCase()
   const dayStr = format(meetingDate, 'dd')
 
   return (
-    <div className="hover:bg-background/80 transition-colors border-b border-dashed pb-4 mb-4 last:mb-0 last:pb-0 last:border-0">
-      <div className="flex items-start gap-4 mb-2">
-        {/* ─── DATE SQUARE BLOCK ─── */}
-        <div className="flex flex-col items-center justify-center w-12 h-12 shrink-0 rounded-lg border border-border bg-muted/40 shadow-sm transition-colors group-hover:bg-muted/60">
-          <span className="text-[10px] font-medium text-muted-foreground leading-none tracking-wider mb-1">
-            {monthStr}
-          </span>
-          <span className="text-lg font-bold text-foreground leading-none">
-            {dayStr}
-          </span>
-        </div>
-
-        {/* ─── CONTENT AREA ─── */}
-        <div className="min-w-0 flex-1">
-          <div className="flex items-start justify-between gap-2">
-            <p className="font-medium text-sm truncate text-foreground">
-              {meeting.title}
-            </p>
-            <Badge
-              variant={variant}
-              className="text-[10px] px-1.5 py-0 h-5 shrink-0"
-            >
-              {dateLabel}
-            </Badge>
+    <div className="group bg-white dark:bg-card/50 rounded-2xl shadow-sm ring-1 ring-border/50 overflow-hidden">
+      {/* ─── MAIN CONTENT ─── */}
+      <div className="px-5 pt-5 pb-4">
+        {/* Header: date block + title + badge */}
+        <div className="flex items-start gap-3">
+          {/* Date block */}
+          <div className="flex flex-col items-center justify-center w-12 h-12 shrink-0 rounded-xl border border-border bg-muted/40 mt-0.5">
+            <span className="text-[10px] font-medium text-muted-foreground leading-none tracking-wider mb-1">
+              {monthStr}
+            </span>
+            <span className="text-lg font-bold text-foreground leading-none">
+              {dayStr}
+            </span>
           </div>
 
-          <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1.5">
-            <Clock className="h-3 w-3 shrink-0" />
-            {format(meetingDate, 'h:mm a')}
-            {client && (
-              <>
-                <span className="hidden @[300px]:inline-block w-1 h-1 rounded-full bg-border shrink-0" />
-                <span className="hidden @[300px]:inline-block truncate max-w-[140px]">
-                  {client.name}
-                </span>
-              </>
-            )}
-          </p>
+          {/* Title + badge */}
+          <div className="flex-1 min-w-0 mt-0.5">
+            <div className="flex items-start justify-between gap-2">
+              <p className="font-semibold text-sm leading-snug text-foreground line-clamp-2">
+                {meeting.title}
+              </p>
+              <Badge
+                variant={badgeVariant}
+                className="text-[10px] px-1.5 py-0 h-5 shrink-0"
+              >
+                {dateLabel}
+              </Badge>
+            </div>
+          </div>
+        </div>
+
+        {/* Notes / description */}
+        <div className="mt-0 pl-15">
+          {meeting.notes ? (
+            <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
+              {meeting.notes}
+            </p>
+          ) : (
+            <p className="text-xs text-muted-foreground/40 italic">No notes</p>
+          )}
+        </div>
+
+        {/* Divider */}
+        <div className="border-t border-dashed border-border/60 mt-4 mb-3" />
+
+        {/* Footer: client (left) + date/time (right) */}
+        <div className="flex items-center justify-between pl-1">
+          {client ? (
+            <div className="flex items-center gap-2">
+              <ClientAvatar client={client} size="sm" />
+              <span className="text-xs font-semibold text-foreground truncate max-w-36">
+                {client.name}
+              </span>
+              {client.is_internal && (
+                <Badge variant="secondary" className="text-[9px] px-1 py-0">
+                  INT
+                </Badge>
+              )}
+            </div>
+          ) : (
+            <div />
+          )}
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <Clock className="size-3.5 shrink-0" />
+            <span>{format(meetingDate, 'd MMMM yyyy')}</span>
+            <span className="w-1 h-1 rounded-full bg-current opacity-50 shrink-0" />
+            <span>{format(meetingDate, 'h:mma')}</span>
+          </div>
         </div>
       </div>
 
-      <div className="flex items-center gap-2 mt-3 border-border/40">
-        <CreateMeetingDialog
-          editMeeting={meeting}
-          defaultClientId={meeting.client_id}
-          lockClient={false}
-        >
-          <Button variant="outline" size="sm" className="flex-1 h-7 text-xs">
-            Reschedule
-          </Button>
-        </CreateMeetingDialog>
-        <Button
-          variant="secondary"
-          size="sm"
-          className="flex-1 h-7 text-xs"
-          onClick={() => markMeetingDone(meeting.id)}
-          disabled={isCompletingMeeting}
-        >
-          Mark as done
-        </Button>
+      {/* ─── HOVER ACTION BAR ─── */}
+      <div className="grid transition-all duration-200 ease-in-out grid-rows-[0fr] group-hover:grid-rows-[1fr]">
+        <div className="overflow-hidden">
+          <div className="flex items-center gap-2 px-4 py-2 border-t border-border/40 bg-muted/30">
+            <CreateMeetingDialog
+              editMeeting={meeting}
+              defaultClientId={meeting.client_id}
+              lockClient={false}
+            >
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 text-xs text-muted-foreground hover:text-foreground gap-1.5"
+              >
+                <CalendarIcon className="size-3" /> Reschedule
+              </Button>
+            </CreateMeetingDialog>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 text-xs text-muted-foreground hover:text-emerald-600 gap-1.5"
+              onClick={() => markMeetingDone(meeting.id)}
+              disabled={isCompletingMeeting}
+            >
+              <CheckCircle2 className="size-3" /> Mark as done
+            </Button>
+          </div>
+        </div>
       </div>
     </div>
   )
@@ -194,13 +231,13 @@ export default function DashboardUpcomingEvents() {
 
   const visibleMeetings = upcomingMeetings.slice(0, 3)
   const extraMeetings = upcomingMeetings.length - 3
-  const visibleNotes = notes.slice(0, 4)
-  const extraNotes = notes.length - 4
+  const visibleNotes = notes.slice(0, 3)
+  const extraNotes = notes.length - 3
 
   return (
     <div className="flex flex-col gap-6 h-full">
       {/* ─── UPCOMING MEETINGS ─────────────────────────────────────────────────── */}
-      <Card className="@container border-none shadow-sm ring-1 ring-border/50 bg-card/50 flex flex-col gap-2">
+      <Card className="@container border-none shadow-sm ring-1 ring-border/50 bg-card/50 dark:bg-card/30 flex flex-col gap-2">
         <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
           <CardTitle className="text-lg font-medium">
             Upcoming Meetings
@@ -235,7 +272,7 @@ export default function DashboardUpcomingEvents() {
             </div>
           ) : (
             <div className="flex flex-col gap-0 mt-2">
-              <div className="space-y-0">
+              <div className="flex flex-col gap-3">
                 {visibleMeetings.map((meeting) => (
                   <MeetingItem
                     key={meeting.id}
@@ -267,7 +304,7 @@ export default function DashboardUpcomingEvents() {
       </Card>
 
       {/* ─── ACTIVE NOTES & REMINDERS ──────────────────────────────────────────── */}
-      <Card className="border-none shadow-sm ring-1 ring-border/50 bg-card/50 flex flex-col gap-2 h-full">
+      <Card className="border-none shadow-sm ring-1 ring-border/50 bg-card/50 dark:bg-card/30 flex flex-col gap-2 h-full">
         <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
           <CardTitle className="text-lg font-medium">
             Notes & Reminders

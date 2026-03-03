@@ -31,11 +31,11 @@ import { calculateRecurringBurn } from '@/utils/finance'
 const chartConfig = {
   income: {
     label: 'Revenue',
-    color: 'hsl(var(--chart-2))', // Emerald
+    color: '#10b981', // emerald-500
   },
   expenses: {
     label: 'Expenses',
-    color: 'hsl(var(--chart-5))', // Rose
+    color: '#f43f5e', // rose-500
   },
 }
 
@@ -87,7 +87,7 @@ export default function FinancialSnapshot() {
   const isLoading = loadingTx || loadingExp
 
   return (
-    <Card className="rounded-2xl border-none shadow-sm flex flex-col h-[400px] bg-card/50 dark:bg-card/20 ring-1 ring-border/50">
+    <Card className="rounded-2xl border-none shadow-sm flex flex-col h-full min-h-80 bg-card/50 dark:bg-card/20 ring-1 ring-border/50">
       <CardHeader className="pb-2 shrink-0">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
@@ -140,10 +140,14 @@ export default function FinancialSnapshot() {
                   axisLine={false}
                   tickMargin={10}
                   fontSize={10}
+                  allowDecimals={false}
+                  domain={[0, (dataMax) => Math.max(dataMax, 1000)]}
                   className="text-muted-foreground"
-                  tickFormatter={(value) =>
-                    `${CURRENCY.SYMBOL}${value / 1000}k`
-                  }
+                  tickFormatter={(value) => {
+                    if (value === 0) return `${CURRENCY.SYMBOL}0`
+                    if (value >= 1000) return `${CURRENCY.SYMBOL}${Math.round(value / 1000)}k`
+                    return `${CURRENCY.SYMBOL}${Math.round(value)}`
+                  }}
                 />
                 <ChartTooltip
                   cursor={false}
@@ -153,10 +157,10 @@ export default function FinancialSnapshot() {
                   content={<ChartLegendContent />}
                   className="text-foreground text-[10px]"
                 />
-                <Bar dataKey="income" fill="#10b981" radius={4} barSize={20} />
+                <Bar dataKey="income" fill={chartConfig.income.color} radius={4} barSize={20} />
                 <Bar
                   dataKey="expenses"
-                  fill="#f43f5e"
+                  fill={chartConfig.expenses.color}
                   radius={4}
                   barSize={20}
                 />

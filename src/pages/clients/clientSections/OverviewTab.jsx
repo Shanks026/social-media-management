@@ -75,7 +75,10 @@ import NoteRow from '@/components/NoteRow'
 const platformChartConfig = {
   posts: { label: 'Posts' },
   ...SUPPORTED_PLATFORMS.reduce((acc, p) => {
-    acc[p.id] = { label: p.label, color: p.color }
+    acc[p.id] =
+      p.id === 'twitter'
+        ? { label: p.label, theme: { light: '#000000', dark: '#cbd5e1' } }
+        : { label: p.label, color: p.color }
     return acc
   }, {}),
 }
@@ -387,7 +390,7 @@ export default function OverviewTab({ client }) {
       },
     })
 
-  const visibleNotes = notes.filter((n) => n.status !== 'ARCHIVED').slice(0, 3)
+  const visibleNotes = notes.filter((n) => n.status !== 'ARCHIVED').slice(0, 2)
   const extraNotes = notes.filter((n) => n.status !== 'ARCHIVED').length - 2
 
   const NotesCard = (
@@ -458,7 +461,7 @@ export default function OverviewTab({ client }) {
     <Card className="border-none shadow-sm ring-1 ring-border/50 bg-card/50 flex flex-col gap-2 h-full">
       <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
         <CardTitle className="text-lg font-medium flex items-center gap-2">
-          <Clock className="h-4 w-4" />
+          {/* <Clock className="h-4 w-4" /> */}
           Recent Transactions
         </CardTitle>
         <Button
@@ -747,7 +750,8 @@ export default function OverviewTab({ client }) {
                 </div>
               </CardContent>
             </Card>
-            {NotesCard}
+
+            {RecentTransactionsCard}
           </div>
 
           {/* COLUMN 3: NOTES & REMINDERS */}
@@ -777,7 +781,7 @@ export default function OverviewTab({ client }) {
                 </Button>
               </CardContent>
             </Card>
-            {RecentTransactionsCard}
+            {NotesCard}
           </div>
         </>
       ) : (

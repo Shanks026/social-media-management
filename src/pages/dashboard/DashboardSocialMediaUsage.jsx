@@ -20,7 +20,10 @@ import { SUPPORTED_PLATFORMS } from '@/lib/platforms'
 const platformChartConfig = {
   posts: { label: 'Posts' },
   ...SUPPORTED_PLATFORMS.reduce((acc, p) => {
-    acc[p.id] = { label: p.label, color: p.color }
+    acc[p.id] =
+      p.id === 'twitter'
+        ? { label: p.label, theme: { light: '#000000', dark: '#cbd5e1' } }
+        : { label: p.label, color: p.color }
     return acc
   }, {}),
 }
@@ -73,7 +76,7 @@ export default function DashboardSocialMediaUsage() {
   }, [posts])
 
   return (
-    <Card className="border-none shadow-sm ring-1 ring-border/50 bg-card/50 h-full flex flex-col">
+    <Card className="border-none shadow-sm ring-1 ring-border/50 bg-card/50 dark:bg-card/30 h-full flex flex-col">
       <CardHeader>
         <CardTitle className="text-lg font-medium">
           Social Media Usage

@@ -6,6 +6,7 @@ import DashboardMeetingsNotes from './DashboardMeetingsNotes'
 import ContentPipelineBar from './ContentPipelineBar'
 import DashboardScheduledPosts from './DashboardScheduledPosts'
 import DashboardSocialMediaUsage from './DashboardSocialMediaUsage'
+import LifetimeRevenue from './LifetimeRevenue'
 import FinancialSnapshot from './FinancialSnapshot'
 import DashboardInvoiceTable from './DashboardInvoiceTable'
 import ClientHealthGrid from './ClientHealthGrid'
@@ -42,9 +43,11 @@ export default function Dashboard() {
 
           {/* Social media usage + profitability */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            <DashboardSocialMediaUsage />
             <FinancialSnapshot />
+            <LifetimeRevenue />
           </div>
+
+          <DashboardSocialMediaUsage />
         </div>
       </div>
 

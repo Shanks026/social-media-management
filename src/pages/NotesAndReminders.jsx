@@ -305,7 +305,7 @@ function NotesGroup({ title, notes, clientMap }) {
       <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
         {title}
       </p>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-4">
         {notes.map((note) => (
           <NoteCard key={note.id} note={note} clientMap={clientMap} />
         ))}
@@ -538,7 +538,7 @@ export default function NotesAndReminders() {
 
       {/* Notes grid */}
       {isLoadingNotes || isLoadingClients ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-4">
           {[...Array(8)].map((_, i) => (
             <div
               key={i}

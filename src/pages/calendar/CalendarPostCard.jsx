@@ -117,7 +117,7 @@ const PlatformIcon = ({ name }) => {
       <img
         src={imgSrc}
         alt={name}
-        className="size-5 object-contain"
+        className="size-6 object-contain"
         // Fallback for missing images
         onError={(e) => (e.target.style.display = 'none')}
       />
@@ -321,7 +321,7 @@ export function CalendarPostCard({ post }) {
       {/* 1. The Main Clickable Card */}
       <div
         onClick={handleCardClick}
-        className="flex flex-col bg-card/50 border dark:border-none rounded-2xl px-6 py-8 transition-all duration-200 cursor-pointer group"
+        className="flex flex-col bg-card/50 border dark:border-none rounded-xl px-6 py-8 transition-all duration-200 cursor-pointer group shadow-xs"
       >
         {/* Header: Status, Version & ClientInfo */}
         <div className="flex items-center justify-between mb-4">
@@ -437,7 +437,7 @@ export function CalendarPostCard({ post }) {
             {/* Date Badge and Urgency Info */}
             <div
               className={cn(
-                "rounded-full px-3 py-1.5 flex items-center justify-center gap-2 border shadow-sm",
+                "rounded-full px-3 py-1.5 flex items-center justify-center gap-2",
                 health?.label === 'Overdue'
                   ? "bg-destructive/10 border-destructive/20 text-destructive"
                   : "bg-muted/50 border-border/50 text-muted-foreground"

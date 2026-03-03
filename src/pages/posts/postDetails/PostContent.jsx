@@ -41,7 +41,6 @@ import {
 
 // Custom Components & API
 import { deleteIndividualMedia } from '@/api/posts'
-import { useAuth } from '@/context/AuthContext'
 import StatusBadge from '@/components/StatusBadge'
 import PlatformBadge from '@/components/PlatformBadge'
 import ClientNotes from './ClientNotes'
