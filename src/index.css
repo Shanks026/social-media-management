@@ -278,6 +278,41 @@ body {
   background-color: var(--scrollbar-thumb-hover);
 }
 
+/* --- Timeline Scrollbar --- */
+
+/* 1. Firefox Support */
+.timeline-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+  transition: scrollbar-color 0.2s ease-in-out;
+}
+
+.timeline-scrollbar:hover,
+.timeline-scrollbar:focus-within {
+  /* Matches your Tailwind border color roughly, adjust the rgba as needed */
+  scrollbar-color: rgba(156, 163, 175, 0.1) transparent; 
+}
+
+/* 2. WebKit Support (Chrome, Safari, Edge) */
+.timeline-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.timeline-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.timeline-scrollbar::-webkit-scrollbar-thumb {
+  background-color: transparent;
+  border-radius: 9999px;
+}
+
+/* Show thumb on hover or keyboard focus */
+.timeline-scrollbar:hover::-webkit-scrollbar-thumb,
+.timeline-scrollbar:focus-within::-webkit-scrollbar-thumb {
+  background-color: rgba(156, 163, 175, 0.6); 
+}
+
 /* =========================================================
    Theme variables
    ========================================================= */

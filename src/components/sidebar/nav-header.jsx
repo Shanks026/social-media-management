@@ -13,7 +13,7 @@ import { Layout } from 'lucide-react'
 // Application Defaults
 const APP_NAME = 'Tercero'
 const APP_TAGLINE = 'Development'
-const DEFAULT_ICON = '/TerceroLogo.svg' // Path to your public folder icon
+const DEFAULT_ICON = '/TerceroLogo2.svg' // Path to your public folder icon
 
 export function AppSidebarHeader({ agencySettings }) {
   const { state, isMobile } = useSidebar()

@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/context/AuthContext'
@@ -13,13 +14,8 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from '@/components/ui/card'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -29,7 +25,7 @@ import CreateMeetingDialog from '@/components/CreateMeetingDialog'
 import CreateNoteDialog from '@/components/CreateNoteDialog'
 import { deleteMeeting } from '@/api/meetings'
 
-// ─── HELPER COMPONENTS ────────────────────────────────────────────────────────
+// ─── MEETING CARD ─────────────────────────────────────────────────────────────
 
 function MeetingItem({
   meeting,
@@ -61,11 +57,9 @@ function MeetingItem({
 
   return (
     <div className="group bg-white dark:bg-card/50 rounded-2xl shadow-sm ring-1 ring-border/50 overflow-hidden">
-      {/* ─── MAIN CONTENT ─── */}
       <div className="px-5 pt-5 pb-4">
         {/* Header: date block + title + badge */}
         <div className="flex items-start gap-3">
-          {/* Date block */}
           <div className="flex flex-col items-center justify-center w-12 h-12 shrink-0 rounded-xl border border-border bg-muted/40 mt-0.5">
             <span className="text-[10px] font-medium text-muted-foreground leading-none tracking-wider mb-1">
               {monthStr}
@@ -74,8 +68,6 @@ function MeetingItem({
               {dayStr}
             </span>
           </div>
-
-          {/* Title + badge */}
           <div className="flex-1 min-w-0 mt-0.5">
             <div className="flex items-start justify-between gap-2">
               <p className="font-semibold text-sm leading-snug text-foreground line-clamp-2">
@@ -91,7 +83,7 @@ function MeetingItem({
           </div>
         </div>
 
-        {/* Notes / description */}
+        {/* Notes */}
         <div className="mt-0 pl-15">
           {meeting.notes ? (
             <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
@@ -131,7 +123,7 @@ function MeetingItem({
         </div>
       </div>
 
-      {/* ─── HOVER ACTION BAR ─── */}
+      {/* Hover action bar */}
       <div className="grid transition-all duration-200 ease-in-out grid-rows-[0fr] group-hover:grid-rows-[1fr]">
         <div className="overflow-hidden">
           <div className="flex items-center gap-2 px-4 py-2 border-t border-border/40 bg-muted/30">
@@ -164,7 +156,10 @@ function MeetingItem({
   )
 }
 
-export default function DashboardUpcomingEvents() {
+// ─── MAIN COMPONENT ───────────────────────────────────────────────────────────
+
+export default function DashboardMeetingsNotes() {
+  const [activeTab, setActiveTab] = useState('meetings')
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { user } = useAuth()
@@ -229,49 +224,62 @@ export default function DashboardUpcomingEvents() {
     },
   })
 
-  const visibleMeetings = upcomingMeetings.slice(0, 3)
-  const extraMeetings = upcomingMeetings.length - 3
-  const visibleNotes = notes.slice(0, 3)
-  const extraNotes = notes.length - 3
+  const visibleMeetings = upcomingMeetings.slice(0, 2)
+  const extraMeetings = upcomingMeetings.length - 2
+  const visibleNotes = notes.slice(0, 2)
+  const extraNotes = notes.length - 2
 
   return (
-    <div className="flex flex-col gap-6 h-full">
-      {/* ─── UPCOMING MEETINGS ─────────────────────────────────────────────────── */}
-      <Card className="@container border-none shadow-sm ring-1 ring-border/50 bg-card/50 dark:bg-card/30 flex flex-col gap-2">
-        <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
-          <CardTitle className="text-lg font-medium">
-            Upcoming Meetings
-          </CardTitle>
-          <CreateMeetingDialog lockClient={false}>
-            <Button variant="ghost" size="icon" className="h-8 w-8 -mr-2">
-              <Plus className="h-4 w-4" />
-            </Button>
-          </CreateMeetingDialog>
-        </CardHeader>
-        <CardContent className="flex-1 flex flex-col pt-0">
-          {loadingMeetings ? (
-            <div className="space-y-4 py-2">
-              {[...Array(2)].map((_, i) => (
-                <div key={i} className="flex gap-4">
-                  <Skeleton className="h-12 w-12 rounded-lg shrink-0" />
-                  <div className="flex-1 space-y-2 py-1">
-                    <Skeleton className="h-4 w-3/4" />
-                    <Skeleton className="h-3 w-1/2" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : visibleMeetings.length === 0 ? (
-            <div className="flex-1 flex flex-col items-center justify-center text-center py-6 gap-2">
-              <div className="h-10 w-10 border border-dashed rounded-full flex items-center justify-center text-muted-foreground">
-                <CalendarIcon className="h-4 w-4" />
-              </div>
-              <p className="text-sm text-muted-foreground">
-                No upcoming meetings
-              </p>
-            </div>
+    <Card className="border-none shadow-sm ring-1 ring-border/50 bg-card/50 dark:bg-card/30 flex flex-col h-full">
+      <Tabs
+        value={activeTab}
+        onValueChange={setActiveTab}
+        className="flex flex-col flex-1"
+      >
+        <CardHeader className="pb-3 flex flex-row items-center justify-between space-y-0 shrink-0">
+          <TabsList className="h-9">
+            <TabsTrigger value="meetings" className="gap-1.5 text-xs">
+              <CalendarIcon className="size-3.5" /> Meetings
+            </TabsTrigger>
+            <TabsTrigger value="notes" className="gap-1.5 text-xs">
+              <FileText className="size-3.5" /> Notes
+            </TabsTrigger>
+          </TabsList>
+
+          {activeTab === 'meetings' ? (
+            <CreateMeetingDialog lockClient={false}>
+              <Button variant="ghost" size="icon" className="h-8 w-8 -mr-2">
+                <Plus className="h-4 w-4" />
+              </Button>
+            </CreateMeetingDialog>
           ) : (
-            <div className="flex flex-col gap-0 mt-2">
+            <CreateNoteDialog lockClient={false}>
+              <Button variant="ghost" size="icon" className="h-8 w-8 -mr-2">
+                <Plus className="h-4 w-4" />
+              </Button>
+            </CreateNoteDialog>
+          )}
+        </CardHeader>
+
+        <CardContent className="flex-1 flex flex-col pt-0">
+          {/* ─── MEETINGS TAB ─── */}
+          <TabsContent value="meetings" className="mt-0 flex-1 flex flex-col">
+            {loadingMeetings ? (
+              <div className="space-y-3 py-1">
+                {[...Array(2)].map((_, i) => (
+                  <Skeleton key={i} className="h-40 rounded-2xl" />
+                ))}
+              </div>
+            ) : visibleMeetings.length === 0 ? (
+              <div className="flex-1 flex flex-col items-center justify-center text-center py-8 gap-2">
+                <div className="h-10 w-10 border border-dashed rounded-full flex items-center justify-center text-muted-foreground">
+                  <CalendarIcon className="h-4 w-4" />
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  No upcoming meetings
+                </p>
+              </div>
+            ) : (
               <div className="flex flex-col gap-3">
                 {visibleMeetings.map((meeting) => (
                   <MeetingItem
@@ -282,61 +290,42 @@ export default function DashboardUpcomingEvents() {
                     isCompletingMeeting={isCompletingMeeting}
                   />
                 ))}
-              </div>
-              {extraMeetings > 0 && (
-                <div className="flex items-center justify-between mt-4 pt-4 border-t border-dashed border-border/40">
-                  <span className="text-xs text-muted-foreground">
-                    +{extraMeetings} more meeting{extraMeetings !== 1 && 's'}
-                  </span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 text-xs px-2 text-muted-foreground hover:text-foreground -mr-2"
-                    onClick={() => navigate('/operations/meetings')}
-                  >
-                    View all meetings <ArrowUpRight className="ml-1 h-3 w-3" />
-                  </Button>
-                </div>
-              )}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* ─── ACTIVE NOTES & REMINDERS ──────────────────────────────────────────── */}
-      <Card className="border-none shadow-sm ring-1 ring-border/50 bg-card/50 dark:bg-card/30 flex flex-col gap-2 h-full">
-        <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
-          <CardTitle className="text-lg font-medium">
-            Notes & Reminders
-          </CardTitle>
-          <CreateNoteDialog lockClient={false}>
-            <Button variant="ghost" size="icon" className="h-8 w-8 -mr-2">
-              <Plus className="h-4 w-4" />
-            </Button>
-          </CreateNoteDialog>
-        </CardHeader>
-        <CardContent className="flex flex-col flex-1 pt-0">
-          {loadingNotes ? (
-            <div className="space-y-3">
-              {[1, 2].map((i) => (
-                <div key={i} className="flex items-start gap-3 py-1">
-                  <Skeleton className="h-5 w-5 rounded-full shrink-0" />
-                  <div className="flex-1 space-y-2">
-                    <Skeleton className="h-4 w-3/4" />
-                    <Skeleton className="h-3 w-1/2" />
+                {extraMeetings > 0 && (
+                  <div className="flex items-center justify-between pt-3 border-t border-dashed border-border/40">
+                    <span className="text-xs text-muted-foreground">
+                      +{extraMeetings} more meeting
+                      {extraMeetings !== 1 && 's'}
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 text-xs px-2 text-muted-foreground hover:text-foreground -mr-2"
+                      onClick={() => navigate('/operations/meetings')}
+                    >
+                      View all <ArrowUpRight className="ml-1 h-3 w-3" />
+                    </Button>
                   </div>
-                </div>
-              ))}
-            </div>
-          ) : visibleNotes.length === 0 ? (
-            <div className="flex-1 flex flex-col items-center justify-center text-center py-6 gap-2">
-              <div className="h-10 w-10 border border-dashed rounded-full flex items-center justify-center text-muted-foreground">
-                <FileText className="h-4 w-4 opacity-50" />
+                )}
               </div>
-              <p className="text-sm text-muted-foreground">No pending notes</p>
-            </div>
-          ) : (
-            <div className="flex flex-col gap-0.5 mt-2">
+            )}
+          </TabsContent>
+
+          {/* ─── NOTES TAB ─── */}
+          <TabsContent value="notes" className="mt-0 flex-1 flex flex-col">
+            {loadingNotes ? (
+              <div className="space-y-3 py-1">
+                {[...Array(2)].map((_, i) => (
+                  <Skeleton key={i} className="h-40 rounded-2xl" />
+                ))}
+              </div>
+            ) : visibleNotes.length === 0 ? (
+              <div className="flex-1 flex flex-col items-center justify-center text-center py-8 gap-2">
+                <div className="h-10 w-10 border border-dashed rounded-full flex items-center justify-center text-muted-foreground">
+                  <FileText className="h-4 w-4 opacity-50" />
+                </div>
+                <p className="text-sm text-muted-foreground">No pending notes</p>
+              </div>
+            ) : (
               <div className="flex flex-col gap-3">
                 {visibleNotes.map((note) => (
                   <NoteRow
@@ -347,27 +336,26 @@ export default function DashboardUpcomingEvents() {
                     variant="dashboard-card"
                   />
                 ))}
+                {extraNotes > 0 && (
+                  <div className="flex items-center justify-between pt-3 border-t border-dashed border-border/40">
+                    <span className="text-xs text-muted-foreground">
+                      +{extraNotes} more note{extraNotes !== 1 && 's'}
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 text-xs px-2 text-muted-foreground hover:text-foreground -mr-2"
+                      onClick={() => navigate('/operations/notes')}
+                    >
+                      View all <ArrowUpRight className="ml-1 h-3 w-3" />
+                    </Button>
+                  </div>
+                )}
               </div>
-
-              {extraNotes > 0 && (
-                <div className="flex items-center justify-between mt-3 pt-3 border-t border-dashed border-border/40">
-                  <span className="text-xs text-muted-foreground">
-                    +{extraNotes} more note{extraNotes !== 1 && 's'}
-                  </span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 text-xs px-2 text-muted-foreground hover:text-foreground -mr-2"
-                    onClick={() => navigate('/operations/notes')}
-                  >
-                    View all notes <ArrowUpRight className="ml-1 h-3 w-3" />
-                  </Button>
-                </div>
-              )}
-            </div>
-          )}
+            )}
+          </TabsContent>
         </CardContent>
-      </Card>
-    </div>
+      </Tabs>
+    </Card>
   )
 }

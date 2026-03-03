@@ -4,7 +4,7 @@ import DashboardWelcomeMessage from './DashboardWelcomeMessage'
 import AgencyHealthBar from './AgencyHealthBar'
 import DashboardMeetingsNotes from './DashboardMeetingsNotes'
 import ContentPipelineBar from './ContentPipelineBar'
-import DashboardScheduledPosts from './DashboardScheduledPosts'
+import DashboardWeekTimeline from './DashboardWeekTimeline'
 import DashboardSocialMediaUsage from './DashboardSocialMediaUsage'
 import LifetimeRevenue from './LifetimeRevenue'
 import FinancialSnapshot from './FinancialSnapshot'
@@ -19,42 +19,31 @@ export default function Dashboard() {
   }, [setHeader])
 
   return (
-    <div className="px-4 sm:px-6 lg:px-8 pt-6 pb-20 max-w-[1440px] mx-auto flex flex-col gap-6 animate-in fade-in duration-500">
+    <div className="px-4 sm:px-6 lg:px-8 pt-6 pb-20 max-w-[1440px] mx-auto flex flex-col gap-4 animate-in fade-in duration-500">
       {/* Row 1: Welcome Message */}
       <DashboardWelcomeMessage />
 
       {/* Row 2: KPI cards */}
       <AgencyHealthBar />
 
-      {/* Row 3: Middle Section — left 1/3 (meetings/notes), right 2/3 (pipeline + charts) */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left column */}
-        <div className="lg:col-span-1 flex flex-col gap-6">
-          <DashboardMeetingsNotes />
-        </div>
-
-        {/* Right column */}
-        <div className="lg:col-span-2 flex flex-col gap-6">
-          {/* Workflow pipeline + scheduled posts */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            <ContentPipelineBar />
-            <DashboardScheduledPosts />
-          </div>
-
-          {/* Social media usage + profitability */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            <FinancialSnapshot />
-            <LifetimeRevenue />
-          </div>
-
-          <DashboardSocialMediaUsage />
-        </div>
+      {/* Row 3: Meetings/Notes + Pipeline + Scheduled Posts */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
+        <DashboardMeetingsNotes />
+        <ContentPipelineBar />
+        <DashboardWeekTimeline />
       </div>
 
-      {/* Row 4: Recent invoices table */}
+      {/* Row 4: Finance + Social Media */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
+        <FinancialSnapshot />
+        <LifetimeRevenue />
+        <DashboardSocialMediaUsage />
+      </div>
+
+      {/* Row 5: Recent invoices table */}
       <DashboardInvoiceTable />
 
-      {/* Row 5: Client content health grid */}
+      {/* Row 6: Client content health grid */}
       <ClientHealthGrid />
     </div>
   )
