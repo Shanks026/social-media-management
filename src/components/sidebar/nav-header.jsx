@@ -7,12 +7,13 @@ import {
   SidebarTrigger,
   useSidebar,
 } from '@/components/ui/sidebar'
-import { Skeleton } from '../ui/skeleton'
-import { Layout, ShieldCheck } from 'lucide-react' // Added Layout for fallback icon
+import { Skeleton } from '@/components/ui/skeleton'
+import { Layout } from 'lucide-react'
 
 // Application Defaults
-const APP_NAME = 'Tertiary'
+const APP_NAME = 'Tercero'
 const APP_TAGLINE = 'Development'
+const DEFAULT_ICON = '/TerceroLogo.svg' // Path to your public folder icon
 
 export function AppSidebarHeader({ agencySettings }) {
   const { state, isMobile } = useSidebar()
@@ -20,8 +21,6 @@ export function AppSidebarHeader({ agencySettings }) {
 
   const isCollapsed = state === 'collapsed' && !isMobile
 
-  // Logic: Check if branding is complete
-  // Priority: Props (Real-time updates) > Subscription Query (Fallback)
   const name =
     agencySettings?.name ||
     agencySettings?.agency_name ||
@@ -51,74 +50,100 @@ export function AppSidebarHeader({ agencySettings }) {
             className="hover:bg-transparent cursor-default group"
           >
             {/* LOGO SECTION */}
-            <div className="flex size-9 items-center justify-center rounded-xl bg-zinc-950 text-white shrink-0 overflow-hidden shadow-sm transition-all duration-500">
+            <div
+              className={`flex shrink-0 items-center justify-center transition-all duration-300 overflow-hidden rounded-lg shadow-sm bg-background ${
+                isCollapsed ? 'size-8' : 'size-9'
+              }`}
+            >
               {isLoading ? (
-                <Skeleton className="size-full bg-white/10" />
+                <Skeleton className="size-full rounded-lg" />
               ) : logo ? (
-                <img src={logo} alt={name} className="size-full object-cover" />
+                <img
+                  src={logo}
+                  alt={name}
+                  className="size-full object-cover rounded-lg"
+                  onError={(e) => {
+                    e.target.onerror = null
+                    e.target.src = DEFAULT_ICON
+                  }}
+                />
+              ) : name === APP_NAME || !name ? (
+                <img
+                  src={DEFAULT_ICON}
+                  alt="Tercero Logo"
+                  className="size-full object-contain transition-all duration-300"
+                />
               ) : (
-                <div className="flex flex-col items-center justify-center">
-                  {/* If it's the app fallback, show an icon, otherwise initials */}
-                  {!name || name === APP_NAME ? (
-                    <div className="flex size-8 items-center justify-center rounded-md bg-primary text-primary-foreground font-semibold shrink-0">
-                      Te
-                    </div>
-                  ) : (
-                    <span className="text-[10px] font-black uppercase tracking-tighter">
-                      {getInitials(name)}
-                    </span>
-                  )}
+                <div className="flex size-full items-center justify-center bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 rounded-lg">
+                  <span className="text-[10px] font-black uppercase tracking-tighter">
+                    {getInitials(name)}
+                  </span>
                 </div>
               )}
             </div>
 
             {/* IDENTITY TEXT SECTION */}
-            {!isCollapsed && (
-              <div className="flex flex-col text-left min-w-0 animate-in fade-in slide-in-from-left-2 duration-500">
-                {isLoading ? (
-                  <div className="space-y-2">
-                    <Skeleton className="h-3 w-24" />
-                    <Skeleton className="h-2 w-16" />
-                  </div>
-                ) : (
-                  <>
-                    <div className="flex items-center gap-1.5 overflow-hidden">
-                      <span className="text-sm font-semibold text-foreground truncate tracking-tight">
-                        {name}
-                      </span>
-                      {isBrandingComplete && (
-                        <div>
-                          <img
-                            src="/verify.png"
-                            alt="Verified"
-                            className="size-3.5"
-                          />
-                        </div>
-                      )}
-                    </div>
-                    <span className="text-xs text-muted-foreground truncate">
-                      {plan}
+            {/* Fix: Kept in DOM. Used max-w and opacity for a smooth, flicker-free transition */}
+            <div
+              className={`flex flex-col text-left overflow-hidden transition-all duration-300 ease-in-out ${
+                isCollapsed
+                  ? 'max-w-0 opacity-0 ml-0'
+                  : 'max-w-[200px] opacity-100 ml-0'
+              }`}
+            >
+              {isLoading ? (
+                <div className="space-y-2 w-24">
+                  <Skeleton className="h-3 w-full" />
+                  <Skeleton className="h-2 w-16" />
+                </div>
+              ) : (
+                <>
+                  <div className="flex items-center gap-1.5 overflow-hidden">
+                    <span className="text-sm font-semibold text-foreground truncate tracking-tight">
+                      {name}
                     </span>
-                  </>
-                )}
-              </div>
-            )}
+                    {isBrandingComplete && (
+                      <img
+                        src="/verify.png"
+                        alt="Verified"
+                        className="size-3.5 shrink-0"
+                      />
+                    )}
+                  </div>
+                  <span className="text-xs text-muted-foreground truncate">
+                    {plan}
+                  </span>
+                </>
+              )}
+            </div>
           </SidebarMenuButton>
 
           {/* Trigger: Visible on Desktop when Expanded */}
-          {!isCollapsed && !isMobile && (
-            <div className="ml-auto shrink-0">
-              <SidebarTrigger />
-            </div>
-          )}
+          {/* Fix: Kept in DOM to prevent layout pop */}
+          <div
+            className={`shrink-0 overflow-hidden transition-all duration-300 ease-in-out ${
+              isCollapsed || isMobile
+                ? 'max-w-0 opacity-0 ml-0'
+                : 'max-w-[32px] opacity-100 ml-auto'
+            }`}
+          >
+            <SidebarTrigger />
+          </div>
         </SidebarMenuItem>
 
         {/* Desktop-only: Show trigger below icon when collapsed */}
-        {isCollapsed && (
-          <SidebarMenuItem className="flex justify-center mt-2">
+        {/* Fix: Wrapped in an animating div to slide down smoothly instead of instantly appearing */}
+        <div
+          className={`overflow-hidden transition-all duration-300 ease-in-out ${
+            isCollapsed && !isMobile
+              ? 'max-h-[40px] opacity-100 mt-2'
+              : 'max-h-0 opacity-0 mt-0'
+          }`}
+        >
+          <SidebarMenuItem className="flex justify-center">
             <SidebarTrigger />
           </SidebarMenuItem>
-        )}
+        </div>
       </SidebarMenu>
     </SidebarHeader>
   )

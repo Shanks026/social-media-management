@@ -12,13 +12,17 @@ import SocialCalendar from './pages/calendar/ContentCalendar'
 import MyOrganization from './pages/MyOrganization'
 import Expenses from './pages/finance/FinanceLayout'
 import FinanceLayout from './pages/finance/FinanceLayout'
-import OverviewTab from './pages/finance/OverviewTab'
+import OverviewTab from './pages/finance/FinancialOverviewTab'
 import SubscriptionsTab from './pages/finance/SubscriptionsTab'
 import LedgerTab from './pages/finance/LedgerTab'
 import InvoicesTab from './pages/finance/InvoicesTab'
 import Posts from './pages/Posts'
 import BillingUsage from './pages/billingAndUsage/BillingUsage'
 import CreateClientPage from './pages/clients/CreateClientPage'
+import NotesAndReminders from './pages/NotesAndReminders'
+import MeetingsPage from './pages/MeetingsPage'
+import Dashboard from './pages/dashboard/Dashboard'
+
 
 function AppRoutes() {
   const { session, user } = useAuth()
@@ -31,6 +35,7 @@ function AppRoutes() {
 
       {session ? (
         <Route element={<AppShell user={user} />}>
+          <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/clients" element={<Clients />} />
           <Route path="/myorganization" element={<MyOrganization />} />
           <Route path="/clients/create" element={<CreateClientPage />} />
@@ -44,6 +49,8 @@ function AppRoutes() {
             element={<PostDetails />}
           />
           <Route path="/posts" element={<Posts />} />
+          <Route path="/operations/notes" element={<NotesAndReminders />} />
+          <Route path="/operations/meetings" element={<MeetingsPage />} />
           <Route path="/calendar" element={<SocialCalendar />} />
           <Route path="/finance" element={<FinanceLayout />}>
             {/* Redirect /finance to /finance/overview */}
@@ -56,7 +63,7 @@ function AppRoutes() {
           </Route>
           <Route path="/billing" element={<BillingUsage />} />
           <Route path="/settings" element={<Settings />} />
-          <Route path="*" element={<Navigate to="/clients" replace />} />
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Route>
       ) : (
         <Route path="*" element={<Navigate to="/login" replace />} />

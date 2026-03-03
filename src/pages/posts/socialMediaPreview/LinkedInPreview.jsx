@@ -1,4 +1,4 @@
-import { useState } from 'react'
+
 import {
   ThumbsUp,
   MessageSquare,
@@ -8,7 +8,7 @@ import {
   Globe,
   Plus,
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
+
 
 /**
  * Text parser to highlight hashtags
@@ -38,11 +38,7 @@ export default function LinkedInPreview({ post, client }) {
   const displayName = client?.name || 'Company Name'
   const logo = client?.logo_url
   const followers = '12,345 followers'
-  const handle = client?.social_links?.linkedin?.handle || displayName
-
-  /**
-   * Helper to render the LinkedIn Grid Layout
-   */
+  
   const renderMediaGrid = () => {
     const count = mediaUrls.length
     if (count === 0) return null
@@ -236,6 +232,7 @@ export default function LinkedInPreview({ post, client }) {
   )
 }
 
+// eslint-disable-next-line no-unused-vars
 const ActionButton = ({ icon: Icon, label }) => (
   <button className="flex items-center gap-1.5 px-3 py-3 rounded hover:bg-[#00000014] dark:hover:bg-[#ffffff14] transition-colors text-gray-600 dark:text-gray-300 font-semibold group">
     <Icon size={20} className="group-hover:stroke-2 transition-all" />

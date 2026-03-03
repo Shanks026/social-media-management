@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
@@ -9,14 +9,21 @@ import {
   ArrowDownCircle,
   Building2,
   User,
+  FileText,
+  AlertCircle,
 } from 'lucide-react'
 
 // API
 import { useCreateTransaction, useUpdateTransaction } from '@/api/transactions'
 import { useClients } from '@/api/clients'
-import { supabase } from '@/lib/supabase'
-import { useQuery } from '@tanstack/react-query'
 import { cn } from '@/lib/utils'
+
+// Constants
+import {
+  INCOME_CATEGORIES,
+  EXPENSE_CATEGORIES,
+  INVOICE_REQUIRED_CATEGORIES,
+} from '@/utils/constants'
 
 // UI Components
 import { Button } from '@/components/ui/button'
@@ -52,29 +59,8 @@ import {
 } from '@/components/ui/popover'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
-// --- CONSTANTS ---
-const INCOME_CATEGORIES = [
-  'Monthly Retainer',
-  'Setup / Onboarding',
-  'Performance / Success Fee',
-  'Ad Budget Reimbursement',
-  'Creative Project',
-  'Consulting / Audit',
-  'Other',
-]
-
-const EXPENSE_CATEGORIES = [
-  'Ad Spend / Media Buying',
-  'Freelancer / Contractor',
-  'SaaS / Marketing Tools',
-  'Content Production',
-  'Stock / Assets',
-  'Travel & Meetings',
-  'Training / Courses',
-  'Office / Rent',
-  'Taxes / Legal',
-  'Other',
-]
+// Lazy-imported to avoid circular dep — CreateInvoiceDialog is a heavy component
+// Note: CreateInvoiceDialog is NOT mounted here; parent handles it via onCreateInvoice callback
 
 const transactionSchema = z.object({
   type: z.enum(['INCOME', 'EXPENSE']),
@@ -95,6 +81,9 @@ export function AddTransactionDialog({
   onOpenChange,
   editingData = null,
   defaultClientId = null,
+  // Called when user chooses "Create Invoice instead".
+  // Receives prefill: { clientId, category, amount, description }
+  onCreateInvoice = null,
 }) {
   const { data: clientData, isLoading: isLoadingClients } = useClients()
   const clients = clientData?.realClients || []
@@ -104,6 +93,7 @@ export function AddTransactionDialog({
     useCreateTransaction()
   const { mutate: updateTransaction, isPending: isUpdating } =
     useUpdateTransaction()
+
 
   const form = useForm({
     resolver: zodResolver(transactionSchema),
@@ -144,12 +134,60 @@ export function AddTransactionDialog({
   }, [editingData, form, open, defaultClientId])
 
   const type = form.watch('type')
-  const activeCategories =
-    type === 'INCOME' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES
+  const clientId = form.watch('client_id')
+  const selectedCategory = form.watch('category')
+
+  // Determine if currently selected client is internal
+  const isInternalClient = useMemo(
+    () =>
+      clientId === internalAccount?.id ||
+      clients.find((c) => c.id === clientId)?.is_internal,
+    [clientId, internalAccount, clients],
+  )
+
+  // Build available categories based on type + client
+  const activeCategories = useMemo(() => {
+    if (type === 'INCOME') {
+      if (isInternalClient) {
+        // Hide client-billing categories for internal account
+        return INCOME_CATEGORIES.filter(
+          (cat) =>
+            ![
+              'Monthly Retainer',
+              'Setup / Onboarding',
+              'Performance / Success Fee',
+              'Ad Budget Reimbursement',
+              'Creative Project',
+            ].includes(cat),
+        )
+      }
+      return INCOME_CATEGORIES
+    } else {
+      if (!isInternalClient && clientId) {
+        return EXPENSE_CATEGORIES.filter(
+          (cat) => !['Office / Rent', 'Taxes / Legal'].includes(cat),
+        )
+      }
+      return EXPENSE_CATEGORIES
+    }
+  }, [type, clientId, isInternalClient])
+
+  // True when the chosen category requires an invoice instead of a direct ledger entry
+  const isInvoiceRequired =
+    type === 'INCOME' &&
+    !isInternalClient &&
+    INVOICE_REQUIRED_CATEGORIES.has(selectedCategory)
+
+  // The prefill values for CreateInvoiceDialog when redirecting
+  const invoicePrefill = useMemo(() => ({
+    clientId: clientId || '',
+    category: selectedCategory || '',
+    amount: form.getValues('amount') || '',
+    description: form.getValues('description') || '',
+  }), [clientId, selectedCategory, form])
 
   function onSubmit(data) {
     if (editingData) {
-      // Update Mode
       updateTransaction(
         { id: editingData.id, updates: data },
         {
@@ -160,7 +198,6 @@ export function AddTransactionDialog({
         },
       )
     } else {
-      // Create Mode
       createTransaction(data, {
         onSuccess: () => {
           onOpenChange(false)
@@ -171,250 +208,315 @@ export function AddTransactionDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
-        <DialogHeader>
-          <DialogTitle>
-            {editingData ? 'Edit Transaction' : 'Record Transaction'}
-          </DialogTitle>
-          <DialogDescription>
-            {editingData
-              ? 'Update the details of this ledger entry.'
-              : 'Log a one-time income or expense for your agency or clients.'}
-          </DialogDescription>
-        </DialogHeader>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>
+              {editingData ? 'Edit Transaction' : 'Record Transaction'}
+            </DialogTitle>
+            <DialogDescription>
+              {editingData
+                ? 'Update the details of this ledger entry.'
+                : 'Log a one-time income or expense for your agency or clients.'}
+            </DialogDescription>
+          </DialogHeader>
 
-        <Form {...form}>
-          <form
-            onSubmit={form.handleSubmit(onSubmit)}
-            className="space-y-4 pt-2"
-          >
-            {/* TYPE TOGGLE - Disabled during Edit */}
-            <FormField
-              control={form.control}
-              name="type"
-              render={({ field }) => (
-                <FormItem
-                  className={cn('space-y-0', editingData && 'opacity-60')}
-                >
-                  <Tabs
-                    onValueChange={field.onChange}
-                    value={field.value}
-                    className="w-full"
+          <Form {...form}>
+            <form
+              onSubmit={form.handleSubmit(onSubmit)}
+              className="space-y-4 pt-2"
+            >
+              {/* TYPE TOGGLE - Disabled during Edit */}
+              <FormField
+                control={form.control}
+                name="type"
+                render={({ field }) => (
+                  <FormItem
+                    className={cn('space-y-0', editingData && 'opacity-60')}
                   >
-                    <TabsList className="grid w-full grid-cols-2">
-                      <TabsTrigger
-                        value="INCOME"
-                        disabled={!!editingData}
-                        className="data-[state=active]:bg-emerald-50 data-[state=active]:text-emerald-700"
-                      >
-                        <ArrowDownCircle className="mr-2 h-4 w-4" /> Income
-                      </TabsTrigger>
-                      <TabsTrigger
-                        value="EXPENSE"
-                        disabled={!!editingData}
-                        className="data-[state=active]:bg-rose-50 data-[state=active]:text-rose-700"
-                      >
-                        <ArrowUpCircle className="mr-2 h-4 w-4" /> Expense
-                      </TabsTrigger>
-                    </TabsList>
-                  </Tabs>
-                </FormItem>
-              )}
-            />
-
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="amount"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Amount (₹)</FormLabel>
-                    <FormControl>
-                      <Input placeholder="0.00" {...field} />
-                    </FormControl>
-                    <FormMessage />
+                    <Tabs
+                      onValueChange={field.onChange}
+                      value={field.value}
+                      className="w-full"
+                    >
+                      <TabsList className="grid w-full grid-cols-2">
+                        <TabsTrigger
+                          value="INCOME"
+                          disabled={!!editingData}
+                          className="data-[state=active]:bg-emerald-50 data-[state=active]:text-emerald-700"
+                        >
+                          <ArrowDownCircle className="mr-2 h-4 w-4" /> Income
+                        </TabsTrigger>
+                        <TabsTrigger
+                          value="EXPENSE"
+                          disabled={!!editingData}
+                          className="data-[state=active]:bg-rose-50 data-[state=active]:text-rose-700"
+                        >
+                          <ArrowUpCircle className="mr-2 h-4 w-4" /> Expense
+                        </TabsTrigger>
+                      </TabsList>
+                    </Tabs>
                   </FormItem>
                 )}
               />
-              <FormField
-                control={form.control}
-                name="date"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel className="mb-1">Date</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
+
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="amount"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>
+                        Amount (₹) <span className="text-destructive">*</span>
+                      </FormLabel>
+                      <FormControl>
+                        <Input placeholder="0.00" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="date"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                      <FormLabel className="mb-1">
+                        Date <span className="text-destructive">*</span>
+                      </FormLabel>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant="outline"
+                              className={cn(
+                                'pl-3 text-left font-normal',
+                                !field.value && 'text-muted-foreground',
+                              )}
+                            >
+                              {field.value ? (
+                                format(field.value, 'PPP')
+                              ) : (
+                                <span>Pick a date</span>
+                              )}
+                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={field.value}
+                            onSelect={field.onChange}
+                            disabled={(date) => date > new Date('2100-01-01')}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="client_id"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>
+                        {type === 'INCOME' ? 'From Client' : 'For Client'}
+                      </FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value || ''}
+                        disabled={!!defaultClientId}
+                      >
                         <FormControl>
-                          <Button
-                            variant="outline"
-                            className={cn(
-                              'pl-3 text-left font-normal',
-                              !field.value && 'text-muted-foreground',
-                            )}
-                          >
-                            {field.value ? (
-                              format(field.value, 'PPP')
-                            ) : (
-                              <span>Pick a date</span>
-                            )}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
+                          <SelectTrigger className="w-full">
+                            <SelectValue
+                              placeholder={
+                                isLoadingClients
+                                  ? 'Loading account...'
+                                  : 'Select account...'
+                              }
+                            />
+                          </SelectTrigger>
                         </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={field.value}
-                          onSelect={field.onChange}
-                          disabled={(date) => date > new Date('2100-01-01')}
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+                        <SelectContent>
+                          {internalAccount && (
+                            <>
+                              <SelectItem value={internalAccount.id}>
+                                <div className="flex items-center gap-2">
+                                  <Building2 className="h-4 w-4" />
+                                  <span>My Agency</span>
+                                </div>
+                              </SelectItem>
+                              <div className="h-px bg-muted my-1" />
+                            </>
+                          )}
+                          {clients.map((c) => (
+                            <SelectItem key={c.id} value={c.id}>
+                              <div className="flex items-center gap-2">
+                                {c.logo_url ? (
+                                  <img
+                                    src={c.logo_url}
+                                    alt=""
+                                    className="size-4 rounded-sm object-cover"
+                                  />
+                                ) : (
+                                  <div className="size-4 rounded-sm bg-muted flex items-center justify-center text-[8px] font-bold text-muted-foreground uppercase">
+                                    {c.name?.[0]}
+                                  </div>
+                                )}
+                                <span>{c.name}</span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="category"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>
+                        Category <span className="text-destructive">*</span>
+                      </FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value}
+                        key={type}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Category" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {activeCategories.map((cat) => (
+                            <SelectItem key={cat} value={cat}>
+                              {cat}
+                              {/* Mark invoice-required categories */}
+                              {INVOICE_REQUIRED_CATEGORIES.has(cat) && (
+                                <span className="ml-1.5 text-[10px] font-medium text-amber-600 dark:text-amber-400">
+                                  · invoice
+                                </span>
+                              )}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
-            <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
-                name="client_id"
+                name="description"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>
-                      {type === 'INCOME' ? 'From Client' : 'For Client'}
+                      Description <span className="text-destructive">*</span>
                     </FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      value={field.value || ''}
-                      disabled={!!defaultClientId}
-                    >
-                      <FormControl>
-                        <SelectTrigger className="w-full">
-                          <SelectValue
-                            placeholder={
-                              isLoadingClients
-                                ? 'Loading account...'
-                                : 'Select account...'
-                            }
-                          />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {internalAccount && (
-                          <>
-                            <SelectItem value={internalAccount.id}>
-                              <div className="flex items-center gap-2">
-                                <Building2 className="h-4 w-4" />
-                                <span>My Agency</span>
-                              </div>
-                            </SelectItem>
-                            <div className="h-px bg-muted my-1" />
-                          </>
-                        )}
-                        {clients.map((c) => (
-                          <SelectItem key={c.id} value={c.id}>
-                            <div className="flex items-center gap-2">
-                              <User className="h-4 w-4 text-muted-foreground" />
-                              <span>{c.name}</span>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <FormControl>
+                      <Textarea
+                        placeholder="Enter details..."
+                        className="resize-none"
+                        {...field}
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
+
               <FormField
                 control={form.control}
-                name="category"
+                name="status"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Category</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      value={field.value}
-                      key={type}
-                    >
+                    <FormLabel>Status</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Category" />
+                          <SelectValue placeholder="Select status" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {activeCategories.map((cat) => (
-                          <SelectItem key={cat} value={cat}>
-                            {cat}
-                          </SelectItem>
-                        ))}
+                        <SelectItem value="PAID">Paid / Received</SelectItem>
+                        <SelectItem value="PENDING">Pending</SelectItem>
+                        <SelectItem value="OVERDUE">Overdue</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-            </div>
 
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Description</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="Enter details..."
-                      className="resize-none"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
+              {/* ── INVOICE GATE BANNER ───────────────────────────────────── */}
+              {isInvoiceRequired && (
+                <div className="rounded-lg border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/30 p-4 space-y-3">
+                  <div className="flex items-start gap-3">
+                    <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+                    <div className="space-y-1">
+                      <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">
+                        Invoice required for "{selectedCategory}"
+                      </p>
+                      <p className="text-xs text-amber-700 dark:text-amber-400 leading-relaxed">
+                        This category requires a formal invoice for the client.
+                        Create an invoice instead — when marked as paid, it
+                        auto-creates the ledger entry for you.
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="w-full gap-2 bg-amber-600 hover:bg-amber-700 text-white"
+                    onClick={() => {
+                      // Close this dialog first, then signal parent to open CreateInvoiceDialog
+                      onOpenChange(false)
+                      if (onCreateInvoice) {
+                        // Small delay ensures the closing animation completes before
+                        // the parent mounts the new dialog
+                        setTimeout(() => onCreateInvoice(invoicePrefill), 150)
+                      }
+                    }}
+                  >
+                    <FileText className="h-3.5 w-3.5" />
+                    Create Invoice instead
+                  </Button>
+                </div>
               )}
-            />
 
-            <FormField
-              control={form.control}
-              name="status"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Status</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select status" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="PAID">Paid / Received</SelectItem>
-                      <SelectItem value="PENDING">Pending</SelectItem>
-                      <SelectItem value="OVERDUE">Overdue</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <div className="flex justify-end gap-3 pt-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => onOpenChange(false)}
-              >
-                Cancel
-              </Button>
-              <Button type="submit" disabled={isCreating || isUpdating}>
-                {editingData ? 'Update Record' : 'Save Record'}
-              </Button>
-            </div>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
+              <div className="flex justify-end gap-3 pt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => onOpenChange(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={isCreating || isUpdating || (isInvoiceRequired && !editingData)}
+                >
+                  {editingData ? 'Update Record' : 'Save Record'}
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+    </>
   )
 }

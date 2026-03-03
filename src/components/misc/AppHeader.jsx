@@ -20,7 +20,7 @@ export function AppHeader() {
         <div className="flex size-8 items-center justify-center rounded-md bg-primary text-primary-foreground font-semibold">
           Te
         </div>
-        <span className="text-sm font-bold">Tertiary</span>
+        <span className="text-sm font-bold">Tercero</span>
       </div>
 
       {/* --- DESKTOP BREADCRUMBS SECTION --- */}

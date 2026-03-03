@@ -12,6 +12,7 @@ import { completeFullAgencySetup, setupBrandingOnly } from '../../api/agency'
 import CreateClientPage from '../../pages/clients/CreateClientPage'
 import WelcomeCarousel from '../WelcomeCarousel' // Import the new component
 import OnboardingPage from '../../pages/onboarding/Onboarding'
+import { SubscriptionReminder } from '../SubscriptionReminder'
 import { Loader2 } from 'lucide-react'
 import { useMeetingReminders } from '../../hooks/useMeetingReminders'
 
@@ -55,6 +56,7 @@ export function AppShell({ user }) {
 
   useEffect(() => {
     checkAgencyStatus()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user])
 
   const handleSetupComplete = async () => {
@@ -126,6 +128,8 @@ export function AppShell({ user }) {
             }}
           />
 
+          {/* Background Subscription Reminder Service */}
+          <SubscriptionReminder />
         </div>
 
         {isSetupOpen && (

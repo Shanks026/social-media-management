@@ -285,12 +285,12 @@ export default function InvoicePDF({ invoice, agency = {} }) {
                   <Text style={s.logoText}>{agency.agency_name || 'Agency'}</Text>
                 </View>
                 {agency.basic_whitelabel_enabled && !agency.full_whitelabel_enabled && (
-                  <Text style={[s.arkLabsText, { marginTop: 4 }]}>Powered by Tertiary, Ark Labs 2026</Text>
+                  <Text style={[s.arkLabsText, { marginTop: 4 }]}>Powered by Tercero, Ark Labs 2026</Text>
                 )}
               </View>
             ) : (
               <View>
-                <Text style={s.tertiaryLogoText}>Tertiary</Text>
+                <Text style={s.tertiaryLogoText}>Tercero</Text>
                 <Text style={s.arkLabsText}>Ark Labs 2026</Text>
               </View>
             )}

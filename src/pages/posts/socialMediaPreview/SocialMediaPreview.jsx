@@ -31,6 +31,7 @@ export default function SocialMediaPreview({
     ) {
       setActivePlatform(availablePlatforms[0])
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [post?.platform])
 
   return (

@@ -83,6 +83,7 @@ function normalizePosts(data) {
       const c = row.clients
       return {
         id: row.id,
+        actual_post_id: row.id,
         client_id: row.client_id,
         version_id: v.id,
         title: v.title,
@@ -149,7 +150,6 @@ export function usePostCounts() {
         all: 0,
         DRAFT: 0,
         PENDING_APPROVAL: 0,
-        APPROVED: 0,
         SCHEDULED: 0,
         NEEDS_REVISION: 0,
         PUBLISHED: 0,

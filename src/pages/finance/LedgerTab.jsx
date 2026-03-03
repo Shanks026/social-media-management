@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { format } from 'date-fns'
 import {
   Filter,
@@ -26,10 +27,9 @@ import StatusBadge from '@/components/StatusBadge'
 import { useTransactions, useDeleteTransaction } from '@/api/transactions'
 import { useClients } from '@/api/clients'
 import { formatCurrency } from '@/utils/finance'
-import { supabase } from '@/lib/supabase'
-import { useQuery } from '@tanstack/react-query'
 import { cn } from '@/lib/utils'
 import { AddTransactionDialog } from './AddTransactionDialog'
+import { CreateInvoiceDialog } from './CreateInvoiceDialog'
 import { CustomTable } from '@/components/CustomTable'
 
 export default function LedgerTab({ clientId, subTabs }) {
@@ -37,6 +37,9 @@ export default function LedgerTab({ clientId, subTabs }) {
   const [editingTransaction, setEditingTransaction] = useState(null)
   const [filterMode, setFilterMode] = useState('ALL')
   const [searchTerm, setSearchTerm] = useState('')
+  const [invoiceOpen, setInvoiceOpen] = useState(false)
+  const [invoicePrefill, setInvoicePrefill] = useState(null)
+  const navigate = useNavigate()
 
   const { data: transactions = [], isLoading } = useTransactions({ clientId })
   const { mutate: deleteTransaction } = useDeleteTransaction()
@@ -235,7 +238,7 @@ export default function LedgerTab({ clientId, subTabs }) {
                 </div>
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="ALL">All Expenses</SelectItem>
+                <SelectItem value="ALL">All Transactions</SelectItem>
                 <SelectItem value={internalAccount?.id || 'INTERNAL'}>
                   Internal (My Agency)
                 </SelectItem>
@@ -272,6 +275,18 @@ export default function LedgerTab({ clientId, subTabs }) {
         }}
         editingData={editingTransaction}
         defaultClientId={clientId}
+        onCreateInvoice={(prefill) => {
+          setInvoicePrefill(prefill)
+          setInvoiceOpen(true)
+        }}
+      />
+
+      <CreateInvoiceDialog
+        open={invoiceOpen}
+        onOpenChange={setInvoiceOpen}
+        preselectedClientId={invoicePrefill?.clientId || undefined}
+        prefill={invoicePrefill}
+        onSuccess={() => navigate('/finance/invoices')}
       />
     </div>
   )

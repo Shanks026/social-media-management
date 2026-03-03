@@ -1,10 +1,13 @@
+import { useState } from 'react'
 import { Button } from '@/components/ui/button'
+import { Calendar } from '@/components/ui/calendar'
 import {
   Lock,
   AlertCircle,
   Globe,
-  Pencil,
   MessageSquareText,
+  CalendarDays,
+  Clock,
 } from 'lucide-react'
 import {
   Dialog,
@@ -14,7 +17,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
 import { Textarea } from '@/components/ui/textarea'
+import { cn } from '@/lib/utils'
+import { format } from 'date-fns'
 
 export default function PostActionDialogs({
   post,
@@ -32,9 +42,19 @@ export default function PostActionDialogs({
   isRevisionPending,
   adminNotes,
   setAdminNotes,
+  // Internal: Approve & Schedule
+  isApproveScheduleOpen,
+  setIsApproveScheduleOpen,
+  approveDate,
+  setApproveDate,
+  onConfirmApproveSchedule,
+  isApproveSchedulePending,
 }) {
+  const [calendarOpen, setCalendarOpen] = useState(false)
+
   return (
     <>
+      {/* ── External: Send for Approval confirmation ── */}
       <Dialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader className="space-y-4">
@@ -80,6 +100,101 @@ export default function PostActionDialogs({
         </DialogContent>
       </Dialog>
 
+      {/* ── Internal: Approve & Schedule ── */}
+      <Dialog
+        open={isApproveScheduleOpen}
+        onOpenChange={(open) => {
+          setIsApproveScheduleOpen(open)
+          if (!open) setApproveDate(null)
+        }}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader className="space-y-4">
+            <DialogTitle className="flex items-center gap-2 text-xl">
+              <CalendarDays className="h-6 w-6 text-violet-500" /> Approve &
+              Schedule
+            </DialogTitle>
+            <div className="space-y-3">
+              <DialogDescription className="text-base text-foreground/90">
+                Set a publish date to lock{' '}
+                <strong>v{post.version_number}.0</strong> as scheduled. This
+                version will become read-only.
+              </DialogDescription>
+              <div className="bg-muted/50 p-4 rounded-lg border text-sm space-y-2">
+                <p className="font-semibold text-foreground flex items-center gap-2">
+                  <Clock size={14} className="text-muted-foreground" /> What
+                  happens next?
+                </p>
+                <ul className="list-disc pl-4 space-y-1 text-muted-foreground">
+                  <li>The post moves directly to Scheduled status.</li>
+                  <li>No client approval email is sent.</li>
+                  <li>
+                    You can create a new version from Scheduled if you need to
+                    make changes.
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </DialogHeader>
+
+          <div className="py-2">
+            <p className="text-sm font-medium mb-2">Publish Date</p>
+            <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    'w-full justify-start text-left font-normal gap-2',
+                    !approveDate && 'text-muted-foreground',
+                  )}
+                >
+                  <CalendarDays size={16} />
+                  {approveDate
+                    ? format(approveDate, 'PPP')
+                    : 'Select a date…'}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={approveDate}
+                  onSelect={(date) => {
+                    setApproveDate(date)
+                    setCalendarOpen(false)
+                  }}
+                  disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
+            <p className="text-[11px] text-muted-foreground mt-1.5 italic">
+              {approveDate
+                ? "Prefilled from the post\u2019s target date \u2014 change it if needed."
+                : 'No target date set \u2014 please pick a publish date.'}
+            </p>
+          </div>
+
+          <DialogFooter className="flex flex-row gap-3">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsApproveScheduleOpen(false)
+                setApproveDate(null)
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={onConfirmApproveSchedule}
+              disabled={isApproveSchedulePending || !approveDate}
+            >
+              {isApproveSchedulePending ? 'Scheduling…' : 'Confirm Schedule'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Publish Now confirmation ── */}
       <Dialog
         open={isPublishConfirmOpen}
         onOpenChange={setIsPublishConfirmOpen}
@@ -119,6 +234,7 @@ export default function PostActionDialogs({
         </DialogContent>
       </Dialog>
 
+      {/* ── Create New Version confirmation ── */}
       <Dialog
         open={isRevisionConfirmOpen}
         onOpenChange={setIsRevisionConfirmOpen}
@@ -166,7 +282,6 @@ export default function PostActionDialogs({
             <Button
               onClick={onConfirmRevision}
               disabled={isRevisionPending}
-              
             >
               {isRevisionPending ? 'Creating...' : 'Create New Version'}
             </Button>

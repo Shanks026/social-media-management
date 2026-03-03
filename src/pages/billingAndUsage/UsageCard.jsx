@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils'
 
 export const UsageCard = ({
   title,
+  // eslint-disable-next-line no-unused-vars
   icon: Icon,
   value,
   valueUnit,

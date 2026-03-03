@@ -43,12 +43,12 @@ export default function HTMLInvoicePreview({ invoice, agency }) {
                 <span className="text-2xl font-bold tracking-tight text-[#111827]">{agency.agency_name || 'Agency'}</span>
               </div>
               {agency.basic_whitelabel_enabled && !agency.full_whitelabel_enabled && (
-                <p className="text-[9px] text-gray-400 mt-1">Powered by Tertiary, Ark Labs 2026</p>
+                <p className="text-[9px] text-gray-400 mt-1">Powered by Tercero, Ark Labs 2026</p>
               )}
             </div>
           ) : (
             <div className="flex flex-col items-end">
-               <h2 className="text-3xl font-extrabold tracking-tight text-[#111827]">Tertiary</h2>
+               <h2 className="text-3xl font-extrabold tracking-tight text-[#111827]">Tercero</h2>
                <p className="text-xs font-medium text-gray-500">Ark Labs 2026</p>
             </div>
           )}

@@ -28,7 +28,24 @@ import { PlanOverview } from './PlanOverview'
 
 // ── Plan data ──
 
-const plans = [
+export const plans = [
+  {
+    id: 'free',
+    name: 'Free',
+    icon: Zap,
+    bestFor: 'Individual Explorers',
+    price: '0',
+    accent: { text: 'text-slate-500' },
+    features: {
+      clients: { value: '1 client limit', included: true },
+      workspace: { value: 'Internal Workspace included', included: true },
+      storage: { value: '5 GB Storage limit', included: true },
+      whitelabeling: { value: 'No whitelabeling', included: false },
+      finance: { value: 'Basic ledger only', included: true },
+      support: { value: 'Email support', included: true },
+      costPerClient: { value: '₹400 per extra client', included: true },
+    },
+  },
   {
     id: 'ignite',
     name: 'Ignite',
@@ -106,7 +123,7 @@ const UpgradeRequestDialog = ({
 
   if (!targetPlan) return null
 
-  const prefilledMessage = `Dear Tertiary Admin,
+  const prefilledMessage = `Dear Tercero Admin,
 
 I would like to request a plan upgrade for my agency account.
 
@@ -371,13 +388,16 @@ export const SubscriptionTab = ({ sub, isLoading }) => {
       // Small timeout to ensure everything is rendered
       const timer = setTimeout(() => {
         scrollToPlans()
-        
+
         // Remove scroll param
-        setSearchParams((prev) => {
-          const nextParams = new URLSearchParams(prev)
-          nextParams.delete('scroll')
-          return nextParams
-        }, { replace: true })
+        setSearchParams(
+          (prev) => {
+            const nextParams = new URLSearchParams(prev)
+            nextParams.delete('scroll')
+            return nextParams
+          },
+          { replace: true },
+        )
       }, 300)
 
       return () => clearTimeout(timer)
@@ -398,7 +418,7 @@ export const SubscriptionTab = ({ sub, isLoading }) => {
     setUpgradeDialogOpen(true)
   }
   return (
-    <div className="space-y-12">
+    <div className="space-y-10">
       <PlanOverview
         sub={sub}
         currentPlan={currentPlan}
@@ -431,7 +451,7 @@ export const SubscriptionTab = ({ sub, isLoading }) => {
           </p>
         </div>
 
-        <div className="grid gap-6 lg:gap-8 md:grid-cols-3">
+        <div className="grid gap-6 lg:gap-8 md:grid-cols-4">
           {plans.map((plan) => (
             <PlanCard
               key={plan.id}
@@ -475,33 +495,38 @@ export const SubscriptionTab = ({ sub, isLoading }) => {
               {[
                 {
                   label: 'Client Portals',
-                  values: ['Up to 5', 'Up to 15', 'Up to 35'],
+                  values: ['1 Target', 'Up to 5', 'Up to 15', 'Up to 35'],
                 },
                 {
                   label: 'Internal Workspace',
-                  values: [true, true, true],
+                  values: [true, true, true, true],
                 },
                 {
                   label: 'Storage Limit',
-                  values: ['20 GB', '100 GB', '500 GB'],
+                  values: ['5 GB', '20 GB', '100 GB', '500 GB'],
                 },
                 {
                   label: 'Whitelabeling',
-                  values: [false, 'Basic', 'Full Custom'],
+                  values: [false, false, 'Basic', 'Full Custom'],
                 },
                 {
                   label: 'Finance Module',
-                  values: ['Basic Ledger', 'Invoicing + Reports', 'Full CFO'],
+                  values: [
+                    'Basic Ledger',
+                    'Basic Ledger',
+                    'Invoicing + Reports',
+                    'Full CFO',
+                  ],
                 },
                 {
                   label: 'Dedicated Support',
-                  values: ['Email', 'Priority Chat', 'VIP Concierge'],
+                  values: ['Email', 'Email', 'Priority Chat', 'VIP Concierge'],
                 },
                 {
                   label: 'Cost Per Extra Client',
-                  values: ['₹400 / mo', '₹400 / mo', '₹370 / mo'],
+                  values: ['₹400 / mo', '₹400 / mo', '₹400 / mo', '₹370 / mo'],
                 },
-              ].map((row, idx) => (
+              ].map((row) => (
                 <tr
                   key={row.label}
                   className="border-b border-border/20 transition-colors hover:bg-muted/10"

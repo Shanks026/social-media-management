@@ -1,7 +1,7 @@
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { MessageSquareOff } from 'lucide-react'
 
-const CommentItem = ({ name, content, date }) => {
+const CommentItem = ({ name, content }) => {
   const initials = name ? name.charAt(0).toUpperCase() : 'C'
 
   return (

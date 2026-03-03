@@ -149,8 +149,8 @@ export default function MyOrganization() {
           </p>
         </div>
 
-        {agencySettings ? (
-          /* PATH B: Branding Exists, needs Workspace Activation */
+        {agencySettings?.agency_name ? (
+          /* PATH B: Brand identity done — offer one-click workspace activation */
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
             <div className="rounded-2xl border border-border/50 bg-card/30 overflow-hidden">
               <div className="p-8 lg:p-12 grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
@@ -199,6 +199,12 @@ export default function MyOrganization() {
                       </>
                     )}
                   </Button>
+                  <button
+                    className="text-xs text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2"
+                    onClick={() => handleOpenSetup('full')}
+                  >
+                    Reset &amp; reconfigure →
+                  </button>
                 </div>
               </div>
             </div>

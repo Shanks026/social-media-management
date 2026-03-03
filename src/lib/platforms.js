@@ -14,10 +14,10 @@ export const SUPPORTED_PLATFORMS = [
   { id: 'facebook', label: 'Facebook', icon: Facebook, color: '#1877F2' },
   { id: 'twitter', label: 'Twitter/X', icon: Twitter, color: '#000000' },
   { id: 'youtube', label: 'YouTube', icon: Youtube, color: '#FF0000' },
-  {
-    id: 'google_business',
-    label: 'Google Business',
-    icon: Globe,
-    color: '#4285F4',
-  },
+  // {
+  //   id: 'google_business',
+  //   label: 'Google Business',
+  //   icon: Globe,
+  //   color: '#4285F4',
+  // },
 ]

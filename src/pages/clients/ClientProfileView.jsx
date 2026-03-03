@@ -1,10 +1,12 @@
 import { useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import {
   LayoutGrid,
   Calendar,
   Settings2,
   BarChart3,
   CircleDollarSign,
+  PieChart,
 } from 'lucide-react'
 
 // UI Components
@@ -12,6 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import TierBadge from '@/components/TierBadge'
 
 // Section Imports
+import OverviewTab from './clientSections/OverviewTab'
 import WorkflowTab from './clientSections/WorkflowTab'
 import ManagementTab from './clientSections/ManagementTab'
 import { ComingSoon } from './clientSections/ComingSoon'
@@ -20,12 +23,13 @@ import ContentCalendar from '../calendar/ContentCalendar'
 import { cn } from '@/lib/utils'
 
 // Finance Imports
-import OverviewPage from '../finance/OverviewTab'
+import OverviewPage from '../finance/FinancialOverviewTab'
 import LedgerTab from '../finance/LedgerTab'
 import SubscriptionsTab from '../finance/SubscriptionsTab'
 import InvoicesTab from '../finance/InvoicesTab'
 
 const TABS_CONFIG = [
+  { value: 'overview', label: 'Overview', icon: PieChart },
   { value: 'workflow', label: 'Workflow', icon: LayoutGrid },
   { value: 'financials', label: 'Financials', icon: CircleDollarSign },
   { value: 'calendar', label: 'Calendar', icon: Calendar },
@@ -44,6 +48,34 @@ export default function ClientProfileView({ client }) {
         .toUpperCase()
         .slice(0, 2)
     : 'CL'
+
+  const [searchParams, setSearchParams] = useSearchParams()
+  
+  // Get active tabs from URL or default to 'overview'
+  const activeTab = searchParams.get('tab') || 'overview'
+  const activeSubTab = searchParams.get('subtab') || 'overview'
+
+  const handleTabChange = (value) => {
+    setSearchParams((prev) => {
+      prev.set('tab', value)
+      // When switching main tabs, maybe clear subtab if it's not financials to keep URL clean,
+      // or optionally preserve it if returning to financials. For now, clear it if not financials.
+      if (value !== 'financials') {
+        prev.delete('subtab')
+      } else if (!prev.has('subtab')) {
+        // If switching to financials and no subtab is set, default to overview
+        prev.set('subtab', 'overview')
+      }
+      return prev
+    }, { replace: true }) // use replace to not bloat history on every click
+  }
+
+  const handleSubTabChange = (value) => {
+    setSearchParams((prev) => {
+      prev.set('subtab', value)
+      return prev
+    }, { replace: true })
+  }
 
   const subTabs = (
     <TabsList className="bg-muted/20 p-1 rounded-lg w-fit h-auto">
@@ -65,12 +97,14 @@ export default function ClientProfileView({ client }) {
       >
         Subscriptions
       </TabsTrigger>
-      <TabsTrigger
-        value="invoices"
-        className="rounded-md text-xs px-3 py-1.5 h-8"
-      >
-        Invoices
-      </TabsTrigger>
+      {!client.is_internal && (
+        <TabsTrigger
+          value="invoices"
+          className="rounded-md text-xs px-3 py-1.5 h-8"
+        >
+          Invoices
+        </TabsTrigger>
+      )}
     </TabsList>
   )
 
@@ -79,10 +113,10 @@ export default function ClientProfileView({ client }) {
       {/* MAIN CONTAINER: 
           Standardised to max-w-[1440px] to match the Clients List Page 
       */}
-      <div className="px-8 pt-10 pb-20 space-y-10 max-w-[1440px] mx-auto animate-in fade-in duration-700">
+      <div className="px-8 pt-6 pb-10 space-y-6 max-w-[1440px] mx-auto animate-in fade-in duration-700">
         {/* --- HEADER SECTION: Google-esque Lightweight Typography --- */}
         <div className="flex items-center gap-6">
-          <div className="h-16 w-16 shrink-0 rounded-[22px] bg-muted/20 border border-border/40 flex items-center justify-center overflow-hidden shadow-sm transition-transform hover:scale-[1.02]">
+          <div className="h-16 w-16 shrink-0 rounded-2xl bg-muted/20 border border-border/40 flex items-center justify-center overflow-hidden shadow-sm transition-transform hover:scale-[1.02]">
             {client.logo_url ? (
               <img
                 src={client.logo_url}
@@ -105,7 +139,6 @@ export default function ClientProfileView({ client }) {
             </div>
             <div className="flex items-center gap-2">
               <IndustryBadge industryValue={client.industry} />
-              <span className="text-[10px] text-muted-foreground/30">•</span>
               {/* <span className="text-xs text-muted-foreground font-light tracking-wide italic">
                 Active Client Workspace
               </span> */}
@@ -114,7 +147,7 @@ export default function ClientProfileView({ client }) {
         </div>
 
         {/* --- NAVIGATION & CONTENT --- */}
-        <Tabs defaultValue="workflow" className="w-full">
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
           {/* Tab List: Clean, border-bottom navigation */}
           <TabsList className="bg-transparent h-auto w-full justify-start rounded-none p-0 gap-12 border-b border-border/40">
             {TABS_CONFIG.map((tab) => (
@@ -145,6 +178,13 @@ export default function ClientProfileView({ client }) {
           {/* Tab Content: Spaced and Animated */}
           <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
             <TabsContent
+              value="overview"
+              className="mt-2 focus-visible:ring-0 outline-none"
+            >
+              <OverviewTab client={client} />
+            </TabsContent>
+
+            <TabsContent
               value="workflow"
               className="mt-2 focus-visible:ring-0 outline-none"
             >
@@ -155,9 +195,9 @@ export default function ClientProfileView({ client }) {
               value="financials"
               className="mt-2 focus-visible:outline-none"
             >
-              <Tabs defaultValue="overview" className="w-full">
+              <Tabs value={activeSubTab} onValueChange={handleSubTabChange} className="w-full">
                 <TabsContent value="overview" className="mt-0">
-                  <OverviewPage clientId={client.id} subTabs={subTabs} />
+                  <OverviewPage clientId={client.id} client={client} subTabs={subTabs} />
                 </TabsContent>
                 <TabsContent value="ledger" className="mt-0">
                   <LedgerTab clientId={client.id} subTabs={subTabs} />
@@ -165,9 +205,11 @@ export default function ClientProfileView({ client }) {
                 <TabsContent value="subscriptions" className="mt-0">
                   <SubscriptionsTab clientId={client.id} subTabs={subTabs} />
                 </TabsContent>
-                <TabsContent value="invoices" className="mt-0">
-                  <InvoicesTab clientId={client.id} subTabs={subTabs} />
-                </TabsContent>
+                {!client.is_internal && (
+                  <TabsContent value="invoices" className="mt-0">
+                    <InvoicesTab clientId={client.id} subTabs={subTabs} />
+                  </TabsContent>
+                )}
               </Tabs>
             </TabsContent>
 

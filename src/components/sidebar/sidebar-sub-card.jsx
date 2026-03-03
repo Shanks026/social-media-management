@@ -25,6 +25,7 @@ export function SidebarSubCard() {
 
   const clientPercent = (currentClients / clientLimit) * 100
 
+  const isFreeTier = sub.plan_name?.toUpperCase() === 'FREE'
   const isClientReached = currentClients >= clientLimit
   const isClientNearing = clientPercent >= 80 && clientPercent < 100
 
@@ -37,12 +38,51 @@ export function SidebarSubCard() {
 
   if (!shouldShow) return null
 
+  // Helper for Free Tier subtle messaging
+  const getBadgeContent = () => {
+    // Storage reached is always a "Limit reached" hard alarm
+    if (isStorageReached)
+      return {
+        text: 'Limit reached',
+        className: 'text-red-600 border-red-500/20 bg-red-500/5',
+        dot: 'bg-red-600',
+      }
+
+    // For Free tier clients reached, we don't return a badge content here anymore
+    // It will be handled as a separate sentence below.
+    if (isFreeTier && isClientReached) return null
+
+    if (isClientReached)
+      return {
+        text: 'Limit reached',
+        className: 'text-red-600 border-red-500/20 bg-red-500/5',
+        dot: 'bg-red-600',
+      }
+    if (isStorageNearing || isClientNearing)
+      return {
+        text: 'Nearing limit',
+        className: 'text-amber-600 border-amber-500/20 bg-amber-500/5',
+        dot: 'bg-amber-500',
+      }
+    return null
+  }
+
+  const badge = getBadgeContent()
+
   /**
    * Helper to get status colors based on thresholds
    */
   const getStatusClasses = (percent, isCountLimit = false) => {
-    if (percent >= 100 || isCountLimit)
+    if (percent >= 100 || isCountLimit) {
+      // Muted amber for free tier client reach, professional red for others/storage
+      if (isFreeTier && !isStorageReached)
+        return {
+          text: 'text-amber-600/80',
+          bg: 'bg-amber-500',
+          indicator: 'bg-amber-500',
+        }
       return { text: 'text-red-600', bg: 'bg-red-600', indicator: 'bg-red-600' }
+    }
     if (percent >= 80)
       return {
         text: 'text-orange-500',
@@ -65,36 +105,48 @@ export function SidebarSubCard() {
   return (
     <div className="px-3">
       <Card className="shadow-none border-muted bg-muted/50 py-0 gap-0 overflow-hidden">
-        <CardHeader className="p-4 pb-2 space-y-3">
-          <div className="flex flex-col gap-3 items-start">
-            {isClientReached || isStorageReached ? (
-              <Badge
-                variant="outline"
-                className=" text-red-600 py-1 text-[10px]"
-              >
-                <span className="relative flex h-2 w-2 me-1">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-red-600"></span>
-                </span>
-                Limit reached
-              </Badge>
-            ) : (
-              (isClientNearing || isStorageNearing) && (
+        <CardHeader className="p-4 pb-2 space-y-2">
+          <div className="flex flex-col gap-2 items-start">
+            <div className="flex justify-between items-center w-full">
+              <CardTitle className="text-[11px] font-bold flex items-center gap-2 uppercase tracking-widest text-primary">
+                <Zap className="size-3 fill-primary text-primary" />
+                {sub.plan_name} Plan
+              </CardTitle>
+              {badge && (
                 <Badge
                   variant="outline"
-                  className="text-amber-600 py-1 text-[10px]"
+                  className={cn(
+                    'py-0.5 px-2 text-[9px] font-medium transition-colors',
+                    badge.className,
+                  )}
                 >
-                  <span className="inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
-                  Nearing limit
+                  <span className="relative flex h-1.5 w-1.5 me-1">
+                    {badge.text === 'Limit reached' && (
+                      <span
+                        className={cn(
+                          'animate-ping absolute inline-flex h-full w-full rounded-full opacity-75',
+                          badge.dot.replace('bg-', 'bg-') + '/40',
+                        )}
+                      ></span>
+                    )}
+                    <span
+                      className={cn(
+                        'relative inline-flex rounded-full h-1.5 w-1.5',
+                        badge.dot,
+                      )}
+                    ></span>
+                  </span>
+                  {badge.text}
                 </Badge>
-              )
-            )}
-            <CardTitle className="text-[11px] font-bold flex items-center gap-2 uppercase tracking-widest text-primary">
-              <Zap className="size-3 fill-primary text-primary" />
-              {sub.plan_name} Plan
-            </CardTitle>
+              )}
+            </div>
 
-            {/* Status Badges */}
+            {isFreeTier && isClientReached && !isStorageReached && (
+              <p className="text-[10.5px] text-muted-foreground leading-relaxed font-light">
+                You've utilized your free tier benefits. Upgrade to add more
+                clients.
+              </p>
+            )}
           </div>
         </CardHeader>
 
@@ -103,18 +155,20 @@ export function SidebarSubCard() {
             {/* Client Usage */}
             <div className="space-y-1.5">
               <div className="flex justify-between text-[10px] font-bold">
-                <span className="text-muted-foreground flex items-center gap-1.5">
+                <span className="text-muted-foreground flex items-center gap-1.5 font-medium">
                   <Users size={12} /> Clients
                 </span>
                 <span className={clientStatus.text}>
                   {currentClients} / {clientLimit}
                 </span>
               </div>
-              <Progress
-                value={(currentClients / clientLimit) * 100}
-                className="h-1"
-                indicatorClassName={clientStatus.indicator}
-              />
+              {!isFreeTier && (
+                <Progress
+                  value={(currentClients / clientLimit) * 100}
+                  className="h-1"
+                  indicatorClassName={clientStatus.indicator}
+                />
+              )}
             </div>
 
             {/* Storage Usage */}
@@ -124,7 +178,8 @@ export function SidebarSubCard() {
                   <Database size={12} /> Storage
                 </span>
                 <span className={storageStatus.text}>
-                  {sub.storage_display.usage_value} {sub.storage_display.usage_unit} /{' '}
+                  {sub.storage_display.usage_value}{' '}
+                  {sub.storage_display.usage_unit} /{' '}
                   {sub.storage_display.max_value} {sub.storage_display.max_unit}
                 </span>
               </div>
@@ -142,7 +197,7 @@ export function SidebarSubCard() {
             variant="default"
             onClick={() => navigate('/billing?tab=subscription&scroll=true')}
           >
-            Manage
+            Upgrade
           </Button>
         </CardContent>
       </Card>

@@ -1,6 +1,6 @@
-# Tertiary Subscription Plans
+# Tercero Subscription Plans
 
-This document provides an overview of the available subscription plans and their benefits for the Tertiary application.
+This document provides an overview of the available subscription plans and their benefits for the Tercero application.
 
 ## Available Plans
 

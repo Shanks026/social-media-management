@@ -12,11 +12,12 @@ export const invoiceKeys = {
 }
 
 // --- 1. FETCH INVOICES (List) ---
-export function useInvoices(filters = {}) {
+export function useInvoices(filters = {}, options = {}) {
   const { user } = useAuth()
   const { clientId, status } = filters
 
   return useQuery({
+    ...options,
     queryKey: invoiceKeys.list(filters),
     queryFn: async () => {
       if (!user) throw new Error('User not authenticated')
@@ -164,6 +165,7 @@ export function useCreateInvoice() {
           issue_date:
             invoice.issue_date || new Date().toISOString().split('T')[0],
           due_date: invoice.due_date,
+          category: invoice.category || null,
           subtotal,
           total: subtotal, // No tax for now
           notes: invoice.notes || null,
@@ -223,6 +225,7 @@ export function useUpdateInvoice() {
       if (updates.issue_date !== undefined)
         payload.issue_date = updates.issue_date
       if (updates.due_date !== undefined) payload.due_date = updates.due_date
+      if (updates.category !== undefined) payload.category = updates.category
       if (updates.notes !== undefined) payload.notes = updates.notes
       if (updates.payment_terms !== undefined)
         payload.payment_terms = updates.payment_terms

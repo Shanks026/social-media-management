@@ -12,13 +12,6 @@ import {
   AlertTriangle,
   Play,
   Clock,
-  Layers,
-  Instagram,
-  Linkedin,
-  Twitter,
-  Facebook,
-  Youtube,
-  Globe,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -48,8 +41,8 @@ import {
 } from '@/components/ui/empty'
 import { toast } from 'sonner'
 import { useNavigate } from 'react-router-dom'
-import { useAuth } from '@/context/AuthContext'
 import { cn } from '@/lib/utils'
+import { getUrgencyStatus } from '@/lib/client-helpers'
 
 const isVideoSource = (url) => {
   if (!url) return false
@@ -113,11 +106,11 @@ const PlatformIcon = ({ name }) => {
   const imgSrc = `/platformIcons/${fileName}.png`
 
   return (
-    <div className="flex h-7 w-7 items-center justify-center rounded-full border-white dark:border-[#1c1c1f] bg-white dark:bg-zinc-900 shadow-sm transition-transform hover:scale-110 overflow-hidden">
+    <div className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-card bg-white dark:bg-zinc-900 shadow-sm transition-transform hover:scale-110 overflow-hidden relative z-10">
       <img
         src={imgSrc}
         alt={name}
-        className="size-6 object-contain"
+        className="size-5 object-contain"
         // Fallback for missing images
         onError={(e) => (e.target.style.display = 'none')}
       />
@@ -127,13 +120,19 @@ const PlatformIcon = ({ name }) => {
 
 export default function DraftPostList({ clientId }) {
   const queryClient = useQueryClient()
-  const { user } = useAuth()
   const navigate = useNavigate()
 
   const [previewPost, setPreviewPost] = useState(null)
   const [postToDelete, setPostToDelete] = useState(null)
   const [postToEdit, setPostToEdit] = useState(null)
   const [activeImageIndex, setActiveImageIndex] = useState(0)
+
+  // Status mapping rules
+  // DraftPostList actually only sees 'draft-posts' typically, but in case it sees others:
+  // Edit logic
+  const canEdit = (postStatus) => ['DRAFT', 'PENDING_APPROVAL', 'NEEDS_REVISION', 'SCHEDULED'].includes(postStatus)
+  // Delete logic
+  const canDelete = (postStatus) => postStatus !== 'PUBLISHED'
 
   const { data = [], isLoading } = useQuery({
     queryKey: ['draft-posts', clientId],
@@ -144,13 +143,26 @@ export default function DraftPostList({ clientId }) {
     mutationFn: (postId) => deletePost(postId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['draft-posts', clientId] })
+      queryClient.invalidateQueries({ queryKey: ['posts', clientId] })
+      queryClient.invalidateQueries({ queryKey: ['global-posts'] })
+      queryClient.invalidateQueries({ queryKey: ['calendar'] })
+      queryClient.invalidateQueries({ queryKey: ['global-calendar'] })
+      queryClient.invalidateQueries({ queryKey: ['global-post-counts'] })
+      queryClient.invalidateQueries({ queryKey: ['postCounts', clientId] })
       toast.success('Post deleted successfully')
       setPostToDelete(null)
     },
+    onError: (error) => {
+      toast.error('Failed to delete post: ' + error.message)
+      setPostToDelete(null)
+    }
   })
 
   useEffect(() => {
-    if (!previewPost) setActiveImageIndex(0)
+    if (!previewPost) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setActiveImageIndex(0)
+    }
   }, [previewPost])
 
   const handlePrev = (e) => {
@@ -228,11 +240,17 @@ export default function DraftPostList({ clientId }) {
 
   return (
     <TooltipProvider>
-      <div className="grid gap-4 grid-cols-[repeat(auto-fill,minmax(400px,1fr))]">
+      <div className="grid gap-6 grid-cols-[repeat(auto-fill,minmax(350px,1fr))]">
         {data.map((post) => {
-          const platforms = Array.isArray(post.platform)
+          const platformsArr = Array.isArray(post.platform)
             ? post.platform
             : [post.platform]
+          const displayedPlatforms = platformsArr.slice(0, 3)
+          const remainingPlatforms = platformsArr.length - 3
+
+          // Calculate health
+          const isCompleted = ['PUBLISHED', 'ARCHIVED'].includes(post.status)
+          const health = !isCompleted ? getUrgencyStatus(post.target_date) : null
 
           return (
             <div
@@ -240,11 +258,69 @@ export default function DraftPostList({ clientId }) {
               onClick={() =>
                 navigate(`/clients/${clientId}/posts/${post.version_id}`)
               }
-              className="flex flex-col bg-card border rounded-xl overflow-hidden hover:bg-muted/30 transition-colors duration-200 cursor-pointer group"
+              className="flex flex-col bg-card/50 border dark:border-none rounded-2xl px-6 py-8 transition-all duration-200 cursor-pointer group"
             >
+              {/* Header: Status, Version & Actions */}
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <StatusBadge status={post.status || 'DRAFT'} />
+                  <Badge variant="secondary" className="rounded-full text-muted-foreground hover:bg-muted/80 text-xs px-2.5 py-0.5 border-none font-medium font-mono">
+                    v{post.version_number || '1'}
+                  </Badge>
+                </div>
+
+                <div onClick={(e) => e.stopPropagation()}>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-full transition-colors"
+                      >
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-40 rounded-xl">
+                      {/* Edit logic */}
+                      {canEdit(post.status || 'DRAFT') && (
+                        <DropdownMenuItem
+                          className="cursor-pointer font-medium text-foreground py-2"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            navigate(
+                              `/clients/${clientId}/posts/${post.version_id}`,
+                            )
+                          }}
+                        >
+                          <Edit2 className="h-4 w-4 mr-2" /> Edit Post
+                        </DropdownMenuItem>
+                      )}
+                      
+                      {/* Delete logic */}
+                      {canDelete(post.status || 'DRAFT') && (
+                        <DropdownMenuItem
+                          className="cursor-pointer font-medium text-destructive focus:bg-destructive/10 focus:text-destructive py-2"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setPostToDelete(post)
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" /> Delete Post
+                        </DropdownMenuItem>
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </div>
+
+              {/* Title */}
+              <h3 className="text-lg font-medium tracking-tight text-foreground mb-6 line-clamp-1">
+                {post.title || 'Untitled Draft'}
+              </h3>
+
               {/* Media Preview Section */}
               <div
-                className="relative aspect-video bg-muted overflow-hidden shrink-0 group/media"
+                className="relative aspect-video bg-muted/40 rounded-xl overflow-hidden mb-6 shrink-0 group/media border border-border/40"
                 onClick={(e) => {
                   e.stopPropagation()
                   setPreviewPost(post)
@@ -258,67 +334,67 @@ export default function DraftPostList({ clientId }) {
                 </div>
               </div>
 
-              <div className="p-6 flex flex-col flex-1">
-                {/* 🛠️ Updated Header: Status | Version | Actions */}
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2">
-                    <StatusBadge status={post.status || 'DRAFT'} />
-                    <Badge variant="secondary" className="text-xs">
-                      v{post.version_number || '1'}
-                    </Badge>
+              {/* Description */}
+              <p className="text-sm text-muted-foreground leading-relaxed line-clamp-2 mb-6">
+                {post.content || 'No description provided.'}
+              </p>
+
+              {/* Dotted Divider & Footer */}
+              <div className="mt-auto">
+                <hr className="border-t border-dashed border-border mb-4" />
+                
+                <div className="flex items-center justify-between">
+                  {/* Platforms */}
+                  <div className="flex items-center">
+                    <div className="flex -space-x-2">
+                      {displayedPlatforms.map((p, idx) => (
+                        <PlatformIcon key={`${p}-${idx}`} name={p} />
+                      ))}
+                    </div>
+                    {remainingPlatforms > 0 && (
+                      <span className="text-xs font-medium text-muted-foreground ml-2">
+                        +{remainingPlatforms}
+                      </span>
+                    )}
                   </div>
 
-                  <div onClick={(e) => e.stopPropagation()}>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 hover:bg-muted transition-colors"
-                        >
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-40">
-                        <DropdownMenuItem
-                          onClick={() => setPostToEdit(post)}
-                          className="text-xs gap-2 cursor-pointer"
-                        >
-                          <Edit2 className="h-3 w-3" /> Edit Post
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => setPostToDelete(post)}
-                          className="text-xs gap-2 text-destructive cursor-pointer"
-                        >
-                          <Trash2 className="h-3 w-3" /> Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </div>
-
-                <div className="mb-6 space-y-2">
-                  <h4 className="text-lg font-bold tracking-tight leading-tight text-foreground line-clamp-1">
-                    {post.title || 'Untitled Draft'}
-                  </h4>
-                  <p className="text-sm font-medium text-muted-foreground leading-[1.6] line-clamp-2">
-                    {post.content || 'No description provided.'}
-                  </p>
-                </div>
-
-                <div className="flex items-center justify-between mt-auto pt-5 border-t border-border/50">
-                  <div className="flex items-center -space-x-2">
-                    {platforms.map((p, idx) => (
-                      <PlatformIcon key={`${p}-${idx}`} name={p} />
-                    ))}
-                  </div>
-
-                  {/* 🛠️ Updated Date: Target Date + Time */}
-                  <div className="flex items-center gap-1.5 text-muted-foreground">
-                    <Clock size={14} className="text-foreground/70" />
-                    <span className="text-xs font-semibold capitalize text-foreground">
+                  {/* Date Badge and Urgency Info */}
+                  <div
+                    className={cn(
+                      "rounded-full px-3 py-1.5 flex items-center justify-center gap-2 border shadow-sm",
+                      health?.label === 'Overdue'
+                        ? "bg-destructive/10 border-destructive/20 text-destructive"
+                        : "bg-muted/50 border-border/50 text-muted-foreground"
+                    )}
+                  >
+                    {health && health.color && (
+                      <div className="flex items-center gap-1.5">
+                        <div className="relative flex h-2 w-2 items-center justify-center">
+                          {health.pulse && (
+                            <span
+                              className={cn(
+                                'absolute inline-flex h-full w-full animate-ping rounded-full opacity-75',
+                                health.color
+                              )}
+                            />
+                          )}
+                          <span
+                            className={cn(
+                              'relative inline-flex h-2 w-2 rounded-full',
+                              health.color
+                            )}
+                          />
+                        </div>
+                        {['Overdue', 'Urgent'].includes(health.label) && (
+                          <span className="text-[10px] font-bold uppercase tracking-wider whitespace-nowrap">
+                            {health.label}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                    <span className="text-[13px] font-medium tracking-tight whitespace-nowrap">
                       {post.target_date
-                        ? format(new Date(post.target_date), 'd MMM, p')
+                        ? format(new Date(post.target_date), "d MMMM yyyy '•' h:mm a")
                         : 'No Date Set'}
                     </span>
                   </div>
@@ -376,6 +452,52 @@ export default function DraftPostList({ clientId }) {
               </>
             )}
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={!!postToDelete}
+        onOpenChange={(open) => !open && setPostToDelete(null)}
+      >
+        <DialogContent
+          className="sm:max-w-[425px] rounded-2xl"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <DialogHeader>
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-red-100 dark:bg-red-900/30 rounded-full">
+                <AlertTriangle className="h-6 w-6 text-red-600 dark:text-red-400" />
+              </div>
+              <DialogTitle className="text-xl">Delete Post</DialogTitle>
+            </div>
+            <DialogDescription className="pt-4 text-base">
+              Are you sure you want to delete{' '}
+              <span className="font-semibold text-foreground">
+                "{postToDelete?.title || 'Untitled Draft'}"
+              </span>
+              ? This action cannot be undone and all media will be permanently
+              deleted.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0 mt-6">
+            <Button
+              variant="outline"
+              onClick={() => setPostToDelete(null)}
+              disabled={deleteMutation.isPending}
+              className="rounded-xl w-full sm:w-auto"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => deleteMutation.mutate(postToDelete?.actual_post_id || postToDelete?.id)}
+              disabled={deleteMutation.isPending}
+              className="rounded-xl w-full sm:w-auto font-medium"
+            >
+              {deleteMutation.isPending ? 'Deleting...' : 'Delete Post'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </TooltipProvider>

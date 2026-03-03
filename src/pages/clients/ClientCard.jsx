@@ -25,8 +25,8 @@ import { getUrgencyStatus } from '@/lib/client-helpers'
 import IndustryBadge from './IndustryBadge' // Ensure this path is correct
 import TierBadge from '@/components/TierBadge'
 
-import { useTransactions } from '@/api/transactions'
-import { useExpenses } from '@/api/expenses'
+import { useTransactions, useFinanceOverview } from '@/api/transactions'
+import { useExpenses, useBurnRate } from '@/api/expenses'
 import { useClientMetrics } from '@/api/clients'
 import { calculatePeriodMetrics, formatCurrency } from '@/utils/finance'
 import { startOfMonth, endOfMonth, format } from 'date-fns'
@@ -112,6 +112,73 @@ const ProfitMarginDisplay = ({ clientId }) => {
   )
 }
 
+// For the internal account card: use the same DB-view-backed hooks as Finance→All tab.
+// This shows consolidated agency financials (all clients combined), not just Strawhats-tagged data.
+const InternalFinancialsDisplay = () => {
+  const { data: financeOverview, isLoading: overviewLoading } = useFinanceOverview()
+  const { data: burnRate = 0, isLoading: burnLoading } = useBurnRate()
+
+  if (overviewLoading || burnLoading) {
+    return (
+      <div className="grid grid-cols-3 gap-4 py-4 border-t border-dashed border-gray-100 dark:border-white/5 animate-pulse">
+        <div className="flex flex-col gap-0.5">
+          <div className="h-3 w-16 bg-muted rounded"></div>
+          <div className="h-4 w-12 bg-muted rounded mt-1"></div>
+        </div>
+        <div className="flex flex-col gap-0.5">
+          <div className="h-3 w-16 bg-muted rounded"></div>
+          <div className="h-4 w-12 bg-muted rounded mt-1"></div>
+        </div>
+        <div className="flex flex-col gap-0.5 items-end md:items-start">
+          <div className="h-3 w-16 bg-muted rounded"></div>
+          <div className="h-4 w-12 bg-muted rounded mt-1"></div>
+        </div>
+      </div>
+    )
+  }
+
+  const revenue   = Number(financeOverview?.total_income ?? 0)
+  const oneOff    = Number(financeOverview?.total_one_off_expenses ?? 0)
+  const burn      = Number(burnRate)
+  const expenses  = oneOff + burn
+  const profit    = revenue - expenses
+
+  return (
+    <div className="grid grid-cols-3 gap-4 py-4 border-t border-dashed border-gray-100 dark:border-white/5">
+      {/* Column 1: Net Profit */}
+      <div className="flex flex-col gap-0.5">
+        <span className="text-[11px] font-medium text-muted-foreground truncate">
+          Net Profit
+        </span>
+        <span className={`text-sm font-bold ${profit >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
+          {formatCurrency(profit)}
+        </span>
+      </div>
+
+      {/* Column 2: Total Expenses (one-off + burn) */}
+      <div className="flex flex-col gap-0.5">
+        <span className="text-[11px] font-medium text-muted-foreground truncate">
+          Expenses
+        </span>
+        <span className="text-sm font-bold text-foreground">
+          {formatCurrency(expenses)}
+        </span>
+      </div>
+
+      {/* Column 3: Monthly Burn (subscriptions only) */}
+      <div className="flex flex-col gap-0.5 items-end md:items-start">
+        <span className="text-[11px] font-medium text-muted-foreground truncate">
+          Monthly Burn
+        </span>
+        <span className="text-sm font-bold text-foreground flex items-baseline">
+          {formatCurrency(burn)}
+          <span className="text-[10px] text-muted-foreground font-medium ml-0.5">/mo</span>
+        </span>
+      </div>
+    </div>
+  )
+}
+
 function ClientCard({ client, onOpen, onDelete }) {
   const [deleteOpen, setDeleteOpen] = useState(false)
 
@@ -168,9 +235,9 @@ function ClientCard({ client, onOpen, onDelete }) {
       <Card
         onClick={() => onOpen(client)}
         className={cn(
-          "group relative cursor-pointer shadow-none transition-all duration-300 py-2 border border-dashed hover:bg-gray-100/50 dark:hover:bg-card h-full flex flex-col overflow-hidden",
+          "group relative cursor-pointer shadow-none transition-all duration-300 py-2 border hover:bg-gray-100/50 dark:hover:bg-card h-full flex flex-col overflow-hidden",
           client.is_internal
-            ? " bg-gray-50 dark:bg-card dark:border-border"
+            ? " bg-gray-50 dark:bg-card dark:border-border border-dashed"
             : "dark:bg-card/70 dark:border-none"
         )}
       >
@@ -192,7 +259,7 @@ function ClientCard({ client, onOpen, onDelete }) {
                   </div>
                 )}
               </div>
-              <div className="space-y-2 min-w-0">
+              <div className="space-y-3 min-w-0">
                 <div className="flex items-center gap-1">
                   <h3 className="text-lg font-medium text-foreground tracking-tight leading-none truncate]">
                     {client.name}
@@ -242,40 +309,49 @@ function ClientCard({ client, onOpen, onDelete }) {
             )}
 
             {/* Financial Snapshot */}
-            <div className="grid grid-cols-3 gap-4 py-4 border-t border-dashed border-gray-100 dark:border-white/5">
-              {/* Column 1: LTV */}
+            {client.is_internal ? (
+              <InternalFinancialsDisplay />
+            ) : (
+              <div className="grid grid-cols-3 gap-4 py-4 border-t border-dashed border-gray-100 dark:border-white/5">
+                {/* Column 1: LTV */}
               <div className="flex flex-col gap-0.5">
-                <span className="text-[11px] font-medium text-muted-foreground truncate">
-                  Lifetime Value{' '}
-                  <span className="text-[9px] opacity-70">(Cash)</span>
-                </span>
-                <span className="text-sm font-bold text-foreground">
-                  {metrics?.total_revenue
-                    ? formatCurrency(metrics.total_revenue)
-                    : formatCurrency(0)}
-                </span>
-              </div>
+  <span className="text-[11px] font-medium text-muted-foreground truncate">
+    Total Revenue{' '}
+    <span className="text-[9px] opacity-70">(Cash)</span>
+  </span>
+  <span 
+    className={cn(
+      "text-sm font-bold",
+      (metrics?.total_revenue || 0) > 0 
+        ? "text-emerald-600 dark:text-emerald-500" 
+        : "text-primary"
+    )}
+  >
+    {formatCurrency(metrics?.total_revenue || 0)}
+  </span>
+</div>
 
-              {/* Column 2: Burn */}
-              <div className="flex flex-col gap-0.5">
-                <span className="text-[11px] font-medium text-muted-foreground truncate">
-                  Monthly Burn
-                </span>
-                <span className="text-sm font-bold text-foreground">
-                  {metrics?.monthly_recurring_costs
-                    ? formatCurrency(metrics.monthly_recurring_costs)
-                    : formatCurrency(0)}
-                  <span className="text-[10px] text-muted-foreground font-medium ml-0.5">
-                    /mo
+                {/* Column 2: Burn */}
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-[11px] font-medium text-muted-foreground truncate">
+                    Monthly Burn
                   </span>
-                </span>
-              </div>
+                  <span className="text-sm font-bold text-foreground">
+                    {metrics?.monthly_recurring_costs
+                      ? formatCurrency(metrics.monthly_recurring_costs)
+                      : formatCurrency(0)}
+                    <span className="text-[10px] text-muted-foreground font-medium ml-0.5">
+                      /mo
+                    </span>
+                  </span>
+                </div>
 
-              {/* Column 3: Profit Margin (Aligned to end or center vertically) */}
-              <div className="flex items-center justify-end md:justify-start">
-                <ProfitMarginDisplay clientId={client.id} />
+                {/* Column 3: Profit Margin (Aligned to end or center vertically) */}
+                <div className="flex items-center justify-end md:justify-start">
+                  <ProfitMarginDisplay clientId={client.id} />
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           {/* Footer */}

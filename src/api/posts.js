@@ -69,7 +69,7 @@ export async function fetchPostDetails(id) {
       `
       id,
       client_id,
-      clients ( name, logo_url, social_links, industry ),
+      clients ( name, logo_url, social_links, industry, is_internal ),
       post_versions!fk_current_version (*)
     `,
     )
@@ -93,7 +93,7 @@ export async function fetchPostDetails(id) {
       posts!post_versions_post_id_fkey (
         id,
         client_id,
-        clients ( name, logo_url, social_links, industry )
+        clients ( name, logo_url, social_links, industry, is_internal )
       )
     `,
     )
@@ -116,7 +116,6 @@ export async function fetchPostDetails(id) {
 export async function createDraftPost({
   clientId,
   content, // Coming from form.content
-  images, // Usually what the form holds before they are URLs
   mediaUrls, // If they are already uploaded
   platforms,
   title,
