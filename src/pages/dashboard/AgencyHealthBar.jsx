@@ -1,24 +1,69 @@
 import { startOfMonth, endOfMonth } from 'date-fns'
-import { TrendingUp, TrendingDown, Activity, Users } from 'lucide-react'
+import {
+  TrendingUp,
+  TrendingDown,
+  Activity,
+  Users,
+  ArrowUpRight,
+} from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { useClients } from '@/api/clients'
+import { useClients, useAllClientsMetrics } from '@/api/clients'
 import { useInvoices } from '@/api/invoices'
 import { useTransactions } from '@/api/transactions'
 import { useExpenses } from '@/api/expenses'
 import { calculatePeriodMetrics, formatCurrency } from '@/utils/finance'
+import { useNavigate } from 'react-router-dom'
+import { Button } from '@/components/ui/button'
+import { useMemo } from 'react'
 
 export default function AgencyHealthBar() {
+  const navigate = useNavigate()
   const now = new Date()
   const monthStart = startOfMonth(now)
   const monthEnd = endOfMonth(now)
 
   const { data: clientsData, isLoading: loadingClients } = useClients()
+  const { data: allMetrics = [], isLoading: loadingMetrics } =
+    useAllClientsMetrics()
   const { data: invoices = [], isLoading: loadingInvoices } = useInvoices()
   const { data: transactions = [], isLoading: loadingTx } = useTransactions()
   const { data: expenses = [], isLoading: loadingExp } = useExpenses()
 
   const activeClients = clientsData?.realClients?.length ?? 0
+
+  const totalMRR = useMemo(() => {
+    if (!clientsData?.realClients?.length) return 0
+
+    // Sum the most recent 'Monthly Retainer' amount across all real clients
+    const clientMRRs = clientsData.realClients.map((client) => {
+      const clientInvoices = invoices.filter(
+        (inv) =>
+          inv.client_id === client.id && inv.category === 'Monthly Retainer',
+      )
+      const clientTransactions = transactions.filter(
+        (t) =>
+          t.client_id === client.id &&
+          t.category === 'Monthly Retainer' &&
+          t.type === 'INCOME',
+      )
+
+      const allRetainers = [
+        ...clientInvoices.map((inv) => ({
+          date: new Date(inv.issue_date),
+          amount: Number(inv.total),
+        })),
+        ...clientTransactions.map((t) => ({
+          date: new Date(t.date),
+          amount: Number(t.amount),
+        })),
+      ].sort((a, b) => b.date - a.date)
+
+      return allRetainers.length > 0 ? allRetainers[0].amount : 0
+    })
+
+    return clientMRRs.reduce((sum, val) => sum + val, 0)
+  }, [clientsData?.realClients, invoices, transactions])
 
   const metrics = calculatePeriodMetrics({
     transactions,
@@ -31,13 +76,21 @@ export default function AgencyHealthBar() {
 
   const { revenue, expense, profit, margin } = metrics
 
-  const isLoading = loadingClients || loadingInvoices || loadingTx || loadingExp
+  const isLoading =
+    loadingClients ||
+    loadingInvoices ||
+    loadingTx ||
+    loadingExp ||
+    loadingMetrics
 
   if (isLoading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {[1, 2, 3, 4].map((i) => (
-          <Card key={i} className="rounded-2xl border-none bg-card/50 shadow-sm ring-1 ring-border/50">
+          <Card
+            key={i}
+            className="rounded-2xl border-none bg-card/50 shadow-sm ring-1 ring-border/50"
+          >
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <Skeleton className="h-4 w-24" />
               <Skeleton className="h-4 w-4 rounded-full" />
@@ -55,13 +108,13 @@ export default function AgencyHealthBar() {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
       {/* 1. NET PROFIT */}
-      <Card className="rounded-2xl border-none bg-card/50 shadow-sm ring-1 ring-border/50 dark:bg-card/20 group hover:ring-primary/20 transition-all">
+      <Card className="rounded-2xl border-none bg-card/50 shadow-sm ring-1 ring-border/50 dark:bg-card/20 group hover:ring-emerald-500/20 transition-all">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
             Net Profit (Mo)
           </CardTitle>
-          <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-             <Activity className="h-4 w-4 text-primary" />
+          <div className="h-8 w-8 rounded-full bg-emerald-500/10 flex items-center justify-center">
+            <Activity className="h-4 w-4 text-emerald-500" />
           </div>
         </CardHeader>
         <CardContent>
@@ -72,19 +125,19 @@ export default function AgencyHealthBar() {
             {formatCurrency(profit)}
           </div>
           <p className="text-xs text-muted-foreground mt-1">
-            {margin.toFixed(1)}% margin
+            {margin.toFixed(1)}% margin · {formatCurrency(totalMRR)} MRR
           </p>
         </CardContent>
       </Card>
 
       {/* 2. REVENUE */}
-      <Card className="rounded-2xl border-none bg-card/50 shadow-sm ring-1 ring-border/50 dark:bg-card/20 group hover:ring-emerald-500/20 transition-all">
+      <Card className="rounded-2xl border-none bg-card/50 shadow-sm ring-1 ring-border/50 dark:bg-card/20 group hover:ring-primary/20 transition-all">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
             Revenue (Mo)
           </CardTitle>
-          <div className="h-8 w-8 rounded-full bg-emerald-500/10 flex items-center justify-center">
-            <TrendingUp className="h-4 w-4 text-emerald-500" />
+          <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+            <TrendingUp className="h-4 w-4 text-primary" />
           </div>
         </CardHeader>
         <CardContent>
@@ -104,7 +157,7 @@ export default function AgencyHealthBar() {
             Expenses (Mo)
           </CardTitle>
           <div className="h-8 w-8 rounded-full bg-rose-500/10 flex items-center justify-center">
-             <TrendingDown className="h-4 w-4 text-rose-500" />
+            <TrendingDown className="h-4 w-4 text-rose-500" />
           </div>
         </CardHeader>
         <CardContent>

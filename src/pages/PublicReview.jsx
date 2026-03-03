@@ -93,10 +93,14 @@ export default function PublicReview() {
   }, [isPreviewOpen, activeIndex, post?.media_urls])
 
   const handlePrev = () =>
-    setActiveIndex((prev) => (prev === 0 ? post.media_urls.length - 1 : prev - 1))
+    setActiveIndex((prev) =>
+      prev === 0 ? post.media_urls.length - 1 : prev - 1,
+    )
 
   const handleNext = () =>
-    setActiveIndex((prev) => (prev === post.media_urls.length - 1 ? 0 : prev + 1))
+    setActiveIndex((prev) =>
+      prev === post.media_urls.length - 1 ? 0 : prev + 1,
+    )
 
   const openPreview = (index) => {
     setActiveIndex(index)
@@ -125,7 +129,7 @@ export default function PublicReview() {
   const showAgencyBranding =
     agencySub &&
     (agencySub.basic_whitelabel_enabled || agencySub.full_whitelabel_enabled)
-    
+
   // CHANGED: Show "Powered by" footer for Ignite (no whitelabel) AND Velocity (basic whitelabel).
   // This effectively hides the footer ONLY for tiers with full_whitelabel_enabled.
   const showPoweredBy = !agencySub?.full_whitelabel_enabled
@@ -145,7 +149,9 @@ export default function PublicReview() {
           <Check size={32} strokeWidth={2.5} />
         </div>
         <h2 className="text-2xl font-bold tracking-tight text-foreground">
-          {statusUpdated === 'SCHEDULED' ? 'Content Approved' : 'Review Submitted'}
+          {statusUpdated === 'SCHEDULED'
+            ? 'Content Approved'
+            : 'Review Submitted'}
         </h2>
         <p className="mt-2 max-w-md text-muted-foreground leading-relaxed">
           {statusUpdated === 'SCHEDULED'
@@ -168,7 +174,6 @@ export default function PublicReview() {
   return (
     <div className="min-h-screen w-full bg-background font-sans text-foreground flex flex-col">
       <div className="mx-auto max-w-7xl p-6 lg:p-16 w-full flex-1">
-        
         {/* Header Branding */}
         <div className="mb-10 flex flex-col items-start gap-1">
           {showAgencyBranding ? (
@@ -186,10 +191,10 @@ export default function PublicReview() {
             </div>
           ) : (
             <div className="flex items-center gap-3">
-              <img 
-                src="/TerceroLogo.svg" 
-                alt="Tercero Logo" 
-                className="h-7 w-auto object-contain" 
+              <img
+                src="/TerceroLogo2.svg"
+                alt="Tercero Logo"
+                className="h-7 w-auto object-contain"
               />
               <h2 className="text-2xl font-semibold tracking-tight text-primary">
                 Tercero
@@ -220,20 +225,25 @@ export default function PublicReview() {
               <div className="flex flex-wrap items-center gap-y-2 gap-x-4 border-y border-border/50 py-4 text-sm text-muted-foreground">
                 <div className="flex items-center gap-2">
                   <CalendarIcon size={14} />
-                  <span>Created {format(new Date(post.created_at), 'MMM dd, yyyy')}</span>
+                  <span>
+                    Created {format(new Date(post.created_at), 'MMM dd, yyyy')}
+                  </span>
                 </div>
                 {post.target_date && (
                   <div className="flex items-center gap-2 font-semibold text-primary">
                     <Clock size={14} />
                     <span>
-                      Schedule: {format(new Date(post.target_date), 'MMM dd @ p')}
+                      Schedule:{' '}
+                      {format(new Date(post.target_date), 'MMM dd @ p')}
                     </span>
                   </div>
                 )}
               </div>
 
               <div className="space-y-3">
-                <h3 className="text-xs font-semibold text-muted-foreground/60">Caption</h3>
+                <h3 className="text-xs font-semibold text-muted-foreground/60">
+                  Caption
+                </h3>
                 <p className="text-lg leading-relaxed whitespace-pre-wrap text-foreground/90">
                   {post.content}
                 </p>
@@ -245,8 +255,8 @@ export default function PublicReview() {
               <div className="space-y-1">
                 <p className="font-bold">Final Review Notice</p>
                 <p className="text-muted-foreground">
-                  Approval will lock this version and notify the team to schedule for
-                  publication.
+                  Approval will lock this version and notify the team to
+                  schedule for publication.
                 </p>
               </div>
             </div>
@@ -266,7 +276,9 @@ export default function PublicReview() {
                       <Check size={24} strokeWidth={2.5} />
                     </div>
                     <div>
-                      <DialogTitle className="text-lg">Approve &amp; Schedule</DialogTitle>
+                      <DialogTitle className="text-lg">
+                        Approve &amp; Schedule
+                      </DialogTitle>
                       <DialogDescription className="text-sm">
                         You're confirming this content is ready for publication.
                       </DialogDescription>
@@ -275,16 +287,25 @@ export default function PublicReview() {
 
                   {/* Post summary */}
                   <div className="rounded-xl border border-border bg-muted/30 px-4 py-3 text-sm space-y-1.5 my-4">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/60">Approving</p>
-                    <p className="font-semibold text-foreground">{post.title}</p>
+                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/60">
+                      Approving
+                    </p>
+                    <p className="font-semibold text-foreground">
+                      {post.title}
+                    </p>
                     <p className="text-muted-foreground">
-                      {post.platform.join(', ')}{post.target_date ? ` · ${format(new Date(post.target_date), 'MMM d, yyyy')}` : ''}
+                      {post.platform.join(', ')}
+                      {post.target_date
+                        ? ` · ${format(new Date(post.target_date), 'MMM d, yyyy')}`
+                        : ''}
                     </p>
                   </div>
 
                   {/* What happens next */}
                   <div className="space-y-2">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/60">What happens next</p>
+                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/60">
+                      What happens next
+                    </p>
                     <ul className="space-y-2">
                       {[
                         'This version is locked — no further edits can be made to it.',
@@ -292,8 +313,13 @@ export default function PublicReview() {
                         'The post will be published on the platform(s) listed above.',
                         'You will receive a confirmation email once it goes live.',
                       ].map((step, i) => (
-                        <li key={i} className="flex items-start gap-3 text-sm text-muted-foreground">
-                          <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-[11px] font-bold mt-0.5">{i + 1}</span>
+                        <li
+                          key={i}
+                          className="flex items-start gap-3 text-sm text-muted-foreground"
+                        >
+                          <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-[11px] font-bold mt-0.5">
+                            {i + 1}
+                          </span>
                           <span>{step}</span>
                         </li>
                       ))}
@@ -325,36 +351,50 @@ export default function PublicReview() {
                       <PencilLine size={22} strokeWidth={2} />
                     </div>
                     <div>
-                      <DialogTitle className="text-lg">Request Revisions</DialogTitle>
+                      <DialogTitle className="text-lg">
+                        Request Revisions
+                      </DialogTitle>
                       <DialogDescription className="text-sm">
-                        Let the team know what needs to be changed before you can approve.
+                        Let the team know what needs to be changed before you
+                        can approve.
                       </DialogDescription>
                     </div>
                   </div>
 
                   {/* Feedback field */}
                   <div className="my-4 space-y-2">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/60">Your Feedback</p>
+                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/60">
+                      Your Feedback
+                    </p>
                     <Textarea
-                      placeholder="Be as specific as possible — e.g., &quot;Change the opening line to something more casual,&quot; or &quot;Replace the second image with a product shot.&quot;"
+                      placeholder='Be as specific as possible — e.g., "Change the opening line to something more casual," or "Replace the second image with a product shot."'
                       value={feedback}
                       onChange={(e) => setFeedback(e.target.value)}
                       className="min-h-[140px] bg-muted/30 text-sm leading-relaxed"
                     />
-                    <p className="text-xs text-muted-foreground/60">Clear, detailed feedback helps the team respond faster.</p>
+                    <p className="text-xs text-muted-foreground/60">
+                      Clear, detailed feedback helps the team respond faster.
+                    </p>
                   </div>
 
                   {/* What happens next */}
                   <div className="space-y-2">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/60">What happens next</p>
+                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/60">
+                      What happens next
+                    </p>
                     <ul className="space-y-2">
                       {[
                         'Your feedback is sent directly to the content team.',
                         'A revised version will be submitted for your review.',
                         'You will receive a new review link once the update is ready.',
                       ].map((step, i) => (
-                        <li key={i} className="flex items-start gap-3 text-sm text-muted-foreground">
-                          <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-muted text-foreground text-[11px] font-bold mt-0.5">{i + 1}</span>
+                        <li
+                          key={i}
+                          className="flex items-start gap-3 text-sm text-muted-foreground"
+                        >
+                          <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-muted text-foreground text-[11px] font-bold mt-0.5">
+                            {i + 1}
+                          </span>
                           <span>{step}</span>
                         </li>
                       ))}
@@ -368,7 +408,9 @@ export default function PublicReview() {
                       disabled={!feedback || isSubmitting}
                       onClick={() => handleStatusUpdate('NEEDS_REVISION')}
                     >
-                      {isSubmitting ? 'Sending Feedback...' : 'Submit Revision Request'}
+                      {isSubmitting
+                        ? 'Sending Feedback...'
+                        : 'Submit Revision Request'}
                     </Button>
                   </DialogFooter>
                 </DialogContent>
@@ -382,7 +424,11 @@ export default function PublicReview() {
               </h3>
               <div className="grid grid-cols-2 gap-3">
                 {post.media_urls.map((url, i) => (
-                  <MediaThumbnail key={i} url={url} onClick={() => openPreview(i)} />
+                  <MediaThumbnail
+                    key={i}
+                    url={url}
+                    onClick={() => openPreview(i)}
+                  />
                 ))}
               </div>
             </div>
@@ -396,7 +442,11 @@ export default function PublicReview() {
               </h3>
               <div className="grid grid-cols-2 gap-4 max-h-[80vh] overflow-y-auto pr-1 scrollbar-hide">
                 {post.media_urls.map((url, i) => (
-                  <MediaThumbnail key={i} url={url} onClick={() => openPreview(i)} />
+                  <MediaThumbnail
+                    key={i}
+                    url={url}
+                    onClick={() => openPreview(i)}
+                  />
                 ))}
                 {post.media_urls.length === 0 && (
                   <div className="col-span-2 h-48 rounded-2xl border-2 border-dashed border-border flex items-center justify-center text-muted-foreground italic text-sm">
@@ -468,13 +518,19 @@ export default function PublicReview() {
             <>
               <button
                 className="absolute left-4 top-1/2 -translate-y-1/2 p-3 rounded-full bg-white/10 hover:bg-white/20 text-white transition"
-                onClick={(e) => { e.stopPropagation(); handlePrev() }}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handlePrev()
+                }}
               >
                 <ChevronLeft size={28} />
               </button>
               <button
                 className="absolute right-4 top-1/2 -translate-y-1/2 p-3 rounded-full bg-white/10 hover:bg-white/20 text-white transition"
-                onClick={(e) => { e.stopPropagation(); handleNext() }}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handleNext()
+                }}
               >
                 <ChevronRight size={28} />
               </button>
@@ -484,7 +540,10 @@ export default function PublicReview() {
                 {post.media_urls.map((_, idx) => (
                   <button
                     key={idx}
-                    onClick={(e) => { e.stopPropagation(); setActiveIndex(idx) }}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setActiveIndex(idx)
+                    }}
                     className={`h-1.5 rounded-full transition-all duration-300 ${
                       idx === activeIndex ? 'bg-white w-6' : 'bg-white/30 w-1.5'
                     }`}

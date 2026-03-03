@@ -163,16 +163,20 @@ export default function NoteRow({
               {variant === 'dashboard-card' && client ? (
                 <div className="flex items-center gap-2">
                   <ClientAvatar client={client} size="sm" />
-                  <span className="text-xs font-semibold text-foreground truncate max-w-[140px] hidden @[300px]:block">
-                    {client.name || 'Internal'}
-                  </span>
-                  {client.is_internal && (
-                    <Badge
-                      variant="secondary"
-                      className="text-[9px] px-1 py-0 hidden @[300px]:inline-flex"
-                    >
-                      INT
-                    </Badge>
+                  {!overdue && (
+                    <>
+                      <span className="text-xs font-semibold text-foreground truncate max-w-[140px] hidden @[300px]:block">
+                        {client.name || 'Internal'}
+                      </span>
+                      {client.is_internal && (
+                        <Badge
+                          variant="secondary"
+                          className="text-[9px] px-1 py-0 hidden @[300px]:inline-flex"
+                        >
+                          INT
+                        </Badge>
+                      )}
+                    </>
                   )}
                 </div>
               ) : variant === 'client-card' ? (

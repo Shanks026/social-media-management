@@ -243,3 +243,20 @@ export async function fetchInternalClient() {
   if (error) throw error
   return data
 }
+export function useAllClientsMetrics() {
+  const { user } = useAuth()
+  return useQuery({
+    queryKey: ['all-clients-metrics', user?.id],
+    queryFn: async () => {
+      if (!user) return []
+      const { data, error } = await supabase
+        .from('view_client_profitability')
+        .select('*')
+        .eq('user_id', user.id)
+
+      if (error) throw error
+      return data || []
+    },
+    enabled: !!user?.id,
+  })
+}

@@ -13,7 +13,8 @@ import { Layout } from 'lucide-react'
 // Application Defaults
 const APP_NAME = 'Tercero'
 const APP_TAGLINE = 'Development'
-const DEFAULT_ICON = '/TerceroLogo.svg' // Path to your public folder icon
+const DEFAULT_ICON = '/TerceroIcon.svg'
+const LANDSCAPE_LOGO = '/TerceroLand.svg'
 
 export function AppSidebarHeader({ agencySettings }) {
   const { state, isMobile } = useSidebar()
@@ -30,6 +31,7 @@ export function AppSidebarHeader({ agencySettings }) {
   const plan = agencySettings?.tier || sub?.plan_name || APP_TAGLINE
 
   const isBrandingComplete = !!(name && logo && plan && name !== APP_NAME)
+  const isTercero = name === APP_NAME || !name
 
   const getInitials = (name) => {
     const finalName = name || APP_NAME
@@ -46,13 +48,19 @@ export function AppSidebarHeader({ agencySettings }) {
       <SidebarMenu>
         <SidebarMenuItem className="flex items-center">
           <SidebarMenuButton
-            size="lg"
-            className="hover:bg-transparent cursor-default group"
+            size={isCollapsed ? 'default' : 'lg'}
+            className={`hover:bg-transparent cursor-default group ${
+              isCollapsed ? 'justify-center p-0 w-full' : 'justify-start'
+            }`}
           >
             {/* LOGO SECTION */}
             <div
-              className={`flex shrink-0 items-center justify-center transition-all duration-300 overflow-hidden rounded-lg shadow-sm bg-background ${
-                isCollapsed ? 'size-8' : 'size-9'
+              className={`flex shrink-0 items-center justify-center overflow-hidden rounded-lg ${
+                isTercero
+                  ? isCollapsed
+                    ? 'size-7'
+                    : 'h-9 w-32 ml-[-4px]'
+                  : `shadow-sm bg-background ${isCollapsed ? 'size-6' : 'size-9'}`
               }`}
             >
               {isLoading ? (
@@ -63,15 +71,36 @@ export function AppSidebarHeader({ agencySettings }) {
                   alt={name}
                   className="size-full object-cover rounded-lg"
                   onError={(e) => {
-                    e.target.onerror = null
-                    e.target.src = DEFAULT_ICON
+                    const parent = e.target.parentElement
+                    if (parent) {
+                      const fallback = document.createElement('div')
+                      fallback.className = 'size-6 bg-foreground'
+                      fallback.style.maskImage = `url(${DEFAULT_ICON})`
+                      fallback.style.maskRepeat = 'no-repeat'
+                      fallback.style.maskPosition = 'center'
+                      fallback.style.maskSize = 'contain'
+                      fallback.style.webkitMaskImage = `url(${DEFAULT_ICON})`
+                      fallback.style.webkitMaskRepeat = 'no-repeat'
+                      fallback.style.webkitMaskPosition = 'center'
+                      fallback.style.webkitMaskSize = 'contain'
+                      parent.innerHTML = ''
+                      parent.appendChild(fallback)
+                    }
                   }}
                 />
-              ) : name === APP_NAME || !name ? (
-                <img
-                  src={DEFAULT_ICON}
-                  alt="Tercero Logo"
-                  className="size-full object-contain transition-all duration-300"
+              ) : isTercero ? (
+                <div
+                  className={`${isCollapsed ? 'size-5' : 'h-7 w-28'} bg-foreground`}
+                  style={{
+                    maskImage: `url(${isCollapsed ? DEFAULT_ICON : LANDSCAPE_LOGO})`,
+                    maskRepeat: 'no-repeat',
+                    maskPosition: 'center',
+                    maskSize: 'contain',
+                    WebkitMaskImage: `url(${isCollapsed ? DEFAULT_ICON : LANDSCAPE_LOGO})`,
+                    WebkitMaskRepeat: 'no-repeat',
+                    WebkitMaskPosition: 'center',
+                    WebkitMaskSize: 'contain',
+                  }}
                 />
               ) : (
                 <div className="flex size-full items-center justify-center bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 rounded-lg">
@@ -82,68 +111,49 @@ export function AppSidebarHeader({ agencySettings }) {
               )}
             </div>
 
-            {/* IDENTITY TEXT SECTION */}
-            {/* Fix: Kept in DOM. Used max-w and opacity for a smooth, flicker-free transition */}
-            <div
-              className={`flex flex-col text-left overflow-hidden transition-all duration-300 ease-in-out ${
-                isCollapsed
-                  ? 'max-w-0 opacity-0 ml-0'
-                  : 'max-w-[200px] opacity-100 ml-0'
-              }`}
-            >
-              {isLoading ? (
-                <div className="space-y-2 w-24">
-                  <Skeleton className="h-3 w-full" />
-                  <Skeleton className="h-2 w-16" />
-                </div>
-              ) : (
-                <>
-                  <div className="flex items-center gap-1.5 overflow-hidden">
-                    <span className="text-sm font-semibold text-foreground truncate tracking-tight">
-                      {name}
-                    </span>
-                    {isBrandingComplete && (
-                      <img
-                        src="/verify.png"
-                        alt="Verified"
-                        className="size-3.5 shrink-0"
-                      />
-                    )}
+            {/* IDENTITY TEXT — only rendered when expanded and non-Tercero branding */}
+            {!isCollapsed && !isTercero && (
+              <div className="flex flex-col text-left overflow-hidden ml-2">
+                {isLoading ? (
+                  <div className="space-y-2 w-24">
+                    <Skeleton className="h-3 w-full" />
+                    <Skeleton className="h-2 w-16" />
                   </div>
-                  <span className="text-xs text-muted-foreground truncate">
-                    {plan}
-                  </span>
-                </>
-              )}
-            </div>
+                ) : (
+                  <>
+                    <div className="flex items-center gap-1.5 overflow-hidden">
+                      <span className="text-sm font-semibold text-foreground truncate tracking-tight">
+                        {name}
+                      </span>
+                      {isBrandingComplete && (
+                        <img
+                          src="/verify.png"
+                          alt="Verified"
+                          className="size-3.5 shrink-0"
+                        />
+                      )}
+                    </div>
+                    <span className="text-xs text-muted-foreground truncate">
+                      {plan}
+                    </span>
+                  </>
+                )}
+              </div>
+            )}
           </SidebarMenuButton>
 
-          {/* Trigger: Visible on Desktop when Expanded */}
-          {/* Fix: Kept in DOM to prevent layout pop */}
-          <div
-            className={`shrink-0 overflow-hidden transition-all duration-300 ease-in-out ${
-              isCollapsed || isMobile
-                ? 'max-w-0 opacity-0 ml-0'
-                : 'max-w-[32px] opacity-100 ml-auto'
-            }`}
-          >
-            <SidebarTrigger />
-          </div>
+          {/* Collapse trigger — only rendered when expanded on desktop */}
+          {!isCollapsed && !isMobile && (
+            <SidebarTrigger className="ml-auto shrink-0" />
+          )}
         </SidebarMenuItem>
 
-        {/* Desktop-only: Show trigger below icon when collapsed */}
-        {/* Fix: Wrapped in an animating div to slide down smoothly instead of instantly appearing */}
-        <div
-          className={`overflow-hidden transition-all duration-300 ease-in-out ${
-            isCollapsed && !isMobile
-              ? 'max-h-[40px] opacity-100 mt-2'
-              : 'max-h-0 opacity-0 mt-0'
-          }`}
-        >
-          <SidebarMenuItem className="flex justify-center">
+        {/* Expand trigger — only rendered when collapsed on desktop */}
+        {isCollapsed && !isMobile && (
+          <SidebarMenuItem className="flex justify-center mt-2">
             <SidebarTrigger />
           </SidebarMenuItem>
-        </div>
+        )}
       </SidebarMenu>
     </SidebarHeader>
   )
