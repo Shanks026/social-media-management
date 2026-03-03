@@ -6,14 +6,18 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import { cn } from '@/lib/utils'
 import { fetchClients } from '@/api/clients'
+import { ArrowUpRight } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 
 function getHealthStatus(client) {
-  const { drafts, pending, revisions, scheduled, next_post_at } = client.pipeline
+  const { drafts, pending, revisions, scheduled, next_post_at } =
+    client.pipeline
   const inPipeline = drafts + pending + revisions + scheduled
 
   if (scheduled > 0) return 'healthy'
 
-  const nextPostPast = !next_post_at || isBefore(new Date(next_post_at), new Date())
+  const nextPostPast =
+    !next_post_at || isBefore(new Date(next_post_at), new Date())
   if (inPipeline === 0 && nextPostPast) return 'at-risk'
 
   return 'attention'
@@ -49,15 +53,24 @@ export default function ClientHealthGrid() {
 
   return (
     <Card className="border-none shadow-sm ring-1 ring-border/50 bg-card/50 dark:bg-card/30">
-      <CardHeader className="pb-3">
+      <CardHeader className="pb-3 shrink-0">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-base font-semibold">Client Content Health</CardTitle>
-          <button
-            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+          <div>
+            <CardTitle className="text-base font-semibold">
+              Client Content Health
+            </CardTitle>
+            <p className="text-xs text-muted-foreground">
+              Content status across all active clients
+            </p>
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 -mr-2 text-muted-foreground hover:text-foreground"
             onClick={() => navigate('/clients')}
           >
-            View all →
-          </button>
+            <ArrowUpRight className="h-4 w-4" />
+          </Button>
         </div>
       </CardHeader>
       <CardContent>
@@ -72,7 +85,8 @@ export default function ClientHealthGrid() {
             {realClients.map((client) => {
               const health = getHealthStatus(client)
               const config = HEALTH_CONFIG[health]
-              const { drafts, pending, revisions, scheduled, next_post_at } = client.pipeline
+              const { drafts, pending, revisions, scheduled, next_post_at } =
+                client.pipeline
               const inPipeline = drafts + pending + revisions + scheduled
 
               return (
@@ -89,10 +103,22 @@ export default function ClientHealthGrid() {
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex flex-col flex-1 min-w-0">
-                      <span className="text-sm font-semibold truncate text-foreground/90 group-hover:text-foreground transition-colors">{client.name}</span>
+                      <span className="text-sm font-semibold truncate text-foreground/90 group-hover:text-foreground transition-colors">
+                        {client.name}
+                      </span>
                       <div className="flex items-center gap-1.5 mt-0.5">
-                        <div className={cn('size-1.5 rounded-full shrink-0 shadow-sm', config.dotClass)} />
-                        <span className={cn('text-[10px] font-bold tracking-wider uppercase', config.labelClass)}>
+                        <div
+                          className={cn(
+                            'size-1.5 rounded-full shrink-0 shadow-sm',
+                            config.dotClass,
+                          )}
+                        />
+                        <span
+                          className={cn(
+                            'text-[10px] font-bold tracking-wider uppercase',
+                            config.labelClass,
+                          )}
+                        >
                           {config.label}
                         </span>
                       </div>
@@ -105,22 +131,30 @@ export default function ClientHealthGrid() {
 
                   <div className="text-[13px] text-muted-foreground w-full space-y-2 pt-1">
                     <div className="flex items-center justify-between w-full">
-                      <span className="text-muted-foreground/70 text-xs">Pipeline</span>
+                      <span className="text-muted-foreground/70 text-xs">
+                        Pipeline
+                      </span>
                       <span className="font-semibold text-foreground/80 bg-muted/50 px-2 py-0.5 rounded-md border border-border/40 shadow-sm text-xs">
                         {inPipeline} post{inPipeline !== 1 ? 's' : ''}
                       </span>
                     </div>
-                    
+
                     {next_post_at ? (
                       <div className="flex items-center justify-between w-full">
-                        <span className="text-muted-foreground/70 text-xs">Next Drop</span>
+                        <span className="text-muted-foreground/70 text-xs">
+                          Next Drop
+                        </span>
                         <span className="font-medium text-foreground/70 truncate text-right text-xs">
-                          {formatDistanceToNow(new Date(next_post_at), { addSuffix: true })}
+                          {formatDistanceToNow(new Date(next_post_at), {
+                            addSuffix: true,
+                          })}
                         </span>
                       </div>
                     ) : (
                       <div className="flex items-center justify-between w-full opacity-70">
-                        <span className="text-muted-foreground/70 text-xs">Next Drop</span>
+                        <span className="text-muted-foreground/70 text-xs">
+                          Next Drop
+                        </span>
                         <span className="text-xs">-</span>
                       </div>
                     )}

@@ -180,7 +180,7 @@ export default function DashboardWeekTimeline() {
         </Button>
       </CardHeader>
 
-      <CardContent className="pt-0 pb-4 pr-3">
+      <CardContent className="pb-4 pt-2 pr-3">
         {isLoading ? (
           <div className="flex flex-col gap-7 py-1 pl-1">
             {[...Array(4)].map((_, i) => (
@@ -198,9 +198,9 @@ export default function DashboardWeekTimeline() {
           </div>
         ) : (
           /* Scrollable timeline container */
-          <div className="relative overflow-y-auto max-h-[400px] pr-1 timeline-scrollbar">
+          <div className="relative overflow-y-auto max-h-[420px] pr-1 timeline-scrollbar">
             {/* Vertical timeline line — positioned relative to scroll container */}
-            <div className="absolute left-[10px] top-2 bottom-2 w-px bg-gray-300 dark:bg-gray-700" />
+            <div className="absolute left-[10px] top-2 bottom-2 w-px bg-border" />
 
             <div className="flex flex-col">
               {days.map((day, i) => {
@@ -242,10 +242,10 @@ export default function DashboardWeekTimeline() {
                     {/* Timeline dot — centered over the line at left-[10px] */}
                     <div className="w-5 flex justify-center shrink-0 pt-0.5 relative z-10">
                       <div
-                        className={`size-2.5 rounded-full ring-2 ring-card ${
+                        className={`size-2 rounded-full ring-2 ring-card ${
                           isCurrentDay
                             ? 'bg-emerald-500 ring-emerald-500/30'
-                            : 'bg-gray-300 dark:bg-gray-400'
+                            : 'bg-gray-300 dark:bg-gray-500'
                         }`}
                       />
                     </div>
@@ -263,10 +263,10 @@ export default function DashboardWeekTimeline() {
                             ? 'Today'
                             : isTomorrowDay
                               ? 'Tomorrow'
-                              : format(day, 'EEE d')}
+                              : format(day, 'EEEE')}
                         </p>
                         <span className="text-xs text-muted-foreground leading-none">
-                          {format(day, 'd MMM')}
+                          {format(day, 'd MMMM')}
                         </span>
                       </div>
 

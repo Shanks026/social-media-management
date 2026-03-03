@@ -1,13 +1,12 @@
 import React from 'react'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Cell,
-  LabelList,
-} from 'recharts'
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from '@/components/ui/card'
+import { BarChart, Bar, XAxis, YAxis, Cell, LabelList } from 'recharts'
 import {
   ChartContainer,
   ChartTooltip,
@@ -16,6 +15,9 @@ import {
 import { Skeleton } from '@/components/ui/skeleton'
 import { useGlobalPosts } from '@/api/useGlobalPosts'
 import { SUPPORTED_PLATFORMS } from '@/lib/platforms'
+import { useNavigate } from 'react-router-dom'
+import { ArrowUpRight } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 
 const platformChartConfig = {
   posts: { label: 'Posts' },
@@ -41,6 +43,7 @@ const CustomPlatformTick = ({ x, y, payload }) => {
 }
 
 export default function DashboardSocialMediaUsage() {
+  const navigate = useNavigate()
   const { data: posts = [], isLoading: loadingPosts } = useGlobalPosts()
 
   const platformData = React.useMemo(() => {
@@ -77,13 +80,21 @@ export default function DashboardSocialMediaUsage() {
 
   return (
     <Card className="border-none shadow-sm ring-1 ring-border/50 bg-card/50 dark:bg-card/30 h-full flex flex-col">
-      <CardHeader>
-        <CardTitle className="text-lg font-medium">
-          Social Media Usage
-        </CardTitle>
-        <CardDescription>
-          Post distribution across platforms
-        </CardDescription>
+      <CardHeader className="flex flex-row items-center justify-between pb-0 shrink-0">
+        <div>
+          <CardTitle className="text-lg font-medium">
+            Social Media Usage
+          </CardTitle>
+          <CardDescription>Post distribution across platforms</CardDescription>
+        </div>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 -mr-2"
+          onClick={() => navigate('/posts')}
+        >
+          <ArrowUpRight className="h-4 w-4" />
+        </Button>
       </CardHeader>
       <CardContent className="flex-1">
         {loadingPosts ? (
