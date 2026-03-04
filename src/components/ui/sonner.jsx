@@ -32,6 +32,11 @@ const Toaster = ({
           "--border-radius": "var(--radius)"
         }
       }
+      toastOptions={{
+        classNames: {
+          description: 'text-muted-foreground',
+        },
+      }}
       {...props} />
   );
 }
