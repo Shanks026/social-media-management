@@ -133,16 +133,9 @@ export function SignupForm({ className, ...props }) {
       </div>
 
       {error && (
-        <div
-          className={cn(
-            'p-3 rounded-2xl border text-sm text-center',
-            error.includes('Success')
-              ? 'bg-green-50 border-green-200 text-green-700'
-              : 'bg-destructive/10 border-destructive/20 text-destructive',
-          )}
-        >
+        <p className={cn('text-sm', error.includes('Success') ? 'text-green-600 dark:text-green-400' : 'text-destructive')}>
           {error}
-        </div>
+        </p>
       )}
 
       <div className="flex flex-col gap-3 pt-2">
@@ -151,7 +144,7 @@ export function SignupForm({ className, ...props }) {
           className="h-12 w-full rounded-full font-medium text-[15px] shadow-sm hover:shadow-md transition-all active:scale-[0.98]"
           disabled={loading}
         >
-          {loading ? 'Creating...' : 'Create account'}
+          {loading ? 'Getting you started...' : 'Create account'}
         </Button>
       </div>
     </form>

@@ -96,11 +96,7 @@ export function LoginForm({ className, ...props }) {
           </Field>
         </div>
 
-        {error && (
-          <div className="bg-destructive/10 p-3 rounded-lg border border-destructive/20">
-            <p className="text-sm text-destructive text-center">{error}</p>
-          </div>
-        )}
+        {error && <p className="text-sm text-destructive">{error}</p>}
 
         <div className="flex flex-col gap-3 pt-2">
           <Button
@@ -108,7 +104,7 @@ export function LoginForm({ className, ...props }) {
             className="h-11 w-full rounded-full font-medium text-[15px] transition-all"
             disabled={loading}
           >
-            {loading ? 'Processing...' : 'Login'}
+            {loading ? 'Diving right in...' : 'Login'}
           </Button>
         </div>
       </form>

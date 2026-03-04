@@ -1,7 +1,19 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
-import PlatformBadge from '@/components/PlatformBadge'
+const PlatformIcon = ({ name }) => {
+  const fileName = name === 'google_business' ? 'google_busines' : name
+  return (
+    <div className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-card bg-white dark:bg-zinc-900 shadow-sm overflow-hidden">
+      <img
+        src={`/platformIcons/${fileName}.png`}
+        alt={name}
+        className="size-5 object-contain"
+        onError={(e) => (e.target.style.display = 'none')}
+      />
+    </div>
+  )
+}
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import {
@@ -136,8 +148,10 @@ export default function PublicReview() {
 
   if (loading)
     return (
-      <div className="flex h-screen items-center justify-center bg-background">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      <div className="flex mx-auto h-screen items-center justify-center bg-background">
+        <span className="text-spotlight-dark text-sm font-medium tracking-wide">
+          Setting things up...
+        </span>
       </div>
     )
 
@@ -145,15 +159,15 @@ export default function PublicReview() {
   if (statusUpdated) {
     return (
       <div className="flex h-screen w-full flex-col items-center justify-center bg-background p-6 text-center">
-        <div className="mb-6 flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+        <div className="animate-in zoom-in-50 fade-in duration-500 mb-6 flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
           <Check size={32} strokeWidth={2.5} />
         </div>
-        <h2 className="text-2xl font-bold tracking-tight text-foreground">
+        <h2 className="animate-in fade-in slide-in-from-bottom-3 duration-500 delay-150 fill-mode-both text-2xl font-bold tracking-tight text-foreground">
           {statusUpdated === 'SCHEDULED'
             ? 'Content Approved'
             : 'Review Submitted'}
         </h2>
-        <p className="mt-2 max-w-md text-muted-foreground leading-relaxed">
+        <p className="animate-in fade-in slide-in-from-bottom-3 duration-500 delay-300 fill-mode-both mt-2 max-w-md text-muted-foreground leading-relaxed">
           {statusUpdated === 'SCHEDULED'
             ? `Successfully scheduled${post?.target_date ? ` for ${format(new Date(post.target_date), 'PPP')}` : ''}.`
             : "We've received your feedback and will prepare a new version shortly."}
@@ -190,16 +204,19 @@ export default function PublicReview() {
               </h2>
             </div>
           ) : (
-            <div className="flex items-center gap-3">
-              <img
-                src="/TerceroLogo2.svg"
-                alt="Tercero Logo"
-                className="h-7 w-auto object-contain"
-              />
-              <h2 className="text-2xl font-semibold tracking-tight text-primary">
-                Tercero
-              </h2>
-            </div>
+            <div
+              className="h-7 w-28 bg-foreground"
+              style={{
+                maskImage: 'url(/TerceroLand.svg)',
+                maskRepeat: 'no-repeat',
+                maskPosition: 'center left',
+                maskSize: 'contain',
+                WebkitMaskImage: 'url(/TerceroLand.svg)',
+                WebkitMaskRepeat: 'no-repeat',
+                WebkitMaskPosition: 'center left',
+                WebkitMaskSize: 'contain',
+              }}
+            />
           )}
         </div>
 
@@ -210,7 +227,7 @@ export default function PublicReview() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   {post.platform.map((p) => (
-                    <PlatformBadge key={p} platform={p} />
+                    <PlatformIcon key={p} name={p} />
                   ))}
                 </div>
                 <Badge variant="secondary" className="font-mono">
@@ -244,7 +261,7 @@ export default function PublicReview() {
                 <h3 className="text-xs font-semibold text-muted-foreground/60">
                   Caption
                 </h3>
-                <p className="text-lg leading-relaxed whitespace-pre-wrap text-foreground/90">
+                <p className="text-sm leading-relaxed whitespace-pre-wrap text-foreground/90">
                   {post.content}
                 </p>
               </div>
@@ -463,7 +480,7 @@ export default function PublicReview() {
       <footer className="w-full py-6 mt-auto border-t border-border/40 flex items-center justify-center">
         {showPoweredBy && (
           <p className="text-sm text-muted-foreground/60 font-medium tracking-wide">
-            Powered by Tercero, Ark Labs 2026
+            Powered by Tercero 2026
           </p>
         )}
       </footer>

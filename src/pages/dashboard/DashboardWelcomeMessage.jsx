@@ -2,16 +2,57 @@ import { useMemo, useState, useEffect } from 'react'
 import { useAuth } from '@/context/AuthContext'
 import { format, getDay } from 'date-fns'
 
-// Multiple messages per slot, indexed by day of week (0=Sun … 6=Sat)
+// Greeting templates — {name} is replaced at render time
+// Indexed by day of week (0=Sun … 6=Sat) to rotate per-day
+const GREETINGS = {
+  lateNight: [
+    "{name}'s still here? 🌙",
+    "Night owl spotted — {name}! 🦉",
+    "Burning the midnight oil, {name}? ☕",
+    "{name}'s midnight grind! 🌌",
+    "The world sleeps, {name} ships. 🌙",
+    "Still going, {name}? Respect. 🦉",
+    "Late-night mode activated, {name}. ☕",
+  ],
+  morning: [
+    "Rise and shine, {name}! ☀️",
+    "{name}'s back at it! 🚀",
+    "Morning, {name}! Let's make it count. ⚡",
+    "New day, new wins — {name}! 🌿",
+    "Look who's up early, {name}! 🔥",
+    "TGIF vibes start now, {name}! ✨",
+    "Weekend warrior turned workday hero — {name}! ☀️",
+  ],
+  afternoon: [
+    "Back at it, {name}! 💼",
+    "The hustle continues, {name}. 🎯",
+    "Midday check-in, {name}! ⚡",
+    "Afternoon focus mode — {name}! 📊",
+    "Still grinding, {name}? Nice. 🎯",
+    "Almost there, {name}! ✨",
+    "Afternoon power hour, {name}! 🌴",
+  ],
+  evening: [
+    "{name} returns! 🌆",
+    "One more push, {name}! ✅",
+    "Evening mode: on. What's up, {name}? 🍃",
+    "Wrapping up, {name}? 📋",
+    "Almost the weekend, {name}! 🎉",
+    "TGIF, {name}! Close it out strong. 🥂",
+    "Saturday night hustle — {name}! 🌇",
+  ],
+}
+
+// Sub-messages per slot, indexed by day of week
 const MESSAGES = {
   lateNight: [
-    "Burning the midnight oil? Don't forget to rest — great work waits for a rested mind.",
     "Late nights build empires, but so does sleep. Wrap up and recharge.",
     "The agency will still be here in the morning. Take care of yourself first.",
     "Even the best strategists need downtime. You've earned the break.",
     "Midnight grind mode: respect. But seriously, close the laptop soon.",
     "You're still at it? That's dedication. Don't forget to eat something too.",
     "The hustle is real tonight. Make sure tomorrow-you appreciates the effort.",
+    "Great work waits for a rested mind. Seriously — go sleep.",
   ],
   morning: [
     "A fresh week starts today — let's set the tone.",
@@ -19,7 +60,7 @@ const MESSAGES = {
     "New day, clean slate. What's the one thing that moves the needle today?",
     "Mid-week momentum — you're past the hump, keep pushing.",
     "Almost there. Two more days and the weekend is yours.",
-    "Friday! Close out the week strong and tie up any loose ends.",
+    "Close out the week strong and tie up any loose ends.",
     "Weekend check-in? Dedicated. Let's make it quick and worth it.",
   ],
   afternoon: [
@@ -37,16 +78,9 @@ const MESSAGES = {
     "Evening review time — what shipped, what's still open?",
     "End of the work day. Did you chase that overdue approval?",
     "Thursday evening: one more push and you're headed into the weekend.",
-    "TGIF! Wrap up, log off, and actually disconnect this weekend.",
+    "Wrap up, log off, and actually disconnect this weekend.",
     "Saturday evening — you're dedicated. Don't burn out.",
   ],
-}
-
-const EMOJIS = {
-  lateNight: ['🌙', '🦉', '☕', '🌌'],
-  morning: ['☀️', '🌤️', '🚀', '⚡', '🌿', '🔥', '✨'],
-  afternoon: ['☀️', '💼', '📊', '⚡', '🎯', '📅', '🌴'],
-  evening: ['🌆', '📋', '✅', '🍃', '🎉', '🥂', '🌇'],
 }
 
 export default function DashboardWelcomeMessage() {
@@ -61,45 +95,32 @@ export default function DashboardWelcomeMessage() {
   const fullName = user?.user_metadata?.full_name || 'there'
   const firstName = fullName.split(' ')[0]
 
-  const { greeting, message, emoji } = useMemo(() => {
+  const { greeting, message } = useMemo(() => {
     const hour = time.getHours()
     const dayIndex = getDay(time) // 0 = Sunday
 
     let slot = 'evening'
-    let greetingText = 'Good Evening'
+    if (hour >= 0 && hour < 5) slot = 'lateNight'
+    else if (hour >= 5 && hour < 12) slot = 'morning'
+    else if (hour >= 12 && hour < 17) slot = 'afternoon'
+    else if (hour >= 17 && hour < 22) slot = 'evening'
+    else slot = 'lateNight'
 
-    if (hour >= 0 && hour < 5) {
-      slot = 'lateNight'
-      greetingText = 'Working Late'
-    } else if (hour >= 5 && hour < 12) {
-      slot = 'morning'
-      greetingText = 'Good Morning'
-    } else if (hour >= 12 && hour < 17) {
-      slot = 'afternoon'
-      greetingText = 'Good Afternoon'
-    } else if (hour >= 17 && hour < 22) {
-      slot = 'evening'
-      greetingText = 'Good Evening'
-    } else {
-      slot = 'lateNight'
-      greetingText = 'Working Late'
-    }
-
+    const greetings = GREETINGS[slot]
     const msgs = MESSAGES[slot]
-    const emojis = EMOJIS[slot]
+    const template = greetings[dayIndex % greetings.length]
 
     return {
-      greeting: greetingText,
+      greeting: template.replace('{name}', firstName),
       message: msgs[dayIndex % msgs.length],
-      emoji: emojis[dayIndex % emojis.length],
     }
-  }, [time])
+  }, [time, firstName])
 
   return (
     <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-2">
       <div className="space-y-1">
         <h1 className="text-3xl font-medium tracking-tight text-foreground">
-          {greeting}, {firstName}! {emoji}
+          {greeting}
         </h1>
         <p className="text-muted-foreground font-medium text-sm">
           {message}

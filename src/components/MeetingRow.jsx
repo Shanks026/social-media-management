@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import CreateMeetingDialog from '@/components/CreateMeetingDialog'
 import { ClientAvatar } from '@/components/NoteRow'
+import { cn } from '@/lib/utils'
 
 /**
  * Props:
@@ -19,6 +20,7 @@ export default function MeetingRow({
   markMeetingDone,
   isCompletingMeeting,
   variant = 'row',
+  alwaysShowActions = false,
 }) {
   const meetingDate = new Date(meeting.datetime)
   let dateLabel = format(meetingDate, 'MMM d, yyyy')
@@ -158,14 +160,15 @@ export default function MeetingRow({
           </div>
         </div>
 
-        {/* Hover action bar — only for dashboard-card */}
+        {/* Action bar — only for dashboard-card */}
         {variant === 'dashboard-card' && (
           <div
-            className="
-            grid transition-all duration-200 ease-in-out
-            delay-400 group-hover:delay-[400ms]
-            grid-rows-[0fr] group-hover:grid-rows-[1fr]
-          "
+            className={cn(
+              'grid transition-all duration-200 ease-in-out',
+              alwaysShowActions
+                ? 'grid-rows-[1fr]'
+                : 'grid-rows-[0fr] group-hover:grid-rows-[1fr] delay-400 group-hover:delay-[400ms]',
+            )}
           >
             <div className="overflow-hidden">
               <div className="flex items-center gap-2 px-4 py-2 border-t border-border/40 bg-muted/30">

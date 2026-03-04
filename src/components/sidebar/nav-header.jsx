@@ -9,6 +9,7 @@ import {
 } from '@/components/ui/sidebar'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Layout } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 
 // Application Defaults
 const APP_NAME = 'Tercero'
@@ -19,6 +20,7 @@ const LANDSCAPE_LOGO = '/TerceroLand.svg'
 export function AppSidebarHeader({ agencySettings }) {
   const { state, isMobile } = useSidebar()
   const { data: sub, isLoading } = useSubscription()
+  const navigate = useNavigate()
 
   const isCollapsed = state === 'collapsed' && !isMobile
 
@@ -49,9 +51,10 @@ export function AppSidebarHeader({ agencySettings }) {
         <SidebarMenuItem className="flex items-center">
           <SidebarMenuButton
             size={isCollapsed ? 'default' : 'lg'}
-            className={`hover:bg-transparent cursor-default group ${
+            className={`hover:bg-transparent cursor-pointer group ${
               isCollapsed ? 'justify-center p-0 w-full' : 'justify-start'
             }`}
+            onClick={() => navigate('/dashboard')}
           >
             {/* LOGO SECTION */}
             <div

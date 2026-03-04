@@ -29,6 +29,25 @@ const STATUS_STYLES = {
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i)
 const ROW_HEIGHT = 80
+const DURATION_MS = 60 * 60 * 1000 // treat each event as 1 hour for overlap detection
+
+function assignColumns(posts) {
+  if (!posts.length) return []
+  const sorted = [...posts].sort(
+    (a, b) => new Date(a.target_date) - new Date(b.target_date),
+  )
+  const colEnds = [] // end time (ms) of last event in each column
+  const assignments = sorted.map((post) => {
+    const start = new Date(post.target_date).getTime()
+    const end = start + DURATION_MS
+    let col = colEnds.findIndex((endTime) => endTime <= start)
+    if (col === -1) { col = colEnds.length; colEnds.push(end) }
+    else colEnds[col] = end
+    return { post, col }
+  })
+  const total = colEnds.length
+  return assignments.map(({ post, col }) => ({ post, col, total }))
+}
 
 export default function WeekView({ currentMonth, postsByDate, clientId }) {
   const [now, setNow] = useState(new Date())
@@ -127,10 +146,10 @@ export default function WeekView({ currentMonth, postsByDate, clientId }) {
                     />
                   ))}
 
-                  {posts.map((post) => {
+                  {assignColumns(posts).map(({ post, col, total }) => {
                     const topPos = getTopOffset(post.target_date)
-                    // Set a default height, e.g., 60px or 1 hour duration.
-                    const heightStr = post.isMeeting ? '60px' : '60px'
+                    const leftPct = (col / total) * 100
+                    const rightPct = ((total - col - 1) / total) * 100
                     return (
                     <button
                       key={post.version_id}
@@ -138,29 +157,32 @@ export default function WeekView({ currentMonth, postsByDate, clientId }) {
                         e.stopPropagation()
                         setSelectedDate(day)
                       }}
-                      style={{ top: `${topPos}px`, height: heightStr }}
+                      style={{
+                        top: `${topPos}px`,
+                        height: '60px',
+                        left: `calc(${leftPct}% + 2px)`,
+                        right: `calc(${rightPct}% + 2px)`,
+                      }}
                       className={cn(
-                        'absolute left-1 right-1 p-2 rounded-lg border border-l-4 transition-all z-10 hover:z-30 hover:scale-[1.02] text-left shadow-md',
+                        'absolute overflow-hidden p-1.5 rounded-lg border border-l-4 transition-all z-10 hover:z-30 hover:scale-[1.02] text-left shadow-md flex flex-col justify-center',
                         STATUS_STYLES[post.status] || 'border-l-muted',
-                        // 🔥 Apply purple bg fill ONLY for meetings
                         post.isMeeting
-                          ? 'bg-purple-50/90 dark:bg-purple-950/50 border-purple-200 dark:border-purple-800'
+                          ? 'bg-purple-50 dark:bg-purple-950/50 border-purple-200 dark:border-purple-800'
                           : 'bg-card',
                       )}
                     >
-                      <div className="flex items-start gap-2 mb-1">
-                        <div className="mt-0.5 shrink-0">
-                          {/* 🔥 Show Clock icon for meetings, Platform icon for posts */}
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <div className="shrink-0">
                           {post.isMeeting ? (
-                            <Clock className="size-3.5 text-purple-600 dark:text-purple-400" />
+                            <Clock className="size-3 text-purple-600 dark:text-purple-400" />
                           ) : (
                             PLATFORM_ICONS[post.platforms?.[0]?.toLowerCase()]
                           )}
                         </div>
-                        <div className="min-w-0">
+                        <div className="min-w-0 flex-1">
                           <p
                             className={cn(
-                              'text-xs leading-tight truncate',
+                              'text-[11px] leading-tight truncate',
                               post.isMeeting
                                 ? 'font-black text-purple-900 dark:text-purple-100'
                                 : 'font-black text-foreground',
@@ -168,27 +190,17 @@ export default function WeekView({ currentMonth, postsByDate, clientId }) {
                           >
                             {post.title}
                           </p>
-                          <div className="flex items-center gap-1 mt-0.5 text-[10px] font-bold text-foreground/80">
-                            <Clock size={10} />{' '}
+                          <div className="flex items-center gap-1 text-[10px] font-medium text-foreground/60 truncate">
+                            <Clock size={9} className="shrink-0" />
                             {format(new Date(post.target_date), 'h:mm a')}
                           </div>
                         </div>
                       </div>
 
                       {!clientId && (
-                        <div
-                          className={cn(
-                            'flex items-center gap-2 mt-1.5 pt-1.5 border-t',
-                            post.isMeeting
-                              ? 'border-purple-200 dark:border-purple-800'
-                              : 'border-muted',
-                          )}
-                        >
-                          {/* Client logo logic remains same */}
-                          <span className="text-[10px] font-bold truncate text-foreground/90">
-                            {post.client_name}
-                          </span>
-                        </div>
+                        <p className="text-[9px] font-medium truncate text-muted-foreground mt-0.5 pl-4">
+                          {post.client_name}
+                        </p>
                       )}
                     </button>
                     )
