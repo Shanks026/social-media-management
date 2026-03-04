@@ -252,7 +252,6 @@ export function useAllClientsMetrics() {
       const { data, error } = await supabase
         .from('view_client_profitability')
         .select('*')
-        .eq('user_id', user.id)
 
       if (error) throw error
       return data || []

@@ -127,6 +127,11 @@ body {
   font-family: var(--font-sans);
 }
 
+/* Sonner toast description color override */
+[data-sonner-toast] [data-description] {
+  color: var(--muted-foreground) !important;
+}
+
 @keyframes spotlight-sweep {
   0%   { background-position: 200% center; }
   100% { background-position: -200% center; }
