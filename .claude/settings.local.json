@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npm run lint)"
+      "Bash(npm run lint)",
+      "mcp__supabase-mcp-server__list_projects",
+      "mcp__supabase-mcp-server__apply_migration"
     ]
   }
 }

@@ -7,7 +7,7 @@ import { startOfDay, endOfDay } from 'date-fns'
 export async function fetchMeetings({ startDate, endDate, clientId }) {
   let query = supabase
     .from('meetings')
-    .select('id, client_id, title, datetime, notes, created_at, clients!inner(name)')
+    .select('id, client_id, title, datetime, notes, meeting_link, created_at, clients!inner(name)')
 
   if (startDate && endDate) {
     query = query.gte('datetime', startDate).lte('datetime', endDate)

@@ -1,7 +1,12 @@
 import { format, isToday, isTomorrow, differenceInDays } from 'date-fns'
-import { CalendarIcon, CheckCircle2, Clock } from 'lucide-react'
+import { CalendarIcon, CheckCircle2, Clock, Link as LinkIcon } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 import CreateMeetingDialog from '@/components/CreateMeetingDialog'
 import { ClientAvatar } from '@/components/NoteRow'
 import { cn } from '@/lib/utils'
@@ -63,9 +68,14 @@ export default function MeetingRow({
             </div>
             <div className="flex-1 min-w-0 mt-0.5">
               <div className="flex items-start justify-between gap-2">
-                <p className="font-semibold text-sm leading-snug text-foreground line-clamp-2">
-                  {meeting.title}
-                </p>
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <p className="font-semibold text-sm leading-snug text-foreground line-clamp-2">
+                    {meeting.title}
+                  </p>
+                  {meeting.meeting_link && (
+                    <LinkIcon className="h-3.5 w-3.5 shrink-0 text-muted-foreground/50" />
+                  )}
+                </div>
                 <Badge
                   variant={badgeVariant}
                   className="text-[10px] px-1.5 py-0 h-5 shrink-0"
@@ -132,6 +142,23 @@ export default function MeetingRow({
                     <CalendarIcon className="h-4 w-4" />
                   </Button>
                 </CreateMeetingDialog>
+                {meeting.meeting_link && (
+                  <Tooltip delayDuration={600}>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-primary"
+                        onClick={() => window.open(meeting.meeting_link, '_blank')}
+                      >
+                        <LinkIcon className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="max-w-[260px] break-all text-xs">
+                      {meeting.meeting_link}
+                    </TooltipContent>
+                  </Tooltip>
+                )}
                 <Button
                   variant="ghost"
                   size="icon"
@@ -185,6 +212,23 @@ export default function MeetingRow({
                     <CalendarIcon className="size-3" /> Reschedule
                   </Button>
                 </CreateMeetingDialog>
+                {meeting.meeting_link && (
+                  <Tooltip delayDuration={600}>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 text-xs text-muted-foreground hover:text-primary gap-1.5"
+                        onClick={() => window.open(meeting.meeting_link, '_blank')}
+                      >
+                        <LinkIcon className="size-3" /> Meet Link
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="max-w-[260px] break-all text-xs">
+                      {meeting.meeting_link}
+                    </TooltipContent>
+                  </Tooltip>
+                )}
                 <Button
                   variant="ghost"
                   size="sm"

@@ -9,6 +9,7 @@ import {
   Pencil,
   Trash2,
   Search,
+  Link as LinkIcon,
 } from 'lucide-react'
 import { format, isPast } from 'date-fns'
 import { toast } from 'sonner'
@@ -40,6 +41,11 @@ import { useClients } from '@/api/clients'
 import { fetchMeetings, deleteMeeting } from '@/api/meetings'
 import CreateMeetingDialog from '@/components/CreateMeetingDialog'
 import { ClientAvatar } from '@/components/NoteRow'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -165,6 +171,24 @@ function MeetingCard({ meeting, clientMap }) {
                   <Users className="size-3" />
                   <span>No client linked</span>
                 </div>
+              )}
+              {meeting.meeting_link && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 text-xs gap-1.5 text-muted-foreground hover:text-primary px-2 -mr-2"
+                      onClick={() => window.open(meeting.meeting_link, '_blank')}
+                    >
+                      <LinkIcon className="h-3 w-3" />
+                      Meet Link
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="max-w-[260px] break-all text-xs">
+                    {meeting.meeting_link}
+                  </TooltipContent>
+                </Tooltip>
               )}
             </div>
           </div>

@@ -31,7 +31,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
-import { Building2, Loader2, CalendarDays } from 'lucide-react'
+import { Building2, Loader2, CalendarDays, Link } from 'lucide-react'
 import { useClients } from '@/api/clients'
 import { createMeeting, updateMeeting } from '@/api/meetings'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
@@ -61,6 +61,10 @@ const formSchema = z.object({
   title: z.string().min(1, 'Title is required'),
   datetime: z.string().min(1, 'Date and time are required'),
   notes: z.string().optional(),
+  meeting_link: z.union([
+    z.string().url('Please enter a valid URL'),
+    z.literal(''),
+  ]).optional(),
 })
 
 export default function CreateMeetingDialog({
@@ -99,10 +103,11 @@ export default function CreateMeetingDialog({
     resolver: zodResolver(formSchema),
     defaultValues: {
       // Fix 1: Force an empty string "" instead of undefined for clean controlled state
-      client_id: editMeeting?.client_id || defaultClientId || '', 
+      client_id: editMeeting?.client_id || defaultClientId || '',
       title: editMeeting?.title || '',
       datetime: localDatetime,
       notes: editMeeting?.notes || '',
+      meeting_link: editMeeting?.meeting_link || '',
     },
   })
 
@@ -120,16 +125,17 @@ export default function CreateMeetingDialog({
         title: editMeeting.title || '',
         datetime: editLocalDatetime,
         notes: editMeeting.notes || '',
+        meeting_link: editMeeting.meeting_link || '',
       })
     } else if (open && !editMeeting) {
       form.reset({
-        // Fix 2: Reset to empty string if no default is provided
-        client_id: defaultClientId || '', 
+        client_id: defaultClientId || '',
         title: '',
         datetime: new Date(
           defaultDate.getTime() - defaultDate.getTimezoneOffset() * 60000,
         ).toISOString().slice(0, 16),
         notes: '',
+        meeting_link: '',
       })
     }
   }, [open, editMeeting, defaultClientId])
@@ -310,6 +316,32 @@ export default function CreateMeetingDialog({
                         className="min-h-[100px] resize-none bg-muted/30"
                         {...field}
                       />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="meeting_link"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-sm font-semibold">
+                      Meeting Link{' '}
+                      <span className="text-muted-foreground font-normal">
+                        (Optional)
+                      </span>
+                    </FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <Link className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                        <Input
+                          placeholder="https://meet.google.com/..."
+                          className="bg-muted/30 pl-9"
+                          {...field}
+                        />
+                      </div>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
