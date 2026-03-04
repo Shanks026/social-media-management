@@ -13,7 +13,6 @@ import CreateClientPage from '../../pages/clients/CreateClientPage'
 import WelcomeCarousel from '../WelcomeCarousel' // Import the new component
 import OnboardingPage from '../../pages/onboarding/Onboarding'
 import { SubscriptionReminder } from '../SubscriptionReminder'
-import { Loader2 } from 'lucide-react'
 import { useMeetingReminders } from '../../hooks/useMeetingReminders'
 
 export function AppShell({ user }) {
@@ -70,7 +69,9 @@ export function AppShell({ user }) {
   if (loading)
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
-        <Loader2 className="size-6 animate-spin text-primary" />
+        <span className="text-spotlight-dark text-sm font-medium tracking-wide">
+          Setting things up...
+        </span>
       </div>
     )
 

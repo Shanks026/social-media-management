@@ -206,7 +206,7 @@ export default function ContentCalendar({
   return (
     <div
       className={cn(
-        'mx-auto space-y-6',
+        'mx-auto space-y-6 animate-in fade-in duration-500',
         !hideHeader ? 'p-8 max-w-[1440px]' : 'w-full',
       )}
     >

@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/chart'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useFinanceOverview } from '@/api/transactions'
+import { useBurnRate } from '@/api/expenses'
 import { formatCurrency } from '@/utils/finance'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
@@ -42,12 +43,15 @@ function formatCompact(amount) {
 
 export default function LifetimeRevenue() {
   const navigate = useNavigate()
-  const { data: overview, isLoading } = useFinanceOverview()
+  const { data: overview, isLoading: isLoadingOverview } = useFinanceOverview()
+  const { data: burnRate = 0, isLoading: isLoadingBurn } = useBurnRate()
+  const isLoading = isLoadingOverview || isLoadingBurn
 
-  const { chartData, totalRevenue, totalExpenses, profit, margin, isEmpty } =
+  const { chartData, totalRevenue, totalExpenses, profit, margin, isEmpty, isSingleSegment } =
     useMemo(() => {
       const totalRevenue = parseFloat(overview?.total_income) || 0
-      const totalExpenses = parseFloat(overview?.total_one_off_expenses) || 0
+      const oneOff = parseFloat(overview?.total_one_off_expenses) || 0
+      const totalExpenses = oneOff + Number(burnRate)
       const rawProfit = totalRevenue - totalExpenses
       const profit = Math.max(0, rawProfit)
       const margin = totalRevenue > 0 ? (rawProfit / totalRevenue) * 100 : 0
@@ -72,8 +76,10 @@ export default function LifetimeRevenue() {
               },
             ]
 
-      return { chartData, totalRevenue, totalExpenses, profit, margin, isEmpty }
-    }, [overview])
+      const isSingleSegment = chartData.length === 1
+
+      return { chartData, totalRevenue, totalExpenses, profit, margin, isEmpty, isSingleSegment }
+    }, [overview, burnRate])
 
   return (
     <Card className="border-none shadow-sm ring-1 ring-border/50 bg-card/50 dark:bg-card/30 h-full flex flex-col">
@@ -118,8 +124,8 @@ export default function LifetimeRevenue() {
                 data={chartData}
                 dataKey="value"
                 nameKey="name"
-                cornerRadius={6}
-                paddingAngle={2}
+                cornerRadius={isEmpty || isSingleSegment ? 0 : 6}
+                paddingAngle={isEmpty || isSingleSegment ? 0 : 2}
                 innerRadius={72}
                 outerRadius={110}
                 strokeWidth={isEmpty ? 0 : 4}

@@ -72,7 +72,7 @@ export default function MonthView({
               onClick={() => setSelectedDate(day)}
               className={cn(
                 'min-h-[140px] border-b border-r p-2 transition-colors relative flex flex-col',
-                !isCurrentMonth && 'bg-muted/5 opacity-30 grayscale',
+                !isCurrentMonth && 'bg-muted/5',
                 idx % 7 === 6 && 'border-r-0',
               )}
             >
@@ -83,7 +83,9 @@ export default function MonthView({
                     'text-sm font-black px-1.5 py-0.5 rounded-md inline-block',
                     isToday(day)
                       ? 'bg-primary text-primary-foreground'
-                      : 'text-foreground/80',
+                      : isCurrentMonth
+                        ? 'text-foreground/80'
+                        : 'text-muted-foreground/40',
                   )}
                 >
                   {format(day, 'd')}
