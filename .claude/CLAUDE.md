@@ -25,6 +25,7 @@ No test framework is configured.
 - **TanStack React Query** (server state, 30s staleTime, retry: 1, no refetch on focus)
 - **React Hook Form** + **Zod** (forms and validation)
 - **Supabase** (PostgreSQL, auth, storage, edge functions)
+- **date-fns** (date manipulation; used in API layer and components)
 
 ### Data Flow
 
@@ -50,13 +51,21 @@ Pages/Components → API functions (src/api/) → Supabase client → PostgreSQL
 
 **Pages (src/pages/):** Feature directories — clients, posts, calendar, finance, billing, operations (notes/meetings), settings, public review.
 
+**Header context (`src/components/misc/header-context.jsx`):** Pages call `useHeader()` to set the dynamic breadcrumb/title in the shell header via `setHeader({ title, breadcrumbs })`.
+
+**Shared utilities:**
+- `src/lib/helper.js` — `formatDate(dateInput)` → "2 Jan, 2026"
+- `src/lib/client-helpers.js` — `getUrgencyStatus(nextPostAt)` → urgency color/label for pipeline indicators
+
 ### Domain Patterns
 
 **Post management:** Versioning via parent-child post relationships. Statuses: `DRAFT`, `PENDING`, `REVISIONS`, `SCHEDULED`, `ARCHIVED`. Media stored in Supabase `post-media` bucket; deletions are deferred until media is unused. Shareable public review via token.
 
 **Clients:** "Internal Account" vs real clients. Pipeline analytics (`view_client_profitability` DB view). Tiers and industries for filtering.
 
-**Finance:** Invoice generation with PDF export (`@react-pdf/renderer`), expense tracking, transaction ledger, subscription plan management.
+**Finance (`/finance`):** Agency-side financial tracking — invoice generation with PDF export (`@react-pdf/renderer`), expense tracking, transaction ledger, client subscription plan management. Nested routes: `overview`, `subscriptions`, `ledger`, `invoices`.
+
+**Billing (`/billing`):** The agency's own subscription to Tercero — plan details, usage stats, and internal invoices. Separate from client Finance.
 
 **Supabase Edge Functions (supabase/):** `send-approval-email`, `send-client-welcome`, `send-password-update-email`.
 

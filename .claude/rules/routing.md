@@ -5,25 +5,30 @@ How React Router is configured in Tercero (`src/App.jsx`).
 ## Route Structure
 
 ```
-/                     → redirect or landing
 /login                → LoginPage (public)
 /signup               → SignupPage (public)
 /review/:token        → PublicReview (public, no auth required)
-/onboarding           → OnboardingPage (auth required)
 
 Protected routes (inside <AppShell>):
 /dashboard            → Dashboard
 /clients              → Clients list
-/clients/:clientId    → Client detail (nested tabs)
+/clients/create       → CreateClientPage
+/clients/:clientId    → ClientDetails (tabs: Overview, Management, Workflow)
+/clients/:clientId/edit         → CreateClientPage (edit mode)
+/clients/:clientId/posts/:postId → PostDetails
 /posts                → Posts list
-/posts/:postId        → Post detail
-/calendar             → Calendar view
-/finance              → Finance (tabbed layout)
-/meetings             → MeetingsPage
-/notes                → NotesAndReminders
+/calendar             → ContentCalendar
+/finance              → FinanceLayout (nested)
+  /finance/overview       → FinancialOverviewTab
+  /finance/subscriptions  → SubscriptionsTab
+  /finance/ledger         → LedgerTab
+  /finance/invoices       → InvoicesTab
+/operations/meetings  → MeetingsPage
+/operations/notes     → NotesAndReminders
 /settings             → Settings
-/my-organization      → MyOrganization
-/billing              → BillingAndUsage
+/myorganization       → MyOrganization
+/billing              → BillingUsage
+* (catch-all)         → redirect to /dashboard
 ```
 
 ## Auth Guard

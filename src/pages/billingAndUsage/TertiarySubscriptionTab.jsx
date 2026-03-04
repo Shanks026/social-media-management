@@ -10,7 +10,6 @@ import {
   Info,
   Send,
 } from 'lucide-react'
-import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -423,6 +422,7 @@ export const SubscriptionTab = ({ sub, isLoading }) => {
         sub={sub}
         currentPlan={currentPlan}
         onUpgradeClick={scrollToPlans}
+        isFree={currentPlanName === 'free'}
       />
 
       {/* 4. Attach the ref here so it knows where to scroll to */}
@@ -451,8 +451,8 @@ export const SubscriptionTab = ({ sub, isLoading }) => {
           </p>
         </div>
 
-        <div className="grid gap-6 lg:gap-8 md:grid-cols-4">
-          {plans.map((plan) => (
+        <div className="grid gap-6 lg:gap-8 md:grid-cols-3">
+          {plans.filter((p) => p.id !== 'free').map((plan) => (
             <PlanCard
               key={plan.id}
               plan={plan}
