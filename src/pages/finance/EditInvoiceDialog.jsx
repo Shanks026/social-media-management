@@ -13,6 +13,7 @@ import { useInvoice, useUpdateInvoice } from '@/api/invoices'
 import { useClients } from '@/api/clients'
 import { useSubscription } from '@/api/useSubscription'
 import { cn } from '@/lib/utils'
+import { INVOICE_CATEGORIES } from '@/utils/constants'
 
 // UI Components
 import { Button } from '@/components/ui/button'
@@ -44,18 +45,14 @@ import { toast } from 'sonner'
 import HTMLInvoicePreview from '@/components/HTMLInvoicePreview'
 
 const PAYMENT_TERMS = ['Due on Receipt', 'Net 15', 'Net 30', 'Net 60']
-const INCOME_CATEGORIES = [
-  'Monthly Retainer',
-  'Setup / Onboarding',
-  'Performance / Success Fee',
-  'Ad Budget Reimbursement',
-  'Creative Project',
-  'Consulting / Audit',
-  'Other',
-]
 const EMPTY_ITEM = { description: '', quantity: 1, unit_price: 0 }
 
-export function EditInvoiceDialog({ open, onOpenChange, invoiceId }) {
+export function EditInvoiceDialog({
+  open,
+  onOpenChange,
+  invoiceId,
+  disableClientSelect = false,
+}) {
   const { data: invoice, isLoading } = useInvoice(invoiceId)
   const { data: clientData } = useClients()
   const { mutate: updateInvoice, isPending } = useUpdateInvoice()
@@ -194,7 +191,16 @@ export function EditInvoiceDialog({ open, onOpenChange, invoiceId }) {
     }
 
     return false
-  }, [invoice, clientId, issueDate, dueDate, paymentTerms, notes, items, isDraft])
+  }, [
+    invoice,
+    clientId,
+    issueDate,
+    dueDate,
+    paymentTerms,
+    notes,
+    items,
+    isDraft,
+  ])
 
   // --- Preview data (live) ---
   const selectedClient = useMemo(
@@ -221,7 +227,17 @@ export function EditInvoiceDialog({ open, onOpenChange, invoiceId }) {
         unit_price: parseFloat(item.unit_price) || 0,
       })),
     }),
-    [invoice, status, issueDate, dueDate, paymentTerms, notes, subtotal, selectedClient, items],
+    [
+      invoice,
+      status,
+      issueDate,
+      dueDate,
+      paymentTerms,
+      notes,
+      subtotal,
+      selectedClient,
+      items,
+    ],
   )
 
   const agencyData = useMemo(
@@ -316,7 +332,6 @@ export function EditInvoiceDialog({ open, onOpenChange, invoiceId }) {
         ) : (
           /* Two-column layout */
           <div className="flex flex-col lg:flex-row flex-1 min-h-0">
-
             {/* Left — Live HTML Preview */}
             <div className="lg:w-[55%] min-h-[400px] lg:min-h-0 bg-[#f3f4f6] dark:bg-zinc-950/50 border-b lg:border-b-0 lg:border-r border-border/50 flex flex-col min-w-0">
               <div className="px-4 py-2.5 border-b border-border/50 bg-background/50 shrink-0">
@@ -326,7 +341,10 @@ export function EditInvoiceDialog({ open, onOpenChange, invoiceId }) {
               </div>
               <div className="flex-1 overflow-y-auto p-4 md:p-8 flex justify-center custom-scrollbar">
                 <div className="w-full max-w-[700px] shrink-0">
-                  <HTMLInvoicePreview invoice={previewInvoice} agency={agencyData} />
+                  <HTMLInvoicePreview
+                    invoice={previewInvoice}
+                    agency={agencyData}
+                  />
                 </div>
               </div>
             </div>
@@ -334,7 +352,6 @@ export function EditInvoiceDialog({ open, onOpenChange, invoiceId }) {
             {/* Right — Form */}
             <div className="lg:w-[45%] shrink-0 flex flex-col min-h-0">
               <div className="flex-1 overflow-y-auto px-8 py-6 space-y-6 custom-scrollbar">
-
                 {/* Invoice Number & Status */}
                 <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30 border border-border/40">
                   <div className="flex items-center gap-3">
@@ -354,8 +371,8 @@ export function EditInvoiceDialog({ open, onOpenChange, invoiceId }) {
                 {isSentOrOverdue && (
                   <div className="flex items-center gap-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/40 text-amber-700 dark:text-amber-400 text-xs">
                     <Lock className="size-3.5 shrink-0" />
-                    Client and line items are locked after sending. You can still
-                    update the due date, payment terms, and notes.
+                    Client and line items are locked after sending. You can
+                    still update the due date, payment terms, and notes.
                   </div>
                 )}
 
@@ -367,10 +384,13 @@ export function EditInvoiceDialog({ open, onOpenChange, invoiceId }) {
                   <Select
                     value={clientId}
                     onValueChange={setClientId}
-                    disabled={!isDraft}
+                    disabled={!isDraft || disableClientSelect}
                   >
                     <SelectTrigger
-                      className={cn('w-full', !isDraft && 'opacity-60')}
+                      className={cn(
+                        'w-full',
+                        (!isDraft || disableClientSelect) && 'opacity-60',
+                      )}
                     >
                       <SelectValue placeholder="Select a client" />
                     </SelectTrigger>
@@ -416,7 +436,9 @@ export function EditInvoiceDialog({ open, onOpenChange, invoiceId }) {
                           )}
                         >
                           <CalendarIcon className="mr-2 h-3.5 w-3.5" />
-                          {issueDate ? format(issueDate, 'MMM d, yyyy') : 'Select'}
+                          {issueDate
+                            ? format(issueDate, 'MMM d, yyyy')
+                            : 'Select'}
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0" align="start">
@@ -482,7 +504,7 @@ export function EditInvoiceDialog({ open, onOpenChange, invoiceId }) {
                         <SelectValue placeholder="Select category" />
                       </SelectTrigger>
                       <SelectContent>
-                        {INCOME_CATEGORIES.map((cat) => (
+                        {INVOICE_CATEGORIES.map((cat) => (
                           <SelectItem key={cat} value={cat}>
                             {cat}
                           </SelectItem>
@@ -662,7 +684,6 @@ export function EditInvoiceDialog({ open, onOpenChange, invoiceId }) {
                 )}
               </div>
             </div>
-
           </div>
         )}
       </DialogContent>

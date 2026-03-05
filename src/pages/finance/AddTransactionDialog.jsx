@@ -19,11 +19,7 @@ import { useClients } from '@/api/clients'
 import { cn } from '@/lib/utils'
 
 // Constants
-import {
-  INCOME_CATEGORIES,
-  EXPENSE_CATEGORIES,
-  INVOICE_REQUIRED_CATEGORIES,
-} from '@/utils/constants'
+import { INCOME_CATEGORIES, EXPENSE_CATEGORIES } from '@/utils/constants'
 
 // UI Components
 import { Button } from '@/components/ui/button'
@@ -93,7 +89,6 @@ export function AddTransactionDialog({
     useCreateTransaction()
   const { mutate: updateTransaction, isPending: isUpdating } =
     useUpdateTransaction()
-
 
   const form = useForm({
     resolver: zodResolver(transactionSchema),
@@ -174,17 +169,18 @@ export function AddTransactionDialog({
 
   // True when the chosen category requires an invoice instead of a direct ledger entry
   const isInvoiceRequired =
-    type === 'INCOME' &&
-    !isInternalClient &&
-    INVOICE_REQUIRED_CATEGORIES.has(selectedCategory)
+    !editingData && type === 'INCOME' && clientId && !isInternalClient
 
   // The prefill values for CreateInvoiceDialog when redirecting
-  const invoicePrefill = useMemo(() => ({
-    clientId: clientId || '',
-    category: selectedCategory || '',
-    amount: form.getValues('amount') || '',
-    description: form.getValues('description') || '',
-  }), [clientId, selectedCategory, form])
+  const invoicePrefill = useMemo(
+    () => ({
+      clientId: clientId || '',
+      category: selectedCategory || '',
+      amount: form.getValues('amount') || '',
+      description: form.getValues('description') || '',
+    }),
+    [clientId, selectedCategory, form],
+  )
 
   function onSubmit(data) {
     if (editingData) {
@@ -403,12 +399,6 @@ export function AddTransactionDialog({
                           {activeCategories.map((cat) => (
                             <SelectItem key={cat} value={cat}>
                               {cat}
-                              {/* Mark invoice-required categories */}
-                              {INVOICE_REQUIRED_CATEGORIES.has(cat) && (
-                                <span className="ml-1.5 text-[10px] font-medium text-amber-600 dark:text-amber-400">
-                                  · invoice
-                                </span>
-                              )}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -469,12 +459,12 @@ export function AddTransactionDialog({
                     <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
                     <div className="space-y-1">
                       <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">
-                        Invoice required for "{selectedCategory}"
+                        Invoice required for client income
                       </p>
                       <p className="text-xs text-amber-700 dark:text-amber-400 leading-relaxed">
-                        This category requires a formal invoice for the client.
-                        Create an invoice instead — when marked as paid, it
-                        auto-creates the ledger entry for you.
+                        Income from clients should be recorded by creating an
+                        invoice. Create an invoice instead — when marked as
+                        paid, it auto-creates the ledger entry for you.
                       </p>
                     </div>
                   </div>
@@ -506,12 +496,11 @@ export function AddTransactionDialog({
                 >
                   Cancel
                 </Button>
-                <Button
-                  type="submit"
-                  disabled={isCreating || isUpdating || (isInvoiceRequired && !editingData)}
-                >
-                  {editingData ? 'Update Record' : 'Save Record'}
-                </Button>
+                {!isInvoiceRequired && (
+                  <Button type="submit" disabled={isCreating || isUpdating}>
+                    {editingData ? 'Update Record' : 'Save Record'}
+                  </Button>
+                )}
               </div>
             </form>
           </Form>

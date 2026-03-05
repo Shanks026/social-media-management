@@ -25,24 +25,6 @@ export function useClients() {
   })
 }
 
-export function useClientMetrics(clientId) {
-  return useQuery({
-    queryKey: ['client-metrics', clientId],
-    queryFn: async () => {
-      if (!clientId) return null
-      const { data, error } = await supabase
-        .from('view_client_profitability')
-        .select('*')
-        .eq('client_id', clientId)
-        .single()
-
-      if (error) throw error
-      return data
-    },
-    enabled: !!clientId,
-  })
-}
-
 /**
  * HELPER: Extracts the storage path from a public URL
  */
@@ -242,20 +224,4 @@ export async function fetchInternalClient() {
 
   if (error) throw error
   return data
-}
-export function useAllClientsMetrics() {
-  const { user } = useAuth()
-  return useQuery({
-    queryKey: ['all-clients-metrics', user?.id],
-    queryFn: async () => {
-      if (!user) return []
-      const { data, error } = await supabase
-        .from('view_client_profitability')
-        .select('*')
-
-      if (error) throw error
-      return data || []
-    },
-    enabled: !!user?.id,
-  })
 }
