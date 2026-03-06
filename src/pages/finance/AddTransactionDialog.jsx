@@ -19,7 +19,7 @@ import { useClients } from '@/api/clients'
 import { cn } from '@/lib/utils'
 
 // Constants
-import { INCOME_CATEGORIES, EXPENSE_CATEGORIES } from '@/utils/constants'
+import { INCOME_CATEGORIES, EXPENSE_CATEGORIES, AGENCY_INCOME_CATEGORIES } from '@/utils/constants'
 
 // UI Components
 import { Button } from '@/components/ui/button'
@@ -143,21 +143,14 @@ export function AddTransactionDialog({
   // Build available categories based on type + client
   const activeCategories = useMemo(() => {
     if (type === 'INCOME') {
-      if (isInternalClient) {
-        // Hide client-billing categories for internal account
-        return INCOME_CATEGORIES.filter(
-          (cat) =>
-            ![
-              'Monthly Retainer',
-              'Setup / Onboarding',
-              'Performance / Success Fee',
-              'Ad Budget Reimbursement',
-              'Creative Project',
-            ].includes(cat),
-        )
+      // No client selected OR My Agency selected → agency-level income categories
+      // (both cases save to the internal account; categories should be consistent)
+      if (!clientId || isInternalClient) {
+        return AGENCY_INCOME_CATEGORIES
       }
       return INCOME_CATEGORIES
     } else {
+      // For expenses: hide agency-overhead categories when recording against an external client
       if (!isInternalClient && clientId) {
         return EXPENSE_CATEGORIES.filter(
           (cat) => !['Office / Rent', 'Taxes / Legal'].includes(cat),
