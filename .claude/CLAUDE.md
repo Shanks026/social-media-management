@@ -26,6 +26,7 @@ No test framework is configured.
 - **React Hook Form** + **Zod** (forms and validation)
 - **Supabase** (PostgreSQL, auth, storage, edge functions)
 - **date-fns** (date manipulation; used in API layer and components)
+- **@react-pdf/renderer** (PDF generation — invoices and calendar reports)
 
 ### Data Flow
 
@@ -68,6 +69,34 @@ Pages/Components → API functions (src/api/) → Supabase client → PostgreSQL
 **Billing (`/billing`):** The agency's own subscription to Tercero — plan details, usage stats, and internal invoices. Separate from client Finance.
 
 **Supabase Edge Functions (supabase/):** `send-approval-email`, `send-client-welcome`, `send-password-update-email`.
+
+### Subscription & Feature Gating
+
+**`useSubscription()` (`src/api/useSubscription.js`):** Central hook for all plan/tier checks. Returns the `agency_subscriptions` row with derived fields. Always use this hook — never query `agency_subscriptions` directly in components.
+
+Plans: `trial` | `ignite` | `velocity` | `quantum`
+
+Key feature flags on the `agency_subscriptions` table (all boolean):
+- `branding_agency_sidebar` — show agency logo+name in sidebar (Velocity+)
+- `branding_powered_by` — show "Tercero YYYY" / "Powered by Tercero" (Ignite + Velocity; Quantum hides it)
+- `finance_recurring_invoices` — recurring invoice templates tab (Velocity+)
+- `finance_subscriptions` — expense subscriptions route (Velocity+)
+- `calendar_export` — calendar PDF export button (Velocity+)
+
+**`can.*` pattern** — the hook exposes helper methods via the `can` object:
+```js
+const { subscription, can, planName } = useSubscription()
+can.useAgencySidebar()        // branding_agency_sidebar
+can.showPoweredBy()           // branding_powered_by
+can.recurringInvoices()       // finance_recurring_invoices
+can.expenseSubscriptions()    // finance_subscriptions
+can.calendarExport()          // calendar_export
+can.addClient(currentCount)   // checks max_clients limit
+```
+
+**Gating pattern:** Gate UI with `can.*()` checks. For locked features (visible but disabled), show the feature with a disabled state + lock icon + tooltip. For hidden features (like nav items), conditionally render them. See `.claude/features/feature-tiers-v5.md` for the full feature matrix and gating implementation notes.
+
+**Public review page (`/review/:token`):** This page is unauthenticated. To access branding flags, extend the token query to join through `post_versions → posts → clients → agency_subscriptions`.
 
 ### Environment Variables
 

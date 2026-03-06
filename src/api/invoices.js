@@ -11,6 +11,12 @@ export const invoiceKeys = {
   nextNumber: () => [...invoiceKeys.all, 'nextNumber'],
 }
 
+export const recurringInvoiceKeys = {
+  all: ['recurring_invoices'],
+  list: (filters) => [...recurringInvoiceKeys.all, 'list', { ...filters }],
+  detail: (id) => [...recurringInvoiceKeys.all, 'detail', id],
+}
+
 // --- 1. FETCH INVOICES (List) ---
 export function useInvoices(filters = {}, options = {}) {
   const { user } = useAuth()
@@ -297,7 +303,7 @@ export function useUpdateInvoice() {
           type: 'INCOME',
           amount: updatedInvoice.total || 0,
           date: new Date().toISOString().split('T')[0],
-          category: 'Client Payment',
+          category: updatedInvoice.category || 'Other',
           description: `Payment received — ${updatedInvoice.invoice_number}${updatedInvoice.client?.name ? ` (${updatedInvoice.client.name})` : ''}`,
           status: 'PAID',
         })
@@ -338,6 +344,146 @@ export function useDeleteInvoice() {
       queryClient.invalidateQueries({ queryKey: invoiceKeys.all })
       // Also invalidate transactions since a linked transaction may have been cascade-deleted
       queryClient.invalidateQueries({ queryKey: transactionKeys.all })
+    },
+  })
+}
+
+// --- 7. FETCH RECURRING INVOICES ---
+export function useRecurringInvoices(filters = {}, options = {}) {
+  const { user } = useAuth()
+  const { clientId } = filters
+
+  return useQuery({
+    ...options,
+    queryKey: recurringInvoiceKeys.list(filters),
+    queryFn: async () => {
+      if (!user) throw new Error('User not authenticated')
+
+      let query = supabase
+        .from('recurring_invoices')
+        .select(`
+          *,
+          client:client_id (id, name, logo_url, email)
+        `)
+        .order('next_invoice_date', { ascending: true })
+
+      if (clientId) {
+        query = query.eq('client_id', clientId)
+      }
+
+      const { data, error } = await query
+      if (error) throw error
+      return data
+    },
+    enabled: !!user,
+  })
+}
+
+// --- 8. CREATE RECURRING INVOICE ---
+export function useCreateRecurringInvoice() {
+  const queryClient = useQueryClient()
+  const { user } = useAuth()
+
+  return useMutation({
+    mutationFn: async (payload) => {
+      if (!user) throw new Error('User not authenticated')
+
+      const { data, error } = await supabase
+        .from('recurring_invoices')
+        .insert({ ...payload, user_id: user.id })
+        .select()
+        .single()
+
+      if (error) throw error
+      return data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: recurringInvoiceKeys.all })
+    },
+  })
+}
+
+// --- 9. UPDATE RECURRING INVOICE ---
+export function useUpdateRecurringInvoice() {
+  const queryClient = useQueryClient()
+  const { user } = useAuth()
+
+  return useMutation({
+    mutationFn: async ({ id, updates }) => {
+      if (!user) throw new Error('User not authenticated')
+
+      const { data, error } = await supabase
+        .from('recurring_invoices')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single()
+
+      if (error) throw error
+      return data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: recurringInvoiceKeys.all })
+    },
+  })
+}
+
+// --- 10. DELETE RECURRING INVOICE ---
+export function useDeleteRecurringInvoice() {
+  const queryClient = useQueryClient()
+  const { user } = useAuth()
+
+  return useMutation({
+    mutationFn: async (id) => {
+      if (!user) throw new Error('User not authenticated')
+
+      const { error } = await supabase
+        .from('recurring_invoices')
+        .delete()
+        .eq('id', id)
+
+      if (error) throw error
+      return true
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: recurringInvoiceKeys.all })
+    },
+  })
+}
+
+// --- 11. GENERATE INVOICE FROM RECURRING TEMPLATE ---
+export function useGenerateFromRecurring() {
+  const queryClient = useQueryClient()
+  const { user } = useAuth()
+
+  return useMutation({
+    mutationFn: async (templateId) => {
+      if (!user) throw new Error('User not authenticated')
+
+      // Call the atomic RPC to generate the invoice
+      const { data: invoiceId, error: rpcError } = await supabase.rpc(
+        'generate_invoice_from_template',
+        {
+          p_template_id: templateId,
+          p_user_id: user.id,
+        },
+      )
+
+      if (rpcError) throw rpcError
+
+      // Fetch the newly created invoice to return it (for the onSuccess handler)
+      const { data, error } = await supabase
+        .from('invoices')
+        .select('*')
+        .eq('id', invoiceId)
+        .single()
+
+      if (error) throw error
+      return data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: invoiceKeys.all })
+      queryClient.invalidateQueries({ queryKey: recurringInvoiceKeys.all })
     },
   })
 }

@@ -8,28 +8,12 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog'
-import {
-  Instagram,
-  Linkedin,
-  Twitter,
-  Crown,
-  Zap,
-  CalendarDays,
-  Facebook,
-  Youtube,
-  Globe,
-} from 'lucide-react'
+import { CalendarDays } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { getUrgencyStatus } from '@/lib/client-helpers'
-import IndustryBadge from './IndustryBadge' // Ensure this path is correct
+import IndustryBadge from './IndustryBadge'
 import TierBadge from '@/components/TierBadge'
-
-import { useTransactions, useFinanceOverview } from '@/api/transactions'
-import { useExpenses, useBurnRate } from '@/api/expenses'
-import { useClientMetrics } from '@/api/clients'
-import { calculatePeriodMetrics, formatCurrency } from '@/utils/finance'
-import { startOfMonth, endOfMonth, format } from 'date-fns'
 
 const PlatformIcon = ({ name }) => {
   // Map the id to the filename, handling your specific google_business naming
@@ -66,124 +50,8 @@ const StatItem = ({ count, label, colorClass }) => {
   )
 }
 
-const ProfitMarginDisplay = ({ clientId }) => {
-  const start = startOfMonth(new Date())
-  const end = endOfMonth(new Date())
-
-  const { data: transactions = [], isLoading: txLoading } = useTransactions({
-    clientId,
-    startDate: format(start, 'yyyy-MM-dd'),
-    endDate: format(end, 'yyyy-MM-dd'),
-  })
-
-  const { data: expenses = [], isLoading: expLoading } = useExpenses({
-    clientId,
-  })
-
-  // Should we show a loading state or just hidden? Hidden is cleaner for cards.
-  if (txLoading || expLoading) return null
-
-  const metrics = calculatePeriodMetrics({
-    transactions,
-    expenses,
-    periodStart: start,
-    periodEnd: end,
-    method: 'CASH',
-  })
-
-  const { revenue, margin } = metrics
-
-  if (revenue === 0) return null
-
-  let colorClass = 'text-slate-600 dark:text-slate-400'
-  if (margin >= 50) colorClass = 'text-emerald-600 dark:text-emerald-400'
-  else if (margin < 20) colorClass = 'text-rose-600 dark:text-rose-400'
-  else colorClass = 'text-amber-600 dark:text-amber-400'
-
-  return (
-    <div className="flex flex-col gap-0.5">
-      <span className="text-[11px] font-medium text-muted-foreground">
-        Margin <span className="text-[9px] opacity-70">(Mo.)</span>
-      </span>
-      <span className={`text-sm font-bold ${colorClass}`}>
-        {margin.toFixed(0)}%
-      </span>
-    </div>
-  )
-}
-
-// For the internal account card: use the same DB-view-backed hooks as Finance→All tab.
-// This shows consolidated agency financials (all clients combined), not just Strawhats-tagged data.
-const InternalFinancialsDisplay = () => {
-  const { data: financeOverview, isLoading: overviewLoading } = useFinanceOverview()
-  const { data: burnRate = 0, isLoading: burnLoading } = useBurnRate()
-
-  if (overviewLoading || burnLoading) {
-    return (
-      <div className="grid grid-cols-3 gap-4 py-4 border-t border-dashed border-gray-100 dark:border-white/5 animate-pulse">
-        <div className="flex flex-col gap-0.5">
-          <div className="h-3 w-16 bg-muted rounded"></div>
-          <div className="h-4 w-12 bg-muted rounded mt-1"></div>
-        </div>
-        <div className="flex flex-col gap-0.5">
-          <div className="h-3 w-16 bg-muted rounded"></div>
-          <div className="h-4 w-12 bg-muted rounded mt-1"></div>
-        </div>
-        <div className="flex flex-col gap-0.5 items-end md:items-start">
-          <div className="h-3 w-16 bg-muted rounded"></div>
-          <div className="h-4 w-12 bg-muted rounded mt-1"></div>
-        </div>
-      </div>
-    )
-  }
-
-  const revenue   = Number(financeOverview?.total_income ?? 0)
-  const oneOff    = Number(financeOverview?.total_one_off_expenses ?? 0)
-  const burn      = Number(burnRate)
-  const expenses  = oneOff + burn
-  const profit    = revenue - expenses
-
-  return (
-    <div className="grid grid-cols-3 gap-4 py-4 border-t border-dashed border-gray-100 dark:border-white/5">
-      {/* Column 1: Net Profit */}
-      <div className="flex flex-col gap-0.5">
-        <span className="text-[11px] font-medium text-muted-foreground truncate">
-          Net Profit
-        </span>
-        <span className={`text-sm font-bold ${profit >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
-          {formatCurrency(profit)}
-        </span>
-      </div>
-
-      {/* Column 2: Total Expenses (one-off + burn) */}
-      <div className="flex flex-col gap-0.5">
-        <span className="text-[11px] font-medium text-muted-foreground truncate">
-          Expenses
-        </span>
-        <span className="text-sm font-bold text-foreground">
-          {formatCurrency(expenses)}
-        </span>
-      </div>
-
-      {/* Column 3: Monthly Burn (subscriptions only) */}
-      <div className="flex flex-col gap-0.5 items-end md:items-start">
-        <span className="text-[11px] font-medium text-muted-foreground truncate">
-          Monthly Burn
-        </span>
-        <span className="text-sm font-bold text-foreground flex items-baseline">
-          {formatCurrency(burn)}
-          <span className="text-[10px] text-muted-foreground font-medium ml-0.5">/mo</span>
-        </span>
-      </div>
-    </div>
-  )
-}
-
 function ClientCard({ client, onOpen, onDelete }) {
   const [deleteOpen, setDeleteOpen] = useState(false)
-
-  // Fetch financial metrics (LTV, Burn Rate)
-  const { data: metrics } = useClientMetrics(client.id)
 
   const tier = client.tier?.toUpperCase() || 'BASIC'
 
@@ -235,10 +103,10 @@ function ClientCard({ client, onOpen, onDelete }) {
       <Card
         onClick={() => onOpen(client)}
         className={cn(
-          "group relative cursor-pointer shadow-none transition-all duration-300 py-2 border hover:bg-gray-100/50 dark:hover:bg-card h-full flex flex-col overflow-hidden",
+          'group relative cursor-pointer shadow-none transition-all duration-300 py-2 border hover:bg-gray-100/50 dark:hover:bg-card h-full flex flex-col overflow-hidden',
           client.is_internal
-            ? " bg-gray-50 dark:bg-card dark:border-border border-dashed"
-            : "dark:bg-card/70 dark:border-none"
+            ? ' bg-gray-50 dark:bg-card dark:border-border border-dashed'
+            : 'dark:bg-card/70 dark:border-none',
         )}
       >
         <CardContent className="p-6 flex flex-col flex-1 min-w-0">
@@ -277,7 +145,7 @@ function ClientCard({ client, onOpen, onDelete }) {
           {/* Pipeline Stats */}
           <div className="flex-1 min-w-0">
             {hasPipelineData ? (
-              <div className="flex flex-wrap items-center gap-x-6 gap-y-3 mb-6">
+              <div className="flex flex-wrap items-center gap-x-6 gap-y-3 mb-4">
                 <StatItem
                   count={pipeline.drafts}
                   label="Drafts"
@@ -300,56 +168,11 @@ function ClientCard({ client, onOpen, onDelete }) {
                 />
               </div>
             ) : (
-              <div className="mb-6 flex items-center gap-2">
+              <div className="mb-4 flex items-center gap-2">
                 <div className="size-1.5 rounded-full bg-muted-foreground/20" />
                 <span className="text-xs italic text-muted-foreground/50 tracking-wide">
                   No active workflow
                 </span>
-              </div>
-            )}
-
-            {/* Financial Snapshot */}
-            {client.is_internal ? (
-              <InternalFinancialsDisplay />
-            ) : (
-              <div className="grid grid-cols-3 gap-4 py-4 border-t border-dashed border-gray-100 dark:border-white/5">
-                {/* Column 1: LTV */}
-              <div className="flex flex-col gap-0.5">
-  <span className="text-[11px] font-medium text-muted-foreground truncate">
-    Total Revenue{' '}
-    <span className="text-[9px] opacity-70">(Cash)</span>
-  </span>
-  <span 
-    className={cn(
-      "text-sm font-bold",
-      (metrics?.total_revenue || 0) > 0 
-        ? "text-emerald-600 dark:text-emerald-500" 
-        : "text-primary"
-    )}
-  >
-    {formatCurrency(metrics?.total_revenue || 0)}
-  </span>
-</div>
-
-                {/* Column 2: Burn */}
-                <div className="flex flex-col gap-0.5">
-                  <span className="text-[11px] font-medium text-muted-foreground truncate">
-                    Monthly Burn
-                  </span>
-                  <span className="text-sm font-bold text-foreground">
-                    {metrics?.monthly_recurring_costs
-                      ? formatCurrency(metrics.monthly_recurring_costs)
-                      : formatCurrency(0)}
-                    <span className="text-[10px] text-muted-foreground font-medium ml-0.5">
-                      /mo
-                    </span>
-                  </span>
-                </div>
-
-                {/* Column 3: Profit Margin (Aligned to end or center vertically) */}
-                <div className="flex items-center justify-end md:justify-start">
-                  <ProfitMarginDisplay clientId={client.id} />
-                </div>
               </div>
             )}
           </div>

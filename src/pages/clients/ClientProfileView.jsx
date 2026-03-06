@@ -4,9 +4,9 @@ import {
   LayoutGrid,
   Calendar,
   Settings2,
-  BarChart3,
-  CircleDollarSign,
   PieChart,
+  Receipt,
+  FolderOpen,
 } from 'lucide-react'
 
 // UI Components
@@ -17,25 +17,11 @@ import TierBadge from '@/components/TierBadge'
 import OverviewTab from './clientSections/OverviewTab'
 import WorkflowTab from './clientSections/WorkflowTab'
 import ManagementTab from './clientSections/ManagementTab'
-import { ComingSoon } from './clientSections/ComingSoon'
 import IndustryBadge from './IndustryBadge'
 import ContentCalendar from '../calendar/ContentCalendar'
 import { cn } from '@/lib/utils'
-
-// Finance Imports
-import OverviewPage from '../finance/FinancialOverviewTab'
-import LedgerTab from '../finance/LedgerTab'
-import SubscriptionsTab from '../finance/SubscriptionsTab'
-import InvoicesTab from '../finance/InvoicesTab'
-
-const TABS_CONFIG = [
-  { value: 'overview', label: 'Overview', icon: PieChart },
-  { value: 'workflow', label: 'Workflow', icon: LayoutGrid },
-  { value: 'financials', label: 'Financials', icon: CircleDollarSign },
-  { value: 'calendar', label: 'Calendar', icon: Calendar },
-  // { value: 'insights', label: 'Insights', icon: BarChart3 },
-  { value: 'management', label: 'Settings', icon: Settings2 },
-]
+import { ClientBillingTab } from './ClientBillingTab'
+import DocumentsTab from '@/components/documents/DocumentsTab'
 
 export default function ClientProfileView({ client }) {
   if (!client) return null
@@ -50,71 +36,37 @@ export default function ClientProfileView({ client }) {
     : 'CL'
 
   const [searchParams, setSearchParams] = useSearchParams()
-  
-  // Get active tabs from URL or default to 'overview'
+
+  // Get active tab from URL or default to 'overview'
   const activeTab = searchParams.get('tab') || 'overview'
-  const activeSubTab = searchParams.get('subtab') || 'overview'
 
   const handleTabChange = (value) => {
-    setSearchParams((prev) => {
-      prev.set('tab', value)
-      // When switching main tabs, maybe clear subtab if it's not financials to keep URL clean,
-      // or optionally preserve it if returning to financials. For now, clear it if not financials.
-      if (value !== 'financials') {
-        prev.delete('subtab')
-      } else if (!prev.has('subtab')) {
-        // If switching to financials and no subtab is set, default to overview
-        prev.set('subtab', 'overview')
-      }
-      return prev
-    }, { replace: true }) // use replace to not bloat history on every click
+    setSearchParams(
+      (prev) => {
+        prev.set('tab', value)
+        return prev
+      },
+      { replace: true },
+    )
   }
 
-  const handleSubTabChange = (value) => {
-    setSearchParams((prev) => {
-      prev.set('subtab', value)
-      return prev
-    }, { replace: true })
-  }
-
-  const subTabs = (
-    <TabsList className="bg-muted/20 p-1 rounded-lg w-fit h-auto">
-      <TabsTrigger
-        value="overview"
-        className="rounded-md text-xs px-3 py-1.5 h-8"
-      >
-        Overview
-      </TabsTrigger>
-      <TabsTrigger
-        value="ledger"
-        className="rounded-md text-xs px-3 py-1.5 h-8"
-      >
-        Ledger
-      </TabsTrigger>
-      <TabsTrigger
-        value="subscriptions"
-        className="rounded-md text-xs px-3 py-1.5 h-8"
-      >
-        Subscriptions
-      </TabsTrigger>
-      {!client.is_internal && (
-        <TabsTrigger
-          value="invoices"
-          className="rounded-md text-xs px-3 py-1.5 h-8"
-        >
-          Invoices
-        </TabsTrigger>
-      )}
-    </TabsList>
-  )
+  // Build tabs — Billing only shows for external (non-internal) clients
+  const TABS_CONFIG = [
+    { value: 'overview', label: 'Overview', icon: PieChart },
+    { value: 'workflow', label: 'Workflow', icon: LayoutGrid },
+    ...(!client.is_internal
+      ? [{ value: 'billing', label: 'Billing', icon: Receipt }]
+      : []),
+    { value: 'documents', label: 'Documents', icon: FolderOpen },
+    { value: 'calendar', label: 'Calendar', icon: Calendar },
+    { value: 'management', label: 'Settings', icon: Settings2 },
+  ]
 
   return (
     <div className="min-h-full bg-background selection:bg-primary/10">
-      {/* MAIN CONTAINER: 
-          Standardised to max-w-[1440px] to match the Clients List Page 
-      */}
+      {/* MAIN CONTAINER: Standardised to max-w-[1440px] to match the Clients List Page */}
       <div className="px-8 pt-6 pb-10 space-y-6 max-w-[1440px] mx-auto animate-in fade-in duration-700">
-        {/* --- HEADER SECTION: Google-esque Lightweight Typography --- */}
+        {/* --- HEADER SECTION --- */}
         <div className="flex items-center gap-6">
           <div className="h-16 w-16 shrink-0 rounded-2xl bg-muted/20 border border-border/40 flex items-center justify-center overflow-hidden shadow-sm transition-transform hover:scale-[1.02]">
             {client.logo_url ? (
@@ -139,16 +91,17 @@ export default function ClientProfileView({ client }) {
             </div>
             <div className="flex items-center gap-2">
               <IndustryBadge industryValue={client.industry} />
-              {/* <span className="text-xs text-muted-foreground font-light tracking-wide italic">
-                Active Client Workspace
-              </span> */}
             </div>
           </div>
         </div>
 
         {/* --- NAVIGATION & CONTENT --- */}
-        <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-          {/* Tab List: Clean, border-bottom navigation */}
+        <Tabs
+          value={activeTab}
+          onValueChange={handleTabChange}
+          className="w-full"
+        >
+          {/* Tab List */}
           <TabsList className="bg-transparent h-auto w-full justify-start rounded-none p-0 gap-12 border-b border-border/40">
             {TABS_CONFIG.map((tab) => (
               <TabsTrigger
@@ -175,7 +128,8 @@ export default function ClientProfileView({ client }) {
               </TabsTrigger>
             ))}
           </TabsList>
-          {/* Tab Content: Spaced and Animated */}
+
+          {/* Tab Content */}
           <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
             <TabsContent
               value="overview"
@@ -191,26 +145,20 @@ export default function ClientProfileView({ client }) {
               <WorkflowTab client={client} />
             </TabsContent>
 
+            {!client.is_internal && (
+              <TabsContent
+                value="billing"
+                className="mt-2 focus-visible:outline-none"
+              >
+                <ClientBillingTab clientId={client.id} />
+              </TabsContent>
+            )}
+
             <TabsContent
-              value="financials"
+              value="documents"
               className="mt-2 focus-visible:outline-none"
             >
-              <Tabs value={activeSubTab} onValueChange={handleSubTabChange} className="w-full">
-                <TabsContent value="overview" className="mt-0">
-                  <OverviewPage clientId={client.id} client={client} subTabs={subTabs} />
-                </TabsContent>
-                <TabsContent value="ledger" className="mt-0">
-                  <LedgerTab clientId={client.id} subTabs={subTabs} />
-                </TabsContent>
-                <TabsContent value="subscriptions" className="mt-0">
-                  <SubscriptionsTab clientId={client.id} subTabs={subTabs} />
-                </TabsContent>
-                {!client.is_internal && (
-                  <TabsContent value="invoices" className="mt-0">
-                    <InvoicesTab clientId={client.id} subTabs={subTabs} />
-                  </TabsContent>
-                )}
-              </Tabs>
+              <DocumentsTab clientId={client.id} />
             </TabsContent>
 
             <TabsContent
@@ -221,15 +169,6 @@ export default function ClientProfileView({ client }) {
                 <ContentCalendar clientId={client.id} hideHeader={true} />
               </div>
             </TabsContent>
-
-            {/* <TabsContent
-              value="insights"
-              className="focus-visible:outline-none"
-            >
-              <div className="mt-12">
-                <ComingSoon icon={BarChart3} title="Performance Insights" />
-              </div>
-            </TabsContent> */}
 
             <TabsContent
               value="management"
