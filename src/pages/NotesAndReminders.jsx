@@ -440,7 +440,12 @@ export default function NotesAndReminders() {
       {/* ── Header ─────────────────────── */}
       <div className="flex flex-col gap-2">
         <h1 className="text-3xl font-normal tracking-tight text-foreground">
-          Notes & Reminders
+          Notes & Reminders{' '}
+          {filteredNotes.length > 0 && (
+            <span className="text-muted-foreground/50 ml-2 font-extralight">
+              {filteredNotes.length}
+            </span>
+          )}
         </h1>
         <p className="text-sm text-muted-foreground">
           All notes and reminders across your organization

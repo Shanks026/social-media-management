@@ -302,7 +302,12 @@ export default function Posts() {
       <div className="flex items-center justify-between">
         <div className="space-y-1">
           <h1 className="text-3xl font-normal tracking-tight text-foreground">
-            Posts
+            Posts{' '}
+            {posts.length > 0 && (
+              <span className="text-muted-foreground/50 ml-2 font-extralight">
+                {posts.length}
+              </span>
+            )}
           </h1>
           <p className="text-sm text-muted-foreground">
             Manage all posts across your organization
