@@ -64,6 +64,11 @@ const BASE_NAV_ITEMS = [
         url: '/operations/meetings',
         icon: Video,
       },
+      {
+        title: 'Documents',
+        url: '/documents',
+        icon: FileText,
+      },
     ],
   },
   { title: 'Calendar', url: '/calendar', icon: Calendar },

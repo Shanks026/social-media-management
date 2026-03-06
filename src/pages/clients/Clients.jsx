@@ -188,9 +188,11 @@ export default function Clients() {
           <div className="space-y-1">
             <h1 className="text-3xl font-light tracking-tight text-foreground">
               Clients{' '}
-              <span className="text-muted-foreground/50 ml-2 font-extralight">
-                {realClientCount}
-              </span>
+              {realClientCount > 0 && (
+                <span className="text-muted-foreground/50 ml-2 font-extralight">
+                  {realClientCount}
+                </span>
+              )}
             </h1>
             <p className="text-sm text-muted-foreground font-light">
               Manage your active partnerships and social pipelines.

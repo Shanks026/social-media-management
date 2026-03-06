@@ -102,7 +102,7 @@ export function AppShell({ user }) {
             user={user}
             agencySettings={agencySettings}
           />
-          <div className="flex flex-1 flex-col w-full min-w-0">
+          <div className="flex flex-1 flex-col w-full h-screen min-w-0 overflow-y-auto overflow-x-hidden relative [scrollbar-gutter:stable]">
             <AppHeader user={user} agencySettings={agencySettings} />
             <AppBody>
               <Outlet

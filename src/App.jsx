@@ -23,6 +23,7 @@ import CreateClientPage from './pages/clients/CreateClientPage'
 import NotesAndReminders from './pages/NotesAndReminders'
 import MeetingsPage from './pages/MeetingsPage'
 import Dashboard from './pages/dashboard/Dashboard'
+import DocumentsPage from './pages/documents/DocumentsPage'
 
 
 function SubscriptionsRoute() {
@@ -59,6 +60,7 @@ function AppRoutes() {
           <Route path="/posts" element={<Posts />} />
           <Route path="/operations/notes" element={<NotesAndReminders />} />
           <Route path="/operations/meetings" element={<MeetingsPage />} />
+          <Route path="/documents" element={<DocumentsPage />} />
           <Route path="/calendar" element={<SocialCalendar />} />
           <Route path="/finance" element={<FinanceLayout />}>
             {/* Redirect /finance to /finance/overview */}
