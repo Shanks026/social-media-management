@@ -29,84 +29,56 @@ import { PlanOverview } from './PlanOverview'
 
 export const plans = [
   {
-    id: 'free',
-    name: 'Free',
-    icon: Zap,
-    bestFor: 'Individual Explorers',
-    price: '0',
-    accent: { text: 'text-slate-500' },
-    features: {
-      clients: { value: '1 client limit', included: true },
-      workspace: { value: 'Internal Workspace included', included: true },
-      storage: { value: '5 GB Storage limit', included: true },
-      whitelabeling: { value: 'No whitelabeling', included: false },
-      finance: { value: 'Basic ledger only', included: true },
-      support: { value: 'Email support', included: true },
-      costPerClient: { value: '₹400 per extra client', included: true },
-    },
-  },
-  {
     id: 'ignite',
     name: 'Ignite',
     icon: Zap,
     bestFor: 'Freelancers & Solopreneurs',
-    price: '1,999',
+    price: '2,999',
     accent: { text: 'text-amber-500' },
-    features: {
-      clients: { value: 'Up to 5 clients', included: true },
-      workspace: { value: 'Internal Workspace included', included: true },
-      storage: { value: '20 GB Storage limit', included: true },
-      whitelabeling: { value: 'No whitelabeling', included: false },
-      finance: { value: 'Basic ledger only', included: true },
-      support: { value: 'Email support', included: true },
-      costPerClient: { value: '₹400 per extra client', included: true },
-    },
+    features: [
+      { value: 'Up to 5 clients', included: true },
+      { value: '20 GB storage', included: true },
+      { value: 'Invoicing, ledger & reports', included: true },
+      { value: 'Content calendar & scheduling', included: true },
+      { value: 'Client review & approval flow', included: true },
+      { value: 'No agency branding', included: false },
+      { value: 'Email support · ₹500 / extra client', included: true },
+    ],
   },
   {
     id: 'velocity',
     name: 'Velocity',
     icon: Rocket,
     bestFor: 'Boutique Agencies',
-    price: '5,999',
+    price: '8,999',
     popular: true,
+    includesBase: 'Ignite',
     accent: { text: 'text-lime-500' },
-    features: {
-      clients: { value: 'Up to 15 clients', included: true },
-      workspace: { value: 'Internal Workspace included', included: true },
-      storage: { value: '100 GB Storage limit', included: true },
-      whitelabeling: { value: 'Basic agency logo', included: true },
-      finance: { value: 'Advanced invoicing & reports', included: true },
-      support: { value: 'Priority chat support', included: true },
-      costPerClient: { value: '₹400 per extra client', included: true },
-    },
+    features: [
+      { value: 'Up to 15 clients', included: true },
+      { value: '100 GB storage', included: true },
+      { value: 'Agency logo & name in sidebar', included: true },
+      { value: 'Recurring invoices & subscriptions', included: true },
+      { value: 'Calendar PDF export', included: true },
+      { value: 'Priority chat support · ₹500 / extra client', included: true },
+    ],
   },
   {
     id: 'quantum',
     name: 'Quantum',
     icon: Atom,
     bestFor: 'Scaling Firms & Enterprises',
-    price: '12,999',
+    price: '17,999',
+    includesBase: 'Velocity',
     accent: { text: 'text-violet-500' },
-    features: {
-      clients: { value: 'Up to 35 clients', included: true },
-      workspace: { value: 'Internal Workspace included', included: true },
-      storage: { value: '500 GB Storage limit', included: true },
-      whitelabeling: { value: 'Full custom domain & email', included: true },
-      finance: { value: 'Full CFO & profit analysis', included: true },
-      support: { value: 'VIP Concierge setup', included: true },
-      costPerClient: { value: '₹370 per extra client', included: true },
-    },
+    features: [
+      { value: 'Up to 35 clients', included: true },
+      { value: '500 GB storage', included: true },
+      { value: 'Full whitelabel — no Tercero branding', included: true },
+      { value: 'VIP Concierge support', included: true },
+      { value: '₹450 / extra client', included: true },
+    ],
   },
-]
-
-const featureKeys = [
-  'clients',
-  'workspace',
-  'storage',
-  'whitelabeling',
-  'finance',
-  'support',
-  'costPerClient',
 ]
 
 // ── Upgrade Request Dialog ──
@@ -311,10 +283,10 @@ const PlanCard = ({ plan, isCurrentPlan, onContactTeam }) => {
 
       {/* Features */}
       <div className="space-y-4 mb-10 flex-1">
-        {featureKeys.map((key) => (
+        {plan.features.map((feature, i) => (
           <FeatureValue
-            key={key}
-            feature={plan.features[key]}
+            key={i}
+            feature={feature}
             accentClass={plan.accent.text}
             isPopular={isPopular}
           />
@@ -422,7 +394,6 @@ export const SubscriptionTab = ({ sub, isLoading }) => {
         sub={sub}
         currentPlan={currentPlan}
         onUpgradeClick={scrollToPlans}
-        isFree={currentPlanName === 'free'}
       />
 
       {/* 4. Attach the ref here so it knows where to scroll to */}
@@ -452,7 +423,7 @@ export const SubscriptionTab = ({ sub, isLoading }) => {
         </div>
 
         <div className="grid gap-6 lg:gap-8 md:grid-cols-3">
-          {plans.filter((p) => p.id !== 'free').map((plan) => (
+          {plans.map((plan) => (
             <PlanCard
               key={plan.id}
               plan={plan}
@@ -481,9 +452,9 @@ export const SubscriptionTab = ({ sub, isLoading }) => {
                 {plans.map((plan) => (
                   <th
                     key={plan.id}
-                    className="text-center px-4 py-4 text-[11px] font-semibold uppercase tracking-wider"
+                    className="text-left px-4 py-4 text-[11px] font-semibold uppercase tracking-wider"
                   >
-                    <div className="flex items-center justify-center gap-1.5">
+                    <div className="flex items-center gap-1.5">
                       <plan.icon className={cn('size-4', plan.accent.text)} />
                       {plan.name}
                     </div>
@@ -494,37 +465,40 @@ export const SubscriptionTab = ({ sub, isLoading }) => {
             <tbody>
               {[
                 {
-                  label: 'Client Portals',
-                  values: ['1 Target', 'Up to 5', 'Up to 15', 'Up to 35'],
+                  label: 'Max Clients',
+                  values: ['Up to 5', 'Up to 15', 'Up to 35'],
                 },
                 {
                   label: 'Internal Workspace',
-                  values: [true, true, true, true],
+                  values: [true, true, true],
                 },
                 {
-                  label: 'Storage Limit',
-                  values: ['5 GB', '20 GB', '100 GB', '500 GB'],
+                  label: 'Storage',
+                  values: ['20 GB', '100 GB', '500 GB'],
                 },
                 {
-                  label: 'Whitelabeling',
-                  values: [false, false, 'Basic', 'Full Custom'],
+                  label: 'Agency Branding',
+                  values: [false, 'Sidebar logo & name', 'Full whitelabel'],
                 },
                 {
-                  label: 'Finance Module',
-                  values: [
-                    'Basic Ledger',
-                    'Basic Ledger',
-                    'Invoicing + Reports',
-                    'Full CFO',
-                  ],
+                  label: 'Calendar Export (PDF)',
+                  values: [false, true, true],
                 },
                 {
-                  label: 'Dedicated Support',
-                  values: ['Email', 'Email', 'Priority Chat', 'VIP Concierge'],
+                  label: 'Recurring Invoices',
+                  values: [false, true, true],
                 },
                 {
-                  label: 'Cost Per Extra Client',
-                  values: ['₹400 / mo', '₹400 / mo', '₹400 / mo', '₹370 / mo'],
+                  label: 'Expense Subscriptions',
+                  values: [false, true, true],
+                },
+                {
+                  label: 'Support',
+                  values: ['Email', 'Priority Chat', 'VIP Concierge'],
+                },
+                {
+                  label: 'Extra Client',
+                  values: ['₹500 / mo', '₹500 / mo', '₹450 / mo'],
                 },
               ].map((row) => (
                 <tr
@@ -537,12 +511,12 @@ export const SubscriptionTab = ({ sub, isLoading }) => {
                   {row.values.map((val, i) => (
                     <td
                       key={i}
-                      className="text-center px-4 py-4 text-[13px] font-light"
+                      className="text-left px-4 py-4 text-[13px] font-light"
                     >
                       {val === true ? (
-                        <Check className="size-4 text-emerald-500 mx-auto" />
+                        <Check className="size-4 text-emerald-500" />
                       ) : val === false ? (
-                        <X className="size-4 text-muted-foreground/30 mx-auto" />
+                        <X className="size-4 text-muted-foreground/30" />
                       ) : (
                         <span>{val}</span>
                       )}

@@ -35,7 +35,7 @@ export function AppHeader({ agencySettings }) {
   const isTercero = name === APP_NAME || !name
 
   return (
-    <header className="flex h-18 items-center px-4 md:px-8 border-b w-full bg-background">
+    <header className="flex h-16 items-center px-4 md:px-8 border-b w-full bg-background">
       {/* --- MOBILE LOGO SECTION --- */}
       <div className="flex items-center md:hidden">
         <div

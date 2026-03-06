@@ -12,9 +12,12 @@ import {
 import { Separator } from '../ui/separator'
 import { NavSecondary } from './nav-secondary'
 import { SidebarSubCard } from './sidebar-sub-card'
+import { useSubscription } from '@/api/useSubscription'
 
 export function AppSidebar({ user, agencySettings }) {
-  const { isMobile, setOpen } = useSidebar()
+  const { isMobile, setOpen, state } = useSidebar()
+  const { data: sub } = useSubscription()
+  const isCollapsed = state === 'collapsed' && !isMobile
 
   useEffect(() => {
     if (isMobile) {
@@ -45,6 +48,14 @@ export function AppSidebar({ user, agencySettings }) {
             <NavSecondary />
           </div>
         </SidebarContent>
+
+        {!isCollapsed && sub?.branding_powered_by && (
+          <div className="px-4 pb-1">
+            <p className="text-[10px] text-muted-foreground/40 select-none">
+              Tercero {new Date().getFullYear()}
+            </p>
+          </div>
+        )}
 
         <Separator />
         <SidebarFooter className="shrink-0">

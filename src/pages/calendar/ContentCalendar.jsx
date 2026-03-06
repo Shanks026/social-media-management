@@ -20,8 +20,11 @@ import {
   Youtube,
   Twitter,
   Facebook,
-  Plus
+  Plus,
+  FileDown,
+  Lock,
 } from 'lucide-react'
+import { pdf } from '@react-pdf/renderer'
 
 // UI & Context
 import { Button } from '@/components/ui/button'
@@ -41,6 +44,13 @@ import { cn } from '@/lib/utils'
 import { fetchMeetings } from '@/api/meetings'
 import { useClients } from '@/api/clients'
 import CreateMeetingDialog from '@/components/CreateMeetingDialog'
+import { useSubscription } from '@/api/useSubscription'
+import CalendarReportPDF from './CalendarReportPDF'
+import {
+  buildCalendarReport,
+  getPeriodLabel,
+  getPeriodFilename,
+} from './useCalendarReport'
 
 // Calendar Views
 import MonthView from './MonthView'
@@ -93,6 +103,9 @@ export default function ContentCalendar({
       }),
     enabled: !!user?.id,
   })
+
+  const { data: subscription } = useSubscription()
+  const [isGenerating, setIsGenerating] = useState(false)
 
   const { data: clientsData } = useClients()
   const isInternalClient =
@@ -201,6 +214,32 @@ export default function ContentCalendar({
     setStatusFilter('all')
     setClientFilter(clientId || 'all')
     setPlatformFilter('all')
+  }
+
+  const handleGenerateReport = async () => {
+    setIsGenerating(true)
+    try {
+      const reportData = buildCalendarReport(posts, view, currentDate)
+      const period = getPeriodLabel(view, currentDate)
+      const blob = await pdf(
+        <CalendarReportPDF
+          reportData={reportData}
+          agencyName={subscription?.agency_name}
+          agencyLogoUrl={subscription?.logo_url}
+          period={period}
+        />,
+      ).toBlob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `tercero-calendar-${getPeriodFilename(view, currentDate)}.pdf`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+    } finally {
+      setIsGenerating(false)
+    }
   }
 
   return (
@@ -345,7 +384,31 @@ export default function ContentCalendar({
             </CreateMeetingDialog>
           )}
 
-         
+          {subscription?.calendar_export ? (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-9 px-3 text-xs font-semibold gap-2 hidden md:flex"
+              onClick={handleGenerateReport}
+              disabled={isGenerating}
+            >
+              <FileDown size={14} />
+              {isGenerating ? 'Generating...' : 'Export Report'}
+            </Button>
+          ) : (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-9 px-3 text-xs font-semibold gap-2 hidden md:flex opacity-50 cursor-not-allowed"
+              disabled
+              title="Upgrade to Velocity to export calendar reports"
+            >
+              <FileDown size={14} />
+              Export Report
+              <Lock size={12} />
+            </Button>
+          )}
+
         </div>
       </div>
 

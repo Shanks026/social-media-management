@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo } from 'react'
 import { format, isBefore, startOfDay } from 'date-fns'
 import {
   Calendar as CalendarIcon,
@@ -58,7 +58,7 @@ export function EditInvoiceDialog({
   const { mutate: updateInvoice, isPending } = useUpdateInvoice()
   const { data: subscription } = useSubscription()
 
-  const clients = clientData?.realClients || []
+  const clients = useMemo(() => clientData?.realClients || [], [clientData])
 
   // --- Derived permissions ---
   const status = invoice?.status || 'DRAFT'
@@ -68,62 +68,72 @@ export function EditInvoiceDialog({
   const isReadOnly = isPaid
 
   // --- Form State ---
-  const [clientId, setClientId] = useState('')
-  const [issueDate, setIssueDate] = useState(new Date())
-  const [dueDate, setDueDate] = useState(null)
-  const [category, setCategory] = useState('')
-  const [paymentTerms, setPaymentTerms] = useState('')
-  const [notes, setNotes] = useState('')
-  const [items, setItems] = useState([{ ...EMPTY_ITEM }])
+  const [form, setForm] = useState({
+    clientId: '',
+    issueDate: new Date(),
+    dueDate: null,
+    category: '',
+    paymentTerms: '',
+    notes: '',
+    items: [{ ...EMPTY_ITEM }],
+  })
+  const { clientId, issueDate, dueDate, category, paymentTerms, notes, items } = form
 
-  // --- Populate form from invoice data ---
-  useEffect(() => {
+  // --- Populate form from invoice data (render-time derived state) ---
+  const [prevInvoice, setPrevInvoice] = useState(null)
+  const [prevOpen, setPrevOpen] = useState(false)
+  const normalizedInvoice = invoice ?? null
+  if (normalizedInvoice !== prevInvoice || open !== prevOpen) {
+    setPrevInvoice(normalizedInvoice)
+    setPrevOpen(open)
     if (invoice && open) {
-      setClientId(invoice.client_id || '')
-      setIssueDate(
-        invoice.issue_date ? new Date(invoice.issue_date) : new Date(),
-      )
-      setDueDate(invoice.due_date ? new Date(invoice.due_date) : null)
-      setCategory(invoice.category || '')
-      setPaymentTerms(invoice.payment_terms || '')
-      setNotes(invoice.notes || '')
-      setItems(
-        invoice.items?.length > 0
-          ? invoice.items.map((item) => ({
-              description: item.description || '',
-              quantity: item.quantity || 1,
-              unit_price: item.unit_price || 0,
-            }))
-          : [{ ...EMPTY_ITEM }],
-      )
+      setForm({
+        clientId: invoice.client_id || '',
+        issueDate: invoice.issue_date ? new Date(invoice.issue_date) : new Date(),
+        dueDate: invoice.due_date ? new Date(invoice.due_date) : null,
+        category: invoice.category || '',
+        paymentTerms: invoice.payment_terms || '',
+        notes: invoice.notes || '',
+        items:
+          invoice.items?.length > 0
+            ? invoice.items.map((item) => ({
+                description: item.description || '',
+                quantity: item.quantity || 1,
+                unit_price: item.unit_price || 0,
+              }))
+            : [{ ...EMPTY_ITEM }],
+      })
     }
-  }, [invoice, open])
-
-  // --- Auto-clear dueDate if issueDate moves after it ---
-  useEffect(() => {
-    if (
-      dueDate &&
-      issueDate &&
-      isBefore(startOfDay(dueDate), startOfDay(issueDate))
-    ) {
-      setDueDate(null)
-    }
-  }, [issueDate])
+  }
 
   // --- Line item handlers ---
+  const handleIssueDateChange = (date) => {
+    setForm((prev) => ({
+      ...prev,
+      issueDate: date,
+      dueDate:
+        prev.dueDate && date && isBefore(startOfDay(prev.dueDate), startOfDay(date))
+          ? null
+          : prev.dueDate,
+    }))
+  }
+
   const updateItem = (index, field, value) => {
-    setItems((prev) =>
-      prev.map((item, i) => (i === index ? { ...item, [field]: value } : item)),
-    )
+    setForm((prev) => ({
+      ...prev,
+      items: prev.items.map((item, i) =>
+        i === index ? { ...item, [field]: value } : item,
+      ),
+    }))
   }
 
   const addItem = () => {
-    setItems((prev) => [...prev, { ...EMPTY_ITEM }])
+    setForm((prev) => ({ ...prev, items: [...prev.items, { ...EMPTY_ITEM }] }))
   }
 
   const removeItem = (index) => {
     if (items.length <= 1) return
-    setItems((prev) => prev.filter((_, i) => i !== index))
+    setForm((prev) => ({ ...prev, items: prev.items.filter((_, i) => i !== index) }))
   }
 
   // --- Computed totals ---
@@ -254,7 +264,7 @@ export function EditInvoiceDialog({
 
   // --- Submit ---
   const handleSubmit = () => {
-    if (!isValid || !hasChanges) return
+    if (!isValid || (!isDraft && !hasChanges)) return
 
     const updates = {}
 
@@ -383,7 +393,7 @@ export function EditInvoiceDialog({
                   </Label>
                   <Select
                     value={clientId}
-                    onValueChange={setClientId}
+                    onValueChange={(v) => setForm((prev) => ({ ...prev, clientId: v }))}
                     disabled={!isDraft || disableClientSelect}
                   >
                     <SelectTrigger
@@ -445,7 +455,7 @@ export function EditInvoiceDialog({
                         <Calendar
                           mode="single"
                           selected={issueDate}
-                          onSelect={setIssueDate}
+                          onSelect={handleIssueDateChange}
                           initialFocus
                         />
                       </PopoverContent>
@@ -476,7 +486,7 @@ export function EditInvoiceDialog({
                         <Calendar
                           mode="single"
                           selected={dueDate}
-                          onSelect={setDueDate}
+                          onSelect={(date) => setForm((prev) => ({ ...prev, dueDate: date }))}
                           disabled={(date) =>
                             isBefore(startOfDay(date), startOfDay(issueDate))
                           }
@@ -495,7 +505,7 @@ export function EditInvoiceDialog({
                     </Label>
                     <Select
                       value={category}
-                      onValueChange={setCategory}
+                      onValueChange={(v) => setForm((prev) => ({ ...prev, category: v }))}
                       disabled={isReadOnly}
                     >
                       <SelectTrigger
@@ -520,7 +530,7 @@ export function EditInvoiceDialog({
                     </Label>
                     <Select
                       value={paymentTerms}
-                      onValueChange={setPaymentTerms}
+                      onValueChange={(v) => setForm((prev) => ({ ...prev, paymentTerms: v }))}
                       disabled={isReadOnly}
                     >
                       <SelectTrigger
@@ -654,7 +664,7 @@ export function EditInvoiceDialog({
                   <Textarea
                     placeholder="Additional notes for the client (optional)"
                     value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
+                    onChange={(e) => setForm((prev) => ({ ...prev, notes: e.target.value }))}
                     disabled={isReadOnly}
                     className={cn(
                       'min-h-[60px] text-sm resize-none',
@@ -676,7 +686,7 @@ export function EditInvoiceDialog({
                 {!isReadOnly && (
                   <Button
                     onClick={handleSubmit}
-                    disabled={!isValid || !hasChanges || isPending}
+                    disabled={!isValid || (!isDraft && !hasChanges) || isPending}
                     className="min-w-[140px]"
                   >
                     {isPending ? 'Saving...' : 'Save Changes'}

@@ -513,9 +513,11 @@ export default function InvoicesTab({ clientId, subTabs }) {
             <TabsTrigger value="one-off" className="text-xs">
               One-off
             </TabsTrigger>
-            <TabsTrigger value="recurring" className="text-xs">
-              Recurring
-            </TabsTrigger>
+            {subscription?.finance_recurring_invoices && (
+              <TabsTrigger value="recurring" className="text-xs">
+                Recurring
+              </TabsTrigger>
+            )}
           </TabsList>
         </div>
 
@@ -669,14 +671,16 @@ export default function InvoicesTab({ clientId, subTabs }) {
         />
       </TabsContent>
 
-      <TabsContent value="recurring" className="space-y-6 mt-0">
-        {/* --- Recurring Table --- */}
-        <CustomTable
-          columns={recurringColumns}
-          data={filteredRecurringData}
-          isLoading={isRecurringLoading}
-        />
-      </TabsContent>
+      {subscription?.finance_recurring_invoices && (
+        <TabsContent value="recurring" className="space-y-6 mt-0">
+          {/* --- Recurring Table --- */}
+          <CustomTable
+            columns={recurringColumns}
+            data={filteredRecurringData}
+            isLoading={isRecurringLoading}
+          />
+        </TabsContent>
+      )}
 
       {/* --- Dialogs --- */}
       <CreateInvoiceDialog

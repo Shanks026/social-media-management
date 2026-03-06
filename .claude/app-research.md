@@ -1,7 +1,7 @@
 # Tercero — Full Application Research Document
 
 > **Purpose**: Comprehensive product/feature reference for building a landing page for Tercero.
-> **Status**: Based on live codebase analysis (March 2026).
+> **Status**: Updated March 2026 — reflects live codebase including subscription tier gating, calendar PDF export, and branding system.
 
 ---
 
@@ -103,7 +103,7 @@ Full form with:
 
 #### Client Detail (`/clients/:clientId`)
 Three-tab layout:
-1. **Overview** — Profile card, contact info, social links, profitability metrics, upcoming meeting widget, recent posts summary
+1. **Overview** — Profile card, contact info, social links, profitability metrics, upcoming meeting widget, recent posts summary, per-client invoice list, per-client transaction history, platform usage chart, month-over-month revenue bar chart, quick-add buttons (new post, new invoice, new meeting, new note, add transaction)
 2. **Management** — Edit all client details inline
 3. **Workflow** — The client's full post list + notes + meeting history
 
@@ -190,6 +190,14 @@ Filters bar at top: status dropdown, client selector, platform filter, search.
 
 **Create from calendar**: Click any empty date to open the post creation dialog pre-filled with that date.
 
+**Calendar PDF Export** (Velocity+ feature):
+- "Export Report" button in the filters bar generates a PDF summary of the content schedule
+- Available on Velocity and Quantum; visible but disabled (with lock icon) on Ignite
+- Report contains: agency name/logo, period label, per-day post list (title, client, platform badges, status), and summary counts (total posts, by status, by platform)
+- Works for both month view and week view
+- Generated client-side with `@react-pdf/renderer`; downloads automatically
+- Implementation: `CalendarReportPDF.jsx` (PDF document component) + `useCalendarReport.js` (data preparation — `buildCalendarReport()`, `getPeriodLabel()`, `getPeriodFilename()`)
+
 ---
 
 ### 3.4 FINANCE
@@ -198,32 +206,50 @@ Three conceptually separate but integrated financial tools.
 
 #### Financial Overview (`/finance/overview`)
 Summary dashboard for the agency's financial health:
-- **Total Income**: Sum of all paid invoice amounts
-- **Total Expenses**: One-off expense entries
-- **Monthly Burn Rate**: Recurring subscription costs (auto-calculated from active subscriptions)
-- Trend cards with directional indicators
+- **Accounting method toggle**: Switch between Cash and Accrual basis
+- **Chart range selector**: 3M, 6M, or 12M revenue vs. expenses bar chart
+- **KPI cards**: Total revenue, total expenses, outstanding invoices (SENT + OVERDUE), net profit
+- **Outstanding Invoice Total**: Sum of all SENT and OVERDUE invoices surfaced as a KPI
+- Trend cards with directional indicators comparing to prior period
 
 #### Invoices (`/finance/invoices`)
-Full invoice lifecycle management:
-- Create invoices with line items (description, quantity, unit price)
+Full invoice lifecycle with two sub-tabs: **One-off** and **Recurring**.
+
+**One-off Invoices**:
+- Create invoices with unlimited line items (description, quantity, unit price)
 - Auto-generated invoice numbers (format: `INV-YYYY-###`)
-- Status workflow: `Draft → Sent → Paid → Archived`
+- Status workflow: `Draft → Sent → Overdue → Paid` (`OVERDUE` is an explicit auto-detectable status)
+- **Edit/View dialog** (two-column layout with live HTML preview on the left, form on the right):
+  - PAID invoices are read-only (lock icon shown)
+  - SENT/OVERDUE invoices: client and line items locked; due date, payment terms, category, and notes remain editable
+  - DRAFT invoices: fully editable
 - **PDF Export**: Professionally formatted invoice PDF (generated client-side with `@react-pdf/renderer`)
-- **PDF Preview**: HTML preview before downloading
 - When an invoice is marked **Paid** → automatically creates an INCOME transaction in the ledger
-- Filters: by client, by status
+- Quick stats bar: Outstanding amount, Collected amount, Overdue count, Draft count
+- Filters: by client, by status, by search term
 
 **Invoice Fields**:
 - Client
 - Invoice number (auto-suggested, editable)
 - Issue date, due date
+- Category (from shared `INVOICE_CATEGORIES` constant)
+- Payment terms (Due on Receipt, Net 15, Net 30, Net 60)
 - Line items (unlimited)
-- Payment terms
 - Notes
-- Category
 
-#### Subscriptions / Recurring Expenses (`/finance/subscriptions`)
-Track all recurring costs:
+**Recurring Invoice Templates** (`recurring` sub-tab — Velocity+ only):
+- The "Recurring" tab is hidden on Ignite; visible and functional on Velocity and Quantum
+- Define a reusable template for repeat billing (e.g., monthly retainers)
+- Fields: client, line item description, amount, billing cycle (Monthly / Quarterly / Yearly), next invoice date, category, payment terms, notes, active toggle
+- **Generate button**: One-click creates a new DRAFT one-off invoice from the template, advances the next invoice date, and opens the edit dialog
+- Tracks `last_generated_at` for each template
+- Active/Inactive toggle to pause templates without deleting them
+
+#### Subscriptions / Recurring Expenses (`/finance/subscriptions` — Velocity+ only)
+- The Subscriptions nav item is hidden on Ignite; navigating to `/finance/subscriptions` on Ignite redirects to `/finance/invoices`
+- Fully accessible on Velocity and Quantum
+
+Track all recurring costs (agency-side expenses, not client invoices):
 - Name, cost, billing cycle (monthly/annual/weekly), category
 - Next billing date
 - Optional client assignment (e.g., "Canva license" assigned to a specific client)
@@ -304,11 +330,18 @@ One of Tercero's most client-friendly features.
 **Review page shows**:
 - Post title
 - Full content text
-- Media gallery (images/videos) with full-screen carousel
+- Media gallery (images/videos) with full-screen carousel with keyboard navigation (arrow keys + Escape)
 - Platform-specific social media preview (Instagram, LinkedIn, etc.)
 - Target date and version number
 - Feedback textarea
 - "Request Revisions" submit button
+
+**Branding on the review page** (tier-controlled):
+- **Ignite**: Tercero app logo in header, "Powered by Tercero" footer
+- **Velocity**: Agency logo in header, "Powered by Tercero" footer
+- **Quantum**: Agency logo in header, no Tercero attribution footer (full whitelabel)
+- Branding data is fetched from `agency_subscriptions` via a secondary query using the `user_id` returned by the `get_post_by_token` RPC — the page remains fully unauthenticated
+- If agency logo is missing on Velocity/Quantum, falls back to Tercero app logo gracefully
 
 **Why this matters for the landing page**: This is a strong differentiator — clients don't need accounts. Zero friction for client review and approval.
 
@@ -341,14 +374,17 @@ One of Tercero's most client-friendly features.
 The agency's own subscription to Tercero (separate from client finance).
 
 **Usage Tab**:
-- Storage usage bar (current MB/GB vs. plan limit)
+- Storage usage bar (current MB/GB vs. plan limit — auto-selects MB or GB unit based on size)
 - Client count vs. max clients on current plan
 - Visual progress bars with percentage
+- Remaining storage shown as a pre-calculated label (e.g., "500 MB remaining")
 
-**Plan Tab**:
-- Current plan name
-- Pricing and features
-- Upgrade/downgrade options
+**Plan Tab** (`SubscriptionTab`):
+- Current plan overview card (plan name, key limits, "Upgrade Plan" button that scrolls to the pricing grid)
+- Three plan cards: **Ignite** (₹2,999/mo), **Velocity** (₹8,999/mo, marked "Recommended"), **Quantum** (₹17,999/mo)
+- Full feature comparison table
+- **Note**: Automated payment processing is not yet live. Upgrades are handled manually — users click "Contact Team" on a plan card, which opens an upgrade request dialog. The dialog sends a prefilled message to the Tercero team (currently logged to console; to be replaced by a dedicated API).
+- Downgrade is handled the same way via the Contact Team flow.
 
 **Invoices Tab**:
 - History of charges from Tercero to the agency
@@ -360,8 +396,13 @@ The agency's own subscription to Tercero (separate from client finance).
 
 ### Navigation
 - **Sidebar** (always visible on desktop, collapsible on mobile):
-  - Agency logo + name at top
+  - **Header** (tier-controlled branding):
+    - **Ignite**: Tercero app logo always shown (landscape logo when expanded, icon when collapsed)
+    - **Velocity**: Agency logo + name + verified badge; falls back to initials if no logo set
+    - **Quantum**: Same as Velocity
+    - Controlled by `branding_agency_sidebar` flag from `useSubscription()`
   - Nav groups: Dashboard, Clients, Content (Posts, Calendar), Operations (Meetings, Notes), Finance
+  - **Footer text**: "Tercero [year]" shown above the user account footer on Ignite and Velocity; hidden on Quantum (`branding_powered_by` flag)
   - User account + settings at bottom
 - **Header** (top bar):
   - Breadcrumbs (context-aware, set by each page via `useHeader()`)
@@ -402,8 +443,9 @@ Agency (user_id)
     │   └── Post Versions (DRAFT → PENDING → REVISIONS → SCHEDULED → ARCHIVED)
     ├── Meetings
     ├── Notes / Tasks
-    ├── Invoices
+    ├── Invoices (One-off)
     │   └── Invoice Items
+    ├── Recurring Invoice Templates
     └── Transactions (auto-created on invoice paid)
 ```
 
@@ -415,6 +457,8 @@ Agency (user_id)
 | `create_revision_version` | Creates new version, updates current_version_id |
 | `get_global_calendar` | Returns posts in date range with version data |
 | `advance_expense_billing_date` | Moves next_billing_date forward by one billing cycle |
+| `get_post_by_token` | Returns post + `user_id` for public review page (unauthenticated) |
+| `update_post_status_by_token` | Updates post status + stores feedback from public review page |
 
 ### Database Views (read-only aggregations)
 | View | Purpose |
@@ -427,17 +471,44 @@ Agency (user_id)
 
 ## 6. SUBSCRIPTION & PLAN SYSTEM
 
-Each agency has an `agency_subscriptions` row that controls:
-- Plan name (e.g., Starter, Growth, Pro)
-- Max clients allowed
-- Storage limit (bytes)
-- White-label flags
-- Agency branding (name, logo)
+Each agency has an `agency_subscriptions` row (single row per user) that controls plan limits, feature flags, and branding.
 
-This data powers:
-- The Billing page (usage bars)
-- The sidebar (shows agency name/logo)
-- The enforcement of limits (client count guards)
+### Plans
+| Plan | Price | Clients | Storage |
+|------|-------|---------|---------|
+| **Trial** | Free (14 days) | 5 | 20 GB |
+| **Ignite** | ₹2,999/mo | 5 | 20 GB |
+| **Velocity** | ₹8,999/mo | 15 | 100 GB |
+| **Quantum** | ₹17,999/mo | 35 | 500 GB |
+
+### Feature Flags (boolean columns on `agency_subscriptions`)
+| Flag | Ignite | Velocity | Quantum | Controls |
+|------|--------|----------|---------|---------|
+| `branding_agency_sidebar` | false | true | true | Show agency logo+name in sidebar |
+| `branding_powered_by` | true | true | false | Show "Tercero YYYY" + "Powered by Tercero" attribution |
+| `finance_recurring_invoices` | false | true | true | Recurring invoice templates tab |
+| `finance_subscriptions` | false | true | true | Expense subscriptions route |
+| `calendar_export` | false | true | true | Calendar PDF export button |
+
+### `useSubscription()` Hook
+Accessed via `src/api/useSubscription.js`. Returns: `{ subscription, can, planName, data (raw row) }`.
+
+The `can` object exposes checked methods:
+- `can.useAgencySidebar()`, `can.showPoweredBy()`
+- `can.recurringInvoices()`, `can.expenseSubscriptions()`, `can.calendarExport()`
+- `can.addClient(currentCount)` — checks against `max_clients`
+
+Defaults are defensive (most-restricted) except `branding_powered_by` which defaults to `true` to protect Tercero brand attribution.
+
+### Extra Client Add-on
+- ₹500/mo per extra client on Ignite and Velocity
+- ₹450/mo per extra client on Quantum
+
+### Upgrade Flow
+- No automated payment processing currently
+- Users request upgrades via "Contact Team" dialog on the Billing page
+- Tercero team manually processes the request and updates the account
+- `trial_ends_at` controls trial expiry; expired trials redirect to `/billing`
 
 ---
 
@@ -473,6 +544,9 @@ Three Supabase Edge Functions handle transactional email:
 | Twitter / X | Yes (tweet card) | ✓ |
 | YouTube | Yes (video thumbnail + title) | ✓ |
 | Facebook | No dedicated preview | ✓ |
+| Google Business | No dedicated preview | ✓ |
+
+Platform icons are served from `/platformIcons/{name}.png`. The `google_business` icon maps to `google_busines.png` (filename inconsistency handled in code).
 
 ---
 
@@ -540,21 +614,32 @@ src/api/notes.js                    — Notes CRUD
 src/api/invoices.js                 — Invoice lifecycle
 src/api/transactions.js             — Ledger
 src/api/expenses.js                 — Subscriptions
-src/api/useSubscription.js          — Plan/branding hook
+src/api/useSubscription.js          — Plan/branding hook (returns subscription row + can.* methods)
 src/api/useGlobalPosts.js           — Filtered post list
 src/pages/dashboard/Dashboard.jsx  — Dashboard composition
 src/pages/clients/Clients.jsx       — Client list
 src/pages/clients/ClientDetails.jsx — Client detail + tabs
 src/pages/Posts.jsx                 — Global post list
 src/pages/posts/postDetails/PostDetails.jsx — Post editor
-src/pages/calendar/ContentCalendar.jsx — Calendar views
-src/pages/finance/FinanceLayout.jsx — Finance shell
+src/pages/calendar/ContentCalendar.jsx  — Calendar views + Export Report button
+src/pages/calendar/CalendarReportPDF.jsx — PDF document component (react-pdf/renderer)
+src/pages/calendar/useCalendarReport.js  — buildCalendarReport(), getPeriodLabel(), getPeriodFilename()
+src/pages/finance/FinanceLayout.jsx          — Finance shell
+src/pages/finance/FinancialOverviewTab.jsx  — Finance overview (cash/accrual, charts)
+src/pages/finance/InvoicesTab.jsx           — One-off + recurring invoice tabs (recurring gated by can.recurringInvoices())
+src/pages/finance/RecurringInvoiceDialog.jsx — Recurring template create/edit
+src/pages/finance/EditInvoiceDialog.jsx     — Invoice edit/view (live preview)
 src/pages/MeetingsPage.jsx          — Meetings
 src/pages/NotesAndReminders.jsx     — Notes
-src/pages/PublicReview.jsx          — Client review link
-src/pages/billingAndUsage/BillingUsage.jsx — Plan/billing
+src/pages/PublicReview.jsx          — Client review link (fetches agency branding via secondary query)
+src/pages/billingAndUsage/BillingUsage.jsx        — Plan/billing shell
+src/pages/billingAndUsage/TertiarySubscriptionTab.jsx — Plan cards + comparison table + upgrade request dialog
+src/components/sidebar/nav-header.jsx — Sidebar header (branding_agency_sidebar logic)
+src/components/sidebar/app-sidebar.jsx — Sidebar composition + "Tercero YYYY" footer text
 src/lib/helper.js                   — formatDate()
 src/lib/client-helpers.js           — getUrgencyStatus()
 src/lib/industries.js               — Industry constants
 src/components/misc/header-context.jsx — useHeader() hook
+src/utils/finance.js                — formatCurrency()
+src/utils/downloadInvoicePDF.js     — Invoice PDF download utility
 ```
