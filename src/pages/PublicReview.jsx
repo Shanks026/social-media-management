@@ -78,7 +78,7 @@ export default function PublicReview() {
         const { data: sub } = await supabase
           .from('agency_subscriptions')
           .select(
-            'agency_name, logo_url, primary_color, basic_whitelabel_enabled, full_whitelabel_enabled',
+            'agency_name, logo_url, primary_color, branding_agency_sidebar, branding_powered_by',
           )
           .eq('user_id', userId)
           .maybeSingle()
@@ -138,13 +138,10 @@ export default function PublicReview() {
   }
 
   // Determine branding
-  const showAgencyBranding =
-    agencySub &&
-    (agencySub.basic_whitelabel_enabled || agencySub.full_whitelabel_enabled)
+  const showAgencyBranding = agencySub?.branding_agency_sidebar ?? false
 
-  // CHANGED: Show "Powered by" footer for Ignite (no whitelabel) AND Velocity (basic whitelabel).
-  // This effectively hides the footer ONLY for tiers with full_whitelabel_enabled.
-  const showPoweredBy = !agencySub?.full_whitelabel_enabled
+  // Show "Powered by Tercero" footer on Ignite and Velocity; hidden on Quantum (branding_powered_by = false)
+  const showPoweredBy = agencySub?.branding_powered_by ?? true
 
   if (loading)
     return (
@@ -192,13 +189,14 @@ export default function PublicReview() {
         <div className="mb-10 flex flex-col items-start gap-1">
           {showAgencyBranding ? (
             <div className="flex items-center gap-4">
-              {agencySub.logo_url && (
+              {agencySub.logo_url ? (
                 <img
                   src={agencySub.logo_url}
                   alt="Agency Logo"
                   className="h-8 w-auto object-contain rounded-lg"
+                  onError={(e) => (e.target.style.display = 'none')}
                 />
-              )}
+              ) : null}
               <h2 className="text-2xl font-bold tracking-tight">
                 {agencySub.agency_name || 'Agency'}
               </h2>

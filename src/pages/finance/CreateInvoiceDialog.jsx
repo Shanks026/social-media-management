@@ -4,13 +4,17 @@ import { Calendar as CalendarIcon, Plus, Trash2, FileText } from 'lucide-react'
 
 // API
 import { useQueryClient } from '@tanstack/react-query'
-import { useCreateInvoice, useNextInvoiceNumber, invoiceKeys } from '@/api/invoices'
+import {
+  useCreateInvoice,
+  useNextInvoiceNumber,
+  invoiceKeys,
+} from '@/api/invoices'
 import { useClients } from '@/api/clients'
 import { useSubscription } from '@/api/useSubscription'
 import { cn } from '@/lib/utils'
 
 // Constants
-import { INCOME_CATEGORIES } from '@/utils/constants'
+import { INVOICE_CATEGORIES } from '@/utils/constants'
 
 // UI Components
 import { Button } from '@/components/ui/button'
@@ -42,7 +46,7 @@ import { toast } from 'sonner'
 import HTMLInvoicePreview from '@/components/HTMLInvoicePreview'
 
 const PAYMENT_TERMS = ['Due on Receipt', 'Net 15', 'Net 30', 'Net 60']
-// INCOME_CATEGORIES imported from @/utils/constants
+// INVOICE_CATEGORIES imported from @/utils/constants
 const EMPTY_ITEM = { description: '', quantity: 1, unit_price: 0 }
 
 /**
@@ -261,7 +265,6 @@ export function CreateInvoiceDialog({
 
         {/* Two-column layout */}
         <div className="flex flex-col lg:flex-row flex-1 min-h-0">
-          
           {/* Left — Live HTML Preview Container */}
           <div className="lg:w-[55%] min-h-[400px] lg:min-h-0 bg-[#f3f4f6] dark:bg-zinc-950/50 border-b lg:border-b-0 lg:border-r border-border/50 flex flex-col min-w-0">
             <div className="px-4 py-2.5 border-b border-border/50 bg-background/50 shrink-0">
@@ -273,7 +276,10 @@ export function CreateInvoiceDialog({
             <div className="flex-1 overflow-y-auto p-4 md:p-8 flex justify-center custom-scrollbar">
               <div className="w-full max-w-[700px] shrink-0">
                 {/* Standard React Component Preview */}
-                <HTMLInvoicePreview invoice={previewInvoice} agency={agencyData} />
+                <HTMLInvoicePreview
+                  invoice={previewInvoice}
+                  agency={agencyData}
+                />
               </div>
             </div>
           </div>
@@ -296,8 +302,17 @@ export function CreateInvoiceDialog({
                 <Label className="text-xs font-medium text-muted-foreground">
                   Client <span className="text-destructive">*</span>
                 </Label>
-                <Select value={clientId} onValueChange={setClientId} disabled={!!preselectedClientId}>
-                  <SelectTrigger className={cn('w-full', preselectedClientId && 'opacity-60')}>
+                <Select
+                  value={clientId}
+                  onValueChange={setClientId}
+                  disabled={!!preselectedClientId}
+                >
+                  <SelectTrigger
+                    className={cn(
+                      'w-full',
+                      preselectedClientId && 'opacity-60',
+                    )}
+                  >
                     <SelectValue placeholder="Select a client" />
                   </SelectTrigger>
                   <SelectContent>
@@ -340,7 +355,9 @@ export function CreateInvoiceDialog({
                         )}
                       >
                         <CalendarIcon className="mr-2 h-3.5 w-3.5" />
-                        {issueDate ? format(issueDate, 'MMM d, yyyy') : 'Select'}
+                        {issueDate
+                          ? format(issueDate, 'MMM d, yyyy')
+                          : 'Select'}
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start">
@@ -398,7 +415,7 @@ export function CreateInvoiceDialog({
                       <SelectValue placeholder="Select category" />
                     </SelectTrigger>
                     <SelectContent>
-                      {INCOME_CATEGORIES.map((cat) => (
+                      {INVOICE_CATEGORIES.map((cat) => (
                         <SelectItem key={cat} value={cat}>
                           {cat}
                         </SelectItem>

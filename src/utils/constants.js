@@ -28,6 +28,14 @@ export const EXPENSE_CATEGORIES = [
   'Other',
 ]
 
+// --- INVOICE CATEGORIES ---
+export const INVOICE_CATEGORIES = [
+  'Retainer',
+  'Project Fee',
+  'Ad Management',
+  'Other',
+]
+
 /**
  * Income categories that REQUIRE a formal invoice.
  * These represent billable client work where a document trail is mandatory.

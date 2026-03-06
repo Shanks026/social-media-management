@@ -8,7 +8,7 @@ import {
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { useClients, useAllClientsMetrics } from '@/api/clients'
+import { useClients } from '@/api/clients'
 import { useInvoices } from '@/api/invoices'
 import { useTransactions } from '@/api/transactions'
 import { useExpenses } from '@/api/expenses'
@@ -24,46 +24,11 @@ export default function AgencyHealthBar() {
   const monthEnd = endOfMonth(now)
 
   const { data: clientsData, isLoading: loadingClients } = useClients()
-  const { data: allMetrics = [], isLoading: loadingMetrics } =
-    useAllClientsMetrics()
   const { data: invoices = [], isLoading: loadingInvoices } = useInvoices()
   const { data: transactions = [], isLoading: loadingTx } = useTransactions()
   const { data: expenses = [], isLoading: loadingExp } = useExpenses()
 
   const activeClients = clientsData?.realClients?.length ?? 0
-
-  const totalMRR = useMemo(() => {
-    if (!clientsData?.realClients?.length) return 0
-
-    // Sum the most recent 'Monthly Retainer' amount across all real clients
-    const clientMRRs = clientsData.realClients.map((client) => {
-      const clientInvoices = invoices.filter(
-        (inv) =>
-          inv.client_id === client.id && inv.category === 'Monthly Retainer',
-      )
-      const clientTransactions = transactions.filter(
-        (t) =>
-          t.client_id === client.id &&
-          t.category === 'Monthly Retainer' &&
-          t.type === 'INCOME',
-      )
-
-      const allRetainers = [
-        ...clientInvoices.map((inv) => ({
-          date: new Date(inv.issue_date),
-          amount: Number(inv.total),
-        })),
-        ...clientTransactions.map((t) => ({
-          date: new Date(t.date),
-          amount: Number(t.amount),
-        })),
-      ].sort((a, b) => b.date - a.date)
-
-      return allRetainers.length > 0 ? allRetainers[0].amount : 0
-    })
-
-    return clientMRRs.reduce((sum, val) => sum + val, 0)
-  }, [clientsData?.realClients, invoices, transactions])
 
   const metrics = calculatePeriodMetrics({
     transactions,
@@ -76,12 +41,7 @@ export default function AgencyHealthBar() {
 
   const { revenue, expense, profit, margin } = metrics
 
-  const isLoading =
-    loadingClients ||
-    loadingInvoices ||
-    loadingTx ||
-    loadingExp ||
-    loadingMetrics
+  const isLoading = loadingClients || loadingInvoices || loadingTx || loadingExp
 
   if (isLoading) {
     return (
@@ -125,7 +85,7 @@ export default function AgencyHealthBar() {
             {formatCurrency(profit)}
           </div>
           <p className="text-xs text-muted-foreground mt-1">
-            {margin.toFixed(1)}% margin · {formatCurrency(totalMRR)} MRR
+            {margin.toFixed(1)}% margin
           </p>
         </CardContent>
       </Card>

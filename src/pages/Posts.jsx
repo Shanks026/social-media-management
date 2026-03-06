@@ -165,8 +165,11 @@ export default function Posts() {
   // Set header
   useEffect(() => {
     setHeader({
-      title: 'Content Hub',
-      breadcrumbs: [{ label: 'Content Hub', href: '/posts' }],
+      title: 'Posts',
+      breadcrumbs: [
+        { label: 'Operations', href: '/posts' },
+        { label: 'Posts', href: '/posts' },
+      ],
     })
   }, [setHeader])
 

@@ -17,6 +17,7 @@ import {
   Users,
   Video,
   LayoutDashboard,
+  Lock,
 } from 'lucide-react'
 import { NavLink, useLocation } from 'react-router-dom'
 import {
@@ -36,8 +37,14 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible'
+import { useSubscription } from '@/api/useSubscription'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 
-const navItems = [
+const BASE_NAV_ITEMS = [
   { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
   { title: 'My Organization', url: '/myorganization', icon: Building2 },
   { title: 'Clients', url: '/clients', icon: UserStar },
@@ -70,6 +77,7 @@ const navItems = [
         title: 'Subscriptions',
         url: '/finance/subscriptions',
         icon: CreditCard,
+        requiresFlag: 'finance_subscriptions',
       },
       { title: 'Ledger', url: '/finance/ledger', icon: ListOrdered },
       { title: 'Invoices', url: '/finance/invoices', icon: FileText },
@@ -80,6 +88,10 @@ const navItems = [
 export function NavMain() {
   const { state } = useSidebar()
   const location = useLocation()
+  const { data: sub } = useSubscription()
+
+  // Keep all items — locked ones are shown as disabled rather than hidden
+  const navItems = BASE_NAV_ITEMS
 
   return (
     <SidebarGroup>
@@ -116,21 +128,50 @@ export function NavMain() {
 
                     <CollapsibleContent>
                       <SidebarMenuSub>
-                        {item.items.map((subItem) => (
-                          <SidebarMenuSubItem key={subItem.title}>
-                            <SidebarMenuSubButton
-                              asChild
-                              isActive={location.pathname === subItem.url}
-                            >
-                              <NavLink to={subItem.url}>
-                                {subItem.icon && (
-                                  <subItem.icon className="size-3.5 me-0.5 opacity-70" />
-                                )}
-                                <span>{subItem.title}</span>
-                              </NavLink>
-                            </SidebarMenuSubButton>
-                          </SidebarMenuSubItem>
-                        ))}
+                        {item.items.map((subItem) => {
+                          const isLocked =
+                            subItem.requiresFlag &&
+                            !sub?.[subItem.requiresFlag]
+
+                          if (isLocked) {
+                            return (
+                              <SidebarMenuSubItem key={subItem.title}>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <SidebarMenuSubButton
+                                      className="cursor-not-allowed opacity-40 hover:bg-transparent hover:text-inherit"
+                                    >
+                                      {subItem.icon && (
+                                        <subItem.icon className="size-3.5 me-0.5 opacity-70" />
+                                      )}
+                                      <span>{subItem.title}</span>
+                                      <Lock className="ml-auto size-3 shrink-0" />
+                                    </SidebarMenuSubButton>
+                                  </TooltipTrigger>
+                                  <TooltipContent side="right" sideOffset={8}>
+                                    Available on Velocity &amp; Quantum
+                                  </TooltipContent>
+                                </Tooltip>
+                              </SidebarMenuSubItem>
+                            )
+                          }
+
+                          return (
+                            <SidebarMenuSubItem key={subItem.title}>
+                              <SidebarMenuSubButton
+                                asChild
+                                isActive={location.pathname === subItem.url}
+                              >
+                                <NavLink to={subItem.url}>
+                                  {subItem.icon && (
+                                    <subItem.icon className="size-3.5 me-0.5 opacity-70" />
+                                  )}
+                                  <span>{subItem.title}</span>
+                                </NavLink>
+                              </SidebarMenuSubButton>
+                            </SidebarMenuSubItem>
+                          )
+                        })}
                       </SidebarMenuSub>
                     </CollapsibleContent>
                   </SidebarMenuItem>

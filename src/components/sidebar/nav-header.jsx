@@ -32,8 +32,9 @@ export function AppSidebarHeader({ agencySettings }) {
   const logo = agencySettings?.logo_url || sub?.logo_url
   const plan = agencySettings?.tier || sub?.plan_name || APP_TAGLINE
 
-  const isBrandingComplete = !!(name && logo && plan && name !== APP_NAME)
-  const isTercero = name === APP_NAME || !name
+  // Use the feature flag — not the name — to decide if agency branding is shown
+  const showAgencyBranding = sub?.branding_agency_sidebar ?? false
+  const isBrandingComplete = !!(showAgencyBranding && name && logo && plan && name !== APP_NAME)
 
   const getInitials = (name) => {
     const finalName = name || APP_NAME
@@ -46,7 +47,7 @@ export function AppSidebarHeader({ agencySettings }) {
   }
 
   return (
-    <SidebarHeader className="pt-4 px-2">
+    <SidebarHeader className="px-2">
       <SidebarMenu>
         <SidebarMenuItem className="flex items-center">
           <SidebarMenuButton
@@ -59,7 +60,7 @@ export function AppSidebarHeader({ agencySettings }) {
             {/* LOGO SECTION */}
             <div
               className={`flex shrink-0 items-center justify-center overflow-hidden rounded-lg ${
-                isTercero
+                !showAgencyBranding
                   ? isCollapsed
                     ? 'size-7'
                     : 'h-9 w-32 ml-[-4px]'
@@ -68,7 +69,23 @@ export function AppSidebarHeader({ agencySettings }) {
             >
               {isLoading ? (
                 <Skeleton className="size-full rounded-lg" />
+              ) : !showAgencyBranding ? (
+                // Ignite: always show Tercero logo regardless of any agency logo set
+                <div
+                  className={`${isCollapsed ? 'size-5' : 'h-7 w-28'} bg-foreground`}
+                  style={{
+                    maskImage: `url(${isCollapsed ? DEFAULT_ICON : LANDSCAPE_LOGO})`,
+                    maskRepeat: 'no-repeat',
+                    maskPosition: 'center',
+                    maskSize: 'contain',
+                    WebkitMaskImage: `url(${isCollapsed ? DEFAULT_ICON : LANDSCAPE_LOGO})`,
+                    WebkitMaskRepeat: 'no-repeat',
+                    WebkitMaskPosition: 'center',
+                    WebkitMaskSize: 'contain',
+                  }}
+                />
               ) : logo ? (
+                // Velocity / Quantum with logo set
                 <img
                   src={logo}
                   alt={name}
@@ -91,21 +108,8 @@ export function AppSidebarHeader({ agencySettings }) {
                     }
                   }}
                 />
-              ) : isTercero ? (
-                <div
-                  className={`${isCollapsed ? 'size-5' : 'h-7 w-28'} bg-foreground`}
-                  style={{
-                    maskImage: `url(${isCollapsed ? DEFAULT_ICON : LANDSCAPE_LOGO})`,
-                    maskRepeat: 'no-repeat',
-                    maskPosition: 'center',
-                    maskSize: 'contain',
-                    WebkitMaskImage: `url(${isCollapsed ? DEFAULT_ICON : LANDSCAPE_LOGO})`,
-                    WebkitMaskRepeat: 'no-repeat',
-                    WebkitMaskPosition: 'center',
-                    WebkitMaskSize: 'contain',
-                  }}
-                />
               ) : (
+                // Velocity / Quantum without logo — show initials
                 <div className="flex size-full items-center justify-center bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 rounded-lg">
                   <span className="text-[10px] font-black uppercase tracking-tighter">
                     {getInitials(name)}
@@ -115,7 +119,7 @@ export function AppSidebarHeader({ agencySettings }) {
             </div>
 
             {/* IDENTITY TEXT — only rendered when expanded and non-Tercero branding */}
-            {!isCollapsed && !isTercero && (
+            {!isCollapsed && !!showAgencyBranding && (
               <div className="flex flex-col text-left overflow-hidden ml-2">
                 {isLoading ? (
                   <div className="space-y-2 w-24">

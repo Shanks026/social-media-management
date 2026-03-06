@@ -1,24 +1,25 @@
 import { useState, useMemo } from 'react'
 import { format } from 'date-fns'
 import {
-  Filter,
   Plus,
-  Trash2,
-  Search,
   FileText,
-  Send,
-  Eye,
-  Pencil,
-  MoreHorizontal,
   AlertCircle,
   TrendingUp,
   TrendingDown,
+  Eye,
+  Pencil,
+  MoreHorizontal,
+  Send,
   Download,
+  Trash2,
+  Search,
+  Filter,
   RefreshCw,
 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Select,
   SelectContent,
@@ -26,8 +27,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Badge } from '@/components/ui/badge'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -36,7 +35,10 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Badge } from '@/components/ui/badge'
 import StatusBadge from '@/components/StatusBadge'
+import { CustomTable } from '@/components/CustomTable'
+import { cn } from '@/lib/utils'
 
 import {
   useInvoices,
@@ -46,17 +48,14 @@ import {
   useDeleteRecurringInvoice,
   useGenerateFromRecurring,
 } from '@/api/invoices'
-import { useClients } from '@/api/clients'
-import { formatCurrency } from '@/utils/finance'
-import { cn } from '@/lib/utils'
-import { CustomTable } from '@/components/CustomTable'
-import { CreateInvoiceDialog } from './CreateInvoiceDialog'
-import { EditInvoiceDialog } from './EditInvoiceDialog'
-import { RecurringInvoiceDialog } from './RecurringInvoiceDialog'
-import { toast } from 'sonner'
 import { useSubscription } from '@/api/useSubscription'
+import { formatCurrency } from '@/utils/finance'
+import { CreateInvoiceDialog } from '@/pages/finance/CreateInvoiceDialog'
+import { EditInvoiceDialog } from '@/pages/finance/EditInvoiceDialog'
+import { RecurringInvoiceDialog } from '@/pages/finance/RecurringInvoiceDialog'
 import { downloadInvoicePDF } from '@/utils/downloadInvoicePDF'
 import { supabase } from '@/lib/supabase'
+import { toast } from 'sonner'
 
 const STATUS_OPTIONS = [
   { value: 'ALL', label: 'All Statuses' },
@@ -66,7 +65,7 @@ const STATUS_OPTIONS = [
   { value: 'OVERDUE', label: 'Overdue' },
 ]
 
-export default function InvoicesTab({ clientId, subTabs }) {
+export function ClientBillingTab({ clientId }) {
   const [activeTab, setActiveTab] = useState('one-off')
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editInvoiceId, setEditInvoiceId] = useState(null)
@@ -74,7 +73,6 @@ export default function InvoicesTab({ clientId, subTabs }) {
   const [isRecurringDialogOpen, setIsRecurringDialogOpen] = useState(false)
   const [editRecurringInvoice, setEditRecurringInvoice] = useState(null)
 
-  const [filterClient, setFilterClient] = useState('ALL')
   const [filterStatus, setFilterStatus] = useState('ALL')
   const [searchTerm, setSearchTerm] = useState('')
 
@@ -92,26 +90,25 @@ export default function InvoicesTab({ clientId, subTabs }) {
   const { mutate: deleteRecurring } = useDeleteRecurringInvoice()
   const { mutate: generateInvoice } = useGenerateFromRecurring()
 
-  const { data: clientData } = useClients()
-  const clients = clientData?.realClients || []
   const { data: subscription } = useSubscription()
 
-  // --- Quick Stats ---
+  // --- Summary stats ---
   const stats = useMemo(() => {
+    const totalCollected = invoices
+      .filter((inv) => inv.status === 'PAID')
+      .reduce((sum, inv) => sum + (inv.total || 0), 0)
+
     const outstanding = invoices
       .filter((inv) => inv.status === 'SENT' || inv.status === 'OVERDUE')
       .reduce((sum, inv) => sum + (inv.total || 0), 0)
 
     const overdue = invoices.filter((inv) => inv.status === 'OVERDUE').length
     const drafts = invoices.filter((inv) => inv.status === 'DRAFT').length
-    const paid = invoices
-      .filter((inv) => inv.status === 'PAID')
-      .reduce((sum, inv) => sum + (inv.total || 0), 0)
 
-    return { outstanding, overdue, drafts, paid }
+    return { totalCollected, outstanding, overdue, drafts }
   }, [invoices])
 
-  // --- Status update handler ---
+  // --- Handlers (One-off) ---
   const handleStatusChange = (id, newStatus) => {
     updateInvoice(
       { id, updates: { status: newStatus } },
@@ -123,7 +120,6 @@ export default function InvoicesTab({ clientId, subTabs }) {
     )
   }
 
-  // --- Delete handlers ---
   const handleDelete = (id) => {
     deleteInvoice(id, {
       onSuccess: () => toast.success('Invoice deleted'),
@@ -131,6 +127,7 @@ export default function InvoicesTab({ clientId, subTabs }) {
     })
   }
 
+  // --- Handlers (Recurring) ---
   const handleDeleteRecurring = (id) => {
     deleteRecurring(id, {
       onSuccess: () => toast.success('Recurring template deleted'),
@@ -151,7 +148,6 @@ export default function InvoicesTab({ clientId, subTabs }) {
     })
   }
 
-  // --- PDF download handler ---
   const handleDownloadPDF = async (invoice) => {
     try {
       const { data: items, error } = await supabase
@@ -187,32 +183,6 @@ export default function InvoicesTab({ clientId, subTabs }) {
         </div>
       ),
     },
-    ...(clientId
-      ? []
-      : [
-          {
-            header: 'Client',
-            width: '20%',
-            render: (inv) => (
-              <div className="flex items-center gap-2">
-                {inv.client?.logo_url ? (
-                  <img
-                    src={inv.client.logo_url}
-                    className="w-4 h-4 rounded-full border border-border shrink-0"
-                    alt=""
-                  />
-                ) : (
-                  <div className="w-4 h-4 rounded-full bg-muted flex items-center justify-center text-[8px] font-bold text-muted-foreground shrink-0">
-                    {inv.client?.name?.[0]}
-                  </div>
-                )}
-                <span className="text-sm text-muted-foreground truncate">
-                  {inv.client?.name || 'Unknown'}
-                </span>
-              </div>
-            ),
-          },
-        ]),
     {
       header: 'Issue Date',
       width: '130px',
@@ -234,12 +204,6 @@ export default function InvoicesTab({ clientId, subTabs }) {
           </span>
         )
       },
-    },
-    {
-      header: 'Category',
-      width: '130px',
-      cellClassName: 'text-muted-foreground text-sm',
-      render: (inv) => inv.category || '—',
     },
     {
       header: 'Status',
@@ -316,38 +280,11 @@ export default function InvoicesTab({ clientId, subTabs }) {
 
   // --- Columns (Recurring) ---
   const recurringColumns = [
-    ...(clientId
-      ? []
-      : [
-          {
-            header: 'Client',
-            width: '20%',
-            headerClassName: 'pl-6',
-            cellClassName: 'pl-6',
-            render: (inv) => (
-              <div className="flex items-center gap-2">
-                {inv.client?.logo_url ? (
-                  <img
-                    src={inv.client.logo_url}
-                    className="w-4 h-4 rounded-full border border-border shrink-0"
-                    alt=""
-                  />
-                ) : (
-                  <div className="w-4 h-4 rounded-full bg-muted flex items-center justify-center text-[8px] font-bold text-muted-foreground shrink-0">
-                    {inv.client?.name?.[0]}
-                  </div>
-                )}
-                <span className="text-sm text-foreground font-medium truncate">
-                  {inv.client?.name || 'Unknown'}
-                </span>
-              </div>
-            ),
-          },
-        ]),
     {
       header: 'Description',
       width: '25%',
-      cellClassName: 'text-sm',
+      headerClassName: 'pl-6',
+      cellClassName: 'pl-6 text-sm',
       render: (inv) => inv.description || inv.category,
     },
     {
@@ -381,7 +318,7 @@ export default function InvoicesTab({ clientId, subTabs }) {
     },
     {
       header: 'Last Gen',
-      width: '130px',
+      width: '110px',
       cellClassName: 'text-xs text-muted-foreground',
       render: (inv) =>
         inv.last_generated_at
@@ -455,89 +392,60 @@ export default function InvoicesTab({ clientId, subTabs }) {
 
   // --- Filtered data ---
   const filteredData = useMemo(() => {
-    let data = invoices
-
-    if (!clientId && filterClient !== 'ALL') {
-      data = data.filter((inv) => inv.client_id === filterClient)
-    }
-
-    if (searchTerm) {
-      const lower = searchTerm.toLowerCase()
-      data = data.filter(
-        (inv) =>
-          inv.invoice_number?.toLowerCase().includes(lower) ||
-          inv.client?.name?.toLowerCase().includes(lower) ||
-          inv.notes?.toLowerCase().includes(lower),
-      )
-    }
-
-    return data
-  }, [invoices, filterClient, searchTerm, clientId])
+    if (!searchTerm) return invoices
+    const lower = searchTerm.toLowerCase()
+    return invoices.filter(
+      (inv) =>
+        inv.invoice_number?.toLowerCase().includes(lower) ||
+        inv.notes?.toLowerCase().includes(lower),
+    )
+  }, [invoices, searchTerm])
 
   const filteredRecurringData = useMemo(() => {
-    let data = recurringInvoices.filter((inv) => inv.is_active)
-
-    if (!clientId && filterClient !== 'ALL') {
-      data = data.filter((inv) => inv.client_id === filterClient)
-    }
-
-    if (searchTerm) {
-      const lower = searchTerm.toLowerCase()
-      data = data.filter(
-        (inv) =>
-          inv.client?.name?.toLowerCase().includes(lower) ||
-          inv.description?.toLowerCase().includes(lower) ||
-          inv.category?.toLowerCase().includes(lower),
-      )
-    }
-
-    return data
-  }, [recurringInvoices, filterClient, searchTerm, clientId])
+    const activeInvoices = (recurringInvoices || []).filter(
+      (item) => item.is_active,
+    )
+    if (!searchTerm) return activeInvoices
+    const lower = searchTerm.toLowerCase()
+    return activeInvoices.filter(
+      (inv) =>
+        inv.description?.toLowerCase().includes(lower) ||
+        inv.category?.toLowerCase().includes(lower),
+    )
+  }, [recurringInvoices, searchTerm])
 
   return (
     <Tabs
       value={activeTab}
       onValueChange={setActiveTab}
-      className="space-y-6 animate-in fade-in duration-500"
+      className="space-y-6 animate-in fade-in duration-500 mt-4"
     >
-      {/* --- Header Actions --- */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
-          {subTabs ? (
-            subTabs
-          ) : (
-            <span className="text-2xl font-normal">Invoices</span>
-          )}
+      {/* --- Toolbar --- */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        <TabsList className="bg-muted/50 p-1">
+          <TabsTrigger value="one-off" className="text-xs">
+            One-off Invoices
+          </TabsTrigger>
+          <TabsTrigger value="recurring" className="text-xs">
+            Recurring Templates
+          </TabsTrigger>
+        </TabsList>
 
-          <TabsList className="bg-muted/50 p-1">
-            <TabsTrigger value="one-off" className="text-xs">
-              One-off
-            </TabsTrigger>
-            {subscription?.finance_recurring_invoices && (
-              <TabsTrigger value="recurring" className="text-xs">
-                Recurring
-              </TabsTrigger>
-            )}
-          </TabsList>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
-          {/* Search */}
-          <div className="relative flex-1 md:flex-none md:w-[240px]">
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+          <div className="relative flex-1 sm:flex-none sm:w-[240px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search..."
+              placeholder="Search invoices..."
               className="pl-9 h-9 border focus:border-solid transition-all text-sm"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
 
-          {/* Status Filter */}
           {activeTab === 'one-off' && (
             <Select value={filterStatus} onValueChange={setFilterStatus}>
               <SelectTrigger className="w-[130px] h-9 border-dashed text-xs">
-                <div className="flex items-center gap-2 text-muted-foreground">
+                <div className="flex items-center gap-2 text-muted-foreground text-xs">
                   <Filter className="h-3.5 w-3.5" />
                   <SelectValue placeholder="Status" />
                 </div>
@@ -552,27 +460,6 @@ export default function InvoicesTab({ clientId, subTabs }) {
             </Select>
           )}
 
-          {/* Client Filter */}
-          {!clientId && (
-            <Select value={filterClient} onValueChange={setFilterClient}>
-              <SelectTrigger className="w-[140px] h-9 border-dashed text-xs">
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <Filter className="h-3.5 w-3.5" />
-                  <SelectValue placeholder="Client" />
-                </div>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL">All Clients</SelectItem>
-                {clients.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-
-          {/* Create Button */}
           {activeTab === 'one-off' ? (
             <Button
               size="sm"
@@ -594,8 +481,25 @@ export default function InvoicesTab({ clientId, subTabs }) {
       </div>
 
       <TabsContent value="one-off" className="space-y-6 mt-0">
-        {/* --- Quick Stats --- */}
+        {/* --- Summary Cards --- */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Card className="rounded-2xl border-none bg-card/50 shadow-sm ring-1 ring-border/50 dark:bg-card/20">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                Total Collected
+              </CardTitle>
+              <TrendingUp className="h-4 w-4 text-emerald-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400">
+                {formatCurrency(stats.totalCollected)}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Paid invoices
+              </p>
+            </CardContent>
+          </Card>
+
           <Card className="rounded-2xl border-none bg-card/50 shadow-sm ring-1 ring-border/50 dark:bg-card/20">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
@@ -608,24 +512,7 @@ export default function InvoicesTab({ clientId, subTabs }) {
                 {formatCurrency(stats.outstanding)}
               </div>
               <p className="text-xs text-muted-foreground mt-1">
-                Sent & overdue invoices
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="rounded-2xl border-none bg-card/50 shadow-sm ring-1 ring-border/50 dark:bg-card/20">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                Collected
-              </CardTitle>
-              <TrendingUp className="h-4 w-4 text-emerald-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400">
-                {formatCurrency(stats.paid)}
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                Total paid invoices
+                Sent &amp; overdue
               </p>
             </CardContent>
           </Card>
@@ -663,7 +550,7 @@ export default function InvoicesTab({ clientId, subTabs }) {
           </Card>
         </div>
 
-        {/* --- One-off Table --- */}
+        {/* --- Invoice Table --- */}
         <CustomTable
           columns={columns}
           data={filteredData}
@@ -671,16 +558,13 @@ export default function InvoicesTab({ clientId, subTabs }) {
         />
       </TabsContent>
 
-      {subscription?.finance_recurring_invoices && (
-        <TabsContent value="recurring" className="space-y-6 mt-0">
-          {/* --- Recurring Table --- */}
-          <CustomTable
-            columns={recurringColumns}
-            data={filteredRecurringData}
-            isLoading={isRecurringLoading}
-          />
-        </TabsContent>
-      )}
+      <TabsContent value="recurring" className="space-y-6 mt-0">
+        <CustomTable
+          columns={recurringColumns}
+          data={filteredRecurringData}
+          isLoading={isRecurringLoading}
+        />
+      </TabsContent>
 
       {/* --- Dialogs --- */}
       <CreateInvoiceDialog
@@ -695,6 +579,7 @@ export default function InvoicesTab({ clientId, subTabs }) {
           if (!open) setEditInvoiceId(null)
         }}
         invoiceId={editInvoiceId}
+        disableClientSelect={true}
       />
 
       <RecurringInvoiceDialog

@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from '../src/context/AuthContext'
+import { useSubscription } from './api/useSubscription'
 import LoginPage from './components/auth/login'
 import SignupPage from './components/auth/signup'
 import { AppShell } from './components/misc/AppShell'
@@ -23,6 +24,13 @@ import NotesAndReminders from './pages/NotesAndReminders'
 import MeetingsPage from './pages/MeetingsPage'
 import Dashboard from './pages/dashboard/Dashboard'
 
+
+function SubscriptionsRoute() {
+  const { data: sub } = useSubscription()
+  if (!sub) return null
+  if (!sub.finance_subscriptions) return <Navigate to="/finance/invoices" replace />
+  return <SubscriptionsTab />
+}
 
 function AppRoutes() {
   const { session, user } = useAuth()
@@ -57,7 +65,7 @@ function AppRoutes() {
             <Route index element={<Navigate to="overview" replace />} />
 
             <Route path="overview" element={<OverviewTab />} />
-            <Route path="subscriptions" element={<SubscriptionsTab />} />
+            <Route path="subscriptions" element={<SubscriptionsRoute />} />
             <Route path="ledger" element={<LedgerTab />} />
             <Route path="invoices" element={<InvoicesTab />} />
           </Route>
