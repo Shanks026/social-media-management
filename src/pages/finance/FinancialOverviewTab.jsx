@@ -8,6 +8,7 @@ import {
   Building2,
   Banknote,
   FileText,
+  Lock,
 } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts'
 import {
@@ -27,7 +28,7 @@ import { CURRENCY } from '@/utils/constants'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
-  Tooltip as UITooltip,
+  Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
@@ -45,6 +46,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useTransactions } from '@/api/transactions'
 import { useExpenses } from '@/api/expenses'
 import { useInvoices } from '@/api/invoices'
+import { useSubscription } from '@/api/useSubscription'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 
@@ -61,6 +63,9 @@ const chartConfig = {
 }
 
 export default function OverviewPage({ clientId, client, subTabs }) {
+  const { data: subscription } = useSubscription()
+  const isAccrualLocked = subscription && !subscription.finance_accrual
+
   const [accountingMethod, setAccountingMethod] = useState('CASH') // CASH, ACCRUAL
   const [chartRange, setChartRange] = useState('3M') // 3M, 6M, 12M
 
@@ -208,10 +213,32 @@ export default function OverviewPage({ clientId, client, subTabs }) {
                 <Banknote className="w-3.5 h-3.5 mr-2" />
                 Cash
               </TabsTrigger>
-              <TabsTrigger value="ACCRUAL" className="text-xs">
-                <FileText className="w-3.5 h-3.5 mr-2" />
-                Accrual
-              </TabsTrigger>
+              <TooltipProvider>
+                <Tooltip delayDuration={0}>
+                  <TooltipTrigger asChild>
+                    <div className="flex-1">
+                      <TabsTrigger
+                        value="ACCRUAL"
+                        className="text-xs w-full disabled:pointer-events-auto disabled:opacity-50"
+                        disabled={isAccrualLocked}
+                      >
+                        <FileText className="w-3.5 h-3.5 mr-2" />
+                        Accrual
+                        {isAccrualLocked && (
+                          <Lock className="w-3 h-3 ml-2 text-muted-foreground" />
+                        )}
+                      </TabsTrigger>
+                    </div>
+                  </TooltipTrigger>
+                  {isAccrualLocked && (
+                    <TooltipContent side="top" align="center" className="p-2">
+                      <p className="text-xs font-medium">
+                        Available on Velocity & Quantum
+                      </p>
+                    </TooltipContent>
+                  )}
+                </Tooltip>
+              </TooltipProvider>
             </TabsList>
           </Tabs>
         </div>
@@ -290,14 +317,14 @@ export default function OverviewPage({ clientId, client, subTabs }) {
                 Pending Invoices
               </CardTitle>
               <TooltipProvider>
-                <UITooltip>
+                <Tooltip>
                   <TooltipTrigger>
                     <Info className="h-3 w-3 text-amber-600/70" />
                   </TooltipTrigger>
                   <TooltipContent>
                     <p>Unpaid ledger entries + outstanding invoices</p>
                   </TooltipContent>
-                </UITooltip>
+                </Tooltip>
               </TooltipProvider>
             </div>
             <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-500" />
@@ -427,14 +454,14 @@ export default function OverviewPage({ clientId, client, subTabs }) {
               {dashboardData.filteredTransactions.filter(
                 (t) => t.status === 'PENDING' && t.type === 'INCOME',
               ).length === 0 ? (
-                <div className="h-full flex flex-col items-center justify-center py-20 text-center">
-                  <div className="h-16 w-16 rounded-full bg-slate-50 dark:bg-slate-800/50 flex items-center justify-center mb-4">
-                    <TrendingUp className="h-8 w-8 text-slate-300" />
+                <div className="flex-1 flex flex-col items-center justify-center text-center py-12 gap-2">
+                  <div className="h-10 w-10 border border-dashed rounded-full flex items-center justify-center text-muted-foreground mb-1">
+                    <TrendingUp className="h-4 w-4" />
                   </div>
-                  <p className="text-base font-medium text-slate-900 dark:text-slate-100">
+                  <p className="text-sm font-medium text-foreground">
                     All clear
                   </p>
-                  <p className="text-sm text-slate-500">
+                  <p className="text-xs text-muted-foreground">
                     No pending payments found.
                   </p>
                 </div>

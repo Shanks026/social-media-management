@@ -474,9 +474,11 @@ export function CalendarPostCard({ post, onEdit }) {
                 </div>
               )}
               <span className="text-[13px] font-medium tracking-tight whitespace-nowrap">
-                {post.target_date
-                  ? format(new Date(post.target_date), "d MMMM yyyy '•' h:mm a")
-                  : 'No Date Set'}
+                {postStatus === 'PUBLISHED'
+                  ? `Published on ${format(new Date(post.published_at || post.updated_at), 'd MMM, yyyy')}`
+                  : post.target_date
+                    ? format(new Date(post.target_date), "d MMMM yyyy '•' h:mm a")
+                    : 'No Date Set'}
               </span>
             </div>
           </div>
