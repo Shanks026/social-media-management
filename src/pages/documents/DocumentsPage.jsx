@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useSearchParams, Link } from 'react-router-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { FolderOpen, FolderPlus, Search, X, Building2 } from 'lucide-react'
+import { FolderOpen, FolderPlus, Search, X, Building2, Lock } from 'lucide-react'
 import { useHeader } from '@/components/misc/header-context'
 import { useAuth } from '@/context/AuthContext'
 import { useClients } from '@/api/clients'
+import { useSubscription } from '@/api/useSubscription'
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip'
 import { useDocuments, useAllCollections, uploadDocument } from '@/api/documents'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -62,6 +64,10 @@ export default function DocumentsPage() {
       ],
     })
   }, [setHeader])
+
+  // ── Subscription ─────────────────────────────────────────────────────────────
+  const { data: sub } = useSubscription()
+  const collectionsUnlocked = sub?.documents_collections ?? false
 
   // ── Clients ──────────────────────────────────────────────────────────────────
   const { data: clientsData } = useClients()
@@ -325,14 +331,27 @@ export default function DocumentsPage() {
               </TabsTrigger>
             </TabsList>
 
-            <Button
-              variant="outline"
-              onClick={() => setCreateCollectionOpen(true)}
-              className="gap-2"
-            >
-              <FolderPlus className="size-4" />
-              New Collection
-            </Button>
+            {collectionsUnlocked ? (
+              <Button
+                variant="outline"
+                onClick={() => setCreateCollectionOpen(true)}
+                className="gap-2"
+              >
+                <FolderPlus className="size-4" />
+                New Collection
+              </Button>
+            ) : (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="outline" className="gap-2 opacity-50 cursor-not-allowed" disabled>
+                    <FolderPlus className="size-4" />
+                    New Collection
+                    <Lock size={12} />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Collections are available on Velocity and above</TooltipContent>
+              </Tooltip>
+            )}
           </div>
         </div>
 
@@ -388,7 +407,23 @@ export default function DocumentsPage() {
             </TabsContent>
 
             {/* ── COLLECTIONS ── */}
-            <TabsContent value="collections" className="mt-0">
+            <TabsContent value="collections" className="mt-0 space-y-4">
+              {!collectionsUnlocked && (
+                <div className="rounded-lg border border-border/50 bg-muted/30 px-4 py-3 flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Lock size={14} className="text-muted-foreground shrink-0" />
+                    <p className="text-sm text-muted-foreground">
+                      Organise your documents into collections. Available on Velocity and above.
+                    </p>
+                  </div>
+                  <Link
+                    to="/billing"
+                    className="text-sm font-medium text-primary hover:underline shrink-0"
+                  >
+                    Upgrade your plan →
+                  </Link>
+                </div>
+              )}
               {collections.length === 0 ? (
                 <Empty className="border">
                   <EmptyHeader>
@@ -409,6 +444,7 @@ export default function DocumentsPage() {
                       key={col.id}
                       collection={col}
                       documents={filteredDocs.filter((d) => d.collection_id === col.id)}
+                      locked={!collectionsUnlocked}
                     />
                   ))}
                 </div>
@@ -438,6 +474,7 @@ export default function DocumentsPage() {
                           key={col.id}
                           collection={col}
                           documents={filteredDocs.filter((d) => d.collection_id === col.id)}
+                          locked={!collectionsUnlocked}
                         />
                       ))}
                     </div>

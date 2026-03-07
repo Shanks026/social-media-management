@@ -15,9 +15,12 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 import { useCollections, moveDocumentToCollection, documentKeys } from '@/api/documents'
 import CreateCollectionDialog from './CreateCollectionDialog'
+import { useSubscription } from '@/api/useSubscription'
 
 export default function MoveToCollectionDialog({ open, onOpenChange, document }) {
   const queryClient = useQueryClient()
+  const { data: sub } = useSubscription()
+  const effectiveOpen = open && (sub?.documents_collections ?? false)
   const [selectedCollectionId, setSelectedCollectionId] = useState(
     document?.collection_id ?? null,
   )
@@ -57,7 +60,7 @@ export default function MoveToCollectionDialog({ open, onOpenChange, document })
 
   return (
     <>
-      <Dialog open={open && !createOpen} onOpenChange={handleOpenChange}>
+      <Dialog open={effectiveOpen && !createOpen} onOpenChange={handleOpenChange}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Move to Collection</DialogTitle>

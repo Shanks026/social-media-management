@@ -126,7 +126,7 @@ const PlatformIcon = ({ name }) => {
   )
 }
 
-export function CalendarPostCard({ post }) {
+export function CalendarPostCard({ post, onEdit }) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [isPreviewOpen, setIsPreviewOpen] = useState(false)
@@ -365,9 +365,13 @@ export function CalendarPostCard({ post }) {
                       className="cursor-pointer font-medium text-foreground py-2"
                       onClick={(e) => {
                         e.stopPropagation()
-                        navigate(
-                          `/clients/${post.client_id}/posts/${post.version_id}`
-                        )
+                        if (onEdit) {
+                          onEdit(post)
+                        } else {
+                          navigate(
+                            `/clients/${post.client_id}/posts/${post.version_id}`
+                          )
+                        }
                       }}
                     >
                       <Edit2 className="h-4 w-4 mr-2" /> Edit Post

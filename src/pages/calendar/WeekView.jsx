@@ -43,8 +43,10 @@ function assignColumns(posts) {
     const start = new Date(post.target_date).getTime()
     const end = start + DURATION_MS
     let col = colEnds.findIndex((endTime) => endTime <= start)
-    if (col === -1) { col = colEnds.length; colEnds.push(end) }
-    else colEnds[col] = end
+    if (col === -1) {
+      col = colEnds.length
+      colEnds.push(end)
+    } else colEnds[col] = end
     return { post, col }
   })
   const total = colEnds.length
@@ -153,58 +155,59 @@ export default function WeekView({ currentMonth, postsByDate, clientId }) {
                     const leftPct = (col / total) * 100
                     const rightPct = ((total - col - 1) / total) * 100
                     return (
-                    <button
-                      key={post.version_id}
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        setSelectedDate(day)
-                      }}
-                      style={{
-                        top: `${topPos}px`,
-                        height: '60px',
-                        left: `calc(${leftPct}% + 2px)`,
-                        right: `calc(${rightPct}% + 2px)`,
-                      }}
-                      className={cn(
-                        'absolute overflow-hidden p-1.5 rounded-lg border border-l-4 transition-all z-10 hover:z-30 hover:scale-[1.02] text-left shadow-md flex flex-col justify-center',
-                        STATUS_STYLES[getPublishState(post)] || 'border-l-muted',
-                        post.isMeeting
-                          ? 'bg-purple-50 dark:bg-purple-950/50 border-purple-200 dark:border-purple-800'
-                          : 'bg-card',
-                      )}
-                    >
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        <div className="shrink-0">
-                          {post.isMeeting ? (
-                            <Clock className="size-3 text-purple-600 dark:text-purple-400" />
-                          ) : (
-                            PLATFORM_ICONS[post.platforms?.[0]?.toLowerCase()]
-                          )}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p
-                            className={cn(
-                              'text-[11px] leading-tight truncate',
-                              post.isMeeting
-                                ? 'font-black text-purple-900 dark:text-purple-100'
-                                : 'font-black text-foreground',
+                      <button
+                        key={post.version_id}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setSelectedDate(day)
+                        }}
+                        style={{
+                          top: `${topPos}px`,
+                          height: '60px',
+                          left: `calc(${leftPct}% + 2px)`,
+                          right: `calc(${rightPct}% + 2px)`,
+                        }}
+                        className={cn(
+                          'absolute overflow-hidden p-1.5 rounded-lg border border-l-4 transition-all z-10 hover:z-30 hover:scale-[1.02] text-left shadow-md flex flex-col justify-center',
+                          STATUS_STYLES[getPublishState(post)] ||
+                            'border-l-muted',
+                          post.isMeeting
+                            ? 'bg-purple-50 dark:bg-purple-950/50 border-purple-200 dark:border-purple-800'
+                            : 'bg-card',
+                        )}
+                      >
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <div className="shrink-0">
+                            {post.isMeeting ? (
+                              <Clock className="size-3 text-purple-600 dark:text-purple-400" />
+                            ) : (
+                              PLATFORM_ICONS[post.platforms?.[0]?.toLowerCase()]
                             )}
-                          >
-                            {post.title}
-                          </p>
-                          <div className="flex items-center gap-1 text-[10px] font-medium text-foreground/60 truncate">
-                            <Clock size={9} className="shrink-0" />
-                            {format(new Date(post.target_date), 'h:mm a')}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p
+                              className={cn(
+                                'text-[11px] leading-tight truncate',
+                                post.isMeeting
+                                  ? 'font-black text-purple-900 dark:text-purple-100'
+                                  : 'font-black text-foreground',
+                              )}
+                            >
+                              {post.title}
+                            </p>
+                            <div className="flex items-center gap-1 text-[10px] font-medium text-foreground/60 truncate">
+                              <Clock size={9} className="shrink-0" />
+                              {format(new Date(post.target_date), 'h:mm a')}
+                            </div>
                           </div>
                         </div>
-                      </div>
 
-                      {!clientId && (
-                        <p className="text-[9px] font-medium truncate text-muted-foreground mt-0.5 pl-4">
-                          {post.client_name}
-                        </p>
-                      )}
-                    </button>
+                        {!clientId && (
+                          <p className="text-[9px] font-medium truncate text-muted-foreground mt-0.5 pl-4">
+                            {post.client_name}
+                          </p>
+                        )}
+                      </button>
                     )
                   })}
                 </div>

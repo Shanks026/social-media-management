@@ -41,6 +41,7 @@ import { uploadDocument } from '@/api/documents'
 import { useAuth } from '@/context/AuthContext'
 import { Accordion, AccordionItem, AccordionContent } from '@/components/ui/accordion'
 import { Accordion as AccordionPrimitive } from 'radix-ui'
+import { Lock } from 'lucide-react'
 
 /**
  * Expandable collection card showing documents grouped inside.
@@ -49,7 +50,7 @@ import { Accordion as AccordionPrimitive } from 'radix-ui'
  *   collection   — collection object { id, name, description, client_id, created_at }
  *   documents    — array of documents belonging to this collection
  */
-export default function CollectionCard({ collection, documents = [] }) {
+export default function CollectionCard({ collection, documents = [], locked = false }) {
   const { user } = useAuth()
   const queryClient = useQueryClient()
   const [expanded, setExpanded] = useState(false)
@@ -121,8 +122,13 @@ export default function CollectionCard({ collection, documents = [] }) {
   const count = documents.length
 
   return (
-    <>
-      <Accordion 
+    <div className={cn('relative', locked && 'opacity-50 pointer-events-none select-none')}>
+      {locked && (
+        <div className="absolute top-2.5 right-10 z-10">
+          <Lock size={12} className="text-muted-foreground" />
+        </div>
+      )}
+      <Accordion
         type="single" 
         collapsible 
         value={expanded ? "collection" : ""} 
@@ -264,6 +270,6 @@ export default function CollectionCard({ collection, documents = [] }) {
         onConfirm={handleConfirmUpload}
         uploadProgress={uploadProgress}
       />
-    </>
+    </div>
   )
 }

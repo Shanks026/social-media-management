@@ -358,6 +358,271 @@ The "Move to Collection" action works identically in all three. The dialog handl
 
 ---
 
+## As-Built Notes (March 2026)
+
+All 5 phases are complete. The following captures actual implementation details that differ from or extend the original spec.
+
+### API Layer (`src/api/documents.js`)
+
+**Query key factory** (actual pattern used — not the one shown in the spec):
+```js
+documentKeys = {
+  list:           (filters) => ['documents', 'list', filters ?? {}],
+  detail:         (id)      => ['documents', 'detail', id],
+  collections:    (clientId) => ['document-collections', clientId],
+  allCollections: ()         => ['document-collections', 'all'],
+}
+```
+Always use this factory when invalidating. The spec showed `['collections', 'list', { clientId }]` in one place — that is wrong, the actual key is `['document-collections', clientId]`.
+
+**Mutation pattern**: All mutations are plain async functions, not React Query hooks. The spec listed hook-style names (`useUploadDocument`, etc.) — the actual exports are `uploadDocument`, `updateDocument`, `deleteDocument`, `archiveDocument`, `unarchiveDocument`, `moveDocumentToCollection`, `createCollection`, `updateCollection`, `deleteCollection`. Components call `useMutation({ mutationFn: ... })` directly.
+
+**Upload pipeline**:
+1. Sanitise filename (strip emoji, non-ASCII, unsafe chars → underscores; collapse multiples)
+2. Storage path: `${userId}/${clientId}/${documentId}/${safeFilename}`
+3. Upload to `client-documents` bucket
+4. Insert metadata row in `client_documents`
+5. Rollback (delete from storage) if DB insert fails
+6. Call `increment_storage_used` RPC on `agency_subscriptions`
+
+**`getDocumentSignedUrl(storagePath)`** — generates a 60-minute signed URL from the `client-documents` bucket.
+
+### Components (`src/components/documents/`)
+
+9 components total:
+
+| File | Purpose |
+|------|---------|
+| `DocumentCard.jsx` | Row item: icon, name, badge, size, date, actions dropdown (preview, download, edit, move, archive, delete) |
+| `DocumentUploadZone.jsx` | Drag-drop + picker; validates against `MAX_DOCUMENT_SIZE_BYTES`; `compact` prop for CollectionCard |
+| `UploadMetaDialog.jsx` | Upload form (name + category + optional client selector); progress bar; exports `DOCUMENT_CATEGORIES` array |
+| `CreateCollectionDialog.jsx` | Create or rename (edit mode); optional client selector for global page |
+| `CollectionCard.jsx` | Radix Accordion; compact upload zone inline; rename + delete actions; delete note warns docs go ungrouped |
+| `DocumentsTab.jsx` | Scoped to one clientId — reused in Client Detail page |
+| `DocumentCategoryBadge.jsx` | Coloured Badge by category (Contract, NDA, Brand Guidelines, Creative Brief, Brand Assets, Meeting Notes, Invoice/Finance, SOP, Other) |
+| `DocumentPreviewModal.jsx` | PDF via iframe, images via img; fetches signed URL on open; "Preview not available" + download for DOCX/XLSX/ZIP/MP4/MOV |
+| `MoveToCollectionDialog.jsx` | Lists collections for `document.client_id`; "Current" label on existing; "Remove from collection" (inline confirm, not AlertDialog); hides behind CreateCollectionDialog when empty-state creation is triggered |
+
+**`DOCUMENT_CATEGORIES`** is exported from `UploadMetaDialog.jsx` for consistent use across components.
+
+### Global Documents Page (`src/pages/documents/DocumentsPage.jsx`)
+
+Three-tab layout (URL param `doc_tab`):
+- **All** — all documents, collections grouped by client when no client filter active
+- **Collections** — collection cards (accordion) scoped to selected client; global all-client grouping when no client selected
+- **Ungrouped** — only docs with `collection_id = null`
+
+Filters: search (debounced 300ms), client dropdown, category dropdown, status dropdown (defaults to Active — archived hidden until explicitly selected).
+
+Upload flow: file selected → `UploadMetaDialog` opens → progress (10% → 30% → 100%) → dialog auto-closes 400ms after complete.
+
+### Phase 5 Deviations from Spec
+
+- `useMoveToCollection()` hook in the spec was implemented as `moveDocumentToCollection()` plain async function (per API conventions). Hook-level `useMutation` lives in `MoveToCollectionDialog`.
+- `MoveToCollectionDialog` manages its own `open` state gating — hides itself (`open={open && !createOpen}`) while `CreateCollectionDialog` is active to avoid nested dialog stacking.
+- "Remove from Collection" uses a two-step inline confirm (click → confirm/cancel) rather than an `AlertDialog`.
+
+---
+
+# Document Feature — Phase 6: Subscription-Based Scoping
+
+**Append this to: `.claude/features/document-feature.md`**
+**Status**: Ready to implement
+**Last Updated**: March 2026
+
+---
+
+## Phase 6 — Subscription-Based Feature Gating
+
+### Goal
+
+Gate the Collections feature (and all related actions) behind the Velocity/Quantum tier using a single new feature flag: `documents_collections`. Everything renders on all tiers — **nothing is hidden**. On Ignite, collections-related UI is visible but locked (disabled + lock icon), consistent with the `calendar_export` pattern already in the codebase.
+
+The per-client Documents tab (upload, view, preview, download, archive, delete) remains fully functional on all tiers including Ignite.
+
+---
+
+### Decision Log
+
+| Decision | Rationale |
+|---|---|
+| One flag only (`documents_collections`) | Collections is the only meaningful differentiator. The global `/documents` page itself is accessible on all tiers. |
+| Show locked UI, never hide | Consistent with existing Ignite UX (calendar export button visible + disabled). Users see what they're missing — passive upsell. |
+| Per-client Documents tab fully open | Basic document storage is a core workflow feature, not a power feature. Crippling it on Ignite would be punishing. |
+| Global `/documents` page fully open | Page is accessible on all tiers. Collections section within it is locked on Ignite. |
+| Shareable links deferred | Not in scope. Revisit after usage data. If built, gate at Quantum only. |
+
+---
+
+### Feature Flag
+
+**One new column on `agency_subscriptions`:**
+
+| Column | Type | Default | Purpose |
+|---|---|---|---|
+| `documents_collections` | boolean | `false` | Unlocks collections create/manage/move on Velocity+ |
+
+**Flag values per plan:**
+
+| Flag | Trial | Ignite | Velocity | Quantum |
+|---|---|---|---|---|
+| `documents_collections` | FALSE | FALSE | TRUE | TRUE |
+
+---
+
+### Pre-Implementation Steps (MANDATORY — do not skip)
+
+Before writing any code, Claude Code must:
+
+1. **Use Supabase MCP** to inspect the live `agency_subscriptions` table:
+   - Confirm the exact current column list (the v5 doc lists 27 columns — verify this is accurate)
+   - Confirm data types and defaults for existing flag columns (`calendar_export`, `finance_recurring_invoices`, `finance_subscriptions`) to match the exact pattern for the new column
+   - Check whether any RLS policies need updating
+
+2. **Read the existing `useSubscription.js`** hook in full before modifying it — do not work from memory or from this doc's description of it
+
+3. **Read `src/components/documents/CollectionCard.jsx`**, `CreateCollectionDialog.jsx`, `MoveToCollectionDialog.jsx`, and `DocumentCard.jsx` in full before modifying any of them
+
+4. **Read the existing locked-state implementation** for calendar export in `src/pages/calendar/ContentCalendar.jsx` to match the exact lock pattern used there (icon, disabled state, tooltip text)
+
+5. **Check `.claude/features/00-index.md`** and confirm the feature index entry for documents
+
+---
+
+### Phase 6 Implementation
+
+#### 6.1 Database Migration
+
+**Via Supabase MCP:**
+
+```sql
+-- Add the new flag column
+ALTER TABLE agency_subscriptions
+  ADD COLUMN IF NOT EXISTS documents_collections boolean DEFAULT false;
+
+-- Set correct values per existing plan
+UPDATE agency_subscriptions
+  SET documents_collections = TRUE
+  WHERE plan_name IN ('velocity', 'quantum');
+
+UPDATE agency_subscriptions
+  SET documents_collections = FALSE
+  WHERE plan_name IN ('trial', 'ignite');
+```
+
+Verify after running:
+- Column exists with correct default
+- Velocity and Quantum rows have `TRUE`
+- Trial and Ignite rows have `FALSE`
+
+Also update the seed SQL in the v5 feature doc (`.claude/features/document-tiers-v5.md` or equivalent) to include `documents_collections` so future plan changes set it correctly.
+
+#### 6.2 `useSubscription.js` Update
+
+**File: `src/api/useSubscription.js`**
+
+Add one new `can` method. Match the exact style of existing methods:
+
+```javascript
+documentsCollections: () => sub.documents_collections ?? false,
+```
+
+Do not change any existing methods. Do not restructure the hook.
+
+#### 6.3 Locked State — UI Rules
+
+Every collections-related interactive element must follow this locked pattern on Ignite (`can.documentsCollections() === false`):
+
+| Element | Locked behaviour |
+|---|---|
+| "New Collection" button (DocumentsTab + DocumentsPage) | `disabled`, `Lock` icon prepended, tooltip: "Upgrade to Velocity to use Collections" |
+| `CollectionCard` — the entire card | Rendered with `opacity-50`, non-interactive overlay or `pointer-events-none`, lock badge in top-right corner |
+| "Move to Collection" in `DocumentCard` three-dot menu | `disabled`, `Lock` icon, no `onSelect` handler fires |
+| Collections tab/section on global `/documents` page | Rendered, but with a lock state banner above the content: "Collections are available on Velocity and above." + upgrade CTA link to `/billing` |
+
+Use the `Lock` icon from `lucide-react` consistently. Match the exact disabled button pattern from the calendar export implementation.
+
+Do **not** use `AlertDialog` or any modal for the locked state — the visual disabled state is sufficient.
+
+#### 6.4 Files to Modify
+
+| File | Change |
+|---|---|
+| `src/api/useSubscription.js` | Add `documentsCollections` to `can` object |
+| `src/components/documents/DocumentCard.jsx` | Lock "Move to Collection" menu item when `!can.documentsCollections()` |
+| `src/components/documents/DocumentsTab.jsx` | Lock "New Collection" button + CollectionCard rendering |
+| `src/pages/documents/DocumentsPage.jsx` | Lock Collections tab/section + "New Collection" button |
+| `src/components/documents/CollectionCard.jsx` | Accept/handle locked prop or derive from `useSubscription` internally |
+| `src/components/documents/MoveToCollectionDialog.jsx` | Guard: if `!can.documentsCollections()`, do not open (belt-and-suspenders, the menu item should already be disabled) |
+| `src/components/documents/CreateCollectionDialog.jsx` | Guard: if `!can.documentsCollections()`, do not open |
+
+**Do not modify:**
+- `DocumentUploadZone.jsx` — upload is open to all tiers
+- `DocumentPreviewModal.jsx` — preview is open to all tiers
+- `DocumentCategoryBadge.jsx` — no gating
+- Any finance, meetings, or calendar files
+
+#### 6.5 Upgrade CTA Copy
+
+Consistent copy to use across all locked states:
+
+- Tooltip on disabled buttons: `"Collections are available on Velocity and above"`
+- Lock banner on collections section: `"Organise your documents into collections. Available on Velocity and above."` + `<Link to="/billing">Upgrade your plan →</Link>`
+
+Keep it factual and direct — consistent with Tercero's confident, no-fluff voice.
+
+---
+
+### Phase 6 Checklist
+
+- [ ] `documents_collections` column added to `agency_subscriptions` via Supabase MCP
+- [ ] Velocity and Quantum rows set to `TRUE`, Trial and Ignite to `FALSE`
+- [ ] Column verified live in DB before any frontend work begins
+- [ ] `useSubscription.js` — `can.documentsCollections()` added
+- [ ] "New Collection" button locked on Ignite (DocumentsTab)
+- [ ] "New Collection" button locked on Ignite (DocumentsPage)
+- [ ] `CollectionCard` renders in locked/dimmed state on Ignite
+- [ ] "Move to Collection" menu item disabled on Ignite (DocumentCard)
+- [ ] Collections section on DocumentsPage shows lock banner on Ignite
+- [ ] `MoveToCollectionDialog` has belt-and-suspenders guard
+- [ ] `CreateCollectionDialog` has belt-and-suspenders guard
+- [ ] Lock icon and disabled state match the calendar export pattern exactly
+- [ ] Upgrade CTA links to `/billing`
+- [ ] Per-client Documents tab (upload, view, download, preview, archive, delete) fully functional on Ignite — no regression
+- [ ] Global `/documents` page loads and functions on Ignite (ungrouped docs visible and usable)
+- [ ] Velocity account: all collections features fully functional
+- [ ] Quantum account: all collections features fully functional
+- [ ] No existing Phase 1–5 functionality broken
+
+---
+
+### What Stays Open on All Tiers (Never Gate These)
+
+- Document upload (per-client tab and global page)
+- Preview modal
+- Download
+- Rename
+- Change category
+- Archive / unarchive
+- Delete
+- Search and filters
+- Storage quota tracking
+
+---
+
+### Out of Scope for This Phase
+
+- Shareable document/collection links — deferred, revisit after usage data
+- Per-tier storage enforcement UI (storage bar already exists in Billing page)
+- Any new pricing page or billing changes
+- Admin-side plan management
+
+---
+
+### Implementation Notes
+
+*(Claude Code fills this in after completing the phase)*
+
 ## Out of Scope
 
 - **Bulk move**: Select multiple documents and move them all into a collection at once — future follow-up if usage data justifies it

@@ -63,9 +63,10 @@ import { formatDate, formatFileSize } from '@/lib/helper'
 import DocumentCategoryBadge from './DocumentCategoryBadge'
 import { DOCUMENT_CATEGORIES } from './UploadMetaDialog'
 import { useAuth } from '@/context/AuthContext'
-import { Building2 } from 'lucide-react'
+import { Building2, Lock } from 'lucide-react'
 import DocumentPreviewModal from './DocumentPreviewModal'
 import MoveToCollectionDialog from './MoveToCollectionDialog'
+import { useSubscription } from '@/api/useSubscription'
 
 function getFileIcon(mimeType) {
   if (!mimeType) return File
@@ -81,6 +82,7 @@ function getFileIcon(mimeType) {
 export default function DocumentCard({ doc }) {
   const { user } = useAuth()
   const queryClient = useQueryClient()
+  const { data: sub } = useSubscription()
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
   const [editName, setEditName] = useState(doc.display_name)
@@ -253,9 +255,14 @@ export default function DocumentCard({ doc }) {
               <Pencil className="size-4" />
               Rename / Recategorise
             </DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => setMoveDialogOpen(true)}>
+            <DropdownMenuItem
+              onSelect={() => setMoveDialogOpen(true)}
+              disabled={!sub?.documents_collections}
+              className={!sub?.documents_collections ? 'opacity-50 cursor-not-allowed' : ''}
+            >
               <FolderInput className="size-4" />
               Move to Collection
+              {!sub?.documents_collections && <Lock size={12} className="ml-auto" />}
             </DropdownMenuItem>
             {isArchived ? (
               <DropdownMenuItem

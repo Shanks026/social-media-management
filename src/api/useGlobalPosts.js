@@ -1,6 +1,7 @@
 import { supabase } from '@/lib/supabase'
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '@/context/AuthContext'
+import { getPublishState } from '@/lib/helper'
 
 /**
  * Builds a Supabase query for global posts with dynamic filters.
@@ -47,8 +48,12 @@ function buildPostsQuery(userId, filters = {}) {
   }
 
   // --- Status filter (applied on post_versions) ---
+  // PARTIALLY_PUBLISHED is UI-only — these are SCHEDULED rows filtered client-side
   if (status && status !== 'ALL') {
-    query = query.eq('post_versions.status', status)
+    query = query.eq(
+      'post_versions.status',
+      status === 'PARTIALLY_PUBLISHED' ? 'SCHEDULED' : status,
+    )
   }
 
   // --- Platform filter (platform is text[], use contains) ---
@@ -118,7 +123,11 @@ export function useGlobalPosts(filters = {}) {
     queryFn: async () => {
       const { data, error } = await buildPostsQuery(user.id, filters)
       if (error) throw error
-      return normalizePosts(data)
+      let posts = normalizePosts(data)
+      if (filters.status === 'PARTIALLY_PUBLISHED') {
+        posts = posts.filter((p) => getPublishState(p) === 'PARTIALLY_PUBLISHED')
+      }
+      return posts
     },
     enabled: !!user?.id,
     staleTime: 1000 * 30, // 30s
@@ -141,7 +150,7 @@ export function usePostCounts() {
           `
           id,
           clients!inner ( is_internal ),
-          post_versions!fk_current_version ( status )
+          post_versions!fk_current_version ( status, platform_schedules )
         `,
         )
         .eq('clients.user_id', user.id)
@@ -154,14 +163,15 @@ export function usePostCounts() {
         PENDING_APPROVAL: 0,
         SCHEDULED: 0,
         NEEDS_REVISION: 0,
+        PARTIALLY_PUBLISHED: 0,
         PUBLISHED: 0,
         ARCHIVED: 0,
       }
       for (const row of data || []) {
         if (!row.post_versions) continue
         counts.all++
-        const s = row.post_versions.status
-        if (s in counts) counts[s]++
+        const derived = getPublishState(row.post_versions)
+        if (derived in counts) counts[derived]++
       }
       return counts
     },

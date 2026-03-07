@@ -68,9 +68,9 @@ const STATUS_TABS = [
   { key: 'ALL', label: 'All' },
   { key: 'DRAFT', label: 'Drafts' },
   { key: 'PENDING_APPROVAL', label: 'Pending Approval' },
-  // { key: 'APPROVED', label: 'Approved' },
   { key: 'SCHEDULED', label: 'Scheduled' },
   { key: 'NEEDS_REVISION', label: 'Needs Revision' },
+  { key: 'PARTIALLY_PUBLISHED', label: 'Partially Published' },
   { key: 'PUBLISHED', label: 'Published' },
   { key: 'ARCHIVED', label: 'Archived' },
 ]
@@ -111,8 +111,9 @@ export default function Posts() {
   // View mode
   const [viewMode, setViewMode] = useState('card') // 'card' | 'table'
 
-  // Create post modal state
+  // Create / edit post modal state
   const [isCreatePostOpen, setIsCreatePostOpen] = useState(false)
+  const [editingPost, setEditingPost] = useState(null)
 
   // Filter states
   const [search, setSearch] = useState('')
@@ -316,6 +317,46 @@ export default function Posts() {
         </div>
       </div>
 
+      {/* ── Tabs ──────────────────────── */}
+      <Tabs value={statusTab} onValueChange={setStatusTab} className="w-full">
+        <TabsList className="bg-transparent h-auto w-full justify-start rounded-none p-0 gap-8 border-b border-border/40">
+          {STATUS_TABS.map((tab) => {
+            const count = tab.key === 'ALL' ? counts.all : counts[tab.key]
+            return (
+              <TabsTrigger
+                key={tab.key}
+                value={tab.key}
+                className="
+                  relative rounded-none bg-transparent px-0 pb-3 pt-0 text-sm font-medium transition-none
+                  shadow-none border-b-2 border-transparent text-muted-foreground
+                  flex-none w-fit gap-2
+                  data-[state=active]:bg-transparent
+                  dark:data-[state=active]:bg-transparent
+                  data-[state=active]:text-black
+                  dark:data-[state=active]:text-white
+                  data-[state=active]:border-black
+                  dark:data-[state=active]:border-white
+                  data-[state=active]:shadow-none
+                  data-[state=active]:border-x-0
+                  data-[state=active]:border-t-0
+                  focus-visible:ring-0
+                "
+              >
+                {tab.label}
+                {count !== undefined && count > 0 && (
+                  <Badge
+                    variant="secondary"
+                    className="text-xs px-1.5 py-0 min-w-[20px] text-center"
+                  >
+                    {count}
+                  </Badge>
+                )}
+              </TabsTrigger>
+            )
+          })}
+        </TabsList>
+      </Tabs>
+
       {/* ── Controls Row ─────────────────── */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         {/* Search */}
@@ -489,46 +530,6 @@ export default function Posts() {
         </div>
       </div>
 
-      {/* ── Tabs ──────────────────────── */}
-      <Tabs value={statusTab} onValueChange={setStatusTab} className="w-full">
-        <TabsList className="bg-transparent h-auto w-full justify-start rounded-none p-0 gap-8 border-b border-border/40">
-          {STATUS_TABS.map((tab) => {
-            const count = tab.key === 'ALL' ? counts.all : counts[tab.key]
-            return (
-              <TabsTrigger
-                key={tab.key}
-                value={tab.key}
-                className="
-                  relative rounded-none bg-transparent px-0 pb-3 pt-0 text-sm font-medium transition-none 
-                  shadow-none border-b-2 border-transparent text-muted-foreground
-                  flex-none w-fit gap-2
-                  data-[state=active]:bg-transparent 
-                  dark:data-[state=active]:bg-transparent
-                  data-[state=active]:text-black 
-                  dark:data-[state=active]:text-white 
-                  data-[state=active]:border-black
-                  dark:data-[state=active]:border-white
-                  data-[state=active]:shadow-none
-                  data-[state=active]:border-x-0 
-                  data-[state=active]:border-t-0
-                  focus-visible:ring-0
-                "
-              >
-                {tab.label}
-                {count !== undefined && count > 0 && (
-                  <Badge
-                    variant="secondary"
-                    className="text-xs px-1.5 py-0 min-w-[20px] text-center"
-                  >
-                    {count}
-                  </Badge>
-                )}
-              </TabsTrigger>
-            )
-          })}
-        </TabsList>
-      </Tabs>
-
       {/* ── Content Area ─────────────── */}
       {viewMode === 'table' ? (
         <CustomTable
@@ -578,7 +579,11 @@ export default function Posts() {
           ) : (
             <div className="grid gap-6 grid-cols-[repeat(auto-fill,minmax(350px,1fr))]">
               {posts.map((post) => (
-                <CalendarPostCard key={post.id} post={post} />
+                <CalendarPostCard
+                  key={post.id}
+                  post={post}
+                  onEdit={(p) => setEditingPost(p)}
+                />
               ))}
             </div>
           )}
@@ -589,6 +594,13 @@ export default function Posts() {
         open={isCreatePostOpen}
         onOpenChange={setIsCreatePostOpen}
         availableClients={clientOptions}
+      />
+
+      <DraftPostForm
+        open={!!editingPost}
+        onOpenChange={(open) => !open && setEditingPost(null)}
+        clientId={editingPost?.client_id}
+        initialData={editingPost ? { ...editingPost, platform: editingPost.platforms } : null}
       />
     </div>
   )

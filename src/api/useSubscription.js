@@ -66,6 +66,7 @@ export function useSubscription() {
         finance_recurring_invoices: sub.finance_recurring_invoices ?? false,
         finance_subscriptions: sub.finance_subscriptions ?? false,
         calendar_export: sub.calendar_export ?? false,
+        documents_collections: sub.documents_collections ?? false,
         client_count: count || 0,
         max_clients: sub.max_clients,
 
