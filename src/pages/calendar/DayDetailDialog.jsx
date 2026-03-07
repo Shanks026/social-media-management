@@ -30,13 +30,15 @@ import MeetingRow from '@/components/MeetingRow'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { deleteMeeting } from '@/api/meetings'
 import { toast } from 'sonner'
+import { getPublishState } from '@/lib/helper'
 
 const STATUS_STATS_CONFIG = [
   { id: 'DRAFT', label: 'Draft', color: 'bg-blue-600' },
   { id: 'PENDING_APPROVAL', label: 'Pending', color: 'bg-orange-600' },
   { id: 'NEEDS_REVISION', label: 'Revisions', color: 'bg-pink-600' },
   { id: 'SCHEDULED', label: 'Scheduled', color: 'bg-purple-600' },
-  { id: 'PUBLISHED', label: 'Published', color: 'bg-lime-600' },
+  { id: 'PUBLISHED', label: 'Published', color: 'bg-emerald-600' },
+  { id: 'PARTIALLY_PUBLISHED', label: 'Partially Published', color: 'bg-lime-600' },
 ]
 
 export function DayDetailDialog({ date, posts = [], open, onOpenChange }) {
@@ -81,8 +83,9 @@ export function DayDetailDialog({ date, posts = [], open, onOpenChange }) {
 
   const filteredPosts = useMemo(() => {
     return regularPosts.filter((post) => {
+      const pStatus = getPublishState(post) || 'DRAFT'
       const matchesSearch = post.title?.toLowerCase().includes(searchQuery.toLowerCase())
-      const matchesStatus = statusFilter === 'all' || post.status === statusFilter
+      const matchesStatus = statusFilter === 'all' || pStatus === statusFilter
       const matchesClient = clientFilter === 'all' || post.client_name === clientFilter
       return matchesSearch && matchesStatus && matchesClient
     })
@@ -90,7 +93,8 @@ export function DayDetailDialog({ date, posts = [], open, onOpenChange }) {
 
   const stats = useMemo(() => {
     return regularPosts.reduce((acc, post) => {
-      acc[post.status] = (acc[post.status] || 0) + 1
+      const pStatus = getPublishState(post) || 'DRAFT'
+      acc[pStatus] = (acc[pStatus] || 0) + 1
       return acc
     }, {})
   }, [regularPosts])

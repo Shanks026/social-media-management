@@ -137,42 +137,62 @@ export default function PostActionDialogs({
             </div>
           </DialogHeader>
 
-          <div className="py-2">
-            <p className="text-sm font-medium mb-2">Publish Date</p>
-            <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={cn(
-                    'w-full justify-start text-left font-normal gap-2',
-                    !approveDate && 'text-muted-foreground',
-                  )}
-                >
-                  <CalendarDays size={16} />
-                  {approveDate
-                    ? format(approveDate, 'PPP')
-                    : 'Select a date…'}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={approveDate}
-                  onSelect={(date) => {
-                    setApproveDate(date)
-                    setCalendarOpen(false)
-                  }}
-                  disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
-            <p className="text-[11px] text-muted-foreground mt-1.5 italic">
-              {approveDate
-                ? "Prefilled from the post\u2019s target date \u2014 change it if needed."
-                : 'No target date set \u2014 please pick a publish date.'}
-            </p>
-          </div>
+          {post.platform_schedules ? (
+            /* Per-platform: show read-only schedule summary */
+            <div className="space-y-2 py-2">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+                Platform Schedule
+              </p>
+              {Object.entries(post.platform_schedules).map(([platform, { scheduled_at }]) => (
+                <div key={platform} className="flex justify-between text-sm">
+                  <span className="font-medium capitalize">
+                    {platform.replace('_', ' ')}
+                  </span>
+                  <span className="text-muted-foreground">
+                    {format(new Date(scheduled_at), 'PPP')} at {format(new Date(scheduled_at), 'p')}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            /* Single-date: existing date picker */
+            <div className="py-2">
+              <p className="text-sm font-medium mb-2">Publish Date</p>
+              <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      'w-full justify-start text-left font-normal gap-2',
+                      !approveDate && 'text-muted-foreground',
+                    )}
+                  >
+                    <CalendarDays size={16} />
+                    {approveDate
+                      ? format(approveDate, 'PPP')
+                      : 'Select a date…'}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={approveDate}
+                    onSelect={(date) => {
+                      setApproveDate(date)
+                      setCalendarOpen(false)
+                    }}
+                    disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+              <p className="text-[11px] text-muted-foreground mt-1.5 italic">
+                {approveDate
+                  ? "Prefilled from the post\u2019s target date \u2014 change it if needed."
+                  : 'No target date set \u2014 please pick a publish date.'}
+              </p>
+            </div>
+          )}
 
           <DialogFooter className="flex flex-row gap-3">
             <Button
@@ -186,7 +206,7 @@ export default function PostActionDialogs({
             </Button>
             <Button
               onClick={onConfirmApproveSchedule}
-              disabled={isApproveSchedulePending || !approveDate}
+              disabled={isApproveSchedulePending || (!post.platform_schedules && !approveDate)}
             >
               {isApproveSchedulePending ? 'Scheduling…' : 'Confirm Schedule'}
             </Button>

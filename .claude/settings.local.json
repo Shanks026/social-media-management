@@ -4,7 +4,17 @@
       "Bash(npm run lint)",
       "mcp__supabase-mcp-server__list_projects",
       "mcp__supabase-mcp-server__apply_migration",
-      "mcp__supabase-mcp-server__execute_sql"
+      "mcp__supabase-mcp-server__execute_sql",
+      "mcp__github-mcp-server__get_me",
+      "Bash(curl -s -H \"Authorization: Bearer sbp_0434fdf9a724ddcc853886322ac87ea0441b560d\" \"https://api.supabase.com/v1/projects\")",
+      "Bash(curl -s -X POST \"https://api.supabase.com/v1/projects/ockvcyevnozuczzngrwg/database/query\" -H \"Authorization: Bearer sbp_0434fdf9a724ddcc853886322ac87ea0441b560d\" -H \"Content-Type: application/json\" -d '{:*)",
+      "Bash(npx supabase --version)",
+      "Bash(npx supabase db execute --project-ref ockvcyevnozuczzngrwg --help)",
+      "Bash(npx supabase --help)",
+      "Bash(npx supabase snippets --help)",
+      "Bash(npx supabase projects list)",
+      "Bash(curl -s -X POST \"https://api.supabase.com/v1/projects/ockvcyevnozuczzngrwg/database/query\" -H \"Authorization: Bearer sbp_0434fdf9a724ddcc853886322ac87ea0441b560d\" -H \"Content-Type: application/json\" -d '{\"\"query\"\": \"\"DROP FUNCTION IF EXISTS public.get_post_by_token\\(text\\);\"\"}')",
+      "mcp__supabase-mcp-server__deploy_edge_function"
     ]
   }
 }

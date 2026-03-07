@@ -16,6 +16,7 @@ import {
 import { AlertCircle, ArrowUpRight, CheckCircle2, FileText } from 'lucide-react'
 import { useGlobalPosts } from '@/api/useGlobalPosts'
 import { Button } from '@/components/ui/button'
+import { getPublishState } from '@/lib/helper'
 
 const chartConfig = {
   DRAFT: { label: 'Draft', color: '#3b82f6' },
@@ -23,6 +24,7 @@ const chartConfig = {
   'NEEDS REVISION': { label: 'Needs Revision', color: '#ec4899' },
   SCHEDULED: { label: 'Scheduled', color: '#a855f7' },
   PUBLISHED: { label: 'Published', color: '#10b981' },
+  'PARTIALLY PUBLISHED': { label: 'Partially Published', color: '#84cc16' },
 }
 
 const ALLOWED_STATUSES = [
@@ -31,6 +33,7 @@ const ALLOWED_STATUSES = [
   'NEEDS REVISION',
   'SCHEDULED',
   'PUBLISHED',
+  'PARTIALLY PUBLISHED',
 ]
 
 export default function ContentPipelineBar() {
@@ -44,7 +47,7 @@ export default function ContentPipelineBar() {
   }, {})
 
   posts.forEach((post) => {
-    let status = post.status?.replace('_', ' ') || 'DRAFT'
+    let status = getPublishState(post)?.replace('_', ' ') || 'DRAFT'
     if (status === 'PENDING') status = 'PENDING APPROVAL'
     if (status === 'REVISIONS') status = 'NEEDS REVISION'
 
@@ -62,7 +65,7 @@ export default function ContentPipelineBar() {
   const pieChartData = chartData.filter((d) => d.value > 0)
 
   const totalPosts = posts.filter((post) => {
-    let status = post.status?.replace('_', ' ') || 'DRAFT'
+    let status = getPublishState(post)?.replace('_', ' ') || 'DRAFT'
     if (status === 'PENDING') status = 'PENDING APPROVAL'
     if (status === 'REVISIONS') status = 'NEEDS REVISION'
     return ALLOWED_STATUSES.includes(status)

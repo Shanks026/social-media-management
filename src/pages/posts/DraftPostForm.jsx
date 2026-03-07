@@ -66,6 +66,7 @@ import { useAuth } from '@/context/AuthContext'
 import { supabase } from '@/lib/supabase'
 import { useSubscription } from '@/api/useSubscription'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Checkbox } from '@/components/ui/checkbox'
 
 const MAX_FILES = 5
 
@@ -181,6 +182,10 @@ export default function DraftPostForm({
   const fileInputRef = useRef(null)
   const isStorageFull = subscription?.storage_display?.percent >= 100
 
+  const [perPlatformMode, setPerPlatformMode] = useState(false)
+  // { [platformId]: { date: Date | null, time: '09:00' } }
+  const [platformSchedulesState, setPlatformSchedulesState] = useState({})
+
   const form = useForm({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -226,8 +231,86 @@ export default function DraftPostForm({
         type: isRemoteVideo(url) ? 'video' : 'image',
       }))
       setPreviews(initialPreviews)
+
+      // Populate per-platform scheduling state if present
+      if (initialData.platform_schedules) {
+        setPerPlatformMode(true)
+        const state = {}
+        Object.entries(initialData.platform_schedules).forEach(([platform, { scheduled_at }]) => {
+          const d = new Date(scheduled_at)
+          state[platform] = { date: d, time: format(d, 'HH:mm') }
+        })
+        setPlatformSchedulesState(state)
+      } else {
+        setPerPlatformMode(false)
+        setPlatformSchedulesState({})
+      }
     }
   }, [initialData, open, form])
+
+  // Sync per-platform state rows when selected platforms change
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!perPlatformMode) return
+    const currentDate = form.getValues('target_date')
+    setPlatformSchedulesState((prev) => {
+      const next = {}
+      watchedPlatforms.forEach((p) => {
+        if (prev[p]) {
+          next[p] = prev[p]
+        } else {
+          next[p] = {
+            date: currentDate || null,
+            time: currentDate ? format(currentDate, 'HH:mm') : '09:00',
+          }
+        }
+      })
+      return next
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [watchedPlatforms.join(','), perPlatformMode])
+
+  // Auto-compute target_date = earliest scheduled_at across all platforms
+  useEffect(() => {
+    if (!perPlatformMode) return
+    const dates = Object.values(platformSchedulesState)
+      .filter(({ date, time }) => date && time)
+      .map(({ date, time }) => {
+        const [hours, minutes] = time.split(':').map(Number)
+        return setMinutes(setHours(date, hours), minutes)
+      })
+    if (!dates.length) return
+    const minDate = new Date(Math.min(...dates.map((d) => d.getTime())))
+    form.setValue('target_date', minDate)
+  }, [platformSchedulesState, perPlatformMode, form])
+
+  function buildPlatformSchedulesPayload(state) {
+    return Object.fromEntries(
+      Object.entries(state).map(([platform, { date, time }]) => {
+        const [hours, minutes] = time.split(':').map(Number)
+        const dt = setMinutes(setHours(date, hours), minutes)
+        return [platform, { scheduled_at: dt.toISOString(), published_at: null }]
+      }),
+    )
+  }
+
+  function handlePerPlatformToggle(checked) {
+    if (checked) {
+      const currentDate = form.getValues('target_date')
+      const initialState = {}
+      watchedPlatforms.forEach((p) => {
+        initialState[p] = {
+          date: currentDate || null,
+          time: currentDate ? format(currentDate, 'HH:mm') : '09:00',
+        }
+      })
+      setPlatformSchedulesState(initialState)
+      setPerPlatformMode(true)
+    } else {
+      setPlatformSchedulesState({})
+      setPerPlatformMode(false)
+    }
+  }
 
   const { data: client, isLoading: isClientLoading } = useQuery({
     queryKey: ['client', effectiveClientId],
@@ -255,6 +338,17 @@ export default function DraftPostForm({
       })
       return
     }
+
+    if (perPlatformMode) {
+      const incomplete = watchedPlatforms.filter(
+        (p) => !platformSchedulesState[p]?.date || !platformSchedulesState[p]?.time,
+      )
+      if (incomplete.length > 0) {
+        toast.error('Please set a date and time for all selected platforms.')
+        return
+      }
+    }
+
     mutation.mutate(values)
   }
 
@@ -297,6 +391,9 @@ export default function DraftPostForm({
         target_date: values.target_date?.toISOString(),
         userId: user?.id,
         adminNotes: values.admin_notes || null,
+        platformSchedules: perPlatformMode
+          ? buildPlatformSchedulesPayload(platformSchedulesState)
+          : null,
       }
 
       if (isEditMode) return updatePost(initialData.version_id, payload)
@@ -322,6 +419,8 @@ export default function DraftPostForm({
       if (p.url.startsWith('blob:')) URL.revokeObjectURL(p.url)
     })
     setPreviews([])
+    setPerPlatformMode(false)
+    setPlatformSchedulesState({})
     onOpenChange(false)
   }
 
@@ -697,96 +796,211 @@ export default function DraftPostForm({
                 )}
               />
 
-              <div className="grid grid-cols-2 gap-4">
-                {/* Date Picker */}
-                <FormField
-                  control={form.control}
-                  name="target_date"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-col">
-                      <FormLabel>
-                        Proposed Schedule Date <span className="text-destructive">*</span>
-                      </FormLabel>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <FormControl>
+              {/* Single-date pickers — hidden when per-platform mode is on */}
+              {!perPlatformMode && (
+                <div className="grid grid-cols-2 gap-4">
+                  {/* Date Picker */}
+                  <FormField
+                    control={form.control}
+                    name="target_date"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-col">
+                        <FormLabel>
+                          Proposed Schedule Date <span className="text-destructive">*</span>
+                        </FormLabel>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <FormControl>
+                              <Button
+                                variant="outline"
+                                className={cn(
+                                  'w-full pl-3 text-left font-normal',
+                                  !field.value && 'text-muted-foreground',
+                                )}
+                              >
+                                {field.value ? (
+                                  format(field.value, 'PPP')
+                                ) : (
+                                  <span>Pick a date</span>
+                                )}
+                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                              </Button>
+                            </FormControl>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={field.value}
+                              onSelect={field.onChange}
+                              disabled={(date) =>
+                                date < new Date(new Date().setHours(0, 0, 0, 0))
+                              }
+                              initialFocus
+                            />
+                          </PopoverContent>
+                        </Popover>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Time Picker */}
+                  <FormItem className="flex flex-col">
+                    <FormLabel>
+                      Time <span className="text-destructive">*</span>
+                    </FormLabel>
+                    <Select
+                      disabled={!form.watch('target_date')}
+                      value={
+                        form.watch('target_date')
+                          ? format(form.watch('target_date'), 'HH:mm')
+                          : ''
+                      }
+                      onValueChange={(val) => {
+                        const [hours, minutes] = val.split(':').map(Number)
+                        const current =
+                          form.getValues('target_date') || new Date()
+                        form.setValue(
+                          'target_date',
+                          setMinutes(setHours(current, hours), minutes),
+                        )
+                      }}
+                    >
+                      <FormControl>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select time" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent className="max-h-[200px]">
+                        {Array.from({ length: 48 }).map((_, i) => {
+                          const hour = Math.floor(i / 2)
+                            .toString()
+                            .padStart(2, '0')
+                          const min = i % 2 === 0 ? '00' : '30'
+                          const time = `${hour}:${min}`
+                          return (
+                            <SelectItem key={time} value={time}>
+                              {time}
+                            </SelectItem>
+                          )
+                        })}
+                      </SelectContent>
+                    </Select>
+                  </FormItem>
+                </div>
+              )}
+
+              {/* Per-platform scheduling toggle — only shown when platforms are selected */}
+              {watchedPlatforms.length > 0 && (
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="per-platform-mode"
+                    checked={perPlatformMode}
+                    onCheckedChange={handlePerPlatformToggle}
+                  />
+                  <label
+                    htmlFor="per-platform-mode"
+                    className="text-sm text-muted-foreground cursor-pointer select-none"
+                  >
+                    Schedule each platform separately
+                  </label>
+                </div>
+              )}
+
+              {/* Per-platform schedule rows */}
+              {perPlatformMode && watchedPlatforms.length > 0 && (
+                <div className="space-y-3">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    Per-platform schedule
+                  </p>
+                  {watchedPlatforms.map((platformId) => {
+                    const config = PLATFORM_CONFIG[platformId]
+                    if (!config) return null
+                    const Icon = config.icon
+                    const sched = platformSchedulesState[platformId] || {
+                      date: null,
+                      time: '09:00',
+                    }
+                    return (
+                      <div key={platformId} className="flex items-center gap-2">
+                        <div className="flex items-center gap-1.5 min-w-[110px]">
+                          <Icon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                          <span className="text-sm font-medium truncate">
+                            {config.label}
+                          </span>
+                        </div>
+                        <Popover>
+                          <PopoverTrigger asChild>
                             <Button
+                              type="button"
                               variant="outline"
                               className={cn(
-                                'w-full pl-3 text-left font-normal',
-                                !field.value && 'text-muted-foreground',
+                                'flex-1 justify-start text-left font-normal h-9 text-sm',
+                                !sched.date && 'text-muted-foreground',
                               )}
                             >
-                              {field.value ? (
-                                format(field.value, 'PPP')
-                              ) : (
-                                <span>Pick a date</span>
-                              )}
-                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                              {sched.date ? format(sched.date, 'PPP') : 'Pick a date'}
+                              <CalendarIcon className="ml-auto h-3.5 w-3.5 opacity-50" />
                             </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={field.value}
-                            onSelect={field.onChange}
-                            disabled={(date) =>
-                              date < new Date(new Date().setHours(0, 0, 0, 0))
-                            }
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
-                      <FormMessage />
-                    </FormItem>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={sched.date}
+                              onSelect={(date) =>
+                                setPlatformSchedulesState((prev) => ({
+                                  ...prev,
+                                  [platformId]: { ...prev[platformId], date },
+                                }))
+                              }
+                              disabled={(date) =>
+                                date < new Date(new Date().setHours(0, 0, 0, 0))
+                              }
+                              initialFocus
+                            />
+                          </PopoverContent>
+                        </Popover>
+                        <Select
+                          value={sched.time || '09:00'}
+                          onValueChange={(val) =>
+                            setPlatformSchedulesState((prev) => ({
+                              ...prev,
+                              [platformId]: { ...prev[platformId], time: val },
+                            }))
+                          }
+                        >
+                          <SelectTrigger className="w-24 h-9">
+                            <SelectValue placeholder="Time" />
+                          </SelectTrigger>
+                          <SelectContent className="max-h-[200px]">
+                            {Array.from({ length: 48 }).map((_, i) => {
+                              const hour = Math.floor(i / 2)
+                                .toString()
+                                .padStart(2, '0')
+                              const min = i % 2 === 0 ? '00' : '30'
+                              const time = `${hour}:${min}`
+                              return (
+                                <SelectItem key={time} value={time}>
+                                  {time}
+                                </SelectItem>
+                              )
+                            })}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )
+                  })}
+                  {form.watch('target_date') && (
+                    <p className="text-xs text-muted-foreground">
+                      Target date auto-set to{' '}
+                      <span className="font-medium text-foreground">
+                        {format(form.watch('target_date'), 'PPP')}
+                      </span>{' '}
+                      (earliest)
+                    </p>
                   )}
-                />
-
-                {/* Time Picker */}
-                <FormItem className="flex flex-col">
-                  <FormLabel>
-                    Time <span className="text-destructive">*</span>
-                  </FormLabel>
-                  <Select
-                    disabled={!form.watch('target_date')}
-                    value={
-                      form.watch('target_date')
-                        ? format(form.watch('target_date'), 'HH:mm')
-                        : ''
-                    }
-                    onValueChange={(val) => {
-                      const [hours, minutes] = val.split(':').map(Number)
-                      const current =
-                        form.getValues('target_date') || new Date()
-                      form.setValue(
-                        'target_date',
-                        setMinutes(setHours(current, hours), minutes),
-                      )
-                    }}
-                  >
-                    <FormControl>
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select time" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent className="max-h-[200px]">
-                      {Array.from({ length: 48 }).map((_, i) => {
-                        const hour = Math.floor(i / 2)
-                          .toString()
-                          .padStart(2, '0')
-                        const min = i % 2 === 0 ? '00' : '30'
-                        const time = `${hour}:${min}`
-                        return (
-                          <SelectItem key={time} value={time}>
-                            {time}
-                          </SelectItem>
-                        )
-                      })}
-                    </SelectContent>
-                  </Select>
-                </FormItem>
-              </div>
+                </div>
+              )}
 
               {/* Title and Caption */}
               <FormField

@@ -30,7 +30,8 @@ function buildPostsQuery(userId, filters = {}) {
         version_number,
         target_date,
         created_at,
-        updated_at
+        updated_at,
+        platform_schedules
       )
     `,
     )
@@ -95,6 +96,7 @@ function normalizePosts(data) {
         target_date: v.target_date,
         created_at: v.created_at,
         updated_at: v.updated_at,
+        platform_schedules: v.platform_schedules,
         // Client info
         client_name: c?.name || 'Unknown',
         client_logo: c?.logo_url,

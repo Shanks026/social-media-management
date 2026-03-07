@@ -18,6 +18,11 @@ import {
   History,
   Play,
   ChevronDownIcon,
+  Instagram,
+  Linkedin,
+  Facebook,
+  Youtube,
+  Globe,
 } from 'lucide-react'
 
 // UI Components
@@ -41,6 +46,7 @@ import {
 
 // Custom Components & API
 import { deleteIndividualMedia } from '@/api/posts'
+import { getPublishState } from '@/lib/helper'
 import StatusBadge from '@/components/StatusBadge'
 import PlatformBadge from '@/components/PlatformBadge'
 import ClientNotes from './ClientNotes'
@@ -58,6 +64,15 @@ const isVideoSource = (url) => {
     url.includes('video') ||
     url.startsWith('blob:')
   )
+}
+
+const PLATFORM_CONFIG = {
+  instagram: { label: 'Instagram', icon: Instagram },
+  linkedin: { label: 'LinkedIn', icon: Linkedin },
+  facebook: { label: 'Facebook', icon: Facebook },
+  google_business: { label: 'Google Business', icon: Globe },
+  youtube: { label: 'YouTube', icon: Youtube },
+  twitter: { label: 'Twitter/X', icon: Globe },
 }
 
 /**
@@ -118,10 +133,12 @@ export default function PostContent({
   onSendForApproval,
   onApproveAndSchedule,
   onPublish,
+  onPublishPlatform,
   onCreateRevision,
   isRevisionPending,
   isApprovalPending,
   isPublishPending,
+  publishingPlatformId,
   isApproveSchedulePending,
   onEdit,
 }) {
@@ -199,7 +216,7 @@ export default function PostContent({
       <div className="flex flex-col md:flex-row justify-between items-start gap-6">
         <div className="space-y-6 flex-1">
           <div className="flex flex-wrap items-center gap-3">
-            <StatusBadge status={post.status} />
+            <StatusBadge status={getPublishState(post)} />
             <div className="flex flex-wrap gap-2">
               {[].concat(post.platform || []).map((p) => (
                 <PlatformBadge key={p} platform={p} />
@@ -225,40 +242,107 @@ export default function PostContent({
                 Created {format(new Date(post.created_at), 'dd MMM, yyyy')}
               </span>
 
-              {post.status === 'PUBLISHED' ? (
+              {/* Single-date display — only when no per-platform schedules */}
+              {!post.platform_schedules && (
+                post.status === 'PUBLISHED' ? (
+                  <div className="flex items-center gap-2 text-sm">
+                    <div className="h-4 w-px bg-border hidden sm:block" />
+                    <CheckCircle2 size={14} className="text-emerald-600" />
+                    <span className="font-medium">Published:</span>
+                    <Badge variant="secondary">
+                      {formatDate(post.published_at || post.updated_at)}
+                    </Badge>
+                  </div>
+                ) : (
+                  post.target_date && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <div className="h-4 w-px bg-border hidden sm:block" />
+                      {post.status === 'SCHEDULED' ? (
+                        <Clock size={14} className="text-violet-600" />
+                      ) : (
+                        <CalendarIcon size={14} />
+                      )}
+                      <span className="text-muted-foreground">
+                        {post.status === 'SCHEDULED'
+                          ? 'Scheduled for:'
+                          : 'Target Date:'}
+                      </span>
+                      <Badge
+                        variant={
+                          post.status === 'SCHEDULED' ? 'secondary' : 'outline'
+                        }
+                      >
+                        {formatDate(post.target_date)}
+                      </Badge>
+                    </div>
+                  )
+                )
+              )}
+
+              {/* Per-platform: published state shows overall published badge */}
+              {post.platform_schedules && post.status === 'PUBLISHED' && (
                 <div className="flex items-center gap-2 text-sm">
                   <div className="h-4 w-px bg-border hidden sm:block" />
-                  <CheckCircle2 size={14} className="text-lime-600" />
+                  <CheckCircle2 size={14} className="text-emerald-600" />
                   <span className="font-medium">Published:</span>
                   <Badge variant="secondary">
                     {formatDate(post.published_at || post.updated_at)}
                   </Badge>
                 </div>
-              ) : (
-                post.target_date && (
-                  <div className="flex items-center gap-2 text-sm">
-                    <div className="h-4 w-px bg-border hidden sm:block" />
-                    {post.status === 'SCHEDULED' ? (
-                      <Clock size={14} className="text-violet-600" />
-                    ) : (
-                      <CalendarIcon size={14} />
-                    )}
-                    <span className="text-muted-foreground">
-                      {post.status === 'SCHEDULED'
-                        ? 'Scheduled for:'
-                        : 'Target Date:'}
-                    </span>
-                    <Badge
-                      variant={
-                        post.status === 'SCHEDULED' ? 'secondary' : 'outline'
-                      }
-                    >
-                      {formatDate(post.target_date)}
-                    </Badge>
-                  </div>
-                )
               )}
             </div>
+
+            {/* Per-platform schedule grid */}
+            {post.platform_schedules && post.status !== 'PUBLISHED' && (
+              <div className="space-y-2 pt-1">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  Platform Schedule
+                </p>
+                {Object.entries(post.platform_schedules).map(
+                  ([platformId, { scheduled_at, published_at }]) => {
+                    const config = PLATFORM_CONFIG[platformId]
+                    const Icon = config?.icon ?? Globe
+                    return (
+                      <div key={platformId} className="flex items-center gap-3">
+                        <div className="flex items-center gap-1.5 min-w-[120px]">
+                          <Icon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                          <span className="text-sm font-medium">
+                            {config?.label ?? platformId}
+                          </span>
+                        </div>
+                        <span className="text-sm text-muted-foreground">
+                          {format(new Date(scheduled_at), 'dd MMM, p')}
+                        </span>
+                        {published_at ? (
+                          <Badge
+                            variant="outline"
+                            className="gap-1 text-xs text-emerald-700 bg-emerald-50 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20"
+                          >
+                            <CheckCircle2 size={11} />
+                            Published
+                          </Badge>
+                        ) : post.status === 'SCHEDULED' ? (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 px-3 text-xs gap-1"
+                            disabled={!!publishingPlatformId}
+                            onClick={() => onPublishPlatform?.(platformId)}
+                          >
+                            {publishingPlatformId === platformId ? (
+                              <Loader2 size={11} className="animate-spin" />
+                            ) : (
+                              <Play size={11} />
+                            )}
+                            Publish
+                          </Button>
+                        ) : null}
+                      </div>
+                    )
+                  },
+                )}
+              </div>
+            )}
           </div>
         </div>
 
@@ -298,7 +382,7 @@ export default function PostContent({
               )
             )}
 
-            {/* SCHEDULED — both get Publish Now; internal also gets Create New Version */}
+            {/* SCHEDULED — both get Publish Now (unless per-platform); internal also gets Create New Version */}
             {post.status === 'SCHEDULED' && (
               <>
                 {isInternal && (
@@ -316,18 +400,20 @@ export default function PostContent({
                     New Version
                   </Button>
                 )}
-                <Button
-                  disabled={isPublishPending}
-                  onClick={onPublish}
-                  className="gap-2 px-6 font-semibold shadow-sm transition-all hover:-translate-y-px"
-                >
-                  {isPublishPending ? (
-                    <Loader2 size={16} className="animate-spin" />
-                  ) : (
-                    <Play size={16} />
-                  )}
-                  Publish Now
-                </Button>
+                {!post.platform_schedules && (
+                  <Button
+                    disabled={isPublishPending}
+                    onClick={onPublish}
+                    className="gap-2 px-6 font-semibold shadow-sm transition-all hover:-translate-y-px"
+                  >
+                    {isPublishPending ? (
+                      <Loader2 size={16} className="animate-spin" />
+                    ) : (
+                      <Play size={16} />
+                    )}
+                    Publish Now
+                  </Button>
+                )}
               </>
             )}
 
@@ -398,9 +484,11 @@ export default function PostContent({
                 )}
                 {post.status === 'SCHEDULED' && (
                   <>
-                    <DropdownMenuItem onClick={onPublish}>
-                      <Play size={14} className="mr-2" /> Publish Now
-                    </DropdownMenuItem>
+                    {!post.platform_schedules && (
+                      <DropdownMenuItem onClick={onPublish}>
+                        <Play size={14} className="mr-2" /> Publish Now
+                      </DropdownMenuItem>
+                    )}
                     {isInternal && (
                       <DropdownMenuItem onClick={onCreateRevision}>
                         <Plus size={14} className="mr-2" /> New Version

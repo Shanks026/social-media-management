@@ -1,7 +1,7 @@
 # Feature: Per-Platform Scheduling & Publishing Enhancement
 
 **File**: `.claude/features/06-post-creation-enhancement.md`
-**Status**: 🔲 Phase 1 ready to build
+**Status**: ✅ Phase 1 complete — ✅ Phase 2 complete — ✅ Phase 3 complete — ✅ Phase 4 complete — ✅ Phase 5 complete — ✅ Phase 6 complete (absorbed into Phase 3)
 **Priority**: High — core product upgrade
 **Last Updated**: March 2026
 
@@ -154,31 +154,36 @@ export function effectivePlatformDate(version, platform) {
 
 ---
 
-## Phase 1 — DB Migration & API Foundation
+## ✅ Phase 1 — DB Migration & API Foundation
 
 **Goal**: Add the JSONB column and update RPCs + API functions. Zero UI changes. All existing posts and workflows work identically after this phase.
 
 ### DB changes
-- [ ] Run migration: `ALTER TABLE post_versions ADD COLUMN platform_schedules jsonb DEFAULT NULL`
-- [ ] Update `create_post_draft_v3` RPC: add `p_platform_schedules jsonb DEFAULT NULL` parameter, include in INSERT column list and VALUES
-- [ ] Update `create_revision_version` RPC (newer version — uses `SELECT * INTO v_old_version_record`): add `platform_schedules` to INSERT column list + `v_old_version_record.platform_schedules` to VALUES
-- [ ] Update `get_post_by_token` RPC: add `platform_schedules` to SELECT
+- [x] Run migration: `ALTER TABLE post_versions ADD COLUMN platform_schedules jsonb DEFAULT NULL`
+- [x] Update `create_post_draft_v3` RPC: add `p_platform_schedules jsonb DEFAULT NULL` parameter, include in INSERT column list and VALUES
+- [x] Update `create_revision_version` RPC (newer version — uses `SELECT * INTO v_old_version_record`): add `platform_schedules` to INSERT column list + `v_old_version_record.platform_schedules` to VALUES
+- [x] Update `get_post_by_token` RPC: add `platform_schedules` to SELECT
 
 ### API layer (`src/api/posts.js`)
-- [ ] `createDraftPost()`: add optional `platformSchedules` param; pass as `p_platform_schedules: platformSchedules ?? null` to RPC
-- [ ] `updatePost()`: add optional `platformSchedules` param; include `platform_schedules` in the Supabase `.update({})` call
-- [ ] `fetchAllPostsByClient()`: add `platform_schedules` to the PostgREST select inside `post_versions!fk_current_version (...)`
-- [ ] Add `getPublishState` and `effectivePlatformDate` helpers to `src/lib/helper.js`
+- [x] `createDraftPost()`: add optional `platformSchedules` param; pass as `p_platform_schedules: platformSchedules ?? null` to RPC
+- [x] `updatePost()`: add optional `platformSchedules` param; include `platform_schedules` in the Supabase `.update({})` call
+- [x] `fetchAllPostsByClient()`: add `platform_schedules` to the PostgREST select inside `post_versions!fk_current_version (...)`
+- [x] Add `getPublishState` and `effectivePlatformDate` helpers to `src/lib/helper.js`
 
 ### Verification
-- [ ] Existing post creation works (no regression — `p_platform_schedules` defaults to null)
-- [ ] Existing post edit works (platform_schedules not touched if not passed)
-- [ ] Revision creation copies `platform_schedules` (confirmed by reading new version row)
-- [ ] `fetchAllPostsByClient` returns `platform_schedules` field (null for existing posts)
+- [x] Existing post creation works (no regression — `p_platform_schedules` defaults to null)
+- [x] Existing post edit works (platform_schedules not touched if not passed)
+- [x] Revision creation copies `platform_schedules` (confirmed by reading new version row)
+- [x] `fetchAllPostsByClient` returns `platform_schedules` field (null for existing posts)
+
+### Implementation Notes
+- All DB changes applied directly via Supabase MCP
+- `createDraftPost` and `updatePost` both default `platformSchedules` to `null` when not passed — zero regression for existing callers
+- `getPublishState` and `effectivePlatformDate` added to `src/lib/helper.js` as named exports
 
 ---
 
-## Phase 2 — DraftPostForm: Per-Platform Scheduling UI
+## ✅ Phase 2 — DraftPostForm: Per-Platform Scheduling UI
 
 **Goal**: Agency can optionally set independent schedule dates per platform inside the create/edit draft dialog.
 
@@ -255,19 +260,25 @@ When `initialData.platform_schedules` is set:
 - Disable the toggle (can't switch back to single-date without clearing)
 
 ### Checklist
-- [ ] Per-platform toggle renders below the date/time row
-- [ ] Per-platform rows appear only for selected platforms
-- [ ] Rows update when platforms are added/removed
-- [ ] `target_date` auto-computes to min of all platform dates in per-platform mode
-- [ ] Per-platform mode: all rows required before submit (Zod + onSubmit guard)
-- [ ] Edit mode: existing `platform_schedules` populates the rows correctly
-- [ ] Payload `platformSchedules` passes through `createDraftPost` → RPC correctly
-- [ ] Payload `platformSchedules` passes through `updatePost` → Supabase update correctly
-- [ ] Single-date mode: existing behaviour completely unchanged
+- [x] Per-platform toggle renders below the date/time row
+- [x] Per-platform rows appear only for selected platforms
+- [x] Rows update when platforms are added/removed
+- [x] `target_date` auto-computes to min of all platform dates in per-platform mode
+- [x] Per-platform mode: all rows required before submit (onSubmit guard + toast)
+- [x] Edit mode: existing `platform_schedules` populates the rows correctly
+- [x] Payload `platformSchedules` passes through `createDraftPost` → RPC correctly
+- [x] Payload `platformSchedules` passes through `updatePost` → Supabase update correctly
+- [x] Single-date mode: existing behaviour completely unchanged
+
+### Implementation Notes
+- Per-platform state managed outside react-hook-form (`perPlatformMode` + `platformSchedulesState`) — keeps Zod schema clean
+- `target_date` field auto-computed via `useEffect` watching `platformSchedulesState`; platform sync uses `.join(',')` string dep to avoid stale array reference re-runs
+- Toggle only visible when ≥1 platform is selected
+- Edit mode: `platform_schedules` presence auto-enables perPlatformMode and pre-fills rows; absence resets state cleanly
 
 ---
 
-## Phase 3 — PostContent & PostDetails: Schedule Display + Per-Platform Publish
+## ✅ Phase 3 — PostContent & PostDetails: Schedule Display + Per-Platform Publish
 
 **Goal**: When a post has `platform_schedules`, show per-platform dates in PostContent and replace the single "Publish Now" button with per-platform publish actions.
 
@@ -354,14 +365,20 @@ Add a new dialog `isPlatformPublishConfirmOpen` that:
 For single-platform publishes inside a per-platform post (not yet all done), use a lighter confirmation toast-style instead of a heavy dialog.
 
 ### Checklist
-- [ ] `PostContent` displays per-platform schedule grid when `platform_schedules` is set
-- [ ] Per-platform schedule grid shows publish state per platform (published ✓ or Publish button)
-- [ ] Clicking Publish on a platform triggers `markPlatformAsPublishedMutation`
-- [ ] When all platforms published: status → PUBLISHED, `published_at` set
-- [ ] Single-date posts: "Publish Now" button and flow completely unchanged
-- [ ] `getPublishState()` helper used for derived display state in PostContent
-- [ ] `PARTIALLY_PUBLISHED` display state shows correctly (some done, some pending)
-- [ ] Published_at shown correctly in PostContent header when status = PUBLISHED
+- [x] `PostContent` displays per-platform schedule grid when `platform_schedules` is set
+- [x] Per-platform schedule grid shows publish state per platform (published ✓ or Publish button)
+- [x] Clicking Publish on a platform triggers `markPlatformAsPublishedMutation`
+- [x] When all platforms published: status → PUBLISHED, `published_at` set
+- [x] Single-date posts: "Publish Now" button and flow completely unchanged
+- [x] `getPublishState()` helper used for derived display state in PostContent
+- [x] `PARTIALLY_PUBLISHED` display state shows correctly (some done, some pending)
+- [x] Published_at shown correctly in PostContent header when status = PUBLISHED
+
+### Implementation Notes
+- `PARTIALLY_PUBLISHED` added to `StatusBadge.jsx` with emerald colour scheme
+- `PostActionDialogs` Approve & Schedule dialog updated for Phase 6 scope (per-platform summary) — done here since it's a prerequisite for the mutation branch
+- Per-platform Publish buttons fire directly without a confirm dialog (toast-style per feature doc); single-date "Publish Now" still uses the existing heavy dialog
+- `markPlatformAsPublishedMutation` in PostDetails builds the full updated JSONB client-side and writes it atomically
 
 ---
 
@@ -410,12 +427,17 @@ The confirmation screen (after approve, line ~168) should show "All scheduled" w
 `handleStatusUpdate('APPROVED')` → `update_post_status_by_token` RPC → `SCHEDULED`. No change needed. The JSONB is already set from DraftPostForm.
 
 ### Checklist
-- [ ] `get_post_by_token` RPC returns `platform_schedules` field (Phase 1 prerequisite)
-- [ ] Single-date posts: public review page unchanged
-- [ ] Per-platform posts: platform schedule grid displayed in meta row
-- [ ] Approval confirm dialog shows per-platform dates in post summary box
-- [ ] Post-approval confirmation screen shows earliest date as primary date
-- [ ] Approval action itself unchanged — no new logic needed
+- [x] `get_post_by_token` RPC returns `platform_schedules` field (Phase 1 prerequisite)
+- [x] Single-date posts: public review page unchanged
+- [x] Per-platform posts: platform schedule grid displayed in meta row
+- [x] Approval confirm dialog shows per-platform dates in post summary box
+- [x] Post-approval confirmation screen shows platform count instead of single date
+- [x] Approval action itself unchanged — no new logic needed
+
+### Implementation Notes
+- Per-platform schedule replaces the single `target_date` badge in the meta row using `Object.entries(post.platform_schedules)`
+- Approval dialog summary conditionally renders per-platform rows vs single-date line
+- Confirmation screen shows "across N platform(s)" for per-platform posts; falls back to `target_date` for single-date posts
 
 ---
 
@@ -450,11 +472,17 @@ For single-date posts: existing email flow unchanged — do not call this functi
 Only called from `markPlatformAsPublishedMutation`. The existing "Publish Now" flow for single-date posts uses the existing email mechanism (if any) — do not change it.
 
 ### Checklist
-- [ ] Edge function created and deployed
-- [ ] Per-platform publish email sent on each platform publish
-- [ ] All-published email sent when `allPublished = true` (not both — guard against double-email)
-- [ ] Single-date post publish: existing email behaviour unchanged
-- [ ] Email uses agency branding if `branding_agency_sidebar = true`
+- [x] Edge function created and deployed (`send-platform-published-email`, function ID `560b80f4`)
+- [x] Per-platform publish email sent on each platform publish
+- [x] All-published email sent when `allPublished = true` (not both — guard against double-email)
+- [x] Single-date post publish: existing email behaviour unchanged (separate flow)
+- [x] Internal clients skipped (no self-notification)
+
+### Implementation Notes
+- Edge function guards against double-send: `all_published = true` path checks DB `status === 'PUBLISHED'` before sending
+- Called fire-and-forget from `markPlatformAsPublishedMutation.onSuccess` — email failure doesn't affect UI
+- `versionId` added to mutation return value to pass to the edge function invocation
+- Internal clients (`is_internal = true`) are skipped in the function body
 
 ---
 

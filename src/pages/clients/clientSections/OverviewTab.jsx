@@ -58,6 +58,7 @@ import {
   startOfMonth,
   endOfMonth,
 } from 'date-fns'
+import { getPublishState } from '@/lib/helper'
 import MeetingRow from '@/components/MeetingRow'
 import {
   fetchClientNotes,
@@ -90,6 +91,7 @@ const chartConfig = {
   'PENDING APPROVAL': { label: 'Pending Approval', color: '#f97316' }, // Tailwind orange-500
   'NEEDS REVISION': { label: 'Needs Revision', color: '#ec4899' }, // Tailwind pink-500
   SCHEDULED: { label: 'Scheduled', color: '#a855f7' }, // Tailwind purple-500
+  'PARTIALLY PUBLISHED': { label: 'Partially Published', color: '#84cc16' }, // Tailwind lime-500
   PUBLISHED: { label: 'Published', color: '#10b981' }, // Tailwind emerald-500
 }
 
@@ -98,6 +100,7 @@ const ALLOWED_STATUSES = [
   'PENDING APPROVAL',
   'NEEDS REVISION',
   'SCHEDULED',
+  'PARTIALLY PUBLISHED',
   'PUBLISHED',
 ]
 
@@ -258,7 +261,8 @@ export default function OverviewTab({ client }) {
   }, {})
 
   posts.forEach((post) => {
-    const status = post.status?.replace('_', ' ') || 'DRAFT'
+    const rawStatus = getPublishState(post) || 'DRAFT'
+    const status = rawStatus.replace('_', ' ')
     if (ALLOWED_STATUSES.includes(status)) {
       postCounts[status] += 1
     }
@@ -274,7 +278,7 @@ export default function OverviewTab({ client }) {
   const pieChartData = chartData.filter((d) => d.value > 0)
 
   const totalPosts = posts.filter((post) => {
-    const status = post.status?.replace('_', ' ') || 'DRAFT'
+    const status = getPublishState(post)?.replace('_', ' ') || 'DRAFT'
     return ALLOWED_STATUSES.includes(status)
   }).length
 

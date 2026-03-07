@@ -30,6 +30,7 @@ export default function PostDetails() {
   // Internal lifecycle: Approve & Schedule dialog state
   const [isApproveScheduleOpen, setIsApproveScheduleOpen] = useState(false)
   const [approveDate, setApproveDate] = useState(null)
+  const [publishingPlatformId, setPublishingPlatformId] = useState(null)
 
   // --- Queries ---
 
@@ -113,15 +114,24 @@ export default function PostDetails() {
   // Internal only: directly schedule without client approval
   const approveAndScheduleMutation = useMutation({
     mutationFn: async (versionId) => {
-      if (!approveDate) throw new Error('Please select a publish date.')
-      const { error: upError } = await supabase
-        .from('post_versions')
-        .update({
-          status: 'SCHEDULED',
-          target_date: approveDate.toISOString(),
-        })
-        .eq('id', versionId)
-      if (upError) throw upError
+      if (post.platform_schedules) {
+        // Per-platform: dates already in JSONB — just transition status
+        const { error: upError } = await supabase
+          .from('post_versions')
+          .update({ status: 'SCHEDULED' })
+          .eq('id', versionId)
+        if (upError) throw upError
+      } else {
+        if (!approveDate) throw new Error('Please select a publish date.')
+        const { error: upError } = await supabase
+          .from('post_versions')
+          .update({
+            status: 'SCHEDULED',
+            target_date: approveDate.toISOString(),
+          })
+          .eq('id', versionId)
+        if (upError) throw upError
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['post-version', postId] })
@@ -130,6 +140,48 @@ export default function PostDetails() {
       setApproveDate(null)
     },
     onError: (err) => toast.error(err.message),
+  })
+
+  const markPlatformAsPublishedMutation = useMutation({
+    mutationFn: async ({ versionId, platform }) => {
+      const current = post.platform_schedules
+      const updated = {
+        ...current,
+        [platform]: { ...current[platform], published_at: new Date().toISOString() },
+      }
+      const allPublished = Object.values(updated).every((v) => v.published_at)
+      const patch = {
+        platform_schedules: updated,
+        ...(allPublished && {
+          status: 'PUBLISHED',
+          published_at: new Date().toISOString(),
+        }),
+      }
+      const { error: upError } = await supabase
+        .from('post_versions')
+        .update(patch)
+        .eq('id', versionId)
+      if (upError) throw upError
+      return { platform, allPublished, versionId }
+    },
+    onSuccess: async ({ platform, allPublished, versionId }) => {
+      setPublishingPlatformId(null)
+      queryClient.invalidateQueries({ queryKey: ['post-version', postId] })
+      if (allPublished) {
+        toast.success('All platforms published — post marked as Published')
+      } else {
+        const label = platform.replace('_', ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+        toast.success(`${label} marked as published`)
+      }
+      const { error: fnError } = await supabase.functions.invoke('send-platform-published-email', {
+        body: { post_version_id: versionId, platform, all_published: allPublished },
+      })
+      if (fnError) console.error('[send-platform-published-email]', fnError)
+    },
+    onError: (err) => {
+      setPublishingPlatformId(null)
+      toast.error(err.message)
+    },
   })
 
   const markAsPublishedMutation = useMutation({
@@ -186,15 +238,20 @@ export default function PostDetails() {
         setShowHistory={setShowHistory}
         onSendForApproval={() => setIsConfirmOpen(true)}
         onApproveAndSchedule={() => {
-          if (post.target_date) setApproveDate(new Date(post.target_date))
+          if (!post.platform_schedules && post.target_date) setApproveDate(new Date(post.target_date))
           setIsApproveScheduleOpen(true)
         }}
         onPublish={() => setIsPublishConfirmOpen(true)}
+        onPublishPlatform={(platform) => {
+          setPublishingPlatformId(platform)
+          markPlatformAsPublishedMutation.mutate({ versionId: post.id, platform })
+        }}
         onCreateRevision={() => setIsRevisionConfirmOpen(true)}
         onEdit={() => setIsEditOpen(true)}
         isRevisionPending={createRevisionMutation.isPending}
         isApprovalPending={sendForApprovalMutation.isPending}
         isPublishPending={markAsPublishedMutation.isPending}
+        publishingPlatformId={publishingPlatformId}
         isApproveSchedulePending={approveAndScheduleMutation.isPending}
       />
 

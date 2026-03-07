@@ -50,6 +50,7 @@ import { CustomTable } from '@/components/CustomTable'
 import { CalendarPostCard } from '@/pages/calendar/CalendarPostCard'
 import DraftPostForm from '@/pages/posts/DraftPostForm'
 import StatusBadge from '@/components/StatusBadge'
+import { getPublishState } from '@/lib/helper'
 import { useHeader } from '@/components/misc/header-context'
 import { useGlobalPosts, usePostCounts } from '@/api/useGlobalPosts'
 import { useClients } from '@/api/clients'
@@ -253,7 +254,7 @@ export default function Posts() {
     {
       header: 'Status',
       width: '160px',
-      render: (item) => <StatusBadge status={item.status} />,
+      render: (item) => <StatusBadge status={getPublishState(item)} />,
     },
     {
       header: 'Target Date',
