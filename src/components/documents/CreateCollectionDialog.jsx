@@ -34,6 +34,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
 import { createCollection, updateCollection, documentKeys } from '@/api/documents'
 import { useAuth } from '@/context/AuthContext'
+import { useSubscription } from '@/api/useSubscription'
 
 const baseSchema = z.object({
   name: z.string().min(1, 'Name is required').max(100),
@@ -69,6 +70,8 @@ export default function CreateCollectionDialog({
 }) {
   const { user } = useAuth()
   const queryClient = useQueryClient()
+  const { data: sub } = useSubscription()
+  const effectiveOpen = open && (sub?.documents_collections ?? false)
   const isEdit = !!editCollection
   const schema = showClientSelector && !isEdit ? schemaWithClient : baseSchema
 
@@ -114,7 +117,7 @@ export default function CreateCollectionDialog({
   })
 
   return (
-    <Dialog open={open} onOpenChange={mutation.isPending ? undefined : onOpenChange}>
+    <Dialog open={effectiveOpen} onOpenChange={mutation.isPending ? undefined : onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{isEdit ? 'Rename Collection' : 'New Collection'}</DialogTitle>

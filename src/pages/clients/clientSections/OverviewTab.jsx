@@ -58,6 +58,7 @@ import {
   startOfMonth,
   endOfMonth,
 } from 'date-fns'
+import { getPublishState } from '@/lib/helper'
 import MeetingRow from '@/components/MeetingRow'
 import {
   fetchClientNotes,
@@ -90,6 +91,7 @@ const chartConfig = {
   'PENDING APPROVAL': { label: 'Pending Approval', color: '#f97316' }, // Tailwind orange-500
   'NEEDS REVISION': { label: 'Needs Revision', color: '#ec4899' }, // Tailwind pink-500
   SCHEDULED: { label: 'Scheduled', color: '#a855f7' }, // Tailwind purple-500
+  'PARTIALLY PUBLISHED': { label: 'Partially Published', color: '#84cc16' }, // Tailwind lime-500
   PUBLISHED: { label: 'Published', color: '#10b981' }, // Tailwind emerald-500
 }
 
@@ -98,6 +100,7 @@ const ALLOWED_STATUSES = [
   'PENDING APPROVAL',
   'NEEDS REVISION',
   'SCHEDULED',
+  'PARTIALLY PUBLISHED',
   'PUBLISHED',
 ]
 
@@ -258,7 +261,8 @@ export default function OverviewTab({ client }) {
   }, {})
 
   posts.forEach((post) => {
-    const status = post.status?.replace('_', ' ') || 'DRAFT'
+    const rawStatus = getPublishState(post) || 'DRAFT'
+    const status = rawStatus.replace('_', ' ')
     if (ALLOWED_STATUSES.includes(status)) {
       postCounts[status] += 1
     }
@@ -274,7 +278,7 @@ export default function OverviewTab({ client }) {
   const pieChartData = chartData.filter((d) => d.value > 0)
 
   const totalPosts = posts.filter((post) => {
-    const status = post.status?.replace('_', ' ') || 'DRAFT'
+    const status = getPublishState(post)?.replace('_', ' ') || 'DRAFT'
     return ALLOWED_STATUSES.includes(status)
   }).length
 
@@ -625,18 +629,19 @@ export default function OverviewTab({ client }) {
             </CardContent>
           </Card>
 
-          {/* Recent Transactions — external clients only */}
-          {!client?.is_internal && (
-            <Card className="border-none shadow-sm ring-1 ring-border/50 bg-card/50 flex flex-col gap-2">
-              <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
-                <CardTitle className="text-lg font-medium">
-                  Recent Transactions
-                </CardTitle>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 text-[11px] text-muted-foreground hover:text-foreground px-2 -mr-2"
-                  onClick={() => {
+          <Card className="border-none shadow-sm ring-1 ring-border/50 bg-card/50 flex flex-col gap-2">
+            <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
+              <CardTitle className="text-lg font-medium">
+                Recent Transactions
+              </CardTitle>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 text-[11px] text-muted-foreground hover:text-foreground px-2 -mr-2"
+                onClick={() => {
+                  if (client?.is_internal) {
+                    navigate('/finance/ledger')
+                  } else {
                     setSearchParams(
                       (prev) => {
                         prev.set('tab', 'financials')
@@ -645,83 +650,83 @@ export default function OverviewTab({ client }) {
                       },
                       { replace: false },
                     )
-                  }}
-                >
-                  View Ledger <ArrowUpRight className="ml-1 h-3 w-3" />
-                </Button>
-              </CardHeader>
-              <CardContent className="flex flex-col flex-1">
-                {isLoadingRecentTransactions ? (
-                  <div className="space-y-4 mt-2">
-                    {[1, 2, 3].map((i) => (
-                      <div key={i} className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <Skeleton className="h-8 w-8 rounded-full" />
-                          <div className="space-y-2">
-                            <Skeleton className="h-3 w-24" />
-                            <Skeleton className="h-2 w-16" />
-                          </div>
+                  }
+                }}
+              >
+                View Ledger <ArrowUpRight className="ml-1 h-3 w-3" />
+              </Button>
+            </CardHeader>
+            <CardContent className="flex flex-col flex-1">
+              {isLoadingRecentTransactions ? (
+                <div className="space-y-4 mt-2">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <Skeleton className="h-8 w-8 rounded-full" />
+                        <div className="space-y-2">
+                          <Skeleton className="h-3 w-24" />
+                          <Skeleton className="h-2 w-16" />
                         </div>
-                        <Skeleton className="h-3 w-12" />
                       </div>
-                    ))}
-                  </div>
-                ) : recentTransactions.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center text-center py-6 gap-2">
-                    <div className="h-10 w-10 border border-dashed rounded-full flex items-center justify-center text-muted-foreground">
-                      <CircleDollarSign className="h-4 w-4 opacity-50" />
+                      <Skeleton className="h-3 w-12" />
                     </div>
-                    <p className="text-sm text-muted-foreground">
-                      No recent transactions
-                    </p>
+                  ))}
+                </div>
+              ) : recentTransactions.length === 0 ? (
+                <div className="flex flex-col items-center justify-center text-center py-6 gap-2">
+                  <div className="h-10 w-10 border border-dashed rounded-full flex items-center justify-center text-muted-foreground">
+                    <CircleDollarSign className="h-4 w-4 opacity-50" />
                   </div>
-                ) : (
-                  <div className="space-y-3 mt-1">
-                    {recentTransactions.map((tx) => (
-                      <div
-                        key={tx.id}
-                        className="flex items-center justify-between py-1 group"
-                      >
-                        <div className="flex items-center gap-3 overflow-hidden">
-                          <div
-                            className={`h-8 w-8 rounded-full flex items-center justify-center shrink-0 ${
-                              tx.type === 'INCOME'
-                                ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-500'
-                                : 'bg-rose-500/10 text-rose-600 dark:text-rose-500'
-                            }`}
-                          >
-                            {tx.type === 'INCOME' ? (
-                              <ArrowUpRight className="h-4 w-4" />
-                            ) : (
-                              <ArrowDownRight className="h-4 w-4" />
-                            )}
-                          </div>
-                          <div className="min-w-0 pr-2">
-                            <p className="font-medium text-[13px] group-hover:text-primary transition-colors truncate">
-                              {tx.description || tx.category}
-                            </p>
-                            <p className="text-[11px] text-muted-foreground mt-0.5">
-                              {format(new Date(tx.date), 'MMM d, yyyy')}
-                            </p>
-                          </div>
-                        </div>
+                  <p className="text-sm text-muted-foreground">
+                    No recent transactions
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3 mt-1">
+                  {recentTransactions.map((tx) => (
+                    <div
+                      key={tx.id}
+                      className="flex items-center justify-between py-1 group"
+                    >
+                      <div className="flex items-center gap-3 overflow-hidden">
                         <div
-                          className={`text-sm tracking-tight font-medium shrink-0 ${
+                          className={`h-8 w-8 rounded-full flex items-center justify-center shrink-0 ${
                             tx.type === 'INCOME'
-                              ? 'text-emerald-600 dark:text-emerald-500'
-                              : 'text-rose-600 dark:text-rose-500'
+                              ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-500'
+                              : 'bg-rose-500/10 text-rose-600 dark:text-rose-500'
                           }`}
                         >
-                          {tx.type === 'INCOME' ? '+' : '-'}
-                          {formatCurrency(tx.amount)}
+                          {tx.type === 'INCOME' ? (
+                            <ArrowUpRight className="h-4 w-4" />
+                          ) : (
+                            <ArrowDownRight className="h-4 w-4" />
+                          )}
+                        </div>
+                        <div className="min-w-0 pr-2">
+                          <p className="font-medium text-[13px] group-hover:text-primary transition-colors truncate">
+                            {tx.description || tx.category}
+                          </p>
+                          <p className="text-[11px] text-muted-foreground mt-0.5">
+                            {format(new Date(tx.date), 'MMM d, yyyy')}
+                          </p>
                         </div>
                       </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
+                      <div
+                        className={`text-sm tracking-tight font-medium shrink-0 ${
+                          tx.type === 'INCOME'
+                            ? 'text-emerald-600 dark:text-emerald-500'
+                            : 'text-rose-600 dark:text-rose-500'
+                        }`}
+                      >
+                        {tx.type === 'INCOME' ? '+' : '-'}
+                        {formatCurrency(tx.amount)}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
       </div>
 

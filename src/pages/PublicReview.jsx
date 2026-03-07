@@ -166,7 +166,9 @@ export default function PublicReview() {
         </h2>
         <p className="animate-in fade-in slide-in-from-bottom-3 duration-500 delay-300 fill-mode-both mt-2 max-w-md text-muted-foreground leading-relaxed">
           {statusUpdated === 'SCHEDULED'
-            ? `Successfully scheduled${post?.target_date ? ` for ${format(new Date(post.target_date), 'PPP')}` : ''}.`
+            ? post?.platform_schedules
+              ? `Successfully scheduled across ${Object.keys(post.platform_schedules).length} platform${Object.keys(post.platform_schedules).length > 1 ? 's' : ''}.`
+              : `Successfully scheduled${post?.target_date ? ` for ${format(new Date(post.target_date), 'PPP')}` : ''}.`
             : "We've received your feedback and will prepare a new version shortly."}
         </p>
       </div>
@@ -244,7 +246,20 @@ export default function PublicReview() {
                     Created {format(new Date(post.created_at), 'MMM dd, yyyy')}
                   </span>
                 </div>
-                {post.target_date && (
+                {post.platform_schedules ? (
+                  <div className="space-y-1.5">
+                    <p className="text-xs font-semibold text-muted-foreground/60 uppercase tracking-wider">
+                      Planned Schedule
+                    </p>
+                    {Object.entries(post.platform_schedules).map(([platform, { scheduled_at }]) => (
+                      <div key={platform} className="flex items-center gap-2 text-sm font-semibold text-primary">
+                        <Clock size={13} />
+                        <span className="capitalize">{platform.replace('_', ' ')}:</span>
+                        <span>{format(new Date(scheduled_at), 'MMM dd @ p')}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : post.target_date ? (
                   <div className="flex items-center gap-2 font-semibold text-primary">
                     <Clock size={14} />
                     <span>
@@ -252,7 +267,7 @@ export default function PublicReview() {
                       {format(new Date(post.target_date), 'MMM dd @ p')}
                     </span>
                   </div>
-                )}
+                ) : null}
               </div>
 
               <div className="space-y-3">
@@ -308,12 +323,23 @@ export default function PublicReview() {
                     <p className="font-semibold text-foreground">
                       {post.title}
                     </p>
-                    <p className="text-muted-foreground">
-                      {post.platform.join(', ')}
-                      {post.target_date
-                        ? ` · ${format(new Date(post.target_date), 'MMM d, yyyy')}`
-                        : ''}
-                    </p>
+                    {post.platform_schedules ? (
+                      <div className="space-y-0.5">
+                        {Object.entries(post.platform_schedules).map(([platform, { scheduled_at }]) => (
+                          <p key={platform} className="text-muted-foreground text-xs">
+                            <span className="capitalize font-medium">{platform.replace('_', ' ')}</span>
+                            {' · '}{format(new Date(scheduled_at), 'MMM d, yyyy @ p')}
+                          </p>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-muted-foreground">
+                        {post.platform.join(', ')}
+                        {post.target_date
+                          ? ` · ${format(new Date(post.target_date), 'MMM d, yyyy')}`
+                          : ''}
+                      </p>
+                    )}
                   </div>
 
                   {/* What happens next */}

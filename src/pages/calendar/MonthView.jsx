@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils'
 import { Instagram, Linkedin, Youtube, Globe, Plus, Clock } from 'lucide-react'
 import { useState } from 'react'
 import { DayDetailDialog } from './DayDetailDialog'
+import { getPublishState } from '@/lib/helper'
 
 const PLATFORM_ICONS = {
   instagram: <Instagram className="size-3.5 text-muted-foreground" />,
@@ -25,7 +26,8 @@ const STATUS_STYLES = {
   PENDING_APPROVAL: 'border-l-orange-600',
   NEEDS_REVISION: 'border-l-pink-600 animate-pulse',
   SCHEDULED: 'border-l-purple-600',
-  PUBLISHED: 'border-l-lime-600',
+  PUBLISHED: 'border-l-emerald-600',
+  PARTIALLY_PUBLISHED: 'border-l-lime-600',
 }
 
 export default function MonthView({
@@ -99,7 +101,7 @@ export default function MonthView({
                     key={post.version_id}
                     className={cn(
                       'w-full flex flex-col justify-center p-2 rounded-md border border-l-4 shadow-sm transition-all hover:bg-accent/50 text-left',
-                      STATUS_STYLES[post.status] || 'border-l-muted',
+                      STATUS_STYLES[getPublishState(post)] || 'border-l-muted',
                       // 🔥 Apply purple bg fill ONLY for meetings
                       post.isMeeting
                         ? 'bg-purple-50 dark:bg-purple-950/40 border-purple-200 dark:border-purple-800'

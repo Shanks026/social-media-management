@@ -20,7 +20,8 @@ export async function fetchAllPostsByClient(clientId) {
         version_number,
         created_at,
         target_date,
-        admin_notes
+        admin_notes,
+        platform_schedules
       )
     `,
     )
@@ -122,6 +123,7 @@ export async function createDraftPost({
   target_date,
   adminNotes,
   userId,
+  platformSchedules,
 }) {
   const { error } = await supabase.rpc('create_post_draft_v3', {
     p_client_id: clientId,
@@ -132,6 +134,7 @@ export async function createDraftPost({
     p_user_id: userId,
     p_target_date: target_date ?? null,
     p_admin_notes: adminNotes || null,
+    p_platform_schedules: platformSchedules ?? null,
   })
 
   if (error) throw error
@@ -190,7 +193,7 @@ export const deletePost = async (postId) => {
 
 export async function updatePost(
   versionId,
-  { title, content, mediaUrls, platforms, target_date, admin_notes },
+  { title, content, mediaUrls, platforms, target_date, admin_notes, platformSchedules },
 ) {
   const { data, error } = await supabase
     .from('post_versions')
@@ -201,6 +204,7 @@ export async function updatePost(
       platform: platforms,
       target_date: target_date ?? null,
       admin_notes: admin_notes,
+      platform_schedules: platformSchedules ?? null,
     })
     .eq('id', versionId)
     .eq('status', 'DRAFT')

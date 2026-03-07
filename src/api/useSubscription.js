@@ -65,7 +65,9 @@ export function useSubscription() {
         // Feature flags
         finance_recurring_invoices: sub.finance_recurring_invoices ?? false,
         finance_subscriptions: sub.finance_subscriptions ?? false,
+        finance_accrual: sub.finance_accrual ?? false,
         calendar_export: sub.calendar_export ?? false,
+        documents_collections: sub.documents_collections ?? false,
         client_count: count || 0,
         max_clients: sub.max_clients,
 

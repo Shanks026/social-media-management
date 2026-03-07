@@ -2,8 +2,10 @@ import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { FolderOpen, FolderPlus, Search, X } from 'lucide-react'
+import { FolderOpen, FolderPlus, Search, X, Lock } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
+import { useSubscription } from '@/api/useSubscription'
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip'
 import { useDocuments, useCollections, uploadDocument } from '@/api/documents'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
@@ -40,6 +42,8 @@ import CreateCollectionDialog from './CreateCollectionDialog'
 export default function DocumentsTab({ clientId }) {
   const { user } = useAuth()
   const queryClient = useQueryClient()
+  const { data: sub } = useSubscription()
+  const collectionsUnlocked = sub?.documents_collections ?? false
   const [searchParams, setSearchParams] = useSearchParams()
   const activeTab = searchParams.get('doc_tab') ?? 'all'
 
@@ -218,13 +222,23 @@ export default function DocumentsTab({ clientId }) {
             <TabsTrigger value="ungrouped">Ungrouped</TabsTrigger>
           </TabsList>
 
-          <Button
-            className="gap-2"
-            onClick={() => setCreateCollectionOpen(true)}
-          >
-            <FolderPlus className="size-4" />
-            New Collection
-          </Button>
+          {collectionsUnlocked ? (
+            <Button className="gap-2" onClick={() => setCreateCollectionOpen(true)}>
+              <FolderPlus className="size-4" />
+              New Collection
+            </Button>
+          ) : (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button className="gap-2 opacity-50 cursor-not-allowed" disabled>
+                  <FolderPlus className="size-4" />
+                  New Collection
+                  <Lock size={12} />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Collections are available on Velocity and above</TooltipContent>
+            </Tooltip>
+          )}
         </div>
       </div>
 
@@ -272,6 +286,7 @@ export default function DocumentsTab({ clientId }) {
                       key={col.id}
                       collection={col}
                       documents={applyFilters(allDocs.filter((d) => d.collection_id === col.id))}
+                      locked={!collectionsUnlocked}
                     />
                   ))}
                 </div>
@@ -300,9 +315,20 @@ export default function DocumentsTab({ clientId }) {
                 <EmptyDescription>Create a collection to group related documents.</EmptyDescription>
               </EmptyHeader>
               <EmptyContent className="mt-4">
-                <Button size="sm" className="gap-1.5" onClick={() => setCreateCollectionOpen(true)}>
-                  <FolderPlus className="size-3.5" /> New Collection
-                </Button>
+                {collectionsUnlocked ? (
+                  <Button size="sm" className="gap-1.5" onClick={() => setCreateCollectionOpen(true)}>
+                    <FolderPlus className="size-3.5" /> New Collection
+                  </Button>
+                ) : (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button size="sm" className="gap-1.5 opacity-50 cursor-not-allowed" disabled>
+                        <FolderPlus className="size-3.5" /> New Collection <Lock size={11} />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Collections are available on Velocity and above</TooltipContent>
+                  </Tooltip>
+                )}
               </EmptyContent>
             </Empty>
           ) : (
@@ -311,6 +337,7 @@ export default function DocumentsTab({ clientId }) {
                 key={col.id}
                 collection={col}
                 documents={applyFilters(allDocs.filter((d) => d.collection_id === col.id))}
+                locked={!collectionsUnlocked}
               />
             ))
           )}

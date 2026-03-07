@@ -43,6 +43,7 @@ import { toast } from 'sonner'
 import { useNavigate } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 import { getUrgencyStatus } from '@/lib/client-helpers'
+import { getPublishState } from '@/lib/helper'
 
 const isVideoSource = (url) => {
   if (!url) return false
@@ -263,7 +264,7 @@ export default function DraftPostList({ clientId }) {
               {/* Header: Status, Version & Actions */}
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
-                  <StatusBadge status={post.status || 'DRAFT'} />
+                  <StatusBadge status={getPublishState(post) || 'DRAFT'} />
                   <Badge variant="secondary" className="rounded-full text-muted-foreground hover:bg-muted/80 text-xs px-2.5 py-0.5 border-none font-medium font-mono">
                     v{post.version_number || '1'}
                   </Badge>
@@ -393,9 +394,11 @@ export default function DraftPostList({ clientId }) {
                       </div>
                     )}
                     <span className="text-[13px] font-medium tracking-tight whitespace-nowrap">
-                      {post.target_date
-                        ? format(new Date(post.target_date), "d MMMM yyyy '•' h:mm a")
-                        : 'No Date Set'}
+                      {post.status === 'PUBLISHED'
+                        ? `Published on ${format(new Date(post.published_at || post.updated_at), 'd MMM, yyyy')}`
+                        : post.target_date
+                          ? format(new Date(post.target_date), "d MMMM yyyy '•' h:mm a")
+                          : 'No Date Set'}
                     </span>
                   </div>
                 </div>

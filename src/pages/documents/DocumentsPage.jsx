@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useSearchParams, Link } from 'react-router-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { FolderOpen, FolderPlus, Search, X, Building2 } from 'lucide-react'
+import { FolderOpen, FolderPlus, Search, X, Building2, Lock } from 'lucide-react'
 import { useHeader } from '@/components/misc/header-context'
 import { useAuth } from '@/context/AuthContext'
 import { useClients } from '@/api/clients'
+import { useSubscription } from '@/api/useSubscription'
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip'
 import { useDocuments, useAllCollections, uploadDocument } from '@/api/documents'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -25,6 +27,7 @@ import {
   EmptyContent,
   EmptyDescription,
   EmptyHeader,
+  EmptyMedia,
   EmptyTitle,
 } from '@/components/ui/empty'
 import DocumentCard from '@/components/documents/DocumentCard'
@@ -61,6 +64,10 @@ export default function DocumentsPage() {
       ],
     })
   }, [setHeader])
+
+  // ── Subscription ─────────────────────────────────────────────────────────────
+  const { data: sub } = useSubscription()
+  const collectionsUnlocked = sub?.documents_collections ?? false
 
   // ── Clients ──────────────────────────────────────────────────────────────────
   const { data: clientsData } = useClients()
@@ -324,14 +331,27 @@ export default function DocumentsPage() {
               </TabsTrigger>
             </TabsList>
 
-            <Button
-              variant="outline"
-              onClick={() => setCreateCollectionOpen(true)}
-              className="gap-2"
-            >
-              <FolderPlus className="size-4" />
-              New Collection
-            </Button>
+            {collectionsUnlocked ? (
+              <Button
+                variant="outline"
+                onClick={() => setCreateCollectionOpen(true)}
+                className="gap-2"
+              >
+                <FolderPlus className="size-4" />
+                New Collection
+              </Button>
+            ) : (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="outline" className="gap-2 opacity-50 cursor-not-allowed" disabled>
+                    <FolderPlus className="size-4" />
+                    New Collection
+                    <Lock size={12} />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Collections are available on Velocity and above</TooltipContent>
+              </Tooltip>
+            )}
           </div>
         </div>
 
@@ -355,26 +375,24 @@ export default function DocumentsPage() {
             {/* ── ALL ── */}
             <TabsContent value="all" className="mt-0">
               {filteredDocs.length === 0 ? (
-                <Empty className="py-32 bg-card/20 rounded-[32px] border border-dashed border-border/60">
-                  <EmptyHeader className="flex flex-col items-center">
-                    <div className="h-20 w-20 rounded-full bg-primary/5 flex items-center justify-center mb-6">
-                      {isFilterActive
-                        ? <Search className="size-10 text-primary/40" />
-                        : <FolderOpen className="size-10 text-primary/40" />}
-                    </div>
-                    <EmptyTitle className="text-2xl font-light">
+                <Empty className="border">
+                  <EmptyHeader>
+                    <EmptyMedia variant="icon">
+                      {isFilterActive ? <Search /> : <FolderOpen />}
+                    </EmptyMedia>
+                    <EmptyTitle>
                       {isFilterActive ? 'No documents match your filters' : 'No documents yet'}
                     </EmptyTitle>
-                    <EmptyDescription className="max-w-md text-center font-light">
+                    <EmptyDescription>
                       {isFilterActive
                         ? "Adjust your filters to find what you're looking for."
                         : 'Upload a contract, brief, or brand asset to get started.'}
                     </EmptyDescription>
                   </EmptyHeader>
                   {isFilterActive && (
-                    <EmptyContent className="mt-8">
-                      <Button variant="ghost" onClick={clearFilters} className="rounded-full gap-2">
-                        <X className="size-4" /> Clear all filters
+                    <EmptyContent className="mt-4">
+                      <Button variant="ghost" size="sm" onClick={clearFilters} className="gap-1.5">
+                        <X className="size-3.5" /> Clear all filters
                       </Button>
                     </EmptyContent>
                   )}
@@ -389,15 +407,29 @@ export default function DocumentsPage() {
             </TabsContent>
 
             {/* ── COLLECTIONS ── */}
-            <TabsContent value="collections" className="mt-0">
+            <TabsContent value="collections" className="mt-0 space-y-4">
+              {!collectionsUnlocked && (
+                <div className="rounded-lg border border-border/50 bg-muted/30 px-4 py-3 flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Lock size={14} className="text-muted-foreground shrink-0" />
+                    <p className="text-sm text-muted-foreground">
+                      Organise your documents into collections. Available on Velocity and above.
+                    </p>
+                  </div>
+                  <Link
+                    to="/billing"
+                    className="text-sm font-medium text-primary hover:underline shrink-0"
+                  >
+                    Upgrade your plan →
+                  </Link>
+                </div>
+              )}
               {collections.length === 0 ? (
-                <Empty className="py-32 bg-card/20 rounded-[32px] border border-dashed border-border/60">
-                  <EmptyHeader className="flex flex-col items-center">
-                    <div className="h-20 w-20 rounded-full bg-primary/5 flex items-center justify-center mb-6">
-                      <FolderOpen className="size-10 text-primary/40" />
-                    </div>
-                    <EmptyTitle className="text-2xl font-light">No collections yet</EmptyTitle>
-                    <EmptyDescription className="max-w-md text-center font-light">
+                <Empty className="border">
+                  <EmptyHeader>
+                    <EmptyMedia variant="icon"><FolderOpen /></EmptyMedia>
+                    <EmptyTitle>No collections yet</EmptyTitle>
+                    <EmptyDescription>
                       {activeClientId
                         ? "Open this client\u2019s Documents tab to create a collection."
                         : "Open a client\u2019s Documents tab to create collections."}
@@ -412,6 +444,7 @@ export default function DocumentsPage() {
                       key={col.id}
                       collection={col}
                       documents={filteredDocs.filter((d) => d.collection_id === col.id)}
+                      locked={!collectionsUnlocked}
                     />
                   ))}
                 </div>
@@ -441,6 +474,7 @@ export default function DocumentsPage() {
                           key={col.id}
                           collection={col}
                           documents={filteredDocs.filter((d) => d.collection_id === col.id)}
+                          locked={!collectionsUnlocked}
                         />
                       ))}
                     </div>
@@ -452,26 +486,24 @@ export default function DocumentsPage() {
             {/* ── UNGROUPED ── */}
             <TabsContent value="ungrouped" className="mt-0">
               {ungroupedDocs.length === 0 ? (
-                <Empty className="py-32 bg-card/20 rounded-[32px] border border-dashed border-border/60">
-                  <EmptyHeader className="flex flex-col items-center">
-                    <div className="h-20 w-20 rounded-full bg-primary/5 flex items-center justify-center mb-6">
-                      {isFilterActive
-                        ? <Search className="size-10 text-primary/40" />
-                        : <FolderOpen className="size-10 text-primary/40" />}
-                    </div>
-                    <EmptyTitle className="text-2xl font-light">
+                <Empty className="border">
+                  <EmptyHeader>
+                    <EmptyMedia variant="icon">
+                      {isFilterActive ? <Search /> : <FolderOpen />}
+                    </EmptyMedia>
+                    <EmptyTitle>
                       {isFilterActive ? 'No ungrouped documents match your filters' : 'No ungrouped documents'}
                     </EmptyTitle>
-                    <EmptyDescription className="max-w-md text-center font-light">
+                    <EmptyDescription>
                       {isFilterActive
                         ? "Adjust your filters to find what you're looking for."
                         : 'All documents are organised into collections.'}
                     </EmptyDescription>
                   </EmptyHeader>
                   {isFilterActive && (
-                    <EmptyContent className="mt-8">
-                      <Button variant="ghost" onClick={clearFilters} className="rounded-full gap-2">
-                        <X className="size-4" /> Clear all filters
+                    <EmptyContent className="mt-4">
+                      <Button variant="ghost" size="sm" onClick={clearFilters} className="gap-1.5">
+                        <X className="size-3.5" /> Clear all filters
                       </Button>
                     </EmptyContent>
                   )}

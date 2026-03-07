@@ -5,16 +5,12 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
 import {
   X,
-  Instagram,
-  Linkedin,
-  Youtube,
-  Facebook,
-  Globe,
   Loader2,
-  Plus,
   Calendar as CalendarIcon,
   AlertCircle,
   Film,
+  UploadCloud,
+  Upload,
 } from 'lucide-react'
 
 import { createDraftPost, updatePost } from '@/api/posts'
@@ -66,8 +62,9 @@ import { useAuth } from '@/context/AuthContext'
 import { supabase } from '@/lib/supabase'
 import { useSubscription } from '@/api/useSubscription'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Checkbox } from '@/components/ui/checkbox'
 
-const MAX_FILES = 5
+const MAX_FILES = 10
 
 // Improved helper for remote URLs
 const isRemoteVideo = (url) => {
@@ -82,39 +79,39 @@ const isRemoteVideo = (url) => {
 const PLATFORM_CONFIG = {
   instagram: {
     label: 'Instagram',
-    icon: Instagram,
-    active:
-      'bg-violet-100 text-violet-800 border-violet-200 dark:bg-violet-500/20 dark:text-violet-400 dark:border-violet-500/30',
+    logo: '/platformIcons/instagram.png',
+    selected:
+      'border-pink-400 bg-pink-50 text-pink-700 dark:border-pink-500/50 dark:bg-pink-500/15 dark:text-pink-300',
   },
   linkedin: {
     label: 'LinkedIn',
-    icon: Linkedin,
-    active:
-      'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-600/20 dark:text-blue-400 dark:border-blue-600/30',
+    logo: '/platformIcons/linkedin.png',
+    selected:
+      'border-blue-500 bg-blue-50 text-blue-700 dark:border-blue-500/50 dark:bg-blue-600/15 dark:text-blue-300',
   },
   facebook: {
     label: 'Facebook',
-    icon: Facebook,
-    active:
-      'bg-cyan-100 text-cyan-800 border-cyan-200 dark:bg-cyan-500/20 dark:text-cyan-400 dark:border-cyan-500/30',
+    logo: '/platformIcons/facebook.png',
+    selected:
+      'border-sky-500 bg-sky-50 text-sky-700 dark:border-sky-500/50 dark:bg-sky-500/15 dark:text-sky-300',
   },
   google_business: {
     label: 'Google Business',
-    icon: Globe,
-    active:
-      'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-500/20 dark:text-yellow-400 dark:border-yellow-500/30',
+    logo: '/platformIcons/google_busines.png',
+    selected:
+      'border-amber-400 bg-amber-50 text-amber-700 dark:border-amber-500/50 dark:bg-amber-500/15 dark:text-amber-300',
   },
   youtube: {
     label: 'YouTube',
-    icon: Youtube,
-    active:
-      'bg-red-100 text-red-800 border-red-200 dark:bg-red-600/20 dark:text-red-400 dark:border-red-600/30',
+    logo: '/platformIcons/youtube.png',
+    selected:
+      'border-red-500 bg-red-50 text-red-700 dark:border-red-500/50 dark:bg-red-600/15 dark:text-red-300',
   },
   twitter: {
     label: 'Twitter/X',
-    icon: Globe,
-    active:
-      'bg-slate-100 text-slate-800 border-slate-200 dark:bg-slate-500/20 dark:text-slate-400 dark:border-slate-500/30',
+    logo: '/platformIcons/twitter.png',
+    selected:
+      'border-slate-700 bg-slate-100 text-slate-900 dark:border-slate-400/50 dark:bg-slate-500/15 dark:text-slate-200',
   },
 }
 
@@ -178,8 +175,13 @@ export default function DraftPostForm({
 
   // State now stores objects: { url: string, type: 'image' | 'video' }
   const [previews, setPreviews] = useState([])
+  const [isDragging, setIsDragging] = useState(false)
   const fileInputRef = useRef(null)
   const isStorageFull = subscription?.storage_display?.percent >= 100
+
+  const [perPlatformMode, setPerPlatformMode] = useState(false)
+  // { [platformId]: { date: Date | null, time: '09:00' } }
+  const [platformSchedulesState, setPlatformSchedulesState] = useState({})
 
   const form = useForm({
     resolver: zodResolver(formSchema),
@@ -226,8 +228,91 @@ export default function DraftPostForm({
         type: isRemoteVideo(url) ? 'video' : 'image',
       }))
       setPreviews(initialPreviews)
+
+      // Populate per-platform scheduling state if present
+      if (initialData.platform_schedules) {
+        setPerPlatformMode(true)
+        const state = {}
+        Object.entries(initialData.platform_schedules).forEach(
+          ([platform, { scheduled_at }]) => {
+            const d = new Date(scheduled_at)
+            state[platform] = { date: d, time: format(d, 'HH:mm') }
+          },
+        )
+        setPlatformSchedulesState(state)
+      } else {
+        setPerPlatformMode(false)
+        setPlatformSchedulesState({})
+      }
     }
   }, [initialData, open, form])
+
+  // Sync per-platform state rows when selected platforms change
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!perPlatformMode) return
+    const currentDate = form.getValues('target_date')
+    setPlatformSchedulesState((prev) => {
+      const next = {}
+      watchedPlatforms.forEach((p) => {
+        if (prev[p]) {
+          next[p] = prev[p]
+        } else {
+          next[p] = {
+            date: currentDate || null,
+            time: currentDate ? format(currentDate, 'HH:mm') : '09:00',
+          }
+        }
+      })
+      return next
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [watchedPlatforms.join(','), perPlatformMode])
+
+  // Auto-compute target_date = earliest scheduled_at across all platforms
+  useEffect(() => {
+    if (!perPlatformMode) return
+    const dates = Object.values(platformSchedulesState)
+      .filter(({ date, time }) => date && time)
+      .map(({ date, time }) => {
+        const [hours, minutes] = time.split(':').map(Number)
+        return setMinutes(setHours(date, hours), minutes)
+      })
+    if (!dates.length) return
+    const minDate = new Date(Math.min(...dates.map((d) => d.getTime())))
+    form.setValue('target_date', minDate)
+  }, [platformSchedulesState, perPlatformMode, form])
+
+  function buildPlatformSchedulesPayload(state) {
+    return Object.fromEntries(
+      Object.entries(state).map(([platform, { date, time }]) => {
+        const [hours, minutes] = time.split(':').map(Number)
+        const dt = setMinutes(setHours(date, hours), minutes)
+        return [
+          platform,
+          { scheduled_at: dt.toISOString(), published_at: null },
+        ]
+      }),
+    )
+  }
+
+  function handlePerPlatformToggle(checked) {
+    if (checked) {
+      const currentDate = form.getValues('target_date')
+      const initialState = {}
+      watchedPlatforms.forEach((p) => {
+        initialState[p] = {
+          date: currentDate || null,
+          time: currentDate ? format(currentDate, 'HH:mm') : '09:00',
+        }
+      })
+      setPlatformSchedulesState(initialState)
+      setPerPlatformMode(true)
+    } else {
+      setPlatformSchedulesState({})
+      setPerPlatformMode(false)
+    }
+  }
 
   const { data: client, isLoading: isClientLoading } = useQuery({
     queryKey: ['client', effectiveClientId],
@@ -255,6 +340,18 @@ export default function DraftPostForm({
       })
       return
     }
+
+    if (perPlatformMode) {
+      const incomplete = watchedPlatforms.filter(
+        (p) =>
+          !platformSchedulesState[p]?.date || !platformSchedulesState[p]?.time,
+      )
+      if (incomplete.length > 0) {
+        toast.error('Please set a date and time for all selected platforms.')
+        return
+      }
+    }
+
     mutation.mutate(values)
   }
 
@@ -297,13 +394,18 @@ export default function DraftPostForm({
         target_date: values.target_date?.toISOString(),
         userId: user?.id,
         adminNotes: values.admin_notes || null,
+        platformSchedules: perPlatformMode
+          ? buildPlatformSchedulesPayload(platformSchedulesState)
+          : null,
       }
 
       if (isEditMode) return updatePost(initialData.version_id, payload)
       return createDraftPost(payload)
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['draft-posts', effectiveClientId] })
+      queryClient.invalidateQueries({
+        queryKey: ['draft-posts', effectiveClientId],
+      })
       queryClient.invalidateQueries({ queryKey: ['posts', effectiveClientId] })
       queryClient.invalidateQueries({ queryKey: ['global-posts'] })
       queryClient.invalidateQueries({ queryKey: ['subscription', user?.id] })
@@ -322,21 +424,20 @@ export default function DraftPostForm({
       if (p.url.startsWith('blob:')) URL.revokeObjectURL(p.url)
     })
     setPreviews([])
+    setPerPlatformMode(false)
+    setPlatformSchedulesState({})
     onOpenChange(false)
   }
 
-  const handleFileChange = (e) => {
-    let files = Array.from(e.target.files || [])
+  const processFiles = (fileList) => {
+    let files = Array.from(fileList)
 
-    // Constraint: If YouTube selected, filter out non-videos
     if (isYoutubeSelected) {
       const videoFiles = files.filter((f) => f.type.startsWith('video/'))
       if (videoFiles.length < files.length) {
         toast.error('Only video files are allowed when YouTube is selected.')
       }
       files = videoFiles
-
-      // Constraint: Single file only
       if (files.length > 1) {
         toast.warning('YouTube allows only one video. Taking the first one.')
         files = files.slice(0, 1)
@@ -344,20 +445,15 @@ export default function DraftPostForm({
     }
 
     const currentFiles = form.getValues('images') || []
-
-    // Calculate slots based on mode
     const maxAllowed = isYoutubeSelected ? 1 : MAX_FILES
     const remainingSlots = maxAllowed - previews.length
 
-    // If YouTube is selected and we already have 1, remaining is 0.
-    // If we're uploading 1 new one, and previews is 0, we can add 1.
     if (remainingSlots <= 0 && isYoutubeSelected) {
       toast.error('You can only upload 1 video for YouTube.')
       return
     }
 
     const addedFiles = files.slice(0, remainingSlots)
-
     form.setValue('images', [...currentFiles, ...addedFiles])
 
     const newLocalPreviews = addedFiles.map((file) => ({
@@ -365,6 +461,17 @@ export default function DraftPostForm({
       type: file.type.startsWith('video') ? 'video' : 'image',
     }))
     setPreviews((prev) => [...prev, ...newLocalPreviews])
+  }
+
+  const handleFileChange = (e) => {
+    processFiles(e.target.files || [])
+  }
+
+  const handleDrop = (e) => {
+    e.preventDefault()
+    setIsDragging(false)
+    if (isStorageFull) return
+    processFiles(e.dataTransfer.files)
   }
 
   const removeImage = (index) => {
@@ -404,430 +511,590 @@ export default function DraftPostForm({
       open={open}
       onOpenChange={(val) => (!val ? resetAndClose() : onOpenChange(val))}
     >
-      <DialogContent className="sm:max-w-[600px] max-h-[95vh] flex flex-col p-0 overflow-hidden">
-        <DialogHeader className="p-6 pb-0">
-          <DialogTitle>
-            {isEditMode ? 'Edit Draft Post' : 'Create Draft Post'}
-          </DialogTitle>
-        </DialogHeader>
-
+      <DialogContent className="sm:max-w-none w-[70vw] max-h-[80vh] h-[80vh] flex flex-col p-0 overflow-hidden">
         <Form {...form}>
           <form
             onSubmit={form.handleSubmit(onSubmit)}
-            className="flex flex-col flex-1 overflow-hidden"
+            className="flex flex-1 min-h-0"
           >
-            <div className="flex-1 overflow-y-auto p-6 space-y-6">
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <FormLabel>
-                    Media Assets ({previews.length}/{MAX_FILES})
-                  </FormLabel>
-                  {isStorageFull && (
-                    <Badge
-                      variant="destructive"
-                      className="text-[10px] animate-pulse"
-                    >
-                      Storage Full - Upgrade Plan
-                    </Badge>
-                  )}
-                </div>
-
-                <div className="grid grid-cols-5 gap-4">
-                  {previews.map((item, index) => (
-                    <div
-                      key={item.url}
-                      className="relative aspect-square rounded-lg border overflow-hidden bg-muted shadow-sm"
-                    >
-                      {item.type === 'video' ? (
-                        <div className="relative h-full w-full">
-                          <video
-                            src={item.url}
-                            className="h-full w-full object-cover"
-                            muted
-                          />
-                          <div className="absolute inset-0 flex items-center justify-center bg-black/20">
-                            <Film className="h-6 w-6 text-white opacity-80" />
-                          </div>
-                        </div>
-                      ) : (
-                        <img
-                          src={item.url}
-                          alt="Preview"
-                          className="h-full w-full object-cover"
-                        />
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => removeImage(index)}
-                        className="absolute top-2 right-2 bg-background/90 p-1 rounded-full border shadow-sm hover:bg-destructive hover:text-white transition-all"
-                      >
-                        <X className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-                  ))}
-
-                  {/* Add Button Logic based on YouTube selection */}
-                  {previews.length < (isYoutubeSelected ? 1 : MAX_FILES) && (
-                    <TooltipProvider delayDuration={0}>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <button
-                            type="button"
-                            disabled={isStorageFull}
-                            onClick={() => fileInputRef.current?.click()}
-                            className={cn(
-                              'flex aspect-square items-center justify-center rounded-lg border-2 border-dashed transition-all',
-                              isStorageFull
-                                ? 'opacity-50 cursor-not-allowed bg-muted/50 border-muted'
-                                : 'hover:bg-accent hover:border-primary/50',
-                            )}
-                          >
-                            <div className="flex flex-col items-center gap-1 text-muted-foreground">
-                              {isStorageFull ? (
-                                <AlertCircle className="h-5 w-5 text-destructive" />
-                              ) : (
-                                <Plus className="h-6 w-6" />
-                              )}
-                              <span className="text-[10px] font-bold uppercase">
-                                {isStorageFull ? 'Locked' : 'Add'}
-                              </span>
-                            </div>
-                          </button>
-                        </TooltipTrigger>
-                        {isStorageFull && (
-                          <TooltipContent>Your storage is full.</TooltipContent>
-                        )}
-                      </Tooltip>
-                    </TooltipProvider>
-                  )}
-                </div>
-                {/* Helper Text for YouTube */}
-                {isYoutubeSelected && (
-                  <p className="text-[11px] text-amber-600 font-medium flex items-center gap-1">
-                    <AlertCircle size={12} />
-                    YouTube: Single video upload only.
-                  </p>
+            {/* ===== LEFT PANEL: Add Media ===== */}
+            <div className="w-[50%] shrink-0 border-r flex flex-col p-8 gap-6 overflow-y-auto bg-muted/20">
+              <div className="flex items-center justify-between">
+                <h2 className="text-base font-semibold tracking-tight">
+                  Add Media
+                </h2>
+                {isStorageFull && (
+                  <Badge
+                    variant="destructive"
+                    className="text-[10px] animate-pulse"
+                  >
+                    Storage Full
+                  </Badge>
                 )}
-
-                <input
-                  type="file"
-                  multiple={!isYoutubeSelected} // Single file only for YouTube
-                  accept={isYoutubeSelected ? 'video/*' : 'image/*,video/*'}
-                  className="hidden"
-                  ref={fileInputRef}
-                  onChange={handleFileChange}
-                />
               </div>
 
-
-              {!clientId && availableClients.length > 0 && (
-                <FormField
-                  control={form.control}
-                  name="client_id"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>
-                        Target Client <span className="text-destructive">*</span>
-                      </FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Select a client for this post" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {availableClients.map((c) => (
-                            <SelectItem key={c.id} value={c.id}>
-                              <div className="flex items-center gap-2">
-                                {c.logo_url ? (
-                                  <img
-                                    src={c.logo_url}
-                                    alt=""
-                                    className="size-4 rounded-sm object-cover"
-                                  />
-                                ) : (
-                                  <div className="size-4 rounded-sm bg-muted flex items-center justify-center text-[8px] font-bold text-muted-foreground uppercase">
-                                    {c.name?.[0]}
-                                  </div>
-                                )}
-                                <span>{c.name}</span>
-                              </div>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
+              {/* Drop Zone */}
+              <div
+                className={cn(
+                  'flex-1 min-h-[200px] border-2 border-dashed rounded-2xl flex flex-col items-center justify-center gap-4 p-10 cursor-pointer transition-all',
+                  isDragging
+                    ? 'border-primary bg-primary/5'
+                    : 'border-border hover:border-primary/40 hover:bg-accent/40',
+                  previews.length >= (isYoutubeSelected ? 1 : MAX_FILES) &&
+                    'pointer-events-none opacity-40',
+                  isStorageFull && 'pointer-events-none opacity-40',
+                )}
+                onClick={() => {
+                  if (
+                    isStorageFull ||
+                    previews.length >= (isYoutubeSelected ? 1 : MAX_FILES)
+                  )
+                    return
+                  fileInputRef.current?.click()
+                }}
+                onDragOver={(e) => {
+                  e.preventDefault()
+                  if (
+                    !isStorageFull &&
+                    previews.length < (isYoutubeSelected ? 1 : MAX_FILES)
+                  )
+                    setIsDragging(true)
+                }}
+                onDragLeave={() => setIsDragging(false)}
+                onDrop={handleDrop}
+              >
+                <div className="rounded-full border bg-background p-4 shadow-sm">
+                  <Upload className="h-7 w-7 text-muted-foreground" />
+                </div>
+                <div className="text-center space-y-1.5">
+                  <p className="text-sm font-medium text-foreground">
+                    {previews.length >= (isYoutubeSelected ? 1 : MAX_FILES)
+                      ? isYoutubeSelected
+                        ? 'YouTube allows only 1 video.'
+                        : `Maximum ${MAX_FILES} files reached.`
+                      : 'Drop a file here or click to browse'}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Max {isYoutubeSelected ? '1 video' : `${MAX_FILES} files`}
+                  </p>
+                  <p className="text-[11px] text-muted-foreground/70">
+                    {isYoutubeSelected
+                      ? 'MP4, MOV, WEBM, M4V'
+                      : 'JPG, PNG, GIF, WEBP, MP4, MOV, WEBM'}
+                  </p>
+                </div>
+                {previews.length < (isYoutubeSelected ? 1 : MAX_FILES) &&
+                  !isStorageFull && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="mt-1"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        fileInputRef.current?.click()
+                      }}
+                    >
+                      Choose File
+                    </Button>
                   )}
-                />
+              </div>
+
+              {isYoutubeSelected && (
+                <p className="text-[11px] text-amber-600 font-medium flex items-center gap-1.5">
+                  <AlertCircle size={12} className="shrink-0" />
+                  YouTube: Single video upload only.
+                </p>
               )}
 
-              {/* Platform Select */}
-              <FormField
-                control={form.control}
-                name="platforms"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-semibold">
-                      Target Platforms <span className="text-destructive">*</span>
-                    </FormLabel>
-                    <div className="flex flex-wrap gap-2 pt-2">
-                      {!effectiveClientId ? (
-                        <p className="text-xs text-muted-foreground italic">
-                          Select client to choose platform
-                        </p>
-                      ) : isClientLoading ? (
-                        <Skeleton className="h-8 w-32" />
-                      ) : (
-                        Object.entries(PLATFORM_CONFIG)
-                          .filter(([id]) => availablePlatforms.includes(id))
-                          .map(([id, config]) => {
-                            const Icon = config.icon
-                            const isSelected = field.value?.includes(id)
-
-                            // Logic to disable YouTube
-                            let isDisabled = false
-                            let tooltipText = ''
-
-                            if (id === 'youtube') {
-                              // 1. Must have media (unless empty, but user can add later - wait, user requirement says "disabled unless user has uploaded a video file")
-                              // Actually user said: "The 'YouTube' option... must be disabled (grayed out) unless the user has uploaded a video file."
-                              // This implies we can't select it BEFORE uploading?
-                              // "Validation Logic: If the user selects "YouTube" first..." -> This implies we CAN select it first.
-                              // Let's interpret "Conditional Disabling":
-                              // "Conditional Disabling: The "YouTube" option... must be disabled... unless the user has uploaded a video file."
-                              // BUT checking requirement 2: "If the user selects "YouTube" first, restrict the file uploader..."
-                              // These are contradictory.
-                              // Interpretation: Verification logic in 'onSubmit' covers the "must have video" part.
-                              // The "Disabled" part likely means: If I have *IMAGES* only, disable it. If I have *NOTHING*, maybe allow it so I can upload a video next?
-                              // Let's stick to: Disable if there is content but NO video (handled below).
-                              if (hasMedia && !hasVideo) {
-                                isDisabled = true
-                                tooltipText = 'YouTube requires a video file.'
-                              }
-                            }
-
-                            const checkboxWithBadge = (
-                              <label
-                                key={id}
-                                className={cn(
-                                  'cursor-pointer',
-                                  isDisabled && 'cursor-not-allowed opacity-50',
-                                )}
-                              >
-                                <input
-                                  type="checkbox"
-                                  className="sr-only"
-                                  checked={isSelected}
-                                  disabled={isDisabled}
-                                  onChange={(e) => {
-                                    if (isDisabled) return
-                                    const current = field.value || []
-                                    const isChecking = e.target.checked
-
-                                    // Constraint: YouTube Single File Policy
-                                    if (id === 'youtube' && isChecking) {
-                                      if (previews.length > 1) {
-                                        toast.error(
-                                          'YouTube posts are limited to 1 video file. Please remove other files first.',
-                                        )
-                                        return // Prevent selection
-                                      }
-                                      // Also ensure no images (though isDisabled handles the 'no video' case, we might have 1 video + 1 image)
-                                      const hasImages = previews.some(
-                                        (p) => p.type !== 'video',
-                                      )
-                                      if (hasImages) {
-                                        toast.error(
-                                          'YouTube allows only video files. Please remove images.',
-                                        )
-                                        return
-                                      }
-                                    }
-
-                                    field.onChange(
-                                      isChecking
-                                        ? [...current, id]
-                                        : current.filter((v) => v !== id),
-                                    )
-                                  }}
-                                />
-                                <Badge
-                                  variant="outline"
-                                  className={cn(
-                                    'flex items-center gap-2 px-3 py-1.5 transition-all',
-                                    'bg-secondary/40 text-muted-foreground',
-                                    isSelected && config.active,
-                                  )}
-                                >
-                                  <Icon
-                                    className={cn(
-                                      'h-3.5 w-3.5',
-                                      isSelected ? 'opacity-100' : 'opacity-50',
-                                    )}
-                                  />
-                                  {config.label}
-                                </Badge>
-                              </label>
-                            )
-
-                            if (isDisabled) {
-                              return (
-                                <TooltipProvider key={id}>
-                                  <Tooltip delayDuration={0}>
-                                    <TooltipTrigger asChild>
-                                      <div>{checkboxWithBadge}</div>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                      <p>{tooltipText}</p>
-                                    </TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
-                              )
-                            }
-                            return checkboxWithBadge
-                          })
-                      )}
-                    </div>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <div className="grid grid-cols-2 gap-4">
-                {/* Date Picker */}
-                <FormField
-                  control={form.control}
-                  name="target_date"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-col">
-                      <FormLabel>
-                        Proposed Schedule Date <span className="text-destructive">*</span>
-                      </FormLabel>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              variant="outline"
-                              className={cn(
-                                'w-full pl-3 text-left font-normal',
-                                !field.value && 'text-muted-foreground',
-                              )}
-                            >
-                              {field.value ? (
-                                format(field.value, 'PPP')
-                              ) : (
-                                <span>Pick a date</span>
-                              )}
-                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={field.value}
-                            onSelect={field.onChange}
-                            disabled={(date) =>
-                              date < new Date(new Date().setHours(0, 0, 0, 0))
-                            }
-                            initialFocus
+              {/* Uploaded Media */}
+              {previews.length > 0 && (
+                <div className="space-y-3">
+                  <p className="text-sm font-medium">Uploaded Media</p>
+                  <div className="grid grid-cols-3 gap-3">
+                    {previews.map((item, index) => (
+                      <div
+                        key={item.url}
+                        className="relative aspect-square rounded-xl border overflow-hidden bg-muted shadow-sm"
+                      >
+                        {item.type === 'video' ? (
+                          <div className="relative h-full w-full">
+                            <video
+                              src={item.url}
+                              className="h-full w-full object-cover"
+                              muted
+                            />
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/25">
+                              <Film className="h-6 w-6 text-white" />
+                            </div>
+                          </div>
+                        ) : (
+                          <img
+                            src={item.url}
+                            alt="Preview"
+                            className="h-full w-full object-cover"
                           />
-                        </PopoverContent>
-                      </Popover>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => removeImage(index)}
+                          className="absolute top-1.5 right-1.5 bg-background/90 p-0.5 rounded-full border shadow-sm hover:bg-destructive hover:text-white transition-all"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
-                {/* Time Picker */}
-                <FormItem className="flex flex-col">
-                  <FormLabel>
-                    Time <span className="text-destructive">*</span>
-                  </FormLabel>
-                  <Select
-                    disabled={!form.watch('target_date')}
-                    value={
-                      form.watch('target_date')
-                        ? format(form.watch('target_date'), 'HH:mm')
-                        : ''
-                    }
-                    onValueChange={(val) => {
-                      const [hours, minutes] = val.split(':').map(Number)
-                      const current =
-                        form.getValues('target_date') || new Date()
-                      form.setValue(
-                        'target_date',
-                        setMinutes(setHours(current, hours), minutes),
-                      )
-                    }}
-                  >
-                    <FormControl>
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select time" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent className="max-h-[200px]">
-                      {Array.from({ length: 48 }).map((_, i) => {
-                        const hour = Math.floor(i / 2)
-                          .toString()
-                          .padStart(2, '0')
-                        const min = i % 2 === 0 ? '00' : '30'
-                        const time = `${hour}:${min}`
-                        return (
-                          <SelectItem key={time} value={time}>
-                            {time}
-                          </SelectItem>
-                        )
-                      })}
-                    </SelectContent>
-                  </Select>
-                </FormItem>
-              </div>
-
-              {/* Title and Caption */}
-              <FormField
-                control={form.control}
-                name="title"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>
-                      Title <span className="text-destructive">*</span>
-                    </FormLabel>
-                    <FormControl>
-                      <Input placeholder="Enter post title" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="content"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>
-                      Caption <span className="text-destructive">*</span>
-                    </FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="Write your post content..."
-                        className="resize-none"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+              <input
+                type="file"
+                multiple={!isYoutubeSelected}
+                accept={isYoutubeSelected ? 'video/*' : 'image/*,video/*'}
+                className="hidden"
+                ref={fileInputRef}
+                onChange={handleFileChange}
               />
             </div>
 
-            <DialogFooter className="p-6 pt-2 bg-background">
-              <div className="flex w-full justify-end gap-2">
+            {/* ===== RIGHT PANEL: Form ===== */}
+            <div className="flex-1 flex flex-col min-h-0">
+              <DialogHeader className="px-8 py-6 shrink-0 border-b gap-1">
+                <DialogTitle className="text-lg">
+                  {isEditMode ? 'Edit Draft Post' : 'Create a Post'}
+                </DialogTitle>
+                {!isEditMode && (
+                  <p className="text-sm text-muted-foreground">
+                    This post will be saved as a draft at version 1.0 for review and scheduling.
+                  </p>
+                )}
+              </DialogHeader>
+
+              <div className="flex-1 overflow-y-auto px-8 py-6 space-y-6">
+                {/* Client Select */}
+                {!clientId && availableClients.length > 0 && (
+                  <FormField
+                    control={form.control}
+                    name="client_id"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>
+                          Target Client{' '}
+                          <span className="text-destructive">*</span>
+                        </FormLabel>
+                        <Select
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger className="w-full">
+                              <SelectValue placeholder="Select a client for this post" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {availableClients.map((c) => (
+                              <SelectItem key={c.id} value={c.id}>
+                                <div className="flex items-center gap-2">
+                                  {c.logo_url ? (
+                                    <img
+                                      src={c.logo_url}
+                                      alt=""
+                                      className="size-4 rounded-sm object-cover"
+                                    />
+                                  ) : (
+                                    <div className="size-4 rounded-sm bg-muted flex items-center justify-center text-[8px] font-bold text-muted-foreground uppercase">
+                                      {c.name?.[0]}
+                                    </div>
+                                  )}
+                                  <span>{c.name}</span>
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+
+                {/* Platform Select */}
+                <FormField
+                  control={form.control}
+                  name="platforms"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>
+                        Target Platforms{' '}
+                        <span className="text-destructive">*</span>
+                      </FormLabel>
+                      <div className="flex flex-wrap gap-2 pt-1">
+                        {!effectiveClientId ? (
+                          <p className="text-xs text-muted-foreground italic">
+                            Select a client to see platforms
+                          </p>
+                        ) : isClientLoading ? (
+                          <Skeleton className="h-8 w-32" />
+                        ) : (
+                          Object.entries(PLATFORM_CONFIG)
+                            .filter(([id]) => availablePlatforms.includes(id))
+                            .map(([id, config]) => {
+                              const isSelected = field.value?.includes(id)
+                              let isDisabled = false
+                              let tooltipText = ''
+                              if (id === 'youtube' && hasMedia && !hasVideo) {
+                                isDisabled = true
+                                tooltipText = 'YouTube requires a video file.'
+                              }
+
+                              const badge = (
+                                <label
+                                  key={id}
+                                  className={cn(
+                                    'cursor-pointer',
+                                    isDisabled &&
+                                      'cursor-not-allowed opacity-40',
+                                  )}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    className="sr-only"
+                                    checked={isSelected}
+                                    disabled={isDisabled}
+                                    onChange={(e) => {
+                                      if (isDisabled) return
+                                      const current = field.value || []
+                                      const isChecking = e.target.checked
+                                      if (id === 'youtube' && isChecking) {
+                                        if (previews.length > 1) {
+                                          toast.error(
+                                            'YouTube posts are limited to 1 video file. Please remove other files first.',
+                                          )
+                                          return
+                                        }
+                                        const hasImages = previews.some(
+                                          (p) => p.type !== 'video',
+                                        )
+                                        if (hasImages) {
+                                          toast.error(
+                                            'YouTube allows only video files. Please remove images.',
+                                          )
+                                          return
+                                        }
+                                      }
+                                      field.onChange(
+                                        isChecking
+                                          ? [...current, id]
+                                          : current.filter((v) => v !== id),
+                                      )
+                                    }}
+                                  />
+                                  <span
+                                    className={cn(
+                                      'inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-all select-none',
+                                      isSelected
+                                        ? config.selected
+                                        : 'border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground',
+                                    )}
+                                  >
+                                    <img
+                                      src={config.logo}
+                                      alt={config.label}
+                                      className="h-3.5 w-3.5 shrink-0 object-contain"
+                                    />
+                                    {config.label}
+                                  </span>
+                                </label>
+                              )
+
+                              if (isDisabled) {
+                                return (
+                                  <TooltipProvider key={id}>
+                                    <Tooltip delayDuration={0}>
+                                      <TooltipTrigger asChild>
+                                        <div>{badge}</div>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        <p>{tooltipText}</p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                )
+                              }
+                              return badge
+                            })
+                        )}
+                      </div>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Single date/time — hidden in per-platform mode */}
+                {!perPlatformMode && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="target_date"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-col">
+                          <FormLabel>
+                            Proposed Schedule date{' '}
+                            <span className="text-destructive">*</span>
+                          </FormLabel>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <FormControl>
+                                <Button
+                                  variant="outline"
+                                  className={cn(
+                                    'w-full pl-3 text-left font-normal',
+                                    !field.value && 'text-muted-foreground',
+                                  )}
+                                >
+                                  {field.value ? (
+                                    format(field.value, 'PPP')
+                                  ) : (
+                                    <span>Pick a date</span>
+                                  )}
+                                  <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                </Button>
+                              </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent
+                              className="w-auto p-0"
+                              align="start"
+                            >
+                              <Calendar
+                                mode="single"
+                                selected={field.value}
+                                onSelect={field.onChange}
+                                disabled={(date) =>
+                                  date <
+                                  new Date(new Date().setHours(0, 0, 0, 0))
+                                }
+                                initialFocus
+                              />
+                            </PopoverContent>
+                          </Popover>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormItem className="flex flex-col">
+                      <FormLabel>
+                        Time <span className="text-destructive">*</span>
+                      </FormLabel>
+                      <Select
+                        disabled={!form.watch('target_date')}
+                        value={
+                          form.watch('target_date')
+                            ? format(form.watch('target_date'), 'HH:mm')
+                            : ''
+                        }
+                        onValueChange={(val) => {
+                          const [hours, minutes] = val.split(':').map(Number)
+                          const current =
+                            form.getValues('target_date') || new Date()
+                          form.setValue(
+                            'target_date',
+                            setMinutes(setHours(current, hours), minutes),
+                          )
+                        }}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select time" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent className="max-h-[200px]">
+                          {Array.from({ length: 48 }).map((_, i) => {
+                            const hour = Math.floor(i / 2)
+                              .toString()
+                              .padStart(2, '0')
+                            const min = i % 2 === 0 ? '00' : '30'
+                            const time = `${hour}:${min}`
+                            return (
+                              <SelectItem key={time} value={time}>
+                                {time}
+                              </SelectItem>
+                            )
+                          })}
+                        </SelectContent>
+                      </Select>
+                    </FormItem>
+                  </div>
+                )}
+
+                {/* Per-platform toggle */}
+                {watchedPlatforms.length > 0 && (
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      id="per-platform-mode"
+                      checked={perPlatformMode}
+                      onCheckedChange={handlePerPlatformToggle}
+                    />
+                    <label
+                      htmlFor="per-platform-mode"
+                      className="text-sm text-muted-foreground cursor-pointer select-none"
+                    >
+                      Schedule each platform separately
+                    </label>
+                  </div>
+                )}
+
+                {/* Per-platform schedule rows */}
+                {perPlatformMode && watchedPlatforms.length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+                      Per-Platform Schedule
+                    </p>
+                    {watchedPlatforms.map((platformId) => {
+                      const config = PLATFORM_CONFIG[platformId]
+                      if (!config) return null
+                      const sched = platformSchedulesState[platformId] || {
+                        date: null,
+                        time: '09:00',
+                      }
+                      return (
+                        <div
+                          key={platformId}
+                          className="flex items-center gap-2"
+                        >
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                className={cn(
+                                  'flex-1 justify-start gap-2 font-normal h-10 text-sm',
+                                  !sched.date && 'text-muted-foreground',
+                                )}
+                              >
+                                <img
+                                  src={config.logo}
+                                  alt={config.label}
+                                  className="h-3.5 w-3.5 shrink-0 object-contain"
+                                />
+                                <span className="flex-1 text-left">
+                                  {sched.date
+                                    ? format(sched.date, 'PPP')
+                                    : 'Pick a date'}
+                                </span>
+                                <CalendarIcon className="h-3.5 w-3.5 opacity-40 shrink-0" />
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent
+                              className="w-auto p-0"
+                              align="start"
+                            >
+                              <Calendar
+                                mode="single"
+                                selected={sched.date}
+                                onSelect={(date) =>
+                                  setPlatformSchedulesState((prev) => ({
+                                    ...prev,
+                                    [platformId]: {
+                                      ...prev[platformId],
+                                      date,
+                                    },
+                                  }))
+                                }
+                                disabled={(date) =>
+                                  date <
+                                  new Date(new Date().setHours(0, 0, 0, 0))
+                                }
+                                initialFocus
+                              />
+                            </PopoverContent>
+                          </Popover>
+                          <Select
+                            value={sched.time || '09:00'}
+                            onValueChange={(val) =>
+                              setPlatformSchedulesState((prev) => ({
+                                ...prev,
+                                [platformId]: {
+                                  ...prev[platformId],
+                                  time: val,
+                                },
+                              }))
+                            }
+                          >
+                            <SelectTrigger className="w-28 h-10">
+                              <SelectValue placeholder="Time" />
+                            </SelectTrigger>
+                            <SelectContent className="max-h-[200px]">
+                              {Array.from({ length: 48 }).map((_, i) => {
+                                const hour = Math.floor(i / 2)
+                                  .toString()
+                                  .padStart(2, '0')
+                                const min = i % 2 === 0 ? '00' : '30'
+                                const time = `${hour}:${min}`
+                                return (
+                                  <SelectItem key={time} value={time}>
+                                    {time}
+                                  </SelectItem>
+                                )
+                              })}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )
+                    })}
+                    {form.watch('target_date') && (
+                      <p className="text-xs text-muted-foreground pt-1">
+                        Target date auto-set to{' '}
+                        <span className="font-medium text-foreground">
+                          {format(form.watch('target_date'), 'PPP')}
+                        </span>{' '}
+                        (earliest)
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {/* Title */}
+                <FormField
+                  control={form.control}
+                  name="title"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>
+                        Title <span className="text-destructive">*</span>
+                      </FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter post title" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Caption */}
+                <FormField
+                  control={form.control}
+                  name="content"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>
+                        Caption <span className="text-destructive">*</span>
+                      </FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="Write your post content..."
+                          className="resize-none"
+                          rows={5}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <DialogFooter className="px-8 py-5 bg-background border-t shrink-0">
                 <Button type="button" variant="outline" onClick={resetAndClose}>
                   Cancel
                 </Button>
@@ -844,8 +1111,8 @@ export default function DraftPostForm({
                     'Save Draft'
                   )}
                 </Button>
-              </div>
-            </DialogFooter>
+              </DialogFooter>
+            </div>
           </form>
         </Form>
       </DialogContent>
