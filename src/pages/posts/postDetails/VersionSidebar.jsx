@@ -3,6 +3,7 @@ import { format } from 'date-fns'
 import { X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge' // Import Badge
+import { getPublishState } from '@/lib/helper'
 
 const getStatusDotColor = (status) => {
   const config = {
@@ -11,7 +12,8 @@ const getStatusDotColor = (status) => {
     SCHEDULED: 'bg-violet-500',
     NEEDS_REVISION: 'bg-pink-500',
     ACTIVE: 'bg-green-500',
-    PUBLISHED: 'bg-lime-500',
+    PUBLISHED: 'bg-emerald-500',
+    PARTIALLY_PUBLISHED: 'bg-lime-500',
     ARCHIVED: 'bg-slate-500',
   }
   return config[status] ?? 'bg-slate-400'
@@ -61,7 +63,7 @@ export default function VersionSidebar({
             >
               <div className="flex items-center gap-3">
                 <div
-                  className={`size-2.5 rounded-full shrink-0 ${getStatusDotColor(v.status)}`}
+                  className={`size-2.5 rounded-full shrink-0 ${getStatusDotColor(getPublishState(v))}`}
                 />
                 <div className="flex items-center gap-2">
                   <span

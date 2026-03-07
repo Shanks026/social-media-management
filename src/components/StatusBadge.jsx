@@ -54,6 +54,12 @@ const STATUS_CONFIG = {
     label: 'Published',
     icon: UploadCloud,
     className:
+      'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-400',
+  },
+  PARTIALLY_PUBLISHED: {
+    label: 'Partially Published',
+    icon: UploadCloud,
+    className:
       'bg-lime-100 text-lime-800 dark:bg-lime-500/10 dark:text-lime-400',
   },
   INACTIVE: {

@@ -15,7 +15,14 @@ import {
   TrendingDown,
   Download,
   RefreshCw,
+  Lock,
 } from 'lucide-react'
+
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -513,10 +520,24 @@ export default function InvoicesTab({ clientId, subTabs }) {
             <TabsTrigger value="one-off" className="text-xs">
               One-off
             </TabsTrigger>
-            {subscription?.finance_recurring_invoices && (
+            {subscription?.finance_recurring_invoices ? (
               <TabsTrigger value="recurring" className="text-xs">
                 Recurring
               </TabsTrigger>
+            ) : (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <TabsTrigger
+                    value="recurring-locked"
+                    disabled
+                    className="text-xs opacity-50 cursor-not-allowed gap-1.5 disabled:pointer-events-auto"
+                  >
+                    Recurring
+                    <Lock size={11} />
+                  </TabsTrigger>
+                </TooltipTrigger>
+                <TooltipContent>Available on Velocity & Quantum</TooltipContent>
+              </Tooltip>
             )}
           </TabsList>
         </div>

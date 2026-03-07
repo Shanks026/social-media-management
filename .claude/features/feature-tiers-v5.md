@@ -145,6 +145,18 @@
 | Client assignment                       |   ✓    |    ✓     |    ✓    |
 | Due date email reminders                |   ✓    |    ✓     |    ✓    |
 
+### Documents
+
+| Feature                                     | Ignite | Velocity | Quantum |
+| ------------------------------------------- | :----: | :------: | :-----: |
+| Upload, view, preview, download documents   |   ✓    |    ✓     |    ✓    |
+| Rename, recategorise, archive, delete       |   ✓    |    ✓     |    ✓    |
+| Global `/documents` page                    |   ✓    |    ✓     |    ✓    |
+| Per-client Documents tab                    |   ✓    |    ✓     |    ✓    |
+| Collections (create, manage, move)          |   ✗    |    ✓     |    ✓    |
+
+> Collections locked on Ignite (visible, disabled with lock icon). All basic document operations open on all tiers.
+
 ### Storage & Support
 
 | Feature             | Ignite  |   Velocity    |    Quantum    |
@@ -159,7 +171,7 @@
 
 ### Confirmed `agency_subscriptions` Table (Live — March 2026)
 
-This is the current confirmed state of the table after the v5 migration. 27 columns total.
+This is the current confirmed state of the table after the v5 migration + Phase 6 documents gating. 28 columns total.
 
 | column_name                  | data_type   | default     | nullable | purpose                                                        |
 | ---------------------------- | ----------- | ----------- | :------: | -------------------------------------------------------------- |
@@ -189,6 +201,7 @@ This is the current confirmed state of the table after the v5 migration. 27 colu
 | `finance_subscriptions`      | boolean     | `false`     |   YES    | Expense subscriptions route gate (Velocity+)                   |
 | `calendar_export`            | boolean     | `false`     |   YES    | Calendar PDF export gate (Velocity+)                           |
 | `finance_recurring_invoices` | boolean     | `false`     |   YES    | Recurring invoice templates gate (Velocity+)                   |
+| `documents_collections`      | boolean     | `false`     |   YES    | Document collections create/manage/move gate (Velocity+)       |
 
 > **Renamed columns**: `basic_whitelabel_enabled` → `branding_agency_sidebar`, `full_whitelabel_enabled` → `branding_powered_by`. Update all references in the codebase accordingly — search for both old names and replace.
 
@@ -203,6 +216,7 @@ This is the current confirmed state of the table after the v5 migration. 27 colu
 | `finance_recurring_invoices` | FALSE | FALSE  |   TRUE   |  TRUE   |
 | `finance_subscriptions`      | FALSE | FALSE  |   TRUE   |  TRUE   |
 | `calendar_export`            | FALSE | FALSE  |   TRUE   |  TRUE   |
+| `documents_collections`      | FALSE | FALSE  |   TRUE   |  TRUE   |
 
 ### Plan Limit Values per Plan
 
@@ -224,7 +238,8 @@ UPDATE agency_subscriptions SET
   branding_powered_by        = TRUE,
   finance_recurring_invoices = FALSE,
   finance_subscriptions      = FALSE,
-  calendar_export            = FALSE
+  calendar_export            = FALSE,
+  documents_collections      = FALSE
 WHERE user_id = $1;
 
 -- IGNITE
@@ -237,7 +252,8 @@ UPDATE agency_subscriptions SET
   branding_powered_by        = TRUE,
   finance_recurring_invoices = FALSE,
   finance_subscriptions      = FALSE,
-  calendar_export            = FALSE
+  calendar_export            = FALSE,
+  documents_collections      = FALSE
 WHERE user_id = $1;
 
 -- VELOCITY
@@ -250,7 +266,8 @@ UPDATE agency_subscriptions SET
   branding_powered_by        = TRUE,
   finance_recurring_invoices = TRUE,
   finance_subscriptions      = TRUE,
-  calendar_export            = TRUE
+  calendar_export            = TRUE,
+  documents_collections      = TRUE
 WHERE user_id = $1;
 
 -- QUANTUM
@@ -263,7 +280,8 @@ UPDATE agency_subscriptions SET
   branding_powered_by        = FALSE,
   finance_recurring_invoices = TRUE,
   finance_subscriptions      = TRUE,
-  calendar_export            = TRUE
+  calendar_export            = TRUE,
+  documents_collections      = TRUE
 WHERE user_id = $1;
 ```
 
@@ -731,3 +749,4 @@ Create one account per tier and verify the following across all three.
 | v3      | March 2026 | Stripped campaigns, proposals, documents                                                                                                                                                                                                                                                                                                                                                                                  |
 | v4      | March 2026 | Basic invoicing open to all tiers. Per-client profitability open to all tiers. Recurring templates → Velocity+.                                                                                                                                                                                                                                                                                                           |
 | v5      | March 2026 | Final confirmed decisions. Most features open to all tiers. Only gates: sidebar branding, review page branding, recurring invoices, expense subscriptions, calendar export. Three new features to build: sidebar footer text, review page "Powered by Tercero" footer, calendar PDF export. Payment reminders deferred. Full implementation instructions added. DB table confirmed and documented with live column state. |
+| v5.1    | March 2026 | Documents Phase 6 — subscription-based scoping for Collections. Added `documents_collections` flag (Velocity+). DB column live. UI: "New Collection" buttons locked, CollectionCards dimmed with lock icon, "Move to Collection" menu item disabled, Collections section on global page shows upgrade banner. Per-client basic document operations remain open on all tiers. |

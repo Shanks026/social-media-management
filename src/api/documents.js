@@ -185,6 +185,21 @@ export async function unarchiveDocument(id) {
 }
 
 /**
+ * Move a document into a collection, or remove it from its current collection.
+ * Pass collectionId = null to make the document ungrouped.
+ */
+export async function moveDocumentToCollection(documentId, collectionId) {
+  const { error } = await supabase
+    .from('client_documents')
+    .update({
+      collection_id: collectionId ?? null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', documentId)
+  if (error) throw error
+}
+
+/**
  * Delete a document from storage and remove its metadata row.
  */
 export async function deleteDocument({ id, storagePath, fileSizeBytes, userId }) {

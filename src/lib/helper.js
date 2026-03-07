@@ -17,6 +17,29 @@ export function formatFileSize(bytes) {
 }
 
 /**
+ * Derives a display-level publish state from a post version.
+ * Returns the DB status for single-date posts.
+ * Returns 'PARTIALLY_PUBLISHED' (UI-only) when some but not all platforms are published.
+ */
+export function getPublishState(version) {
+  if (!version?.platform_schedules) return version?.status
+  const entries = Object.values(version.platform_schedules)
+  if (!entries.length) return version.status
+  const publishedCount = entries.filter((e) => e.published_at).length
+  if (publishedCount === 0) return version.status
+  if (publishedCount === entries.length) return 'PUBLISHED'
+  return 'PARTIALLY_PUBLISHED'
+}
+
+/**
+ * Returns the effective scheduled_at for a given platform.
+ * Falls back to target_date when platform_schedules is absent.
+ */
+export function effectivePlatformDate(version, platform) {
+  return version?.platform_schedules?.[platform]?.scheduled_at ?? version?.target_date
+}
+
+/**
  * Format a date string into: 2 Jan, 2026
  */
 export function formatDate(dateInput) {

@@ -44,27 +44,29 @@ Pages/Components → API functions (src/api/) → Supabase client → PostgreSQL
 
 **Layout (AppShell.jsx):** Sidebar nav + header wrapper; feature content renders via React Router `<Outlet>`.
 
-**API layer (src/api/):** Domain-scoped modules (clients, posts, invoices, expenses, transactions, meetings, notes, agency, storage). Each exports plain async functions for mutations and React Query hooks for reads. Supabase RPC calls are used for complex aggregations:
+**API layer (src/api/):** Domain-scoped modules (clients, posts, invoices, expenses, transactions, meetings, notes, documents, agency, storage). Each exports plain async functions for mutations and React Query hooks for reads. `useGlobalPosts.js` handles cross-client post queries. Supabase RPC calls are used for complex aggregations:
 - `get_clients_with_pipeline()` — client analytics
 - `create_post_draft_v3()` — atomic post creation
 - `create_revision_version()` — post versioning
 - `get_global_calendar()` — date-range post queries
 
-**Pages (src/pages/):** Feature directories — clients, posts, calendar, finance, billing, operations (notes/meetings), settings, public review.
+**Pages (src/pages/):** Feature directories — clients, posts, calendar, finance, billingAndUsage, operations (notes/meetings), documents, dashboard, settings, public review.
 
 **Header context (`src/components/misc/header-context.jsx`):** Pages call `useHeader()` to set the dynamic breadcrumb/title in the shell header via `setHeader({ title, breadcrumbs })`.
 
 **Shared utilities:**
-- `src/lib/helper.js` — `formatDate(dateInput)` → "2 Jan, 2026"
+- `src/lib/helper.js` — `formatDate(dateInput)` → "2 Jan, 2026"; `formatFileSize(bytes)` → "2.3 MB"; `MAX_DOCUMENT_SIZE_BYTES` constant (50 MB)
 - `src/lib/client-helpers.js` — `getUrgencyStatus(nextPostAt)` → urgency color/label for pipeline indicators
 
 ### Domain Patterns
 
 **Post management:** Versioning via parent-child post relationships. Statuses: `DRAFT`, `PENDING`, `REVISIONS`, `SCHEDULED`, `ARCHIVED`. Media stored in Supabase `post-media` bucket; deletions are deferred until media is unused. Shareable public review via token.
 
-**Clients:** "Internal Account" vs real clients. Pipeline analytics (`view_client_profitability` DB view). Tiers and industries for filtering.
+**Clients:** "Internal Account" vs real clients (`is_internal` flag). Pipeline analytics (`view_client_profitability` DB view). Tiers and industries for filtering.
 
-**Finance (`/finance`):** Agency-side financial tracking — invoice generation with PDF export (`@react-pdf/renderer`), expense tracking, transaction ledger, client subscription plan management. Nested routes: `overview`, `subscriptions`, `ledger`, `invoices`.
+**Documents (`/documents`):** File storage per client using a private Supabase `client-documents` bucket (signed URLs). Documents have categories, belong to optional collections, and are scoped by `client_id`. The global page shows all documents with a client filter dropdown; the same `DocumentsTab` component is reused in the Client Detail page, filtering by `clientId` prop. Storage usage is tracked on `agency_subscriptions.current_storage_used` via `increment_storage_used` / `decrement_storage_used` RPCs.
+
+**Finance (`/finance`):** Agency-side financial tracking — invoice generation with PDF export, expense tracking, transaction ledger, client subscription plan management. Nested routes: `overview`, `subscriptions`, `ledger`, `invoices`.
 
 **Billing (`/billing`):** The agency's own subscription to Tercero — plan details, usage stats, and internal invoices. Separate from client Finance.
 
@@ -72,29 +74,21 @@ Pages/Components → API functions (src/api/) → Supabase client → PostgreSQL
 
 ### Subscription & Feature Gating
 
-**`useSubscription()` (`src/api/useSubscription.js`):** Central hook for all plan/tier checks. Returns the `agency_subscriptions` row with derived fields. Always use this hook — never query `agency_subscriptions` directly in components.
+**`useSubscription()` (`src/api/useSubscription.js`):** Central hook for all plan/tier checks. Returns a React Query result; access via `const { data } = useSubscription()`. Always use this hook — never query `agency_subscriptions` directly in components.
 
-Plans: `trial` | `ignite` | `velocity` | `quantum`
+The `data` object includes:
+- `plan_name` — `'trial'` | `'ignite'` | `'velocity'` | `'quantum'`
+- `agency_name`, `logo_url` — agency branding
+- `client_count`, `max_clients` — for client limit checks
+- `storage_display` — pre-calculated storage usage strings (`usage_value`, `usage_unit`, `max_value`, `percent`, `remaining_label`)
+- Feature flags (all boolean):
+  - `branding_agency_sidebar` — show agency logo+name in sidebar (Velocity+)
+  - `branding_powered_by` — show "Powered by Tercero" footer (Ignite + Velocity; Quantum hides it)
+  - `finance_recurring_invoices` — recurring invoice templates tab (Velocity+)
+  - `finance_subscriptions` — expense subscriptions route (Velocity+)
+  - `calendar_export` — calendar PDF export button (Velocity+)
 
-Key feature flags on the `agency_subscriptions` table (all boolean):
-- `branding_agency_sidebar` — show agency logo+name in sidebar (Velocity+)
-- `branding_powered_by` — show "Tercero YYYY" / "Powered by Tercero" (Ignite + Velocity; Quantum hides it)
-- `finance_recurring_invoices` — recurring invoice templates tab (Velocity+)
-- `finance_subscriptions` — expense subscriptions route (Velocity+)
-- `calendar_export` — calendar PDF export button (Velocity+)
-
-**`can.*` pattern** — the hook exposes helper methods via the `can` object:
-```js
-const { subscription, can, planName } = useSubscription()
-can.useAgencySidebar()        // branding_agency_sidebar
-can.showPoweredBy()           // branding_powered_by
-can.recurringInvoices()       // finance_recurring_invoices
-can.expenseSubscriptions()    // finance_subscriptions
-can.calendarExport()          // calendar_export
-can.addClient(currentCount)   // checks max_clients limit
-```
-
-**Gating pattern:** Gate UI with `can.*()` checks. For locked features (visible but disabled), show the feature with a disabled state + lock icon + tooltip. For hidden features (like nav items), conditionally render them. See `.claude/features/feature-tiers-v5.md` for the full feature matrix and gating implementation notes.
+**Gating pattern:** Read flags directly from `data` (e.g. `data?.finance_subscriptions`). For locked features (visible but disabled), show with a disabled state + lock icon + tooltip. For hidden features (like nav items), conditionally render them. See `.claude/features/feature-tiers-v5.md` for the full feature matrix.
 
 **Public review page (`/review/:token`):** This page is unauthenticated. To access branding flags, extend the token query to join through `post_versions → posts → clients → agency_subscriptions`.
 

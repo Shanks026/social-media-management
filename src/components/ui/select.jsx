@@ -48,8 +48,9 @@ function SelectTrigger({
 function SelectContent({
   className,
   children,
-  position = "item-aligned",
-  align = "center",
+  position = "popper",
+  align = "start",
+  sideOffset = 4,
   ...props
 }) {
   return (
@@ -64,6 +65,7 @@ function SelectContent({
         )}
         position={position}
         align={align}
+        sideOffset={sideOffset}
         {...props}>
         <SelectScrollUpButton />
         <SelectPrimitive.Viewport
