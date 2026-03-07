@@ -14,6 +14,7 @@ import {
   Trash2,
   MoreHorizontal,
   Eye,
+  FolderInput,
 } from 'lucide-react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
@@ -64,6 +65,7 @@ import { DOCUMENT_CATEGORIES } from './UploadMetaDialog'
 import { useAuth } from '@/context/AuthContext'
 import { Building2 } from 'lucide-react'
 import DocumentPreviewModal from './DocumentPreviewModal'
+import MoveToCollectionDialog from './MoveToCollectionDialog'
 
 function getFileIcon(mimeType) {
   if (!mimeType) return File
@@ -84,6 +86,7 @@ export default function DocumentCard({ doc }) {
   const [editName, setEditName] = useState(doc.display_name)
   const [editCategory, setEditCategory] = useState(doc.category)
   const [previewOpen, setPreviewOpen] = useState(false)
+  const [moveDialogOpen, setMoveDialogOpen] = useState(false)
 
   const Icon = getFileIcon(doc.mime_type)
 
@@ -250,6 +253,10 @@ export default function DocumentCard({ doc }) {
               <Pencil className="size-4" />
               Rename / Recategorise
             </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => setMoveDialogOpen(true)}>
+              <FolderInput className="size-4" />
+              Move to Collection
+            </DropdownMenuItem>
             {isArchived ? (
               <DropdownMenuItem
                 onClick={() => unarchiveMutation.mutate()}
@@ -301,6 +308,13 @@ export default function DocumentCard({ doc }) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Move to Collection dialog */}
+      <MoveToCollectionDialog
+        open={moveDialogOpen}
+        onOpenChange={setMoveDialogOpen}
+        document={doc}
+      />
 
       {/* Preview modal */}
       <DocumentPreviewModal

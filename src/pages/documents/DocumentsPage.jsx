@@ -25,6 +25,7 @@ import {
   EmptyContent,
   EmptyDescription,
   EmptyHeader,
+  EmptyMedia,
   EmptyTitle,
 } from '@/components/ui/empty'
 import DocumentCard from '@/components/documents/DocumentCard'
@@ -355,26 +356,24 @@ export default function DocumentsPage() {
             {/* ── ALL ── */}
             <TabsContent value="all" className="mt-0">
               {filteredDocs.length === 0 ? (
-                <Empty className="py-32 bg-card/20 rounded-[32px] border border-dashed border-border/60">
-                  <EmptyHeader className="flex flex-col items-center">
-                    <div className="h-20 w-20 rounded-full bg-primary/5 flex items-center justify-center mb-6">
-                      {isFilterActive
-                        ? <Search className="size-10 text-primary/40" />
-                        : <FolderOpen className="size-10 text-primary/40" />}
-                    </div>
-                    <EmptyTitle className="text-2xl font-light">
+                <Empty className="border">
+                  <EmptyHeader>
+                    <EmptyMedia variant="icon">
+                      {isFilterActive ? <Search /> : <FolderOpen />}
+                    </EmptyMedia>
+                    <EmptyTitle>
                       {isFilterActive ? 'No documents match your filters' : 'No documents yet'}
                     </EmptyTitle>
-                    <EmptyDescription className="max-w-md text-center font-light">
+                    <EmptyDescription>
                       {isFilterActive
                         ? "Adjust your filters to find what you're looking for."
                         : 'Upload a contract, brief, or brand asset to get started.'}
                     </EmptyDescription>
                   </EmptyHeader>
                   {isFilterActive && (
-                    <EmptyContent className="mt-8">
-                      <Button variant="ghost" onClick={clearFilters} className="rounded-full gap-2">
-                        <X className="size-4" /> Clear all filters
+                    <EmptyContent className="mt-4">
+                      <Button variant="ghost" size="sm" onClick={clearFilters} className="gap-1.5">
+                        <X className="size-3.5" /> Clear all filters
                       </Button>
                     </EmptyContent>
                   )}
@@ -391,13 +390,11 @@ export default function DocumentsPage() {
             {/* ── COLLECTIONS ── */}
             <TabsContent value="collections" className="mt-0">
               {collections.length === 0 ? (
-                <Empty className="py-32 bg-card/20 rounded-[32px] border border-dashed border-border/60">
-                  <EmptyHeader className="flex flex-col items-center">
-                    <div className="h-20 w-20 rounded-full bg-primary/5 flex items-center justify-center mb-6">
-                      <FolderOpen className="size-10 text-primary/40" />
-                    </div>
-                    <EmptyTitle className="text-2xl font-light">No collections yet</EmptyTitle>
-                    <EmptyDescription className="max-w-md text-center font-light">
+                <Empty className="border">
+                  <EmptyHeader>
+                    <EmptyMedia variant="icon"><FolderOpen /></EmptyMedia>
+                    <EmptyTitle>No collections yet</EmptyTitle>
+                    <EmptyDescription>
                       {activeClientId
                         ? "Open this client\u2019s Documents tab to create a collection."
                         : "Open a client\u2019s Documents tab to create collections."}
@@ -452,26 +449,24 @@ export default function DocumentsPage() {
             {/* ── UNGROUPED ── */}
             <TabsContent value="ungrouped" className="mt-0">
               {ungroupedDocs.length === 0 ? (
-                <Empty className="py-32 bg-card/20 rounded-[32px] border border-dashed border-border/60">
-                  <EmptyHeader className="flex flex-col items-center">
-                    <div className="h-20 w-20 rounded-full bg-primary/5 flex items-center justify-center mb-6">
-                      {isFilterActive
-                        ? <Search className="size-10 text-primary/40" />
-                        : <FolderOpen className="size-10 text-primary/40" />}
-                    </div>
-                    <EmptyTitle className="text-2xl font-light">
+                <Empty className="border">
+                  <EmptyHeader>
+                    <EmptyMedia variant="icon">
+                      {isFilterActive ? <Search /> : <FolderOpen />}
+                    </EmptyMedia>
+                    <EmptyTitle>
                       {isFilterActive ? 'No ungrouped documents match your filters' : 'No ungrouped documents'}
                     </EmptyTitle>
-                    <EmptyDescription className="max-w-md text-center font-light">
+                    <EmptyDescription>
                       {isFilterActive
                         ? "Adjust your filters to find what you're looking for."
                         : 'All documents are organised into collections.'}
                     </EmptyDescription>
                   </EmptyHeader>
                   {isFilterActive && (
-                    <EmptyContent className="mt-8">
-                      <Button variant="ghost" onClick={clearFilters} className="rounded-full gap-2">
-                        <X className="size-4" /> Clear all filters
+                    <EmptyContent className="mt-4">
+                      <Button variant="ghost" size="sm" onClick={clearFilters} className="gap-1.5">
+                        <X className="size-3.5" /> Clear all filters
                       </Button>
                     </EmptyContent>
                   )}

@@ -12,6 +12,7 @@
 | `01-campaigns.md` | Campaigns — Content grouping layer | Post grouping, campaign CRUD, filter integration | Analytics, budgets, campaign-level approval links | High |
 | `02-proposals.md` | Proposals & Client Pipeline | Prospect status, pipeline kanban, convert flow | Full proposal builder, shareable link, e-signature | High |
 | `03-document-storage.md` | Document Storage | File upload per client, categories, preview | Templates, AI generation, document sharing, e-sign | High |
+| `06-post-creation-enhancement.md` | Per-Platform Scheduling & Publishing | DB migration + API foundation (zero UI change) | DraftPostForm per-platform pickers | Critical |
 
 ---
 
@@ -96,6 +97,7 @@ Features that affect plan limit calculations:
 - `posts` — add nullable `campaign_id` FK (phase 1)
 - `clients` — add prospect fields + new status value (phase 1)
 - `invoices` — add optional `campaign_id` and `proposal_id` FKs (phase 2)
+- `post_versions` — add nullable `platform_schedules jsonb` (feature 06, phase 1)
 
 ### New Supabase Edge Functions
 - `send-proposal-email` — triggered when proposal sent to client (phase 2)

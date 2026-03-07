@@ -2,7 +2,7 @@
 
 **Product**: Tercero — Social Media Agency Management SaaS
 **File**: `.claude/features/document-feature.md`
-**Status**: Phases 1–4 complete ✅ — Phase 5 ready to build
+**Status**: All phases complete ✅
 **Last Updated**: March 2026
 
 ---
@@ -32,7 +32,7 @@ Phase 1 — Basic Upload & List                          ✅ Complete
 Phase 2 — Global Documents Page                        ✅ Complete
 Phase 3 — Collections                                  ✅ Complete
 Phase 4 — Preview & Enhanced UX                        ✅ Complete
-Phase 5 — Move to Collection                           🔲 Ready to build
+Phase 5 — Move to Collection                           ✅ Complete
 ```
 
 ---
@@ -147,7 +147,7 @@ Phase 5 — Move to Collection                           🔲 Ready to build
 
 ---
 
-## Phase 5 — Move to Collection 🔲
+## Phase 5 — Move to Collection ✅
 
 ### Goal
 
@@ -300,22 +300,30 @@ The "Move to Collection" action works identically in all three. The dialog handl
 
 ### 5.6 Phase 5 Checklist
 
-- [ ] `useMoveToCollection()` mutation added to `src/api/documents.js`
-- [ ] Both `['documents']` and `['collections']` query keys invalidated on mutation success
-- [ ] `MoveToCollectionDialog.jsx` created in `src/components/documents/`
-- [ ] Dialog fetches collections filtered by `document.client_id` via existing `useCollections` hook
-- [ ] Current collection pre-selected with "Current" label when document is already in one
-- [ ] Move button disabled when selected collection matches current `collection_id`
-- [ ] "Remove from Collection" link shown only when `document.collection_id` is not null
-- [ ] "Remove from Collection" sets `collection_id` to null, shows appropriate toast
-- [ ] Empty state shown when client has no collections
-- [ ] `CreateCollectionDialog` launchable from within the empty state
-- [ ] Collection list refreshes after creating a collection from within the empty state
-- [ ] On move success: toast with collection name, dialog closes
-- [ ] "Move to Collection" added to `DocumentCard` three-dot menu (after Change Category, before Archive)
-- [ ] `FolderInput` icon used for the menu item
-- [ ] Action works correctly from all three contexts: DocumentsTab, DocumentsPage, CollectionCard
-- [ ] Existing Phase 1–4 functionality unchanged
+- [x] `moveDocumentToCollection()` plain async mutation added to `src/api/documents.js`
+- [x] Both `['documents', 'list']` and `['document-collections', clientId]` query keys invalidated on mutation success
+- [x] `MoveToCollectionDialog.jsx` created in `src/components/documents/`
+- [x] Dialog fetches collections filtered by `document.client_id` via existing `useCollections` hook
+- [x] Current collection pre-selected with "Current" label when document is already in one
+- [x] Move button disabled when selected collection matches current `collection_id`
+- [x] "Remove from Collection" link shown only when `document.collection_id` is not null
+- [x] "Remove from Collection" sets `collection_id` to null, shows appropriate toast
+- [x] Empty state shown when client has no collections
+- [x] `CreateCollectionDialog` launchable from within the empty state
+- [x] Collection list refreshes after creating a collection from within the empty state (React Query invalidation)
+- [x] On move success: toast with collection name, dialog closes
+- [x] "Move to Collection" added to `DocumentCard` three-dot menu (after Rename/Recategorise, before Archive)
+- [x] `FolderInput` icon used for the menu item
+- [x] Action works correctly from all three contexts: DocumentsTab, DocumentsPage, CollectionCard
+- [x] Existing Phase 1–4 functionality unchanged
+
+### Implementation Notes
+
+- Followed codebase convention: `moveDocumentToCollection` is a plain async function (not a React Query mutation hook). The `useMutation` wrapper lives in `MoveToCollectionDialog`.
+- Query key for collections is `['document-collections', clientId]` (not `['collections']` as shown in the spec) — matched to the actual `documentKeys` factory.
+- `allCollections` key also invalidated so the global Documents page collection filter stays fresh.
+- "Remove from Collection" uses a lightweight inline confirm (two-step: click link → confirm/cancel buttons) — no `AlertDialog` per spec.
+- `MoveToCollectionDialog` hides itself (`open={open && !createOpen}`) while `CreateCollectionDialog` is open to avoid nested dialog stacking issues.
 
 **→ Stop here. Show the result and wait for approval.**
 
