@@ -70,6 +70,7 @@ export async function fetchClients(filters = {}) {
     industry: c.industry,
     is_internal: c.is_internal,
     platforms: c.platforms || [],
+    active_campaigns: Number(c.active_campaigns ?? 0),
     created_at: c.created_at,
     pipeline: {
       drafts: Number(c.drafts),

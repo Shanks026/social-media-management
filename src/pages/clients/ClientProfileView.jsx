@@ -7,6 +7,7 @@ import {
   PieChart,
   Receipt,
   FolderOpen,
+  Megaphone,
 } from 'lucide-react'
 
 // UI Components
@@ -22,6 +23,7 @@ import ContentCalendar from '../calendar/ContentCalendar'
 import { cn } from '@/lib/utils'
 import { ClientBillingTab } from './ClientBillingTab'
 import DocumentsTab from '@/components/documents/DocumentsTab'
+import { CampaignTab } from '@/components/campaigns/CampaignTab'
 
 export default function ClientProfileView({ client }) {
   if (!client) return null
@@ -54,9 +56,11 @@ export default function ClientProfileView({ client }) {
   const TABS_CONFIG = [
     { value: 'overview', label: 'Overview', icon: PieChart },
     { value: 'workflow', label: 'Workflow', icon: LayoutGrid },
+    { value: 'campaigns', label: 'Campaigns', icon: Megaphone },
     ...(!client.is_internal
       ? [{ value: 'billing', label: 'Billing', icon: Receipt }]
       : []),
+
     { value: 'documents', label: 'Documents', icon: FolderOpen },
     { value: 'calendar', label: 'Calendar', icon: Calendar },
     { value: 'management', label: 'Settings', icon: Settings2 },
@@ -153,6 +157,13 @@ export default function ClientProfileView({ client }) {
                 <ClientBillingTab clientId={client.id} />
               </TabsContent>
             )}
+
+            <TabsContent
+              value="campaigns"
+              className="mt-2 focus-visible:outline-none"
+            >
+              <CampaignTab clientId={client.id} />
+            </TabsContent>
 
             <TabsContent
               value="documents"

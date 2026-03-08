@@ -18,6 +18,8 @@ import {
   Video,
   LayoutDashboard,
   Lock,
+  FolderOpen,
+  Megaphone,
 } from 'lucide-react'
 import { NavLink, useLocation } from 'react-router-dom'
 import {
@@ -48,6 +50,7 @@ const BASE_NAV_ITEMS = [
   { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
   { title: 'My Organization', url: '/myorganization', icon: Building2 },
   { title: 'Clients', url: '/clients', icon: UserStar },
+  { title: 'Campaigns', url: '/campaigns', icon: Megaphone, requiresFlag: 'campaigns' },
   {
     title: 'Operations',
     url: '/operations',
@@ -93,7 +96,7 @@ const BASE_NAV_ITEMS = [
 export function NavMain() {
   const { state } = useSidebar()
   const location = useLocation()
-  const { data: sub } = useSubscription()
+  const { data: sub, isLoading } = useSubscription()
 
   // Keep all items — locked ones are shown as disabled rather than hidden
   const navItems = BASE_NAV_ITEMS
@@ -110,6 +113,7 @@ export function NavMain() {
               (sub) => location.pathname === sub.url,
             )
             const isMainActive = location.pathname === item.url || isChildActive
+            const isTopLocked = item.requiresFlag && !isLoading && !sub?.[item.requiresFlag]
 
             if (item.items && item.items.length > 0) {
               return (
@@ -136,6 +140,7 @@ export function NavMain() {
                         {item.items.map((subItem) => {
                           const isLocked =
                             subItem.requiresFlag &&
+                            !isLoading &&
                             !sub?.[subItem.requiresFlag]
 
                           if (isLocked) {
@@ -194,6 +199,9 @@ export function NavMain() {
                   <NavLink to={item.url}>
                     <item.icon className="size-4 shrink-0" />
                     {state === 'expanded' && <span>{item.title}</span>}
+                    {state === 'expanded' && isTopLocked && (
+                      <Lock className="ml-auto size-3 shrink-0 text-muted-foreground" />
+                    )}
                   </NavLink>
                 </SidebarMenuButton>
               </SidebarMenuItem>
