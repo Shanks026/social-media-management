@@ -7,7 +7,7 @@ import { getPublishState } from '@/lib/helper'
  * Builds a Supabase query for global posts with dynamic filters.
  */
 function buildPostsQuery(userId, filters = {}) {
-  const { search, status, clientId, platform, dateRange } = filters
+  const { search, status, clientId, platform, dateRange, campaignId } = filters
 
   let query = supabase
     .from('posts')
@@ -15,6 +15,8 @@ function buildPostsQuery(userId, filters = {}) {
       `
       id,
       client_id,
+      campaign_id,
+      campaigns!campaign_id ( id, name ),
       clients!inner (
         id,
         name,
@@ -74,6 +76,11 @@ function buildPostsQuery(userId, filters = {}) {
     query = query.lte('post_versions.target_date', dateRange.to.toISOString())
   }
 
+  // --- Campaign filter ---
+  if (campaignId && campaignId !== 'all') {
+    query = query.eq('campaign_id', campaignId)
+  }
+
   return query.order('created_at', { ascending: false })
 }
 
@@ -106,6 +113,9 @@ function normalizePosts(data) {
         client_name: c?.name || 'Unknown',
         client_logo: c?.logo_url,
         is_internal: c?.is_internal || false,
+        // Campaign info
+        campaign_id: row.campaign_id || null,
+        campaign_name: row.campaigns?.name || null,
       }
     })
 }

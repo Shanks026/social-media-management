@@ -24,6 +24,7 @@ import NotesAndReminders from './pages/NotesAndReminders'
 import MeetingsPage from './pages/MeetingsPage'
 import Dashboard from './pages/dashboard/Dashboard'
 import DocumentsPage from './pages/documents/DocumentsPage'
+import CampaignsPage from './pages/campaigns/CampaignsPage'
 
 
 function SubscriptionsRoute() {
@@ -57,6 +58,7 @@ function AppRoutes() {
             path="/clients/:clientId/posts/:postId"
             element={<PostDetails />}
           />
+          <Route path="/campaigns" element={<CampaignsPage />} />
           <Route path="/posts" element={<Posts />} />
           <Route path="/operations/notes" element={<NotesAndReminders />} />
           <Route path="/operations/meetings" element={<MeetingsPage />} />

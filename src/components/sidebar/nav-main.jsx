@@ -18,6 +18,7 @@ import {
   Video,
   LayoutDashboard,
   Lock,
+  FolderOpen,
 } from 'lucide-react'
 import { NavLink, useLocation } from 'react-router-dom'
 import {
@@ -48,6 +49,7 @@ const BASE_NAV_ITEMS = [
   { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
   { title: 'My Organization', url: '/myorganization', icon: Building2 },
   { title: 'Clients', url: '/clients', icon: UserStar },
+  { title: 'Campaigns', url: '/campaigns', icon: FolderOpen, requiresFlag: 'campaigns' },
   {
     title: 'Operations',
     url: '/operations',
@@ -110,6 +112,7 @@ export function NavMain() {
               (sub) => location.pathname === sub.url,
             )
             const isMainActive = location.pathname === item.url || isChildActive
+            const isTopLocked = item.requiresFlag && !sub?.[item.requiresFlag]
 
             if (item.items && item.items.length > 0) {
               return (
@@ -194,6 +197,9 @@ export function NavMain() {
                   <NavLink to={item.url}>
                     <item.icon className="size-4 shrink-0" />
                     {state === 'expanded' && <span>{item.title}</span>}
+                    {state === 'expanded' && isTopLocked && (
+                      <Lock className="ml-auto size-3 shrink-0 text-muted-foreground" />
+                    )}
                   </NavLink>
                 </SidebarMenuButton>
               </SidebarMenuItem>

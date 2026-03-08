@@ -124,6 +124,7 @@ export async function createDraftPost({
   adminNotes,
   userId,
   platformSchedules,
+  campaignId,
 }) {
   const { error } = await supabase.rpc('create_post_draft_v3', {
     p_client_id: clientId,
@@ -135,6 +136,7 @@ export async function createDraftPost({
     p_target_date: target_date ?? null,
     p_admin_notes: adminNotes || null,
     p_platform_schedules: platformSchedules ?? null,
+    p_campaign_id: campaignId ?? null,
   })
 
   if (error) throw error
@@ -193,7 +195,7 @@ export const deletePost = async (postId) => {
 
 export async function updatePost(
   versionId,
-  { title, content, mediaUrls, platforms, target_date, admin_notes, platformSchedules },
+  { title, content, mediaUrls, platforms, target_date, admin_notes, platformSchedules, campaignId, postId },
 ) {
   const { data, error } = await supabase
     .from('post_versions')
@@ -214,6 +216,15 @@ export async function updatePost(
 
   if (data?.length === 0) {
     throw new Error('Update failed: Only drafts can be modified.')
+  }
+
+  // Update campaign_id on the posts row when postId is provided
+  if (postId !== undefined && campaignId !== undefined) {
+    const { error: postError } = await supabase
+      .from('posts')
+      .update({ campaign_id: campaignId || null })
+      .eq('id', postId)
+    if (postError) throw postError
   }
 
   return data
