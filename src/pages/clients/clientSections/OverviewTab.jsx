@@ -629,7 +629,7 @@ export default function OverviewTab({ client }) {
             </CardContent>
           </Card>
 
-          <Card className="border-none shadow-sm ring-1 ring-border/50 bg-card/50 flex flex-col gap-2">
+          <Card className="border-none shadow-sm ring-1 ring-border/50 bg-card/50 flex flex-col gap-2 h-full">
             <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
               <CardTitle className="text-lg font-medium">
                 Recent Transactions

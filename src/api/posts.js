@@ -10,6 +10,9 @@ export async function fetchAllPostsByClient(clientId) {
     .select(
       `
       id,
+      client_id,
+      campaign_id,
+      campaigns ( name ),
       post_versions!fk_current_version (
         id,
         title,
@@ -19,6 +22,8 @@ export async function fetchAllPostsByClient(clientId) {
         status,
         version_number,
         created_at,
+        updated_at,
+        published_at,
         target_date,
         admin_notes,
         platform_schedules
@@ -38,7 +43,10 @@ export async function fetchAllPostsByClient(clientId) {
       id: post.id,
       version_id: latest.id,
       actual_post_id: post.id,
+      client_id: post.client_id,
       display_date: latest.created_at || new Date().toISOString(),
+      campaign_id: post.campaign_id,
+      campaign_name: post.campaigns?.name,
     }
   })
 }
@@ -124,6 +132,7 @@ export async function createDraftPost({
   adminNotes,
   userId,
   platformSchedules,
+  campaignId,
 }) {
   const { error } = await supabase.rpc('create_post_draft_v3', {
     p_client_id: clientId,
@@ -135,6 +144,7 @@ export async function createDraftPost({
     p_target_date: target_date ?? null,
     p_admin_notes: adminNotes || null,
     p_platform_schedules: platformSchedules ?? null,
+    p_campaign_id: campaignId ?? null,
   })
 
   if (error) throw error
@@ -193,7 +203,7 @@ export const deletePost = async (postId) => {
 
 export async function updatePost(
   versionId,
-  { title, content, mediaUrls, platforms, target_date, admin_notes, platformSchedules },
+  { title, content, mediaUrls, platforms, target_date, admin_notes, platformSchedules, campaignId, postId },
 ) {
   const { data, error } = await supabase
     .from('post_versions')
@@ -214,6 +224,15 @@ export async function updatePost(
 
   if (data?.length === 0) {
     throw new Error('Update failed: Only drafts can be modified.')
+  }
+
+  // Update campaign_id on the posts row when postId is provided
+  if (postId !== undefined && campaignId !== undefined) {
+    const { error: postError } = await supabase
+      .from('posts')
+      .update({ campaign_id: campaignId || null })
+      .eq('id', postId)
+    if (postError) throw postError
   }
 
   return data

@@ -16,6 +16,7 @@ import {
 import { createDraftPost, updatePost } from '@/api/posts'
 import { uploadPostImage } from '@/api/storage'
 import { fetchClientById } from '@/api/clients'
+import { fetchActiveCampaignsByClient } from '@/api/campaigns'
 
 import {
   Dialog,
@@ -140,6 +141,7 @@ const formSchema = z
       invalid_type_error: 'Please select a valid date and time',
     }),
     client_id: z.string().optional(),
+    campaign_id: z.string().optional(),
   })
   .superRefine((data) => {
     if (data.platforms.includes('youtube')) {
@@ -167,6 +169,8 @@ export default function DraftPostForm({
   open,
   onOpenChange,
   initialData = null,
+  initialCampaignId = null,
+  initialCampaignName = null,
 }) {
   const { user } = useAuth()
   const queryClient = useQueryClient()
@@ -192,12 +196,48 @@ export default function DraftPostForm({
       images: [],
       target_date: undefined,
       client_id: '',
+      campaign_id: '',
     },
   })
 
   // eslint-disable-next-line react-hooks/incompatible-library
   const formClientId = form.watch('client_id')
   const effectiveClientId = clientId || formClientId
+
+  const [availableCampaigns, setAvailableCampaigns] = useState([])
+
+  useEffect(() => {
+    if (!effectiveClientId || !subscription?.campaigns) {
+      if (!isEditMode) form.setValue('campaign_id', '')
+      setAvailableCampaigns([])
+      return
+    }
+
+    // Always set the campaign_id if providing an initial one
+    if (initialCampaignId) {
+      form.setValue('campaign_id', initialCampaignId)
+    } else if (!isEditMode && !form.getValues('campaign_id')) {
+      form.setValue('campaign_id', '')
+    }
+
+    fetchActiveCampaignsByClient(effectiveClientId)
+      .then((data) => {
+        setAvailableCampaigns(data)
+        // Ensure initialCampaignId is selected if it's in the data and we haven't manually changed it
+        if (initialCampaignId && data.some((c) => c.id === initialCampaignId)) {
+          form.setValue('campaign_id', initialCampaignId)
+        }
+      })
+      .catch(() => setAvailableCampaigns([]))
+  }, [effectiveClientId, subscription?.campaigns, initialCampaignId, isEditMode, form])
+
+  // Reset/Initialize form when opening for a NEW post
+  useEffect(() => {
+    if (open && !isEditMode) {
+      if (clientId) form.setValue('client_id', clientId)
+      if (initialCampaignId) form.setValue('campaign_id', initialCampaignId)
+    }
+  }, [open, isEditMode, clientId, initialCampaignId, form])
 
   // Derived state for validation
   const watchedPlatforms = form.watch('platforms') || []
@@ -220,6 +260,7 @@ export default function DraftPostForm({
           ? new Date(initialData.target_date)
           : undefined,
         client_id: initialData.client_id || '',
+        campaign_id: initialData.campaign_id || '',
       })
 
       // Initialize with correct types for remote URLs
@@ -397,9 +438,14 @@ export default function DraftPostForm({
         platformSchedules: perPlatformMode
           ? buildPlatformSchedulesPayload(platformSchedulesState)
           : null,
+        campaignId: values.campaign_id || null,
       }
 
-      if (isEditMode) return updatePost(initialData.version_id, payload)
+      if (isEditMode)
+        return updatePost(initialData.version_id, {
+          ...payload,
+          postId: initialData.actual_post_id,
+        })
       return createDraftPost(payload)
     },
     onSuccess: () => {
@@ -709,6 +755,45 @@ export default function DraftPostForm({
                                   )}
                                   <span>{c.name}</span>
                                 </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+
+                {/* Campaign Select — only when active campaigns exist for this client */}
+                {availableCampaigns.length > 0 && (
+                  <FormField
+                    control={form.control}
+                    name="campaign_id"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Campaign</FormLabel>
+                        <Select
+                          onValueChange={(val) => field.onChange(val === 'none' ? '' : val)}
+                          value={field.value || 'none'}
+                          disabled={!!initialCampaignId}
+                        >
+                          <FormControl>
+                            <SelectTrigger className="w-full">
+                              <SelectValue placeholder="No Campaign" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="none">No Campaign</SelectItem>
+                            {/* Ensure we have at least one entry for the pre-selected campaign even if it's not in the active list fetched */}
+                            {initialCampaignId && initialCampaignName && !availableCampaigns.some(c => c.id === initialCampaignId) && (
+                              <SelectItem key={initialCampaignId} value={initialCampaignId}>
+                                {initialCampaignName}
+                              </SelectItem>
+                            )}
+                            {availableCampaigns.map((c) => (
+                              <SelectItem key={c.id} value={c.id}>
+                                {c.name}
                               </SelectItem>
                             ))}
                           </SelectContent>

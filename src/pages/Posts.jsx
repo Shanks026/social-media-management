@@ -17,6 +17,7 @@ import {
   Building2,
   Users,
   Filter,
+  FolderOpen,
 } from 'lucide-react'
 
 // UI Components
@@ -54,6 +55,8 @@ import { getPublishState } from '@/lib/helper'
 import { useHeader } from '@/components/misc/header-context'
 import { useGlobalPosts, usePostCounts } from '@/api/useGlobalPosts'
 import { useClients } from '@/api/clients'
+import { useCampaigns } from '@/api/campaigns'
+import { useSubscription } from '@/api/useSubscription'
 
 // ─── Constants ──────────────────────────────────────────
 const PLATFORMS = [
@@ -123,6 +126,7 @@ export default function Posts() {
   const [selectedClient, setSelectedClient] = useState('all')
   const [platform, setPlatform] = useState('all')
   const [dateRange, setDateRange] = useState({ from: undefined, to: undefined })
+  const [selectedCampaign, setSelectedCampaign] = useState('all')
 
   // Debounce search
   useEffect(() => {
@@ -145,11 +149,14 @@ export default function Posts() {
     clientId: effectiveClientId,
     platform: platform !== 'all' ? platform : undefined,
     dateRange: dateRange.from ? dateRange : undefined,
+    campaignId: selectedCampaign !== 'all' ? selectedCampaign : undefined,
   }
 
   const { data: posts = [], isLoading } = useGlobalPosts(filters)
   const { data: counts = {} } = usePostCounts()
   const { data: clientsData } = useClients()
+  const { data: sub } = useSubscription()
+  const { data: allCampaigns = [] } = useCampaigns()
 
   // Client options for dropdown
   const clientOptions = useMemo(() => {
@@ -180,7 +187,8 @@ export default function Posts() {
     scope !== 'all' ||
     selectedClient !== 'all' ||
     platform !== 'all' ||
-    dateRange.from
+    dateRange.from ||
+    selectedCampaign !== 'all'
 
   const resetFilters = () => {
     setSearch('')
@@ -189,6 +197,7 @@ export default function Posts() {
     setSelectedClient('all')
     setPlatform('all')
     setDateRange({ from: undefined, to: undefined })
+    setSelectedCampaign('all')
   }
 
   // ─── Table columns ───────────────────────────
@@ -315,6 +324,11 @@ export default function Posts() {
             Manage all posts across your organization
           </p>
         </div>
+
+        <Button onClick={() => setIsCreatePostOpen(true)} className="gap-2 h-9">
+          <Plus size={16} />
+          New Post
+        </Button>
       </div>
 
       {/* ── Tabs ──────────────────────── */}
@@ -453,6 +467,24 @@ export default function Posts() {
             </SelectContent>
           </Select>
 
+          {/* Campaign Filter — only shown when user has campaigns access */}
+          {sub?.campaigns && allCampaigns.length > 0 && (
+            <Select value={selectedCampaign} onValueChange={setSelectedCampaign}>
+              <SelectTrigger className="w-[160px] h-9 text-xs font-semibold shadow-none">
+                <FolderOpen size={14} className="mr-1.5 shrink-0 opacity-50" />
+                <SelectValue placeholder="Campaign" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Campaigns</SelectItem>
+                {allCampaigns.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+
           {/* Date Range Picker */}
           <Popover>
             <PopoverTrigger asChild>
@@ -522,11 +554,6 @@ export default function Posts() {
               <TableProperties size={16} />
             </Button>
           </div>
-
-          <Button onClick={() => setIsCreatePostOpen(true)} className="gap-2 h-9">
-            <Plus size={16} />
-            New Post
-          </Button>
         </div>
       </div>
 
@@ -579,11 +606,12 @@ export default function Posts() {
           ) : (
             <div className="grid gap-6 grid-cols-[repeat(auto-fill,minmax(350px,1fr))]">
               {posts.map((post) => (
-                <CalendarPostCard
-                  key={post.id}
-                  post={post}
-                  onEdit={(p) => setEditingPost(p)}
-                />
+                <div key={post.id} className="relative">
+                  <CalendarPostCard
+                    post={post}
+                    onEdit={(p) => setEditingPost(p)}
+                  />
+                </div>
               ))}
             </div>
           )}

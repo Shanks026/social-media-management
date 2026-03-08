@@ -68,6 +68,7 @@ export function useSubscription() {
         finance_accrual: sub.finance_accrual ?? false,
         calendar_export: sub.calendar_export ?? false,
         documents_collections: sub.documents_collections ?? false,
+        campaigns: sub.campaigns ?? false,
         client_count: count || 0,
         max_clients: sub.max_clients,
 

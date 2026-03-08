@@ -8,30 +8,13 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog'
-import { CalendarDays } from 'lucide-react'
+import { CalendarDays, Globe, LayoutGrid, Megaphone } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { getUrgencyStatus } from '@/lib/client-helpers'
 import IndustryBadge from './IndustryBadge'
 import TierBadge from '@/components/TierBadge'
 
-const PlatformIcon = ({ name }) => {
-  // Map the id to the filename, handling your specific google_business naming
-  const fileName = name === 'google_business' ? 'google_busines' : name
-  const imgSrc = `/platformIcons/${fileName}.png`
-
-  return (
-    <div className="flex h-8 w-8 items-center justify-center rounded-full border-white dark:border-[#1c1c1f] bg-white dark:bg-zinc-900 shadow-sm transition-transform hover:scale-110 overflow-hidden">
-      <img
-        src={imgSrc}
-        alt={name}
-        className="size-7 object-contain"
-        // Fallback for missing images
-        onError={(e) => (e.target.style.display = 'none')}
-      />
-    </div>
-  )
-}
 
 const StatItem = ({ count, label, colorClass }) => {
   if (!count || count < 1) return null
@@ -63,10 +46,6 @@ function ClientCard({ client, onOpen, onDelete }) {
     scheduled: 0,
     next_post_at: null,
   }
-
-  const MAX_DISPLAY = 3
-  const visiblePlatforms = platforms.slice(0, MAX_DISPLAY)
-  const remainingCount = platforms.length - MAX_DISPLAY
 
   const health = getUrgencyStatus(pipeline.next_post_at)
 
@@ -179,23 +158,14 @@ function ClientCard({ client, onOpen, onDelete }) {
 
           {/* Footer */}
           <div className="flex items-center justify-between pt-5 border-t border-dashed border-gray-100 dark:border-white/5 mt-auto min-w-0">
-            <div className="flex items-center -space-x-3 overflow-hidden">
-              {platforms.length > 0 ? (
-                <>
-                  {visiblePlatforms.map((p) => (
-                    <PlatformIcon key={p} name={p} />
-                  ))}
-                  {remainingCount > 0 && (
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-white dark:border-[#1c1c1f] bg-gray-200 dark:bg-zinc-800 text-[10px] font-bold text-gray-600 dark:text-gray-400 z-10">
-                      +{remainingCount}
-                    </div>
-                  )}
-                </>
-              ) : (
-                <span className="text-[11px] font-medium text-muted-foreground/60 ml-3">
-                  No active platforms
-                </span>
-              )}
+            <div className="flex items-center gap-2 px-3 py-1 bg-gray-100 dark:bg-white/5 rounded-full border border-gray-100 dark:border-white/5 shrink-0">
+              <Globe className="size-3 text-muted-foreground" />
+              <span className="text-xs font-semibold text-foreground/80">{platforms.length}</span>
+              {/* <span className="text-xs text-muted-foreground/50 font-medium">platforms</span>
+              <span className="text-muted-foreground/30 text-[10px]">·</span> */}
+              <Megaphone className="size-3 text-muted-foreground" />
+              <span className="text-xs font-semibold text-foreground/80">{client.active_campaigns ?? 0}</span>
+              {/* <span className="text-xs text-muted-foreground/50 font-medium">campaigns</span> */}
             </div>
 
             <div className="flex items-center min-w-0">

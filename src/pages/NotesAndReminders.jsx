@@ -438,18 +438,32 @@ export default function NotesAndReminders() {
   return (
     <div className="p-8 max-w-[1440px] mx-auto space-y-6">
       {/* ── Header ─────────────────────── */}
-      <div className="flex flex-col gap-2">
-        <h1 className="text-3xl font-normal tracking-tight text-foreground">
-          Notes & Reminders{' '}
-          {filteredNotes.length > 0 && (
-            <span className="text-muted-foreground/50 ml-2 font-extralight">
-              {filteredNotes.length}
-            </span>
-          )}
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          All notes and reminders across your organization
-        </p>
+      <div className="flex items-center justify-between">
+        <div className="space-y-1">
+          <h1 className="text-3xl font-normal tracking-tight text-foreground">
+            Notes & Reminders{' '}
+            {filteredNotes.length > 0 && (
+              <span className="text-muted-foreground/50 ml-2 font-extralight">
+                {filteredNotes.length}
+              </span>
+            )}
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            All notes and reminders across your organization
+          </p>
+        </div>
+
+        <CreateNoteDialog
+          clientId={defaultClientId}
+          onSuccess={() =>
+            queryClient.invalidateQueries({ queryKey: ['global-notes'] })
+          }
+        >
+          <Button className="gap-2 h-9">
+            <Plus size={16} />
+            New Note
+          </Button>
+        </CreateNoteDialog>
       </div>
 
       {/* ── Controls Row ─────────────────── */}
@@ -526,18 +540,6 @@ export default function NotesAndReminders() {
               ))}
             </SelectContent>
           </Select>
-
-          <CreateNoteDialog
-            clientId={defaultClientId}
-            onSuccess={() =>
-              queryClient.invalidateQueries({ queryKey: ['global-notes'] })
-            }
-          >
-            <Button className="gap-2 h-9 text-xs">
-              <Plus size={16} />
-              New Note
-            </Button>
-          </CreateNoteDialog>
         </div>
       </div>
 
