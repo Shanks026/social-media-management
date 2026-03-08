@@ -52,6 +52,32 @@ export async function fetchActiveCampaignsByClient(clientId) {
   return data ?? []
 }
 
+export function useCampaignAnalytics(campaignId) {
+  return useQuery({
+    queryKey: ['campaigns', 'analytics', campaignId],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('get_campaign_analytics', {
+        p_campaign_id: campaignId,
+      })
+      if (error) throw error
+      const row = Array.isArray(data) ? data[0] : data
+      return {
+        total_posts: Number(row?.total_posts ?? 0),
+        published_posts: Number(row?.published_posts ?? 0),
+        on_time_posts: Number(row?.on_time_posts ?? 0),
+        avg_approval_days: row?.avg_approval_days ?? null,
+        platform_distribution: row?.platform_distribution ?? {},
+        budget: row?.budget ?? null,
+        total_invoiced: Number(row?.total_invoiced ?? 0),
+        total_collected: Number(row?.total_collected ?? 0),
+      }
+    },
+    enabled: !!campaignId,
+    staleTime: 30000,
+    retry: 1,
+  })
+}
+
 // ─── Mutations ────────────────────────────────────────────────────────────────
 
 export function useCreateCampaign() {
@@ -109,4 +135,109 @@ export function useDeleteCampaign() {
       queryClient.invalidateQueries({ queryKey: ['campaigns', 'list'] })
     },
   })
+}
+
+// ─── Post-Campaign Linking ────────────────────────────────────────────────────
+
+export function useAssignPostsToCampaign() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ postIds, campaignId }) => {
+      const { error } = await supabase
+        .from('posts')
+        .update({ campaign_id: campaignId })
+        .in('id', postIds)
+      if (error) throw error
+    },
+    onSuccess: (_, { campaignId }) => {
+      queryClient.invalidateQueries({ queryKey: ['campaigns'] })
+      queryClient.invalidateQueries({ queryKey: ['global-posts'] })
+      queryClient.invalidateQueries({ queryKey: ['draft-posts'] })
+      queryClient.invalidateQueries({ queryKey: ['calendar'] })
+      queryClient.invalidateQueries({ queryKey: ['global-calendar'] })
+    },
+  })
+}
+
+export function useUnlinkPostFromCampaign() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (postId) => {
+      const { error } = await supabase
+        .from('posts')
+        .update({ campaign_id: null })
+        .eq('id', postId)
+      if (error) throw error
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['campaigns'] })
+      queryClient.invalidateQueries({ queryKey: ['global-posts'] })
+      queryClient.invalidateQueries({ queryKey: ['draft-posts'] })
+    },
+  })
+}
+
+export function useAssignPostCampaign() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ postId, campaignId }) => {
+      const { error } = await supabase
+        .from('posts')
+        .update({ campaign_id: campaignId || null })
+        .eq('id', postId)
+      if (error) throw error
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['campaigns'] })
+      queryClient.invalidateQueries({ queryKey: ['global-posts'] })
+      queryClient.invalidateQueries({ queryKey: ['draft-posts'] })
+      queryClient.invalidateQueries({ queryKey: ['calendar'] })
+      queryClient.invalidateQueries({ queryKey: ['global-calendar'] })
+    },
+  })
+}
+
+// ─── Campaign Invoices ────────────────────────────────────────────────────────
+
+export function useCampaignInvoices(campaignId) {
+  return useQuery({
+    queryKey: ['campaigns', 'invoices', campaignId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('invoices')
+        .select('id, invoice_number, total_amount, status, due_date, created_at')
+        .eq('campaign_id', campaignId)
+        .order('created_at', { ascending: false })
+      if (error) throw error
+      return data ?? []
+    },
+    enabled: !!campaignId,
+    staleTime: 30000,
+  })
+}
+
+// Fetch unlinked posts for a client (posts without a campaign_id)
+export async function fetchUnlinkedPostsByClient(clientId) {
+  const { data, error } = await supabase
+    .from('posts')
+    .select(`
+      id,
+      client_id,
+      campaign_id,
+      post_versions!fk_current_version (
+        id, title, status, platform, target_date, media_urls
+      )
+    `)
+    .eq('client_id', clientId)
+    .is('campaign_id', null)
+    .order('created_at', { ascending: false })
+  if (error) throw error
+  return (data ?? []).map((post) => ({
+    id: post.id,
+    title: post.post_versions?.title || 'Untitled',
+    status: post.post_versions?.status || 'DRAFT',
+    platforms: post.post_versions?.platform || [],
+    target_date: post.post_versions?.target_date,
+    media_urls: post.post_versions?.media_urls || [],
+  }))
 }

@@ -10,6 +10,9 @@ export async function fetchAllPostsByClient(clientId) {
     .select(
       `
       id,
+      client_id,
+      campaign_id,
+      campaigns ( name ),
       post_versions!fk_current_version (
         id,
         title,
@@ -19,6 +22,8 @@ export async function fetchAllPostsByClient(clientId) {
         status,
         version_number,
         created_at,
+        updated_at,
+        published_at,
         target_date,
         admin_notes,
         platform_schedules
@@ -38,7 +43,10 @@ export async function fetchAllPostsByClient(clientId) {
       id: post.id,
       version_id: latest.id,
       actual_post_id: post.id,
+      client_id: post.client_id,
       display_date: latest.created_at || new Date().toISOString(),
+      campaign_id: post.campaign_id,
+      campaign_name: post.campaigns?.name,
     }
   })
 }

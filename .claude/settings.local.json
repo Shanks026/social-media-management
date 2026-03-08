@@ -18,7 +18,9 @@
       "Bash(npm run build)",
       "Bash(npm install --save-dev vitest @testing-library/react @testing-library/jest-dom @testing-library/user-event jsdom)",
       "Bash(node -e \"const p = JSON.parse\\(require\\(''fs''\\).readFileSync\\(''package.json'',''utf8''\\)\\); p.scripts.test=''vitest run''; p.scripts[''test:watch'']=''vitest''; require\\(''fs''\\).writeFileSync\\(''package.json'', JSON.stringify\\(p, null, 2\\)+''\\\\n''\\)\")",
-      "Bash(npx vitest run src/tests/campaigns/phase1.test.jsx --reporter=verbose)"
+      "Bash(npx vitest run src/tests/campaigns/phase1.test.jsx --reporter=verbose)",
+      "Bash(npx vitest run src/tests/campaigns/phase2.test.jsx)",
+      "Bash(npx vitest run src/tests/campaigns/)"
     ]
   }
 }

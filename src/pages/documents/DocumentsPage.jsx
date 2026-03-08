@@ -7,7 +7,7 @@ import { useHeader } from '@/components/misc/header-context'
 import { useAuth } from '@/context/AuthContext'
 import { useClients } from '@/api/clients'
 import { useSubscription } from '@/api/useSubscription'
-import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip'
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip'
 import { useDocuments, useAllCollections, uploadDocument } from '@/api/documents'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -217,18 +217,46 @@ export default function DocumentsPage() {
       <div className="px-8 pt-8 pb-20 space-y-8 max-w-[1440px] mx-auto">
 
         {/* ── SECTION 1: HEADER ── */}
-        <div className="space-y-1">
-          <h1 className="text-3xl font-light tracking-tight text-foreground">
-            Documents{' '}
-            {filteredDocs.length > 0 && (
-              <span className="text-muted-foreground/50 ml-2 font-extralight">
-                {filteredDocs.length}
-              </span>
+        <div className="flex items-center justify-between">
+          <div className="space-y-1">
+            <h1 className="text-3xl font-light tracking-tight text-foreground">
+              Documents{' '}
+              {filteredDocs.length > 0 && (
+                <span className="text-muted-foreground/50 ml-2 font-extralight">
+                  {filteredDocs.length}
+                </span>
+              )}
+            </h1>
+            <p className="text-sm text-muted-foreground font-light">
+              All documents across your clients and workspace.
+            </p>
+          </div>
+
+          <TooltipProvider>
+            {collectionsUnlocked ? (
+              <Button
+                variant="outline"
+                onClick={() => setCreateCollectionOpen(true)}
+                className="gap-2 h-9"
+              >
+                <FolderPlus className="size-4" />
+                New Collection
+              </Button>
+            ) : (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="outline" className="gap-2 opacity-50 cursor-not-allowed h-9" disabled>
+                    <FolderPlus className="size-4" />
+                    New Collection
+                    <Lock size={12} />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  Upgrade to unlock Collections
+                </TooltipContent>
+              </Tooltip>
             )}
-          </h1>
-          <p className="text-sm text-muted-foreground font-light">
-            All documents across your clients and workspace.
-          </p>
+          </TooltipProvider>
         </div>
 
         <Tabs value={activeTab} onValueChange={setTab}>
@@ -330,28 +358,6 @@ export default function DocumentsPage() {
                 </span>
               </TabsTrigger>
             </TabsList>
-
-            {collectionsUnlocked ? (
-              <Button
-                variant="outline"
-                onClick={() => setCreateCollectionOpen(true)}
-                className="gap-2"
-              >
-                <FolderPlus className="size-4" />
-                New Collection
-              </Button>
-            ) : (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="outline" className="gap-2 opacity-50 cursor-not-allowed" disabled>
-                    <FolderPlus className="size-4" />
-                    New Collection
-                    <Lock size={12} />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Collections are available on Velocity and above</TooltipContent>
-              </Tooltip>
-            )}
           </div>
         </div>
 

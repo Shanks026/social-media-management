@@ -56,10 +56,11 @@ export default function ClientProfileView({ client }) {
   const TABS_CONFIG = [
     { value: 'overview', label: 'Overview', icon: PieChart },
     { value: 'workflow', label: 'Workflow', icon: LayoutGrid },
+    { value: 'campaigns', label: 'Campaigns', icon: Megaphone },
     ...(!client.is_internal
       ? [{ value: 'billing', label: 'Billing', icon: Receipt }]
       : []),
-    { value: 'campaigns', label: 'Campaigns', icon: Megaphone },
+
     { value: 'documents', label: 'Documents', icon: FolderOpen },
     { value: 'calendar', label: 'Calendar', icon: Calendar },
     { value: 'management', label: 'Settings', icon: Settings2 },

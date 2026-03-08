@@ -324,6 +324,11 @@ export default function Posts() {
             Manage all posts across your organization
           </p>
         </div>
+
+        <Button onClick={() => setIsCreatePostOpen(true)} className="gap-2 h-9">
+          <Plus size={16} />
+          New Post
+        </Button>
       </div>
 
       {/* ── Tabs ──────────────────────── */}
@@ -549,11 +554,6 @@ export default function Posts() {
               <TableProperties size={16} />
             </Button>
           </div>
-
-          <Button onClick={() => setIsCreatePostOpen(true)} className="gap-2 h-9">
-            <Plus size={16} />
-            New Post
-          </Button>
         </div>
       </div>
 
@@ -607,12 +607,6 @@ export default function Posts() {
             <div className="grid gap-6 grid-cols-[repeat(auto-fill,minmax(350px,1fr))]">
               {posts.map((post) => (
                 <div key={post.id} className="relative">
-                  {post.campaign_name && (
-                    <div className="absolute top-2 right-2 z-10 flex items-center gap-1 bg-background/90 backdrop-blur-sm border border-border/60 rounded-full px-2 py-0.5 text-xs text-muted-foreground">
-                      <FolderOpen className="size-3 shrink-0" />
-                      <span className="truncate max-w-[120px]">{post.campaign_name}</span>
-                    </div>
-                  )}
                   <CalendarPostCard
                     post={post}
                     onEdit={(p) => setEditingPost(p)}

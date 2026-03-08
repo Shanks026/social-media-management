@@ -203,23 +203,19 @@ export default function Clients() {
             onClick={handleCreateClick}
             disabled={isSubLoading}
             className={cn(
-              'transition-all duration-300',
-              subscription?.is_client_limit_reached
-                ? 'bg-secondary text-secondary-foreground hover:bg-secondary/80 border border-border'
-                : 'bg-primary text-primary-foreground hover:shadow-md',
+              'h-9 gap-2 transition-all duration-300',
+              subscription?.is_client_limit_reached && 'bg-secondary text-secondary-foreground hover:bg-secondary/80 border border-border text-xs'
             )}
           >
             {subscription?.is_client_limit_reached ? (
               <>
                 <Lock className="h-4 w-4" />
-                <span className="text-xs uppercase tracking-wider font-bold">
-                  Limit Reached
-                </span>
+                <span>Limit Reached</span>
               </>
             ) : (
               <>
-                <Plus className="h-5 w-5" />
-                <span className="font-medium">Create Client</span>
+                <Plus className="h-4 w-4" />
+                <span>Create Client</span>
               </>
             )}
           </Button>
@@ -239,7 +235,7 @@ export default function Clients() {
             />
           </div>
 
-          <div className="lg:ml-auto">
+          <div className="lg:ml-auto flex items-center gap-4">
             <UrgencyFilter
               activeValue={urgency}
               onSelect={(v) => updateParams('urgency', v)}

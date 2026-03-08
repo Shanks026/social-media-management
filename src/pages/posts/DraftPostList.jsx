@@ -12,6 +12,8 @@ import {
   AlertTriangle,
   Play,
   Clock,
+  FolderOpen,
+  Megaphone,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -31,8 +33,10 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog'
-import { TooltipProvider } from '@/components/ui/tooltip'
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip'
 import DraftPostForm from './DraftPostForm'
+import { AssignCampaignDialog } from '@/components/campaigns/AssignCampaignDialog'
+import { useSubscription } from '@/api/useSubscription'
 import {
   Empty,
   EmptyDescription,
@@ -127,6 +131,8 @@ export default function DraftPostList({ clientId }) {
   const [postToDelete, setPostToDelete] = useState(null)
   const [postToEdit, setPostToEdit] = useState(null)
   const [activeImageIndex, setActiveImageIndex] = useState(0)
+  const [assignCampaignOpen, setAssignCampaignOpen] = useState(false)
+  const [postToAssign, setPostToAssign] = useState(null)
 
   // Status mapping rules
   // DraftPostList actually only sees 'draft-posts' typically, but in case it sees others:
@@ -134,6 +140,8 @@ export default function DraftPostList({ clientId }) {
   const canEdit = (postStatus) => ['DRAFT', 'PENDING_APPROVAL', 'NEEDS_REVISION', 'SCHEDULED'].includes(postStatus)
   // Delete logic
   const canDelete = (postStatus) => postStatus !== 'PUBLISHED'
+
+  const { data: sub } = useSubscription()
 
   const { data = [], isLoading } = useQuery({
     queryKey: ['draft-posts', clientId],
@@ -268,6 +276,18 @@ export default function DraftPostList({ clientId }) {
                   <Badge variant="secondary" className="rounded-full text-muted-foreground hover:bg-muted/80 text-xs px-2.5 py-0.5 border-none font-medium font-mono">
                     v{post.version_number || '1'}
                   </Badge>
+                  {post.campaign_id && post.campaign_name && (
+                    <Tooltip delayDuration={300}>
+                      <TooltipTrigger asChild>
+                        <Badge variant="secondary" className="rounded-full flex items-center justify-center p-0 size-6 border-none hover:bg-muted/80">
+                          <Megaphone className="h-3 w-3 text-muted-foreground" />
+                        </Badge>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>{post.campaign_name}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  )}
                 </div>
 
                 <div onClick={(e) => e.stopPropagation()}>
@@ -294,6 +314,20 @@ export default function DraftPostList({ clientId }) {
                           }}
                         >
                           <Edit2 className="h-4 w-4 mr-2" /> Edit Post
+                        </DropdownMenuItem>
+                      )}
+                      
+                      {/* Assign to Campaign logic */}
+                      {sub?.campaigns && (
+                        <DropdownMenuItem
+                          className="cursor-pointer font-medium text-foreground py-2"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setPostToAssign(post)
+                            setAssignCampaignOpen(true)
+                          }}
+                        >
+                          <FolderOpen className="h-4 w-4 mr-2 text-muted-foreground" /> Assign to Campaign
                         </DropdownMenuItem>
                       )}
                       
@@ -503,6 +537,15 @@ export default function DraftPostList({ clientId }) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AssignCampaignDialog
+        open={assignCampaignOpen}
+        onOpenChange={(val) => {
+          setAssignCampaignOpen(val)
+          if (!val) setPostToAssign(null)
+        }}
+        post={postToAssign}
+      />
     </TooltipProvider>
   )
 }

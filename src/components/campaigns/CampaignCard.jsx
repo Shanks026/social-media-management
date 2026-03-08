@@ -1,5 +1,5 @@
-import { MoreHorizontal, FolderOpen } from 'lucide-react'
-import { Badge } from '@/components/ui/badge'
+import { MoreHorizontal, Target, CalendarDays, User } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -12,9 +12,35 @@ import { cn } from '@/lib/utils'
 import { format, parseISO } from 'date-fns'
 
 const STATUS_STYLES = {
-  Active: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-400',
-  Completed: 'bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-400',
+  Active:
+    'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
+  Completed: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
   Archived: 'bg-muted text-muted-foreground',
+}
+
+const PIPELINE_COLORS = {
+  draft_count: 'bg-blue-600',
+  revision_count: 'bg-pink-600',
+  pending_count: 'bg-orange-600',
+  scheduled_count: 'bg-purple-600',
+  published_count: 'bg-emerald-600',
+}
+
+const StatItem = ({ count, label, colorClass }) => {
+  if (!count || count < 1) return null
+  return (
+    <div className="flex items-center gap-2 shrink-0">
+      <div className={`size-2 rounded-full ${colorClass}`} />
+      <div className="flex items-baseline gap-1.5">
+        <span className="text-sm font-bold dark:text-white leading-none">
+          {count}
+        </span>
+        <span className="text-xs text-muted-foreground font-medium">
+          {label}
+        </span>
+      </div>
+    </div>
+  )
 }
 
 function formatDateRange(start, end) {
@@ -25,17 +51,18 @@ function formatDateRange(start, end) {
   return `Until ${fmt(end)}`
 }
 
-const STATUS_LABELS = {
-  draft_count: 'Drafts',
-  pending_count: 'Pending',
-  revision_count: 'Revisions',
-  scheduled_count: 'Scheduled',
-  published_count: 'Published',
-}
-
-export function CampaignCard({ campaign, onEdit, onDelete, onStatusChange }) {
+export function CampaignCard({
+  campaign,
+  onEdit,
+  onDelete,
+  onStatusChange,
+  showClient,
+}) {
+  const navigate = useNavigate()
   const {
+    id,
     name,
+    description,
     goal,
     status,
     start_date,
@@ -46,31 +73,47 @@ export function CampaignCard({ campaign, onEdit, onDelete, onStatusChange }) {
     revision_count,
     scheduled_count,
     published_count,
+    client_name,
+    client_avatar,
   } = campaign
 
+  // Progress is displayed if there is a known capacity, even if 0% is completed.
   const progress =
     total_posts > 0 ? Math.round((published_count / total_posts) * 100) : 0
 
   const pipelineCounts = [
     { key: 'draft_count', value: draft_count, label: 'Drafts' },
-    { key: 'pending_count', value: pending_count, label: 'Pending' },
-    { key: 'revision_count', value: revision_count, label: 'Revisions' },
-    { key: 'scheduled_count', value: scheduled_count, label: 'Scheduled' },
-    { key: 'published_count', value: published_count, label: 'Published' },
+    { key: 'revision_count', value: revision_count, label: 'Rev.' },
+    { key: 'pending_count', value: pending_count, label: 'Pend.' },
+    { key: 'scheduled_count', value: scheduled_count, label: 'Sched.' },
+    { key: 'published_count', value: published_count, label: 'Pub.' },
   ].filter((c) => c.value > 0)
 
+  const hasPipelineData = pipelineCounts.length > 0 || published_count > 0
+
   return (
-    <div className="rounded-xl border border-border/60 bg-card p-4 flex flex-col gap-3 hover:border-border transition-colors">
+    <div
+      className="rounded-2xl border border-border/60 bg-card/50 p-6 flex flex-col h-full hover:border-border transition-colors cursor-pointer shadow-sm"
+      onClick={() => navigate(`/campaigns/${id}`)}
+    >
       {/* Header */}
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex items-center gap-2 min-w-0">
-          <FolderOpen className="size-4 text-muted-foreground shrink-0" />
-          <span className="font-medium text-sm truncate">{name}</span>
+      <div className="flex items-start justify-between gap-3 mb-6">
+        <div className="flex flex-col gap-2 min-w-0">
+          <h3 className="text-lg font-semibold truncate">{name}</h3>
+          {description && (
+            <p className="text-sm text-muted-foreground line-clamp-2">
+              {description}
+            </p>
+          )}
         </div>
-        <div className="flex items-center gap-2 shrink-0">
+
+        <div
+          className="flex items-center gap-2 shrink-0"
+          onClick={(e) => e.stopPropagation()}
+        >
           <span
             className={cn(
-              'text-xs font-medium px-2 py-0.5 rounded-full',
+              'px-2.5 py-0.5 rounded-full text-xs font-medium',
               STATUS_STYLES[status] ?? STATUS_STYLES.Archived,
             )}
           >
@@ -78,24 +121,39 @@ export function CampaignCard({ campaign, onEdit, onDelete, onStatusChange }) {
           </span>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-7 w-7">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 text-muted-foreground hover:text-foreground -mr-2"
+              >
                 <MoreHorizontal className="size-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => onEdit(campaign)}>
+              <DropdownMenuItem
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onEdit(campaign)
+                }}
+              >
                 Edit
               </DropdownMenuItem>
               {status === 'Active' && (
                 <DropdownMenuItem
-                  onClick={() => onStatusChange(campaign, 'Completed')}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onStatusChange(campaign, 'Completed')
+                  }}
                 >
                   Mark Complete
                 </DropdownMenuItem>
               )}
               {(status === 'Active' || status === 'Completed') && (
                 <DropdownMenuItem
-                  onClick={() => onStatusChange(campaign, 'Archived')}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onStatusChange(campaign, 'Archived')
+                  }}
                 >
                   Archive
                 </DropdownMenuItem>
@@ -103,7 +161,10 @@ export function CampaignCard({ campaign, onEdit, onDelete, onStatusChange }) {
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 className="text-destructive focus:text-destructive"
-                onClick={() => onDelete(campaign)}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onDelete(campaign)
+                }}
               >
                 Delete
               </DropdownMenuItem>
@@ -114,48 +175,83 @@ export function CampaignCard({ campaign, onEdit, onDelete, onStatusChange }) {
 
       {/* Goal */}
       {goal && (
-        <p
-          className="text-xs text-muted-foreground truncate"
-          title={goal}
-        >
-          {goal}
-        </p>
+        <div className="flex items-center gap-2 text-foreground/80 mb-6">
+          <Target className="size-4 shrink-0" />
+          <span className="text-xs line-clamp-1" title={goal}>
+            {goal}
+          </span>
+        </div>
       )}
 
-      {/* Date range */}
-      <p className="text-xs text-muted-foreground">
-        {formatDateRange(start_date, end_date)}
-      </p>
-
-      {/* Pipeline mini counts */}
-      {pipelineCounts.length > 0 && (
-        <div className="flex flex-wrap gap-1.5">
-          {pipelineCounts.map((c) => (
-            <span
-              key={c.key}
-              className="text-xs bg-muted px-2 py-0.5 rounded-full text-muted-foreground"
-            >
-              {c.value} {c.label}
+      {/* Pipeline Stats */}
+      <div className="flex-1 min-w-0 mb-6">
+        {hasPipelineData ? (
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+            {pipelineCounts.map((c) => (
+              <StatItem
+                key={c.key}
+                count={c.value}
+                label={c.label}
+                colorClass={PIPELINE_COLORS[c.key]}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            <div className="size-1.5 rounded-full bg-muted-foreground/20" />
+            <span className="text-xs italic text-muted-foreground/50 tracking-wide">
+              No active pipeline workflow
             </span>
-          ))}
-        </div>
-      )}
+          </div>
+        )}
 
-      {/* Progress bar */}
-      {total_posts > 0 && (
-        <div className="space-y-1" data-testid="progress-bar">
-          <div className="flex justify-between text-xs text-muted-foreground">
-            <span>Progress</span>
-            <span>{progress}%</span>
+        {/* Progress bar */}
+        {total_posts > 0 && (
+          <div className="space-y-2 mt-6" data-testid="progress-bar">
+            <div className="flex justify-between text-xs text-muted-foreground">
+              <span>Progress</span>
+              <span>{progress}%</span>
+            </div>
+            <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+              <div
+                className="h-full bg-primary rounded-full transition-all"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
           </div>
-          <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-            <div
-              className="h-full bg-primary rounded-full transition-all"
-              style={{ width: `${progress}%` }}
-            />
-          </div>
+        )}
+      </div>
+
+      {/* Footer */}
+      <div className="flex items-center justify-between pt-6 border-t border-dashed border-gray-100 dark:border-white/5 mt-auto min-w-0">
+        {/* Client Info */}
+        <div className="flex items-center min-w-0">
+          {showClient && client_name && (
+            <div className="flex items-center gap-2">
+              {client_avatar ? (
+                <img
+                  src={client_avatar}
+                  alt={client_name}
+                  className="size-6 rounded-full object-cover border border-border"
+                />
+              ) : (
+                <div className="size-6 rounded-full bg-primary/10 flex items-center justify-center">
+                  <User className="size-3 text-primary" />
+                </div>
+              )}
+              <span className="text-xs font-medium truncate max-w-[120px]">
+                {client_name}
+              </span>
+            </div>
+          )}
         </div>
-      )}
+
+        {/* Date Range */}
+        <div className="flex items-center shrink-0 text-xs gap-1.5 font-medium text-muted-foreground/80">
+          <CalendarDays className="size-3.5 opacity-70" />
+          <span>{formatDateRange(start_date, end_date)}</span>
+        </div>
+      </div>
     </div>
   )
 }

@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Plus, Search } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Plus, Search, Megaphone } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { useCampaigns, useDeleteCampaign, useUpdateCampaign } from '@/api/campaigns'
@@ -27,37 +27,62 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Empty, EmptyHeader, EmptyTitle, EmptyDescription, EmptyContent, EmptyMedia } from '@/components/ui/empty'
 
 function CampaignSkeleton() {
   return (
-    <div className="rounded-xl border border-border/60 bg-card p-4 space-y-3">
-      <Skeleton className="h-4 w-40" />
-      <Skeleton className="h-3 w-64" />
-      <Skeleton className="h-3 w-32" />
-      <Skeleton className="h-2 w-full" />
+    <div className="rounded-2xl border overflow-hidden bg-card/50">
+      <Skeleton className="aspect-video w-full" />
+      <div className="p-8 space-y-4">
+        <Skeleton className="h-4 w-3/4" />
+        <Skeleton className="h-3 w-full" />
+        <Skeleton className="h-3 w-1/2" />
+      </div>
     </div>
   )
 }
 
-export function CampaignTab({ clientId }) {
-  const { data: sub } = useSubscription()
+export function CampaignTab({ 
+  clientId, 
+  isCreateOpen: externalIsCreateOpen, 
+  setIsCreateOpen: externalSetIsCreateOpen 
+}) {
+  const { data: sub, isLoading: subLoading } = useSubscription()
+  const [localIsCreateOpen, setLocalIsCreateOpen] = useState(false)
+  
+  const isCreateOpen = externalIsCreateOpen !== undefined ? externalIsCreateOpen : localIsCreateOpen
+  const setIsCreateOpen = externalSetIsCreateOpen !== undefined ? externalSetIsCreateOpen : setLocalIsCreateOpen
+
   const canCampaigns = sub?.campaigns ?? false
 
+  if (subLoading) return null
   if (!canCampaigns) return <CampaignUpgradePrompt />
 
-  return <CampaignTabContent clientId={clientId} />
+  return (
+    <CampaignTabContent 
+      clientId={clientId} 
+      isCreateOpen={isCreateOpen} 
+      setIsCreateOpen={setIsCreateOpen} 
+    />
+  )
 }
 
-function CampaignTabContent({ clientId }) {
+function CampaignTabContent({ clientId, isCreateOpen, setIsCreateOpen }) {
   const { data: campaigns = [], isLoading } = useCampaigns({ clientId })
   const deleteCampaign = useDeleteCampaign()
   const updateCampaign = useUpdateCampaign()
 
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('All')
-  const [dialogOpen, setDialogOpen] = useState(false)
   const [editingCampaign, setEditingCampaign] = useState(null)
   const [deletingCampaign, setDeletingCampaign] = useState(null)
+
+  // Sync isCreateOpen state
+  useEffect(() => {
+    if (isCreateOpen) {
+      setEditingCampaign(null)
+    }
+  }, [isCreateOpen])
 
   const filtered = campaigns.filter((c) => {
     const matchesSearch =
@@ -68,14 +93,11 @@ function CampaignTabContent({ clientId }) {
     return matchesSearch && matchesStatus
   })
 
-  function handleNew() {
-    setEditingCampaign(null)
-    setDialogOpen(true)
-  }
-
   function handleEdit(campaign) {
     setEditingCampaign(campaign)
-    setDialogOpen(true)
+    if (setIsCreateOpen) {
+      setIsCreateOpen(true)
+    }
   }
 
   async function handleStatusChange(campaign, newStatus) {
@@ -99,78 +121,132 @@ function CampaignTabContent({ clientId }) {
     }
   }
 
+  const isFilterActive = search !== '' || statusFilter !== 'All'
+
   return (
-    <div className="space-y-4 pt-4">
-      {/* Toolbar */}
-      <div className="flex items-center gap-3">
-        <div className="relative flex-1 max-w-xs">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-          <Input
-            placeholder="Search campaigns..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-8"
-          />
+    <div className="space-y-4">
+      {/* --- TOOLBAR --- */}
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="relative flex-1 min-w-[300px] max-w-xs">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+            <Input
+              placeholder="Search campaigns..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9 bg-muted/20 border-border/40 focus:bg-background transition-all"
+            />
+          </div>
+
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-[160px] bg-muted/20 border-border/40">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="All">All Statuses</SelectItem>
+              <SelectItem value="Draft">Draft</SelectItem>
+              <SelectItem value="Active">Active</SelectItem>
+              <SelectItem value="Completed">Completed</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-36">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="All">All Statuses</SelectItem>
-            <SelectItem value="Active">Active</SelectItem>
-            <SelectItem value="Completed">Completed</SelectItem>
-            <SelectItem value="Archived">Archived</SelectItem>
-          </SelectContent>
-        </Select>
-        <Button size="sm" onClick={handleNew}>
-          <Plus className="size-4 mr-1" />
-          New Campaign
-        </Button>
+
+        <div className="lg:ml-auto flex items-center gap-4">
+          {isFilterActive && (
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setSearch('')
+                setStatusFilter('All')
+              }}
+              className="text-muted-foreground font-light hover:text-foreground h-9 px-3"
+            >
+              Reset Filters
+            </Button>
+          )}
+
+          {clientId && (
+            <Button
+              onClick={() => setIsCreateOpen(true)}
+              size="default"
+              className="gap-2 h-9"
+            >
+              <Plus className="size-4" />
+              <span>New Campaign</span>
+            </Button>
+          )}
+        </div>
       </div>
 
-      {/* Content */}
+      {/* --- CONTENT grid matching Clients.jsx --- */}
       {isLoading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <CampaignSkeleton />
-          <CampaignSkeleton />
-          <CampaignSkeleton />
+        <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-[repeat(auto-fill,minmax(420px,1fr))] animate-in fade-in duration-500">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <CampaignSkeleton key={i} />
+          ))}
         </div>
-      ) : campaigns.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
-          <p className="text-muted-foreground text-sm">No campaigns yet</p>
-          <Button size="sm" onClick={handleNew}>
-            <Plus className="size-4 mr-1" />
-            New Campaign
-          </Button>
-        </div>
-      ) : filtered.length === 0 ? (
-        <p className="text-sm text-muted-foreground text-center py-8">
-          No campaigns match your filters.
-        </p>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      ) : filtered.length > 0 ? (
+        <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-[repeat(auto-fill,minmax(420px,1fr))] animate-in fade-in duration-500">
           {filtered.map((campaign) => (
             <CampaignCard
               key={campaign.id}
               campaign={campaign}
-              onEdit={handleEdit}
-              onDelete={setDeletingCampaign}
-              onStatusChange={handleStatusChange}
+              onEdit={() => handleEdit(campaign)}
+              onDelete={() => setDeletingCampaign(campaign)}
+              onStatusChange={(status) => handleStatusChange(campaign, status)}
+              showClient={!clientId}
             />
           ))}
         </div>
+      ) : (
+        <Empty className="py-20 border border-dashed rounded-2xl bg-muted/5 animate-in fade-in zoom-in-95 duration-500">
+          <EmptyContent>
+            <EmptyMedia variant="icon">
+              <Megaphone className="size-6 text-muted-foreground/60" />
+            </EmptyMedia>
+            <EmptyHeader>
+              <EmptyTitle className="font-light text-xl">No Campaigns Found</EmptyTitle>
+              <EmptyDescription className="font-light">
+                {isFilterActive 
+                  ? "We couldn't find any campaigns matching your current filters."
+                  : "You haven't created any content campaigns yet. Start your first initiative!"}
+              </EmptyDescription>
+            </EmptyHeader>
+            {!isFilterActive && (
+              <Button 
+                onClick={() => setIsCreateOpen && setIsCreateOpen(true)}
+                variant="outline" 
+                className="mt-2 rounded-full px-6 font-medium"
+              >
+                <Plus className="size-4 mr-2" />
+                Create your first campaign
+              </Button>
+            )}
+            {isFilterActive && (
+              <Button 
+                variant="link" 
+                onClick={() => {
+                  setSearch('')
+                  setStatusFilter('All')
+                }}
+                className="text-primary font-medium"
+              >
+                Clear all filters
+              </Button>
+            )}
+          </EmptyContent>
+        </Empty>
       )}
 
-      {/* Create/Edit Dialog */}
+      {/* --- DIALOGS --- */}
       <CampaignDialog
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
+        open={isCreateOpen}
+        onOpenChange={setIsCreateOpen}
         clientId={clientId}
-        initialData={editingCampaign}
+        campaign={editingCampaign}
+        onSuccess={() => setEditingCampaign(null)}
       />
 
-      {/* Delete Confirm */}
       <AlertDialog
         open={!!deletingCampaign}
         onOpenChange={(v) => !v && setDeletingCampaign(null)}
@@ -188,7 +264,7 @@ function CampaignTabContent({ clientId }) {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 transition-colors"
             >
               Delete
             </AlertDialogAction>

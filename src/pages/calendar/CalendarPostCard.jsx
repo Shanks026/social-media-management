@@ -16,7 +16,15 @@ import {
   Edit2,
   Trash2,
   AlertTriangle,
+  FolderOpen,
+  Megaphone,
 } from 'lucide-react'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import { getUrgencyStatus } from '@/lib/client-helpers'
@@ -36,12 +44,15 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { useNavigate } from 'react-router-dom'
-import { Button } from '@/components/ui/button'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { toast } from 'sonner'
+import { useAuth } from '@/context/AuthContext'
+import { useQueryClient, useMutation } from '@tanstack/react-query'
 import { deleteMeeting } from '@/api/meetings'
 import { deletePost } from '@/api/posts'
+import { toast } from 'sonner'
+import { AssignCampaignDialog } from '@/components/campaigns/AssignCampaignDialog'
+import { useSubscription } from '@/api/useSubscription'
+import { useNavigate } from 'react-router-dom'
+import { Button } from '@/components/ui/button'
 import CreateMeetingDialog from '@/components/CreateMeetingDialog'
 
 /**
@@ -132,6 +143,9 @@ export function CalendarPostCard({ post, onEdit }) {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false)
   const [activeImageIndex, setActiveImageIndex] = useState(0)
   const [postToDelete, setPostToDelete] = useState(null)
+  const [assignCampaignOpen, setAssignCampaignOpen] = useState(false)
+
+  const { data: sub } = useSubscription()
 
   const { mutate: handleDeleteMeeting, isPending: isDeletingMeeting } =
     useMutation({
@@ -331,6 +345,20 @@ export function CalendarPostCard({ post, onEdit }) {
             <Badge variant="secondary" className="rounded-full text-muted-foreground hover:bg-muted/80 text-xs px-2.5 py-0.5 border-none font-medium font-mono">
               v{post.version_number || '1'}
             </Badge>
+            {post.campaign_id && post.campaign_name && (
+              <TooltipProvider>
+                <Tooltip delayDuration={300}>
+                  <TooltipTrigger asChild>
+                    <Badge variant="secondary" className="rounded-full flex items-center justify-center p-0 size-6 border-none hover:bg-muted/80">
+                      <Megaphone className="h-3 w-3 text-muted-foreground" />
+                    </Badge>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{post.campaign_name}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
           </div>
           <div className="flex items-center gap-3 min-w-0" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center gap-2 min-w-0">
@@ -375,6 +403,17 @@ export function CalendarPostCard({ post, onEdit }) {
                       }}
                     >
                       <Edit2 className="h-4 w-4 mr-2" /> Edit Post
+                    </DropdownMenuItem>
+                  )}
+                  {sub?.campaigns && (
+                    <DropdownMenuItem
+                      className="cursor-pointer font-medium text-foreground py-2"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setAssignCampaignOpen(true)
+                      }}
+                    >
+                      <FolderOpen className="h-4 w-4 mr-2 text-muted-foreground" /> Assign to Campaign
                     </DropdownMenuItem>
                   )}
                   {canDelete && (
@@ -573,6 +612,12 @@ export function CalendarPostCard({ post, onEdit }) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AssignCampaignDialog
+        open={assignCampaignOpen}
+        onOpenChange={setAssignCampaignOpen}
+        post={post}
+      />
     </>
   )
 }

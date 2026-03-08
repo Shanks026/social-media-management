@@ -3,9 +3,10 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
 import { format } from 'date-fns'
-import { CalendarIcon, Loader2 } from 'lucide-react'
+import { CalendarIcon, Loader2, Building2 } from 'lucide-react'
 import { toast } from 'sonner'
 
+import { Badge } from '@/components/ui/badge'
 import {
   Dialog,
   DialogContent,
@@ -40,6 +41,23 @@ import { Calendar } from '@/components/ui/calendar'
 import { cn } from '@/lib/utils'
 import { useCreateCampaign, useUpdateCampaign } from '@/api/campaigns'
 import { useClients } from '@/api/clients'
+
+function ClientAvatar({ client }) {
+  if (client?.logo_url) {
+    return (
+      <img
+        src={client.logo_url}
+        alt=""
+        className="size-4 rounded object-cover ring-1 ring-border shrink-0"
+      />
+    )
+  }
+  return (
+    <div className="size-4 rounded bg-muted flex items-center justify-center shrink-0">
+      <Building2 className="size-2.5 text-muted-foreground" />
+    </div>
+  )
+}
 
 const schema = z
   .object({
@@ -156,31 +174,57 @@ export function CampaignDialog({ open, onOpenChange, clientId, initialData }) {
               <FormField
                 control={form.control}
                 name="client_id"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Client</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a client" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {clientsData?.internalAccount && (
-                          <SelectItem value={clientsData.internalAccount.id}>
-                            {clientsData.internalAccount.name}
-                          </SelectItem>
-                        )}
-                        {clientsData?.realClients?.map((c) => (
-                          <SelectItem key={c.id} value={c.id}>
-                            {c.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
+                render={({ field }) => {
+                  return (
+                    <FormItem>
+                      <FormLabel>Client</FormLabel>
+                      <Select 
+                        onValueChange={field.onChange} 
+                        value={field.value ? field.value : undefined}
+                        defaultValue={field.value ? field.value : undefined}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select a client" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {clientsData?.internalAccount && (
+                            <SelectItem value={clientsData.internalAccount.id}>
+                              <div className="flex items-center gap-2">
+                                <ClientAvatar client={clientsData.internalAccount} />
+                                <span className="truncate">{clientsData.internalAccount.name}</span>
+                                <Badge
+                                  variant="secondary"
+                                  className="text-[9px] px-1 py-0 ml-1"
+                                >
+                                  Internal
+                                </Badge>
+                              </div>
+                            </SelectItem>
+                          )}
+                          {clientsData?.realClients?.map((c) => (
+                            <SelectItem key={c.id} value={c.id}>
+                              <div className="flex items-center gap-2">
+                                <ClientAvatar client={c} />
+                                <span className="truncate">{c.name}</span>
+                                {c.is_internal && (
+                                  <Badge
+                                    variant="secondary"
+                                    className="text-[9px] px-1 py-0 ml-1"
+                                  >
+                                    Internal
+                                  </Badge>
+                                )}
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )
+                }}
               />
             )}
             <FormField

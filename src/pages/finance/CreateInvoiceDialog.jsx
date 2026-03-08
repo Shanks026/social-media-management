@@ -11,6 +11,7 @@ import {
 } from '@/api/invoices'
 import { useClients } from '@/api/clients'
 import { useSubscription } from '@/api/useSubscription'
+import { fetchActiveCampaignsByClient } from '@/api/campaigns'
 import { cn } from '@/lib/utils'
 
 // Constants
@@ -77,6 +78,20 @@ export function CreateInvoiceDialog({
   const [paymentTerms, setPaymentTerms] = useState('')
   const [notes, setNotes] = useState('')
   const [items, setItems] = useState([{ ...EMPTY_ITEM }])
+  const [campaignId, setCampaignId] = useState('')
+  const [availableCampaigns, setAvailableCampaigns] = useState([])
+
+  // --- Fetch campaigns when client changes (Velocity+ only) ---
+  useEffect(() => {
+    if (!clientId || !subscription?.campaigns) {
+      setAvailableCampaigns([])
+      setCampaignId('')
+      return
+    }
+    fetchActiveCampaignsByClient(clientId)
+      .then(setAvailableCampaigns)
+      .catch(() => setAvailableCampaigns([]))
+  }, [clientId, subscription?.campaigns])
 
   // --- Auto-clear dueDate if issueDate moves after it ---
   useEffect(() => {
@@ -98,6 +113,7 @@ export function CreateInvoiceDialog({
       setCategory(prefill?.category || '')
       setPaymentTerms('')
       setNotes('')
+      setCampaignId('')
       // Pre-fill first line item if amount/description provided
       const prefillAmount = parseFloat(prefill?.amount) || 0
       const prefillDesc = prefill?.description || prefill?.category || ''
@@ -211,6 +227,7 @@ export function CreateInvoiceDialog({
       category: category || null,
       payment_terms: paymentTerms || null,
       notes: notes || null,
+      campaign_id: campaignId || null,
     }
 
     const itemsPayload = items.map((item) => ({
@@ -443,6 +460,31 @@ export function CreateInvoiceDialog({
                   </Select>
                 </div>
               </div>
+
+              {/* Campaign selector — Velocity+ only, shown when campaigns exist for client */}
+              {subscription?.campaigns && availableCampaigns.length > 0 && (
+                <div className="space-y-2">
+                  <Label className="text-xs font-medium text-muted-foreground">
+                    Campaign
+                  </Label>
+                  <Select
+                    value={campaignId}
+                    onValueChange={(val) => setCampaignId(val === '__none__' ? '' : val)}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="No campaign (optional)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">No campaign</SelectItem>
+                      {availableCampaigns.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
 
               <Separator />
 

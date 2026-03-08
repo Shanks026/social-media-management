@@ -25,6 +25,7 @@ import MeetingsPage from './pages/MeetingsPage'
 import Dashboard from './pages/dashboard/Dashboard'
 import DocumentsPage from './pages/documents/DocumentsPage'
 import CampaignsPage from './pages/campaigns/CampaignsPage'
+import CampaignDetailPage from './pages/campaigns/CampaignDetailPage'
 
 
 function SubscriptionsRoute() {
@@ -59,6 +60,7 @@ function AppRoutes() {
             element={<PostDetails />}
           />
           <Route path="/campaigns" element={<CampaignsPage />} />
+          <Route path="/campaigns/:campaignId" element={<CampaignDetailPage />} />
           <Route path="/posts" element={<Posts />} />
           <Route path="/operations/notes" element={<NotesAndReminders />} />
           <Route path="/operations/meetings" element={<MeetingsPage />} />

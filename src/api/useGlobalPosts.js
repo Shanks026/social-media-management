@@ -34,6 +34,7 @@ function buildPostsQuery(userId, filters = {}) {
         target_date,
         created_at,
         updated_at,
+        published_at,
         platform_schedules
       )
     `,

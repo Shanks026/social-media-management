@@ -255,79 +255,76 @@ const baseCampaign = {
   archived_count: 0,
 }
 
+// CampaignCard now uses useNavigate — wrap in MemoryRouter
+function renderCard(props) {
+  return render(
+    <MemoryRouter>
+      <CampaignCard {...props} />
+    </MemoryRouter>,
+  )
+}
+
 describe('Group D — CampaignCard', () => {
   it('renders campaign name and Active status badge', () => {
-    render(
-      <CampaignCard
-        campaign={baseCampaign}
-        onEdit={vi.fn()}
-        onDelete={vi.fn()}
-        onStatusChange={vi.fn()}
-      />,
-    )
+    renderCard({
+      campaign: baseCampaign,
+      onEdit: vi.fn(),
+      onDelete: vi.fn(),
+      onStatusChange: vi.fn(),
+    })
     expect(screen.getByText('Q2 Launch')).toBeInTheDocument()
     expect(screen.getByText('Active')).toBeInTheDocument()
   })
 
   it('renders goal text', () => {
-    render(
-      <CampaignCard
-        campaign={baseCampaign}
-        onEdit={vi.fn()}
-        onDelete={vi.fn()}
-        onStatusChange={vi.fn()}
-      />,
-    )
+    renderCard({
+      campaign: baseCampaign,
+      onEdit: vi.fn(),
+      onDelete: vi.fn(),
+      onStatusChange: vi.fn(),
+    })
     expect(screen.getByText('Drive 500 sign-ups')).toBeInTheDocument()
   })
 
   it('hides progress bar when total_posts is 0', () => {
-    const { container } = render(
-      <CampaignCard
-        campaign={{ ...baseCampaign, total_posts: 0, published_count: 0 }}
-        onEdit={vi.fn()}
-        onDelete={vi.fn()}
-        onStatusChange={vi.fn()}
-      />,
-    )
+    const { container } = renderCard({
+      campaign: { ...baseCampaign, total_posts: 0, published_count: 0 },
+      onEdit: vi.fn(),
+      onDelete: vi.fn(),
+      onStatusChange: vi.fn(),
+    })
     expect(container.querySelector('[data-testid="progress-bar"]')).toBeNull()
   })
 
   it('shows progress bar when total_posts > 0', () => {
-    const { container } = render(
-      <CampaignCard
-        campaign={baseCampaign}
-        onEdit={vi.fn()}
-        onDelete={vi.fn()}
-        onStatusChange={vi.fn()}
-      />,
-    )
+    const { container } = renderCard({
+      campaign: baseCampaign,
+      onEdit: vi.fn(),
+      onDelete: vi.fn(),
+      onStatusChange: vi.fn(),
+    })
     expect(
       container.querySelector('[data-testid="progress-bar"]'),
     ).not.toBeNull()
   })
 
   it('calculates 30% progress for 3 published out of 10', () => {
-    render(
-      <CampaignCard
-        campaign={baseCampaign}
-        onEdit={vi.fn()}
-        onDelete={vi.fn()}
-        onStatusChange={vi.fn()}
-      />,
-    )
+    renderCard({
+      campaign: baseCampaign,
+      onEdit: vi.fn(),
+      onDelete: vi.fn(),
+      onStatusChange: vi.fn(),
+    })
     expect(screen.getByText(/30%/i)).toBeInTheDocument()
   })
 
   it('renders Archived status badge for archived campaigns', () => {
-    render(
-      <CampaignCard
-        campaign={{ ...baseCampaign, status: 'Archived' }}
-        onEdit={vi.fn()}
-        onDelete={vi.fn()}
-        onStatusChange={vi.fn()}
-      />,
-    )
+    renderCard({
+      campaign: { ...baseCampaign, status: 'Archived' },
+      onEdit: vi.fn(),
+      onDelete: vi.fn(),
+      onStatusChange: vi.fn(),
+    })
     expect(screen.getByText('Archived')).toBeInTheDocument()
   })
 })

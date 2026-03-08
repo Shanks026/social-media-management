@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { format, isBefore, startOfDay } from 'date-fns'
 import {
   Calendar as CalendarIcon,
@@ -12,6 +12,7 @@ import {
 import { useInvoice, useUpdateInvoice } from '@/api/invoices'
 import { useClients } from '@/api/clients'
 import { useSubscription } from '@/api/useSubscription'
+import { fetchActiveCampaignsByClient } from '@/api/campaigns'
 import { cn } from '@/lib/utils'
 import { INVOICE_CATEGORIES } from '@/utils/constants'
 
@@ -76,8 +77,21 @@ export function EditInvoiceDialog({
     paymentTerms: '',
     notes: '',
     items: [{ ...EMPTY_ITEM }],
+    campaignId: '',
   })
-  const { clientId, issueDate, dueDate, category, paymentTerms, notes, items } = form
+  const { clientId, issueDate, dueDate, category, paymentTerms, notes, items, campaignId } = form
+
+  // --- Available campaigns for the selected client (Velocity+ only) ---
+  const [availableCampaigns, setAvailableCampaigns] = useState([])
+  useEffect(() => {
+    if (!clientId || !subscription?.campaigns) {
+      setAvailableCampaigns([])
+      return
+    }
+    fetchActiveCampaignsByClient(clientId)
+      .then(setAvailableCampaigns)
+      .catch(() => setAvailableCampaigns([]))
+  }, [clientId, subscription?.campaigns])
 
   // --- Populate form from invoice data (render-time derived state) ---
   const [prevInvoice, setPrevInvoice] = useState(null)
@@ -94,6 +108,7 @@ export function EditInvoiceDialog({
         category: invoice.category || '',
         paymentTerms: invoice.payment_terms || '',
         notes: invoice.notes || '',
+        campaignId: invoice.campaign_id || '',
         items:
           invoice.items?.length > 0
             ? invoice.items.map((item) => ({
@@ -272,6 +287,7 @@ export function EditInvoiceDialog({
     updates.notes = notes || null
     updates.payment_terms = paymentTerms || null
     updates.category = category || null
+    updates.campaign_id = campaignId || null
 
     if (isDraft) {
       updates.client_id = clientId
@@ -548,6 +564,34 @@ export function EditInvoiceDialog({
                     </Select>
                   </div>
                 </div>
+
+                {/* Campaign selector — Velocity+ only, shown when campaigns exist for client */}
+                {subscription?.campaigns && availableCampaigns.length > 0 && (
+                  <div className="space-y-2">
+                    <Label className="text-xs font-medium text-muted-foreground">
+                      Campaign
+                    </Label>
+                    <Select
+                      value={campaignId}
+                      onValueChange={(val) =>
+                        setForm((prev) => ({ ...prev, campaignId: val === '__none__' ? '' : val }))
+                      }
+                      disabled={isReadOnly}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="No campaign (optional)" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none__">No campaign</SelectItem>
+                        {availableCampaigns.map((c) => (
+                          <SelectItem key={c.id} value={c.id}>
+                            {c.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
 
                 <Separator />
 
