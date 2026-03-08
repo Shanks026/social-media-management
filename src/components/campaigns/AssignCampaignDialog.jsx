@@ -38,7 +38,7 @@ export function AssignCampaignDialog({ open, onOpenChange, post }) {
 
   const handleAssign = (campaignId = selectedCampaignId) => {
     if (!post) return
-    const postId = post.actual_post_id || post.id
+    const postId = post.id
     assignMutation.mutate(
       { postId, campaignId },
       {

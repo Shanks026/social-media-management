@@ -64,6 +64,7 @@ const schema = z
     name: z.string().min(1, 'Campaign name is required'),
     goal: z.string().optional().nullable(),
     description: z.string().optional().nullable(),
+    budget: z.coerce.number().positive('Must be a positive number').optional().nullable(),
     start_date: z.date().optional().nullable(),
     end_date: z.date().optional().nullable(),
     status: z.enum(['Active', 'Completed', 'Archived']).default('Active'),
@@ -88,6 +89,7 @@ export function CampaignDialog({ open, onOpenChange, clientId, initialData }) {
       name: '',
       goal: '',
       description: '',
+      budget: null,
       start_date: null,
       end_date: null,
       status: 'Active',
@@ -102,6 +104,7 @@ export function CampaignDialog({ open, onOpenChange, clientId, initialData }) {
           name: initialData.name ?? '',
           goal: initialData.goal ?? '',
           description: initialData.description ?? '',
+          budget: initialData.budget ?? null,
           start_date: initialData.start_date
             ? new Date(initialData.start_date)
             : null,
@@ -115,6 +118,7 @@ export function CampaignDialog({ open, onOpenChange, clientId, initialData }) {
           name: '',
           goal: '',
           description: '',
+          budget: null,
           start_date: null,
           end_date: null,
           status: 'Active',
@@ -135,6 +139,7 @@ export function CampaignDialog({ open, onOpenChange, clientId, initialData }) {
         name: values.name,
         goal: values.goal || null,
         description: values.description || null,
+        budget: values.budget ?? null,
         start_date: values.start_date
           ? format(values.start_date, 'yyyy-MM-dd')
           : null,
@@ -271,6 +276,30 @@ export function CampaignDialog({ open, onOpenChange, clientId, initialData }) {
                       rows={2}
                       {...field}
                       value={field.value ?? ''}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="budget"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Budget</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      placeholder="e.g. 50000"
+                      {...field}
+                      value={field.value ?? ''}
+                      onChange={(e) =>
+                        field.onChange(e.target.value === '' ? null : e.target.value)
+                      }
                     />
                   </FormControl>
                   <FormMessage />

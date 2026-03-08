@@ -49,13 +49,13 @@ export function AppSidebar({ user, agencySettings }) {
           </div>
         </SidebarContent>
 
-        {!isCollapsed && sub?.branding_powered_by && (
+        {/* {!isCollapsed && sub?.branding_powered_by && (
           <div className="px-4 pb-1">
             <p className="text-[10px] text-muted-foreground/40 select-none">
               Tercero {new Date().getFullYear()}
             </p>
           </div>
-        )}
+        )} */}
 
         <Separator />
         <SidebarFooter className="shrink-0">

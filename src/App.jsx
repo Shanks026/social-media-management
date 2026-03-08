@@ -26,6 +26,7 @@ import Dashboard from './pages/dashboard/Dashboard'
 import DocumentsPage from './pages/documents/DocumentsPage'
 import CampaignsPage from './pages/campaigns/CampaignsPage'
 import CampaignDetailPage from './pages/campaigns/CampaignDetailPage'
+import CampaignReview from './pages/campaigns/CampaignReview'
 
 
 function SubscriptionsRoute() {
@@ -41,6 +42,7 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/review/:token" element={<PublicReview />} />
+      <Route path="/campaign-review/:token" element={<CampaignReview />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/signup" element={<SignupPage />} />
 

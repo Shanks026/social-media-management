@@ -28,7 +28,7 @@ export function useCampaign(campaignId) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('campaigns')
-        .select('*')
+        .select('*, clients ( id, name, email, logo_url )')
         .eq('id', campaignId)
         .single()
       if (error) throw error
@@ -215,6 +215,73 @@ export function useCampaignInvoices(campaignId) {
     staleTime: 30000,
   })
 }
+
+export function useRegenerateCampaignReviewToken() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (campaignId) => {
+      const { data, error } = await supabase
+        .from('campaigns')
+        .update({ review_token: crypto.randomUUID() })
+        .eq('id', campaignId)
+        .select('review_token')
+        .single()
+      if (error) throw error
+      return data
+    },
+    onSuccess: (_, campaignId) => {
+      queryClient.invalidateQueries({ queryKey: ['campaigns', 'detail', campaignId] })
+    },
+  })
+}
+
+export function useMarkReviewSent() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (campaignId) => {
+      const { error } = await supabase
+        .from('campaigns')
+        .update({ last_review_sent_at: new Date().toISOString() })
+        .eq('id', campaignId)
+      if (error) throw error
+    },
+    onSuccess: (_, campaignId) => {
+      queryClient.invalidateQueries({ queryKey: ['campaigns', 'detail', campaignId] })
+    },
+  })
+}
+
+// ─── Campaign Review (Phase 3) ────────────────────────────────────────────────
+
+// Unauthenticated — token from URL param; SECURITY DEFINER RPC
+export function useCampaignReview(token) {
+  return useQuery({
+    queryKey: ['campaigns', 'review', token],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('get_campaign_by_review_token', {
+        p_token: token,
+      })
+      if (error) throw error
+      return data?.[0] ?? null // null = invalid / expired token
+    },
+    enabled: !!token,
+    staleTime: 0, // always fresh — client reviews in real time
+    retry: 1,
+  })
+}
+
+// Called per post in CampaignReview action handlers
+// postReviewToken = share_tokens.token for that post version
+export async function submitCampaignPostReview(postReviewToken, status, feedback) {
+  const { error } = await supabase.rpc('update_post_status_by_token', {
+    p_token: postReviewToken,
+    p_status: status,
+    p_feedback: feedback,
+  })
+  if (error) throw error
+}
+
+// ─── Unlinked Posts ───────────────────────────────────────────────────────────
 
 // Fetch unlinked posts for a client (posts without a campaign_id)
 export async function fetchUnlinkedPostsByClient(clientId) {

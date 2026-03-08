@@ -180,13 +180,13 @@ function CampaignTabContent({ clientId, isCreateOpen, setIsCreateOpen }) {
 
       {/* --- CONTENT grid matching Clients.jsx --- */}
       {isLoading ? (
-        <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-[repeat(auto-fill,minmax(420px,1fr))] animate-in fade-in duration-500">
+        <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-[repeat(auto-fill,minmax(420px,1fr))]">
           {Array.from({ length: 6 }).map((_, i) => (
             <CampaignSkeleton key={i} />
           ))}
         </div>
       ) : filtered.length > 0 ? (
-        <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-[repeat(auto-fill,minmax(420px,1fr))] animate-in fade-in duration-500">
+        <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-[repeat(auto-fill,minmax(420px,1fr))]">
           {filtered.map((campaign) => (
             <CampaignCard
               key={campaign.id}

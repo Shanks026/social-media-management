@@ -26,24 +26,42 @@ import {
   Link2,
   Receipt,
   Play,
+  Share2,
+  Copy,
+  Mail,
+  RefreshCw,
+  ExternalLink,
+  User,
 } from 'lucide-react'
 
+import { supabase } from '@/lib/supabase'
 import { useHeader } from '@/components/misc/header-context'
 import {
   useCampaign,
   useCampaignAnalytics,
   useUpdateCampaign,
   useCampaignInvoices,
+  useRegenerateCampaignReviewToken,
+  useMarkReviewSent,
 } from '@/api/campaigns'
 import { useGlobalPosts } from '@/api/useGlobalPosts'
 import { useSubscription } from '@/api/useSubscription'
 import DraftPostForm from '@/pages/posts/DraftPostForm'
 import { LinkPostsToCampaignDialog } from '@/components/campaigns/LinkPostsToCampaignDialog'
 import { CampaignDialog } from '@/components/campaigns/CampaignDialog'
+import { CampaignUpgradePrompt } from '@/components/campaigns/CampaignUpgradePrompt'
 import CampaignReportPDF from '@/components/campaigns/CampaignReportPDF'
 import StatusBadge from '@/components/StatusBadge'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
 import {
   Card,
   CardContent,
@@ -164,6 +182,9 @@ export default function CampaignDetailPage() {
   const [exportingPdf, setExportingPdf] = useState(false)
   const [createPostOpen, setCreatePostOpen] = useState(false)
   const [linkPostsOpen, setLinkPostsOpen] = useState(false)
+  const [shareDialogOpen, setShareDialogOpen] = useState(false)
+  const [shareDialogUrl, setShareDialogUrl] = useState('')
+  const [sendingEmail, setSendingEmail] = useState(false)
 
   const { data: campaign, isLoading: campaignLoading } = useCampaign(campaignId)
   const { data: analytics, isLoading: analyticsLoading } =
@@ -174,6 +195,8 @@ export default function CampaignDetailPage() {
   const { data: sub } = useSubscription()
   const { data: invoices = [], isLoading: invoicesLoading } =
     useCampaignInvoices(campaignId)
+  const regenerateToken = useRegenerateCampaignReviewToken()
+  const markReviewSent = useMarkReviewSent()
 
   const { setHeader } = useHeader()
   useEffect(() => {
@@ -233,6 +256,17 @@ export default function CampaignDetailPage() {
       maximumFractionDigits: 2,
     }).format(val ?? 0)
 
+  // Gate: Trial/Ignite users should not access campaign detail
+  // (placed after all hooks to satisfy Rules of Hooks)
+  if (!sub && !isLoading) return null
+  if (sub && !sub.campaigns) {
+    return (
+      <div className="p-6 text-center">
+        <CampaignUpgradePrompt />
+      </div>
+    )
+  }
+
   async function handleExportPdf() {
     if (!campaign || !analytics) return
     setExportingPdf(true)
@@ -257,6 +291,58 @@ export default function CampaignDetailPage() {
       toast.error('Failed to generate PDF')
     } finally {
       setExportingPdf(false)
+    }
+  }
+
+  const hasPendingPosts = postsData?.some((p) => p.status === 'PENDING_APPROVAL') ?? false
+  const canShare = hasPendingPosts && !!campaign?.review_token
+
+  function handleShareLink() {
+    const url = `${window.location.origin}/campaign-review/${campaign.review_token}`
+    setShareDialogUrl(url)
+    setShareDialogOpen(true)
+  }
+
+  async function handleCopyLink() {
+    try {
+      await navigator.clipboard.writeText(shareDialogUrl)
+      toast.success('Review link copied')
+    } catch {
+      toast.error('Could not copy — select and copy the link manually')
+    }
+  }
+
+  async function handleSendEmail() {
+    if (!campaign?.clients?.email) return
+    setSendingEmail(true)
+    try {
+      const { error } = await supabase.functions.invoke('send-campaign-review-email', {
+        body: {
+          client_email: campaign.clients.email,
+          client_name: campaign.clients.name,
+          campaign_name: campaign.name,
+          review_url: shareDialogUrl,
+        },
+      })
+      if (error) throw error
+      markReviewSent.mutate(campaignId)
+      toast.success(`Review link sent to ${campaign.clients.email}`)
+      setShareDialogOpen(false)
+    } catch {
+      toast.error('Failed to send email — please copy the link instead')
+    } finally {
+      setSendingEmail(false)
+    }
+  }
+
+  async function handleRegenerateToken() {
+    try {
+      const result = await regenerateToken.mutateAsync(campaignId)
+      const newUrl = `${window.location.origin}/campaign-review/${result.review_token}`
+      setShareDialogUrl(newUrl)
+      toast.success('Review link regenerated')
+    } catch {
+      toast.error('Failed to regenerate link')
     }
   }
 
@@ -315,6 +401,22 @@ export default function CampaignDetailPage() {
                 </span>
               </div>
               <div className="flex items-center gap-4 mt-3 text-sm text-muted-foreground font-light flex-wrap">
+                {campaign.clients?.name && (
+                  <span className="flex items-center gap-1.5">
+                    {campaign.clients.logo_url ? (
+                      <img
+                        src={campaign.clients.logo_url}
+                        alt={campaign.clients.name}
+                        className="size-4 rounded object-cover border border-border/50 shrink-0"
+                      />
+                    ) : (
+                      <div className="size-4 rounded bg-primary/10 flex items-center justify-center shrink-0">
+                        <User className="size-2.5 text-primary" />
+                      </div>
+                    )}
+                    <span className="truncate max-w-xs">{campaign.clients.name}</span>
+                  </span>
+                )}
                 <span className="flex items-center gap-1.5">
                   <Calendar className="size-3.5 opacity-60" />
                   {formatDateRange(campaign.start_date, campaign.end_date)}
@@ -338,6 +440,16 @@ export default function CampaignDetailPage() {
               <FileDown className="size-4" />
               {exportingPdf ? 'Exporting…' : 'Export PDF'}
             </Button>
+            {canShare && (
+              <Button
+                variant="outline"
+                className="gap-2 h-9"
+                onClick={handleShareLink}
+              >
+                <Share2 className="size-4" />
+                Share Review Link
+              </Button>
+            )}
             <Button className="gap-2 h-9" onClick={() => setEditOpen(true)}>
               <Pencil className="size-4" />
               Edit
@@ -687,6 +799,81 @@ export default function CampaignDetailPage() {
           clientId={campaign.client_id}
           campaignName={campaign.name}
         />
+
+        {/* Share Review Link dialog */}
+        <Dialog open={shareDialogOpen} onOpenChange={setShareDialogOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Share Review Link</DialogTitle>
+              <DialogDescription>
+                Send this link to your client so they can review and approve all pending posts in one session.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex gap-2">
+              <Input
+                value={shareDialogUrl}
+                readOnly
+                onClick={(e) => e.target.select()}
+                className="font-mono text-xs flex-1"
+              />
+              <Button variant="outline" size="icon" className="shrink-0" onClick={handleCopyLink}>
+                <Copy className="size-4" />
+              </Button>
+            </div>
+            <div className="flex items-center justify-between gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="gap-1.5 text-xs text-muted-foreground h-7 px-2"
+                onClick={handleRegenerateToken}
+                disabled={regenerateToken.isPending}
+              >
+                <RefreshCw className={cn('size-3', regenerateToken.isPending && 'animate-spin')} />
+                Regenerate link
+              </Button>
+              {campaign?.last_review_sent_at && (
+                <p className="text-xs text-muted-foreground">
+                  Last sent {format(parseISO(campaign.last_review_sent_at), 'MMM d, yyyy')}
+                </p>
+              )}
+            </div>
+            {campaign?.clients?.email ? (
+              <div className="border-t border-border/60 pt-4 flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium truncate">{campaign.clients.name}</p>
+                  <p className="text-xs text-muted-foreground truncate">{campaign.clients.email}</p>
+                </div>
+                <Button
+                  variant="outline"
+                  className="gap-2 shrink-0"
+                  onClick={handleSendEmail}
+                  disabled={sendingEmail}
+                >
+                  <Mail className="size-4" />
+                  {sendingEmail ? 'Sending…' : 'Send Email'}
+                </Button>
+              </div>
+            ) : (
+              <div className="border-t border-border/60 pt-4 flex items-center justify-between gap-2">
+                <p className="text-xs text-muted-foreground">
+                  No email on file — copy and share the link manually.
+                </p>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="gap-1.5 text-xs h-7 px-2 shrink-0"
+                  onClick={() => {
+                    setShareDialogOpen(false)
+                    navigate(`/clients/${campaign.client_id}`)
+                  }}
+                >
+                  <ExternalLink className="size-3" />
+                  Add email
+                </Button>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   )
