@@ -58,6 +58,7 @@ export function CreateInvoiceDialog({
   open,
   onOpenChange,
   preselectedClientId,
+  preselectedCampaignId = null,
   prefill = null,
   // Called after successful invoice creation. Use to e.g. navigate to /finance/invoices.
   onSuccess: onSuccessCallback = null,
@@ -113,7 +114,7 @@ export function CreateInvoiceDialog({
       setCategory(prefill?.category || '')
       setPaymentTerms('')
       setNotes('')
-      setCampaignId('')
+      setCampaignId(preselectedCampaignId || '')
       // Pre-fill first line item if amount/description provided
       const prefillAmount = parseFloat(prefill?.amount) || 0
       const prefillDesc = prefill?.description || prefill?.category || ''
@@ -123,7 +124,7 @@ export function CreateInvoiceDialog({
           : { ...EMPTY_ITEM },
       ])
     }
-  }, [open, preselectedClientId, prefill])
+  }, [open, preselectedClientId, preselectedCampaignId, prefill])
 
   // --- Line item handlers ---
   const updateItem = (index, field, value) => {
@@ -208,6 +209,7 @@ export function CreateInvoiceDialog({
     () => ({
       agency_name: subscription?.agency_name || '',
       logo_url: subscription?.logo_url || null,
+      logo_horizontal_url: subscription?.logo_horizontal_url || null,
       email: subscription?.email || '',
       mobile_number: subscription?.mobile_number || '',
       basic_whitelabel_enabled: subscription?.basic_whitelabel_enabled ?? false,
@@ -470,6 +472,7 @@ export function CreateInvoiceDialog({
                   <Select
                     value={campaignId}
                     onValueChange={(val) => setCampaignId(val === '__none__' ? '' : val)}
+                    disabled={!!preselectedCampaignId}
                   >
                     <SelectTrigger className="w-full">
                       <SelectValue placeholder="No campaign (optional)" />

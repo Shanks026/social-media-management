@@ -78,8 +78,11 @@ export async function fetchPostDetails(id) {
       `
       id,
       client_id,
-      clients ( name, logo_url, social_links, industry, is_internal ),
-      post_versions!fk_current_version (*)
+      clients ( name, logo_url, email, social_links, industry, is_internal ),
+      post_versions!fk_current_version (
+        *,
+        share_tokens (token, is_active)
+      )
     `,
     )
     .eq('id', id)
@@ -99,10 +102,11 @@ export async function fetchPostDetails(id) {
     .select(
       `
       *,
+      share_tokens (token, is_active),
       posts!post_versions_post_id_fkey (
         id,
         client_id,
-        clients ( name, logo_url, social_links, industry, is_internal )
+        clients ( name, logo_url, email, social_links, industry, is_internal )
       )
     `,
     )
@@ -352,4 +356,34 @@ export async function fetchGlobalCalendar({ userId, currentMonth }) {
 
   // The data now includes media_urls (array) and version_number (int)
   return data || []
+}
+
+export async function regeneratePostShareToken(versionId) {
+  // 1. Invalidate old tokens
+  await supabase
+    .from('share_tokens')
+    .update({ is_active: false })
+    .eq('post_version_id', versionId)
+
+  // 2. Create new token
+  const token = Math.random().toString(36).substring(2, 15)
+  const { data, error } = await supabase
+    .from('share_tokens')
+    .insert([{ post_version_id: versionId, token, is_active: true }])
+    .select()
+    .single()
+
+  if (error) throw error
+  return data
+}
+
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+export function useRegeneratePostShareToken() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (versionId) => regeneratePostShareToken(versionId),
+    onSuccess: (_, versionId) => {
+      queryClient.invalidateQueries({ queryKey: ['post-version', versionId] })
+    },
+  })
 }

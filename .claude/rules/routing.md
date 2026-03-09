@@ -5,19 +5,22 @@ How React Router is configured in Tercero (`src/App.jsx`).
 ## Route Structure
 
 ```
-/login                → LoginPage (public)
-/signup               → SignupPage (public)
-/review/:token        → PublicReview (public, no auth required)
+/login                       → LoginPage (public)
+/signup                      → SignupPage (public)
+/review/:token               → PublicReview (public, no auth required)
+/campaign-review/:token      → CampaignReview (public, no auth required)
 
 Protected routes (inside <AppShell>):
 /dashboard            → Dashboard
 /clients              → Clients list
 /clients/create       → CreateClientPage
-/clients/:clientId    → ClientDetails (tabs: Overview, Management, Workflow)
+/clients/:clientId    → ClientDetails (tabs: Overview, Management, Workflow, Campaigns, Documents)
 /clients/:clientId/edit         → CreateClientPage (edit mode)
 /clients/:clientId/posts/:postId → PostDetails
 /posts                → Posts list
 /calendar             → ContentCalendar
+/campaigns            → CampaignsPage (Velocity+ gated)
+/campaigns/:campaignId → CampaignDetailPage (Velocity+ gated)
 /finance              → FinanceLayout (nested)
   /finance/overview       → FinancialOverviewTab
   /finance/subscriptions  → SubscriptionsTab

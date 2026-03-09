@@ -84,31 +84,18 @@ const s = StyleSheet.create({
     color: C.muted,
     marginTop: 4,
   },
-  logo: { 
-    height: 24, 
+  logo: {
+    height: 24,
+    maxWidth: 160,
     objectFit: 'contain',
     marginRight: 8,
-    borderRadius: 6
+    borderRadius: 4
   },
   logoText: {
     fontSize: 18,
     fontWeight: 700,
     letterSpacing: -0.5,
     color: C.text
-  },
-  tertiaryLogoText: {
-    fontSize: 20,
-    fontWeight: 800,
-    letterSpacing: -0.5,
-    color: C.text,
-    textAlign: 'right'
-  },
-  arkLabsText: {
-    fontSize: 10,
-    fontWeight: 500,
-    color: C.muted,
-    textAlign: 'right',
-    marginTop: 2
   },
 
   /* Typography Utilities */
@@ -257,7 +244,7 @@ function fmtDate(d) {
 }
 
 /* ── PDF Document ── */
-export default function InvoicePDF({ invoice, agency = {} }) {
+export default function InvoicePDF({ invoice, agency = {}, terceroLogoDataUrl = null }) {
   const items = invoice.items || []
   const subtotal = items.reduce(
     (s, item) => s + (item.quantity || 0) * (item.unit_price || 0),
@@ -268,7 +255,7 @@ export default function InvoicePDF({ invoice, agency = {} }) {
   return (
     <Document>
       <Page size="A4" style={s.page}>
-        
+
         {/* ─── Header ─── */}
         <View style={s.header}>
           <View>
@@ -276,23 +263,20 @@ export default function InvoicePDF({ invoice, agency = {} }) {
             <Text style={s.invoiceNumber}>#{invoice.invoice_number}</Text>
           </View>
           <View style={{ alignItems: 'flex-end' }}>
-            {(agency.basic_whitelabel_enabled || agency.full_whitelabel_enabled) ? (
-              <View style={{ alignItems: 'flex-end' }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  {agency.logo_url && (
-                    <Image src={agency.logo_url} style={s.logo} />
-                  )}
-                  <Text style={s.logoText}>{agency.agency_name || 'Agency'}</Text>
-                </View>
-                {agency.basic_whitelabel_enabled && !agency.full_whitelabel_enabled && (
-                  <Text style={[s.arkLabsText, { marginTop: 4 }]}>Powered by Tercero, Ark Labs 2026</Text>
-                )}
-              </View>
+            {(agency.full_whitelabel_enabled || agency.basic_whitelabel_enabled) ? (
+              /* Velocity / Quantum — agency branding: horizontal → square → name */
+              agency.logo_horizontal_url ? (
+                <Image src={agency.logo_horizontal_url} style={{ width: 120, height: 36, objectFit: 'contain', borderRadius: 4 }} />
+              ) : agency.logo_url ? (
+                <Image src={agency.logo_url} style={{ width: 28, height: 28, objectFit: 'contain', borderRadius: 4 }} />
+              ) : (
+                <Text style={s.logoText}>{agency.agency_name || 'Agency'}</Text>
+              )
             ) : (
-              <View>
-                <Text style={s.tertiaryLogoText}>Tercero</Text>
-                <Text style={s.arkLabsText}>Ark Labs 2026</Text>
-              </View>
+              /* Ignite — TerceroLand logo */
+              terceroLogoDataUrl ? (
+                <Image src={terceroLogoDataUrl} style={{ width: 90, height: 15, objectFit: 'contain' }} />
+              ) : null
             )}
           </View>
         </View>
@@ -394,7 +378,18 @@ export default function InvoicePDF({ invoice, agency = {} }) {
           </View>
         )}
 
-
+        {/* ─── Footer: Quantum → none | Velocity → Tercero logo | Ignite → "Tercero 2026" ─── */}
+        {agency.full_whitelabel_enabled ? null : agency.basic_whitelabel_enabled ? (
+          <View style={[s.footer, { alignItems: 'center' }]}>
+            {terceroLogoDataUrl ? (
+              <Image src={terceroLogoDataUrl} style={{ width: 52, height: 9, objectFit: 'contain', opacity: 0.4 }} />
+            ) : null}
+          </View>
+        ) : (
+          <View style={s.footer}>
+            <Text style={s.footerText}>Tercero 2026</Text>
+          </View>
+        )}
 
       </Page>
     </Document>

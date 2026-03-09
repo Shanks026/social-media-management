@@ -1,21 +1,11 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { pdf } from '@react-pdf/renderer'
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  Cell,
-} from 'recharts'
+import { BarChart, Bar, XAxis, YAxis, Cell } from 'recharts'
 import { format, parseISO } from 'date-fns'
 import {
-  ArrowLeft,
   Pencil,
   FileDown,
-  FolderOpen,
   Calendar,
   Target,
   Activity,
@@ -31,7 +21,10 @@ import {
   Mail,
   RefreshCw,
   ExternalLink,
+  ArrowUpRight,
   User,
+  FileText,
+  CalendarDays,
 } from 'lucide-react'
 
 import { supabase } from '@/lib/supabase'
@@ -39,21 +32,29 @@ import { useHeader } from '@/components/misc/header-context'
 import {
   useCampaign,
   useCampaignAnalytics,
-  useUpdateCampaign,
   useCampaignInvoices,
   useRegenerateCampaignReviewToken,
   useMarkReviewSent,
 } from '@/api/campaigns'
 import { useGlobalPosts } from '@/api/useGlobalPosts'
 import { useSubscription } from '@/api/useSubscription'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { fetchCampaignMeetings, deleteMeeting } from '@/api/meetings'
+import { fetchCampaignNotes, updateNoteStatus } from '@/api/notes'
 import DraftPostForm from '@/pages/posts/DraftPostForm'
 import { LinkPostsToCampaignDialog } from '@/components/campaigns/LinkPostsToCampaignDialog'
 import { CampaignDialog } from '@/components/campaigns/CampaignDialog'
 import { CampaignUpgradePrompt } from '@/components/campaigns/CampaignUpgradePrompt'
+import { CreateInvoiceDialog } from '@/pages/finance/CreateInvoiceDialog'
 import CampaignReportPDF from '@/components/campaigns/CampaignReportPDF'
+import MeetingRow from '@/components/MeetingRow'
+import NoteRow from '@/components/NoteRow'
+import CreateMeetingDialog from '@/components/CreateMeetingDialog'
+import CreateNoteDialog from '@/components/CreateNoteDialog'
 import StatusBadge from '@/components/StatusBadge'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import {
   Dialog,
   DialogContent,
@@ -73,6 +74,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { SUPPORTED_PLATFORMS } from '@/lib/platforms'
+import { getUrgencyStatus } from '@/lib/client-helpers'
 import {
   ChartContainer,
   ChartTooltip,
@@ -125,27 +127,6 @@ const STATUS_STYLES = {
   Archived: 'bg-muted text-muted-foreground',
 }
 
-const POST_STATUS_STYLES = {
-  DRAFT: 'bg-muted text-muted-foreground',
-  PENDING:
-    'bg-yellow-100 text-yellow-700 dark:bg-yellow-500/15 dark:text-yellow-400',
-  REVISIONS:
-    'bg-orange-100 text-orange-700 dark:bg-orange-500/15 dark:text-orange-400',
-  SCHEDULED: 'bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-400',
-  PUBLISHED:
-    'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-400',
-  ARCHIVED: 'bg-muted text-muted-foreground',
-}
-
-const PLATFORM_COLORS = [
-  '#6366f1',
-  '#8b5cf6',
-  '#ec4899',
-  '#f59e0b',
-  '#10b981',
-  '#3b82f6',
-]
-
 function formatDateRange(start, end) {
   if (!start && !end) return 'No dates set'
   const fmt = (d) => format(parseISO(d), 'MMM d, yyyy')
@@ -178,6 +159,9 @@ function KpiCard({ label, value, sub, icon: Icon, color = 'text-primary' }) {
 export default function CampaignDetailPage() {
   const { campaignId } = useParams()
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
+
+  const [activeTab, setActiveTab] = useState('posts')
   const [editOpen, setEditOpen] = useState(false)
   const [exportingPdf, setExportingPdf] = useState(false)
   const [createPostOpen, setCreatePostOpen] = useState(false)
@@ -185,6 +169,8 @@ export default function CampaignDetailPage() {
   const [shareDialogOpen, setShareDialogOpen] = useState(false)
   const [shareDialogUrl, setShareDialogUrl] = useState('')
   const [sendingEmail, setSendingEmail] = useState(false)
+  const [createInvoiceOpen, setCreateInvoiceOpen] = useState(false)
+  const [editingMeeting, setEditingMeeting] = useState(null)
 
   const { data: campaign, isLoading: campaignLoading } = useCampaign(campaignId)
   const { data: analytics, isLoading: analyticsLoading } =
@@ -197,6 +183,46 @@ export default function CampaignDetailPage() {
     useCampaignInvoices(campaignId)
   const regenerateToken = useRegenerateCampaignReviewToken()
   const markReviewSent = useMarkReviewSent()
+
+  const { data: campaignMeetings = [], isLoading: meetingsLoading } = useQuery({
+    queryKey: ['campaign-meetings', campaignId],
+    queryFn: () => fetchCampaignMeetings(campaignId),
+    enabled: !!campaignId,
+  })
+
+  const { data: campaignNotes = [], isLoading: notesLoading } = useQuery({
+    queryKey: ['campaign-notes', campaignId],
+    queryFn: () => fetchCampaignNotes(campaignId),
+    enabled: !!campaignId,
+  })
+
+  const { mutate: markMeetingDone, isPending: isCompletingMeeting } =
+    useMutation({
+      mutationFn: (meetingId) => deleteMeeting(meetingId),
+      onSuccess: () => {
+        queryClient.invalidateQueries({
+          queryKey: ['campaign-meetings', campaignId],
+        })
+        queryClient.invalidateQueries({ queryKey: ['meetings'] })
+        queryClient.invalidateQueries({ queryKey: ['todayMeetings'] })
+        toast.success('Meeting marked as done')
+      },
+      onError: (error) => {
+        toast.error('Failed to update meeting: ' + error.message)
+      },
+    })
+
+  const { mutate: toggleNoteStatus } = useMutation({
+    mutationFn: ({ noteId, newStatus }) => updateNoteStatus(noteId, newStatus),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ['campaign-notes', campaignId],
+      })
+    },
+    onError: (error) => {
+      toast.error('Failed to update note: ' + error.message)
+    },
+  })
 
   const { setHeader } = useHeader()
   useEffect(() => {
@@ -211,19 +237,16 @@ export default function CampaignDetailPage() {
 
   const isLoading = campaignLoading || analyticsLoading
 
-  // On-time rate
   const onTimeRate =
     analytics?.published_posts > 0
       ? `${Math.round((analytics.on_time_posts / analytics.published_posts) * 100)}%`
       : '—'
 
-  // Progress
   const progress =
     analytics?.total_posts > 0
       ? Math.round((analytics.published_posts / analytics.total_posts) * 100)
       : 0
 
-  // Platform chart data
   const platformData = useMemo(() => {
     const counts = {}
     Object.entries(analytics?.platform_distribution ?? {}).forEach(
@@ -242,7 +265,6 @@ export default function CampaignDetailPage() {
       .sort((a, b) => b.posts - a.posts)
   }, [analytics?.platform_distribution])
 
-  // Budget remaining
   const remaining =
     analytics?.budget != null
       ? analytics.budget - analytics.total_invoiced
@@ -256,8 +278,6 @@ export default function CampaignDetailPage() {
       maximumFractionDigits: 2,
     }).format(val ?? 0)
 
-  // Gate: Trial/Ignite users should not access campaign detail
-  // (placed after all hooks to satisfy Rules of Hooks)
   if (!sub && !isLoading) return null
   if (sub && !sub.campaigns) {
     return (
@@ -294,7 +314,8 @@ export default function CampaignDetailPage() {
     }
   }
 
-  const hasPendingPosts = postsData?.some((p) => p.status === 'PENDING_APPROVAL') ?? false
+  const hasPendingPosts =
+    postsData?.some((p) => p.status === 'PENDING_APPROVAL') ?? false
   const canShare = hasPendingPosts && !!campaign?.review_token
 
   function handleShareLink() {
@@ -316,14 +337,17 @@ export default function CampaignDetailPage() {
     if (!campaign?.clients?.email) return
     setSendingEmail(true)
     try {
-      const { error } = await supabase.functions.invoke('send-campaign-review-email', {
-        body: {
-          client_email: campaign.clients.email,
-          client_name: campaign.clients.name,
-          campaign_name: campaign.name,
-          review_url: shareDialogUrl,
+      const { error } = await supabase.functions.invoke(
+        'send-campaign-review-email',
+        {
+          body: {
+            client_email: campaign.clients.email,
+            client_name: campaign.clients.name,
+            campaign_name: campaign.name,
+            review_url: shareDialogUrl,
+          },
         },
-      })
+      )
       if (error) throw error
       markReviewSent.mutate(campaignId)
       toast.success(`Review link sent to ${campaign.clients.email}`)
@@ -369,20 +393,20 @@ export default function CampaignDetailPage() {
     return <div className="p-6 text-muted-foreground">Campaign not found.</div>
   }
 
+  const visibleMeetings = campaignMeetings.slice(0, 5)
+  const extraMeetings = campaignMeetings.length - 5
+  const visibleNotes = campaignNotes
+    .filter((n) => n.status !== 'ARCHIVED')
+    .slice(0, 5)
+  const extraNotes =
+    campaignNotes.filter((n) => n.status !== 'ARCHIVED').length - 5
+
   return (
     <div className="min-h-full bg-background selection:bg-primary/10">
       <div className="px-8 pt-8 pb-20 space-y-4 max-w-[1440px] mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between gap-4 mb-8">
           <div className="flex items-center gap-3 min-w-0">
-            {/* <Button
-              variant="ghost"
-              size="icon"
-              className="shrink-0"
-              onClick={() => navigate('/campaigns')}
-            >
-              <ArrowLeft className="size-4" />
-            </Button> */}
             <div className="min-w-0">
               <div className="flex items-center gap-3 flex-wrap">
                 <h1 className="text-2xl font-medium tracking-normal text-foreground truncate">
@@ -407,14 +431,16 @@ export default function CampaignDetailPage() {
                       <img
                         src={campaign.clients.logo_url}
                         alt={campaign.clients.name}
-                        className="size-4 rounded object-cover border border-border/50 shrink-0"
+                        className="size-5 rounded-full object-cover shrink-0"
                       />
                     ) : (
                       <div className="size-4 rounded bg-primary/10 flex items-center justify-center shrink-0">
                         <User className="size-2.5 text-primary" />
                       </div>
                     )}
-                    <span className="truncate max-w-xs">{campaign.clients.name}</span>
+                    <span className="truncate max-w-xs font-medium">
+                      {campaign.clients.name}
+                    </span>
                   </span>
                 )}
                 <span className="flex items-center gap-1.5">
@@ -447,7 +473,7 @@ export default function CampaignDetailPage() {
                 onClick={handleShareLink}
               >
                 <Share2 className="size-4" />
-                Share Review Link
+                Send for Approval
               </Button>
             )}
             <Button className="gap-2 h-9" onClick={() => setEditOpen(true)}>
@@ -457,7 +483,7 @@ export default function CampaignDetailPage() {
           </div>
         </div>
 
-        {/* KPI bar */}
+        {/* KPI bar — always visible */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <KpiCard
             label="Total Posts"
@@ -478,303 +504,605 @@ export default function CampaignDetailPage() {
             color="text-blue-500"
           />
           <KpiCard
-            label="Avg Approval"
-            value={
-              analytics?.avg_approval_days != null
-                ? `${analytics.avg_approval_days}d`
-                : '—'
-            }
-            sub="days to approve"
+            label="Progress"
+            value={`${progress}%`}
+            sub={`${analytics?.published_posts ?? 0} of ${analytics?.total_posts ?? 0} published`}
             icon={Clock}
             color="text-amber-500"
           />
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pt-2">
-          {/* Post list */}
-          <Card className="lg:col-span-2 border-none shadow-sm ring-1 ring-border/50 bg-card/50 dark:bg-card/30 flex flex-col h-full gap-4">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 shrink-0">
-              <div>
-                <CardTitle className="text-lg font-medium">Posts</CardTitle>
-                <CardDescription>
-                  Manage and track campaign posts
-                </CardDescription>
-              </div>
-              {campaign?.status === 'Active' && (
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-8 gap-1.5"
-                    onClick={() => setLinkPostsOpen(true)}
-                  >
-                    <Link2 className="size-3.5" />
-                    Link Posts
-                  </Button>
-                  <Button
-                    size="sm"
-                    className="h-8 gap-1.5"
-                    onClick={() => setCreatePostOpen(true)}
-                  >
-                    <Plus className="size-3.5" />
-                    New Post
-                  </Button>
-                </div>
-              )}
-            </CardHeader>
-            <CardContent className="flex-1 p-0 flex flex-col">
-              {postsLoading ? (
-                <div className="p-4 space-y-3 border-t border-border/60">
-                  {[...Array(3)].map((_, i) => (
-                    <Skeleton key={i} className="h-12" />
-                  ))}
-                </div>
-              ) : !postsData?.length ? (
-                <p className="p-6 text-sm text-muted-foreground text-center">
-                  No posts linked to this campaign yet.
-                </p>
-              ) : (
-                <div className="px-4 pb-4 space-y-2">
-                  {postsData.map((post) => {
-                    const pv = post
-                    const mediaUrl = pv.media_urls?.[0]
-                    return (
-                      <div
-                        key={post.id}
-                        className="group flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-muted/50 transition-all cursor-pointer border border-transparent hover:border-border/50 shadow-sm hover:shadow-md"
-                        onClick={() =>
-                          navigate(
-                            `/clients/${post.client_id}/posts/${post.id}`,
-                          )
-                        }
+        {/* Tabs */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="pt-2">
+          <TabsList className="h-10 mb-4">
+            <TabsTrigger value="posts" className="gap-1.5 text-sm px-5">
+              <Activity className="size-3.5" />
+              Posts
+            </TabsTrigger>
+            <TabsTrigger value="finance" className="gap-1.5 text-sm px-5">
+              <Receipt className="size-3.5" />
+              Finance
+            </TabsTrigger>
+            <TabsTrigger value="activity" className="gap-1.5 text-sm px-5">
+              <CalendarDays className="size-3.5" />
+              Activity
+            </TabsTrigger>
+          </TabsList>
+
+          {/* ── Posts tab ── */}
+          <TabsContent value="posts" className="mt-0">
+            <div className="grid grid-cols-1 gap-4">
+              {/* Post list */}
+              <Card className="border-none shadow-sm ring-1 ring-border/50 bg-card/50 dark:bg-card/30 flex flex-col h-full gap-4">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 shrink-0">
+                  <div>
+                    <CardTitle className="text-lg font-medium">Posts</CardTitle>
+                    <CardDescription>
+                      Manage and track campaign posts
+                    </CardDescription>
+                  </div>
+                  {campaign?.status === 'Active' && (
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 gap-1.5"
+                        onClick={() => setLinkPostsOpen(true)}
                       >
-                        {mediaUrl ? (
-                          <div className="w-12 h-12 rounded-lg overflow-hidden shrink-0 border border-border/50 bg-muted relative shadow-sm">
-                            {mediaUrl.match(/\.(mp4|mov|webm)$/i) ? (
-                              <div className="absolute inset-0 flex items-center justify-center bg-black/90">
-                                <Play className="size-4 text-white fill-current" />
-                              </div>
-                            ) : (
-                              <img
-                                src={mediaUrl}
-                                alt=""
-                                className="w-full h-full object-cover transition-transform group-hover:scale-105"
-                              />
-                            )}
-                          </div>
-                        ) : (
-                          <div className="w-12 h-12 rounded-lg shrink-0 border border-border/50 bg-muted flex items-center justify-center shadow-sm">
-                            <Activity className="size-5 text-muted-foreground/40" />
-                          </div>
-                        )}
-
-                        <div className="min-w-0 flex-1 ml-1">
-                          <p className="text-sm font-semibold truncate text-foreground leading-tight">
-                            {pv?.title || 'Untitled'}
-                          </p>
-                          <div className="flex items-center gap-3 mt-1.5 flex-wrap">
-                            {pv?.target_date && (
-                              <p className="text-[11px] text-muted-foreground/70 flex items-center gap-1.5 font-medium">
-                                <span className="font-bold text-foreground/60 uppercase tracking-tight">
-                                  {pv.status === 'PUBLISHED'
-                                    ? 'Published'
-                                    : 'Target'}
-                                </span>
-                                <span>
-                                  ·{' '}
-                                  {format(
-                                    parseISO(pv.target_date),
-                                    'MMM d, yyyy',
-                                  )}
-                                </span>
-                              </p>
-                            )}
-                          </div>
-                        </div>
-
-                        <div className="shrink-0 flex flex-col items-end gap-2.5">
-                          <div className="scale-90 origin-right">
-                            <StatusBadge status={pv?.status} />
-                          </div>
-                          <div className="flex items-center -space-x-1.5">
-                            {pv?.platforms?.length > 0 ? (
-                              pv.platforms.map((p) => (
-                                <PlatformIcon key={p} name={p} />
-                              ))
-                            ) : (
-                              <span className="text-[10px] text-muted-foreground/50 ml-1">
-                                No platform
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Right column: platform chart + budget */}
-          <div className="flex flex-col gap-4">
-            {/* Progress bar */}
-            {(analytics?.total_posts ?? 0) > 0 && (
-              <Card className="rounded-xl border-none bg-card/50 shadow-sm ring-1 ring-border/50 dark:bg-card/20 p-4 space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="font-medium">Overall Progress</span>
-                  <span className="text-muted-foreground tabular-nums">
-                    {analytics.published_posts} / {analytics.total_posts}{' '}
-                    published ({progress}%)
-                  </span>
-                </div>
-                <div className="h-2 bg-muted rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-primary rounded-full transition-all"
-                    style={{ width: `${progress}%` }}
-                  />
-                </div>
-              </Card>
-            )}
-
-            {/* Platform distribution */}
-            {platformData.length > 0 && (
-              <Card className="rounded-xl border-none bg-card/50 shadow-sm ring-1 ring-border/50 dark:bg-card/20 p-4">
-                <p className="font-medium text-sm mb-3">
-                  Platform Distribution
-                </p>
-                <ChartContainer
-                  config={platformChartConfig}
-                  className="h-[200px] w-full"
-                >
-                  <BarChart
-                    data={platformData}
-                    layout="vertical"
-                    margin={{ top: 0, right: 30, bottom: 0, left: 10 }}
-                  >
-                    <YAxis
-                      dataKey="platform"
-                      type="category"
-                      tickLine={false}
-                      axisLine={false}
-                      width={40}
-                      tick={<CustomPlatformTick />}
-                    />
-                    <XAxis dataKey="posts" type="number" hide />
-                    <ChartTooltip
-                      cursor={{ fill: 'rgba(0,0,0,0.05)' }}
-                      content={<ChartTooltipContent hideIndicator />}
-                    />
-                    <Bar
-                      dataKey="posts"
-                      radius={[0, 4, 4, 0]}
-                      barSize={24}
-                      label={{
-                        position: 'right',
-                        fill: 'currentColor',
-                        fontSize: 12,
-                        fontWeight: 500,
-                      }}
-                    >
-                      {platformData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.fill} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ChartContainer>
-              </Card>
-            )}
-
-            {/* Budget section */}
-            {analytics?.budget != null && (
-              <Card className="rounded-2xl border-none bg-card/50 shadow-sm ring-1 ring-border/50 dark:bg-card/20 p-4 space-y-3">
-                <p className="font-medium text-sm">Budget</p>
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Total Budget</span>
-                    <span className="font-medium tabular-nums">
-                      {formatCurrency(analytics.budget)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Invoiced</span>
-                    <span className="tabular-nums">
-                      {formatCurrency(analytics.total_invoiced)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Collected</span>
-                    <span className="tabular-nums">
-                      {formatCurrency(analytics.total_collected)}
-                    </span>
-                  </div>
-                  <div className="border-t border-border/60 pt-2 flex justify-between text-sm font-medium">
-                    <span>Remaining</span>
-                    <span
-                      className={cn(
-                        'tabular-nums',
-                        remaining != null && remaining < 0
-                          ? 'text-destructive'
-                          : 'text-emerald-600 dark:text-emerald-400',
-                      )}
-                    >
-                      {formatCurrency(remaining)}
-                    </span>
-                  </div>
-                </div>
-              </Card>
-            )}
-
-            {/* Linked invoices */}
-            {invoices.length > 0 && (
-              <Card className="rounded-2xl border-none bg-card/50 shadow-sm ring-1 ring-border/50 dark:bg-card/20 overflow-hidden">
-                <div className="px-4 py-3 border-b border-border/60 flex items-center gap-2">
-                  <Receipt className="size-4 text-muted-foreground" />
-                  <p className="font-medium text-sm">Linked Invoices</p>
-                </div>
-                <div className="divide-y divide-border/60">
-                  {invoices.map((inv) => (
-                    <div
-                      key={inv.id}
-                      className="px-4 py-2.5 flex items-center justify-between hover:bg-muted/30 transition-colors cursor-pointer"
-                      onClick={() => navigate(`/finance?invoice=${inv.id}`)}
-                    >
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium">
-                          {inv.invoice_number}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {inv.due_date
-                            ? `Due ${format(parseISO(inv.due_date), 'MMM d, yyyy')}`
-                            : 'No due date'}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <span className="text-sm font-medium tabular-nums">
-                          {formatCurrency(inv.total_amount)}
-                        </span>
-                        <span
-                          className={cn(
-                            'text-[10px] font-medium px-2 py-0.5 rounded-full',
-                            inv.status === 'Paid'
-                              ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-400'
-                              : inv.status === 'Overdue'
-                                ? 'bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-400'
-                                : 'bg-muted text-muted-foreground',
-                          )}
-                        >
-                          {inv.status}
-                        </span>
-                      </div>
+                        <Link2 className="size-3.5" />
+                        Link Posts
+                      </Button>
+                      <Button
+                        size="sm"
+                        className="h-8 gap-1.5"
+                        onClick={() => setCreatePostOpen(true)}
+                      >
+                        <Plus className="size-3.5" />
+                        New Post
+                      </Button>
                     </div>
-                  ))}
-                </div>
-              </Card>
-            )}
-          </div>
-        </div>
+                  )}
+                </CardHeader>
+                <CardContent className="min-h-[320px] p-0 flex flex-col">
+                  {postsLoading ? (
+                    <div>
+                      {[...Array(3)].map((_, i) => (
+                        <div key={i}>
+                          <div className="flex items-center gap-4 px-6 py-3">
+                            <Skeleton className="w-12 h-12 rounded-lg shrink-0" />
+                            <div className="flex-1 space-y-2">
+                              <Skeleton className="h-4 w-1/2" />
+                              <Skeleton className="h-3 w-1/3" />
+                            </div>
+                            <Skeleton className="h-5 w-20 rounded-full" />
+                          </div>
+                          {i < 2 && (
+                            <hr className="border-t border-dashed border-border/50 mx-6" />
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : !postsData?.length ? (
+                    <div className="flex-1 flex flex-col items-center justify-center text-center py-16 gap-2">
+                      <div className="h-10 w-10 border border-dashed rounded-full flex items-center justify-center text-muted-foreground">
+                        <Activity className="h-4 w-4 opacity-50" />
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        No posts linked yet
+                      </p>
+                      <p className="text-xs text-muted-foreground/70">
+                        Use Link Posts or New Post to get started
+                      </p>
+                    </div>
+                  ) : (
+                    <div>
+                      {postsData.map((post, idx) => {
+                        const pv = post
+                        const mediaUrl = pv.media_urls?.[0]
+                        const isCompleted = ['PUBLISHED', 'ARCHIVED'].includes(
+                          pv.status,
+                        )
+                        const health = !isCompleted
+                          ? getUrgencyStatus(pv.target_date)
+                          : null
+                        return (
+                          <div key={post.id}>
+                            <div
+                              className="group flex items-center gap-4 px-6 py-3 hover:bg-muted/40 transition-colors cursor-pointer"
+                              onClick={() =>
+                                navigate(
+                                  `/clients/${post.client_id}/posts/${post.id}`,
+                                )
+                              }
+                            >
+                              {mediaUrl ? (
+                                <div className="w-12 h-12 rounded-lg overflow-hidden shrink-0 border border-border/50 bg-muted relative">
+                                  {mediaUrl.match(/\.(mp4|mov|webm)$/i) ? (
+                                    <div className="absolute inset-0 flex items-center justify-center bg-black/90">
+                                      <Play className="size-4 text-white fill-current" />
+                                    </div>
+                                  ) : (
+                                    <img
+                                      src={mediaUrl}
+                                      alt=""
+                                      className="w-full h-full object-cover"
+                                    />
+                                  )}
+                                </div>
+                              ) : (
+                                <div className="w-12 h-12 rounded-lg shrink-0 border border-border/50 bg-muted flex items-center justify-center">
+                                  <Activity className="size-5 text-muted-foreground/40" />
+                                </div>
+                              )}
 
-        {/* Edit dialog */}
+                              <div className="min-w-0 flex-1">
+                                <p className="text-base font-medium truncate text-foreground leading-tight">
+                                  {pv?.title || 'Untitled'}
+                                </p>
+                                {pv?.target_date && (
+                                  <div className="flex items-center gap-1.5 mt-1.5">
+                                    {health?.color && (
+                                      <div className="relative flex h-2 w-2 items-center justify-center shrink-0">
+                                        {health.pulse && (
+                                          <span
+                                            className={cn(
+                                              'absolute inline-flex h-full w-full animate-ping rounded-full opacity-75',
+                                              health.color,
+                                            )}
+                                          />
+                                        )}
+                                        <span
+                                          className={cn(
+                                            'relative inline-flex h-2 w-2 rounded-full',
+                                            health.color,
+                                          )}
+                                        />
+                                      </div>
+                                    )}
+                                    <p className="text-xs text-muted-foreground">
+                                      {pv.status === 'PUBLISHED'
+                                        ? 'Published'
+                                        : 'Target'}
+                                      {' · '}
+                                      {format(
+                                        parseISO(pv.target_date),
+                                        'MMM d, yyyy',
+                                      )}
+                                    </p>
+                                  </div>
+                                )}
+                              </div>
+
+                              <div className="shrink-0 flex flex-col items-end gap-2">
+                                <StatusBadge
+                                  status={pv?.status}
+                                  className="text-sm px-3 py-1.5"
+                                />
+                                {pv?.platforms?.length > 0 && (
+                                  <div className="flex items-center -space-x-2">
+                                    {pv.platforms.map((p) => (
+                                      <PlatformIcon key={p} name={p} />
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                            {idx < postsData.length - 1 && (
+                              <hr className="border-t border-dashed border-border/50 mx-6" />
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          {/* ── Finance tab ── */}
+          <TabsContent value="finance" className="mt-0">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {/* Budget card */}
+              <Card className="rounded-2xl border-none bg-card/50 shadow-sm ring-1 ring-border/50 dark:bg-card/20">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg font-medium">Budget</CardTitle>
+                  <CardDescription>Campaign spend tracking</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {analytics ? (
+                    <>
+                      <div className="flex justify-between text-sm py-1.5 border-b border-border/40">
+                        <span className="text-muted-foreground">
+                          Total Budget
+                        </span>
+                        {analytics.budget != null ? (
+                          <span className="font-semibold tabular-nums">
+                            {formatCurrency(analytics.budget)}
+                          </span>
+                        ) : (
+                          <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+                            Uncapped
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex justify-between text-sm py-1.5 border-b border-border/40">
+                        <span className="text-muted-foreground">Invoiced</span>
+                        <span className="tabular-nums font-medium">
+                          {formatCurrency(analytics.total_invoiced)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-sm py-1.5 border-b border-border/40">
+                        <span className="text-muted-foreground">Collected</span>
+                        <span className="tabular-nums font-medium">
+                          {formatCurrency(analytics.total_collected)}
+                        </span>
+                      </div>
+                      {analytics.budget != null && (
+                        <div className="flex justify-between text-sm pt-1 font-semibold">
+                          <span>Remaining</span>
+                          <span
+                            className={cn(
+                              'tabular-nums',
+                              remaining != null && remaining < 0
+                                ? 'text-destructive'
+                                : 'text-emerald-600 dark:text-emerald-400',
+                            )}
+                          >
+                            {formatCurrency(remaining)}
+                          </span>
+                        </div>
+                      )}
+                      {analytics.budget != null && (
+                        <div className="pt-2">
+                          <div className="h-2 bg-muted rounded-full overflow-hidden">
+                            <div
+                              className={cn(
+                                'h-full rounded-full transition-all',
+                                remaining != null && remaining < 0
+                                  ? 'bg-destructive'
+                                  : 'bg-primary',
+                              )}
+                              style={{
+                                width: `${Math.min(100, (analytics.total_invoiced / analytics.budget) * 100)}%`,
+                              }}
+                            />
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-1.5">
+                            {Math.round(
+                              (analytics.total_invoiced / analytics.budget) *
+                                100,
+                            )}
+                            % of budget invoiced
+                          </p>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="space-y-3">
+                      <Skeleton className="h-5 w-full" />
+                      <Skeleton className="h-5 w-full" />
+                      <Skeleton className="h-5 w-full" />
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Linked invoices */}
+              <Card className="border-none bg-card/50 shadow-sm ring-1 ring-border/50 dark:bg-card/20 flex flex-col">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 shrink-0">
+                  <div>
+                    <CardTitle className="text-lg font-medium">
+                      Linked Invoices
+                    </CardTitle>
+                    <CardDescription>
+                      {invoices.length} invoice
+                      {invoices.length !== 1 ? 's' : ''} linked
+                    </CardDescription>
+                  </div>
+                  <div className="flex items-center">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => setCreateInvoiceOpen(true)}
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 -mr-2 text-muted-foreground hover:text-foreground"
+                      onClick={() => navigate('/finance/invoices')}
+                    >
+                      <ArrowUpRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent className="min-h-[320px] p-0 flex flex-col">
+                  {invoicesLoading ? (
+                    <div>
+                      {[...Array(3)].map((_, i) => (
+                        <div key={i}>
+                          <div className="flex items-center gap-4 px-6 py-3">
+                            <Skeleton className="w-10 h-10 rounded-lg shrink-0" />
+                            <div className="flex-1 space-y-2">
+                              <Skeleton className="h-4 w-1/3" />
+                              <Skeleton className="h-3 w-1/4" />
+                            </div>
+                            <Skeleton className="h-6 w-20 rounded-full" />
+                          </div>
+                          {i < 2 && (
+                            <hr className="border-t border-dashed border-border/50 mx-6" />
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : invoices.length === 0 ? (
+                    <div className="flex-1 flex flex-col items-center justify-center text-center py-16 gap-2">
+                      {/* <div className="h-10 w-10 border border-dashed rounded-full flex items-center justify-center text-muted-foreground">
+                        <Receipt className="h-4 w-4 opacity-50" />
+                      </div> */}
+                      <p className="text-sm text-muted-foreground">
+                        No invoices linked yet
+                      </p>
+                      <p className="text-xs text-muted-foreground/70">
+                        Create one to start tracking campaign spend
+                      </p>
+                    </div>
+                  ) : (
+                    <div>
+                      {invoices.map((inv, idx) => (
+                        <div key={inv.id}>
+                          <div
+                            className="flex items-center gap-4 px-6 py-3 hover:bg-muted/40 transition-colors cursor-pointer group/row"
+                            onClick={() =>
+                              navigate(`/finance?invoice=${inv.id}`)
+                            }
+                          >
+                            <div className="min-w-0 flex-1">
+                              <p className="text-base font-medium truncate text-foreground leading-tight">
+                                {inv.invoice_number}
+                              </p>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                {inv.due_date
+                                  ? `Due · ${format(parseISO(inv.due_date), 'MMM d, yyyy')}`
+                                  : 'No due date'}
+                              </p>
+                            </div>
+                            <div className="shrink-0 flex items-center gap-3">
+                              <div className="flex flex-col items-end gap-1.5">
+                                <StatusBadge
+                                  status={inv.status?.toUpperCase()}
+                                  className="text-sm px-3 py-1.5"
+                                />
+                                <p className="text-sm font-semibold tabular-nums text-foreground">
+                                  {formatCurrency(inv.total)}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                          {idx < invoices.length - 1 && (
+                            <hr className="border-t border-dashed border-border/50 mx-6" />
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          {/* ── Activity tab ── */}
+          <TabsContent value="activity" className="mt-0">
+            <div className="flex flex-col gap-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {/* Notes column */}
+                <Card className="border-none shadow-sm ring-1 ring-border/50 bg-card/50 flex flex-col">
+                  <CardHeader className="pb-3 flex flex-row items-center justify-between space-y-0 shrink-0">
+                    <div className="flex items-center gap-2">
+                      <FileText className="size-4 text-muted-foreground" />
+                      <CardTitle className="text-base font-medium">
+                        Notes
+                      </CardTitle>
+                    </div>
+                    <CreateNoteDialog
+                      clientId={campaign.client_id}
+                      lockClient={true}
+                      campaignId={campaignId}
+                      campaignName={campaign.name}
+                    >
+                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </CreateNoteDialog>
+                  </CardHeader>
+                  <CardContent className="flex-1 flex flex-col pt-0">
+                    {notesLoading ? (
+                      <div className="space-y-3">
+                        {[1, 2, 3].map((i) => (
+                          <div key={i} className="flex items-start gap-3 py-1">
+                            <Skeleton className="h-5 w-5 rounded-full shrink-0" />
+                            <div className="flex-1 space-y-2">
+                              <Skeleton className="h-4 w-3/4" />
+                              <Skeleton className="h-3 w-1/2" />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : visibleNotes.length === 0 ? (
+                      <div className="flex-1 flex flex-col items-center justify-center text-center py-10 gap-2">
+                        <div className="h-10 w-10 border border-dashed rounded-full flex items-center justify-center text-muted-foreground">
+                          <FileText className="h-4 w-4 opacity-50" />
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          No notes yet
+                        </p>
+                        <p className="text-xs text-muted-foreground/70">
+                          Use the + button to add one
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col gap-3">
+                        {visibleNotes.map((note) => (
+                          <NoteRow
+                            key={note.id}
+                            note={note}
+                            variant="client-card"
+                          />
+                        ))}
+                        {extraNotes > 0 && (
+                          <p className="text-xs text-muted-foreground pt-1">
+                            +{extraNotes} more —{' '}
+                            <button
+                              className="underline underline-offset-2 hover:text-foreground transition-colors"
+                              onClick={() => navigate('/operations/notes')}
+                            >
+                              view all
+                            </button>
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Meetings column */}
+                <Card className="border-none shadow-sm ring-1 ring-border/50 bg-card/50 flex flex-col">
+                  <CardHeader className="pb-3 flex flex-row items-center justify-between space-y-0 shrink-0">
+                    <div className="flex items-center gap-2">
+                      <CalendarDays className="size-4 text-muted-foreground" />
+                      <CardTitle className="text-base font-medium">
+                        Meetings
+                      </CardTitle>
+                    </div>
+                    <CreateMeetingDialog
+                      defaultClientId={campaign.client_id}
+                      lockClient={true}
+                      campaignId={campaignId}
+                      campaignName={campaign.name}
+                      editMeeting={editingMeeting}
+                      onSuccess={() => setEditingMeeting(null)}
+                    >
+                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </CreateMeetingDialog>
+                  </CardHeader>
+                  <CardContent className="flex-1 flex flex-col pt-0">
+                    {meetingsLoading ? (
+                      <div className="space-y-4 py-2">
+                        <Skeleton className="h-12 w-full" />
+                        <Skeleton className="h-12 w-full" />
+                        <Skeleton className="h-12 w-full" />
+                      </div>
+                    ) : visibleMeetings.length === 0 ? (
+                      <div className="flex-1 flex flex-col items-center justify-center text-center py-10 gap-2">
+                        <div className="h-10 w-10 border border-dashed rounded-full flex items-center justify-center text-muted-foreground">
+                          <CalendarDays className="h-4 w-4" />
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          No meetings yet
+                        </p>
+                        <p className="text-xs text-muted-foreground/70">
+                          Use the + button to schedule one
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {visibleMeetings.map((meeting) => (
+                          <MeetingRow
+                            key={meeting.id}
+                            meeting={meeting}
+                            markMeetingDone={markMeetingDone}
+                            isCompletingMeeting={isCompletingMeeting}
+                            variant="client-card"
+                          />
+                        ))}
+                        {extraMeetings > 0 && (
+                          <p className="text-xs text-muted-foreground pt-1">
+                            +{extraMeetings} more —{' '}
+                            <button
+                              className="underline underline-offset-2 hover:text-foreground transition-colors"
+                              onClick={() => navigate('/operations/meetings')}
+                            >
+                              view all
+                            </button>
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Platform distribution — full row below */}
+              <Card className="border-none shadow-sm ring-1 ring-border/50 bg-card/50">
+                <CardHeader className="pb-3 shrink-0">
+                  <CardTitle className="text-base font-medium">
+                    Platform Distribution
+                  </CardTitle>
+                  <CardDescription>Posts across platforms</CardDescription>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  {platformData.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center text-center py-10 gap-2">
+                      <div className="h-10 w-10 border border-dashed rounded-full flex items-center justify-center text-muted-foreground">
+                        <Activity className="h-4 w-4 opacity-50" />
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        No posts yet
+                      </p>
+                    </div>
+                  ) : (
+                    <ChartContainer
+                      config={platformChartConfig}
+                      className="h-[220px] w-full"
+                    >
+                      <BarChart
+                        data={platformData}
+                        layout="vertical"
+                        margin={{ top: 0, right: 30, bottom: 0, left: 10 }}
+                      >
+                        <YAxis
+                          dataKey="platform"
+                          type="category"
+                          tickLine={false}
+                          axisLine={false}
+                          width={40}
+                          tick={<CustomPlatformTick />}
+                        />
+                        <XAxis dataKey="posts" type="number" hide />
+                        <ChartTooltip
+                          cursor={{ fill: 'rgba(0,0,0,0.05)' }}
+                          content={<ChartTooltipContent hideIndicator />}
+                        />
+                        <Bar
+                          dataKey="posts"
+                          radius={[0, 4, 4, 0]}
+                          barSize={24}
+                          label={{
+                            position: 'right',
+                            fill: 'currentColor',
+                            fontSize: 12,
+                            fontWeight: 500,
+                          }}
+                        >
+                          {platformData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.fill} />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ChartContainer>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+        </Tabs>
+
+        {/* Dialogs */}
         <CampaignDialog
           open={editOpen}
           onOpenChange={setEditOpen}
@@ -782,7 +1110,13 @@ export default function CampaignDetailPage() {
           initialData={campaign}
         />
 
-        {/* New Post dialog — pre-filled with campaign client + campaign */}
+        <CreateInvoiceDialog
+          open={createInvoiceOpen}
+          onOpenChange={setCreateInvoiceOpen}
+          preselectedClientId={campaign.client_id}
+          preselectedCampaignId={campaignId}
+        />
+
         <DraftPostForm
           open={createPostOpen}
           onOpenChange={setCreatePostOpen}
@@ -791,7 +1125,6 @@ export default function CampaignDetailPage() {
           initialCampaignName={campaign.name}
         />
 
-        {/* Link existing posts dialog */}
         <LinkPostsToCampaignDialog
           open={linkPostsOpen}
           onOpenChange={setLinkPostsOpen}
@@ -800,13 +1133,12 @@ export default function CampaignDetailPage() {
           campaignName={campaign.name}
         />
 
-        {/* Share Review Link dialog */}
         <Dialog open={shareDialogOpen} onOpenChange={setShareDialogOpen}>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
-              <DialogTitle>Share Review Link</DialogTitle>
+              <DialogTitle>Campaign Review Link</DialogTitle>
               <DialogDescription>
-                Send this link to your client so they can review and approve all pending posts in one session.
+                Copy the link below or send it directly via email to your client for approval.
               </DialogDescription>
             </DialogHeader>
             <div className="flex gap-2">
@@ -816,7 +1148,12 @@ export default function CampaignDetailPage() {
                 onClick={(e) => e.target.select()}
                 className="font-mono text-xs flex-1"
               />
-              <Button variant="outline" size="icon" className="shrink-0" onClick={handleCopyLink}>
+              <Button
+                variant="outline"
+                size="icon"
+                className="shrink-0"
+                onClick={handleCopyLink}
+              >
                 <Copy className="size-4" />
               </Button>
             </div>
@@ -828,20 +1165,33 @@ export default function CampaignDetailPage() {
                 onClick={handleRegenerateToken}
                 disabled={regenerateToken.isPending}
               >
-                <RefreshCw className={cn('size-3', regenerateToken.isPending && 'animate-spin')} />
-                Regenerate link
+                <RefreshCw
+                  className={cn(
+                    'size-3',
+                    regenerateToken.isPending && 'animate-spin',
+                  )}
+                />
+                Resend link
               </Button>
               {campaign?.last_review_sent_at && (
                 <p className="text-xs text-muted-foreground">
-                  Last sent {format(parseISO(campaign.last_review_sent_at), 'MMM d, yyyy')}
+                  Last sent{' '}
+                  {format(
+                    parseISO(campaign.last_review_sent_at),
+                    'MMM d, yyyy',
+                  )}
                 </p>
               )}
             </div>
             {campaign?.clients?.email ? (
               <div className="border-t border-border/60 pt-4 flex items-center justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="text-sm font-medium truncate">{campaign.clients.name}</p>
-                  <p className="text-xs text-muted-foreground truncate">{campaign.clients.email}</p>
+                  <p className="text-sm font-medium truncate">
+                    {campaign.clients.name}
+                  </p>
+                  <p className="text-xs text-muted-foreground truncate">
+                    {campaign.clients.email}
+                  </p>
                 </div>
                 <Button
                   variant="outline"

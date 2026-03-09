@@ -55,6 +55,7 @@ import {
 } from 'lucide-react'
 
 import { SUPPORTED_PLATFORMS } from '@/lib/platforms'
+import HorizontalLogoCropDialog from '@/components/HorizontalLogoCropDialog'
 
 export default function AgencySettings() {
   const { user } = useAuth()
@@ -74,6 +75,17 @@ export default function AgencySettings() {
   const [isSavingAgency, setIsSavingAgency] = useState(false)
   const logoInputRef = useRef(null)
 
+  // Horizontal logo editing
+  const [horizontalLogoUrl, setHorizontalLogoUrl] = useState(null) // null = not editing (pending upload)
+  const [savedHorizontalLogoUrl, setSavedHorizontalLogoUrl] = useState(
+    () => agencySettings?.logo_horizontal_url || ''
+  )
+  const [isUploadingHorizontalLogo, setIsUploadingHorizontalLogo] = useState(false)
+  const [isSavingHorizontalLogo, setIsSavingHorizontalLogo] = useState(false)
+  const horizontalLogoInputRef = useRef(null)
+
+  const [cropSrc, setCropSrc] = useState(null)        // local objectURL for the crop modal
+  const [isCropOpen, setIsCropOpen] = useState(false)  // controls crop dialog visibility
 
   const { data: internalClient, isLoading: isClientLoading } = useQuery({
     queryKey: ['internal-client', user?.id],
@@ -168,6 +180,67 @@ export default function AgencySettings() {
     }
   }
 
+  const handleHorizontalLogoUpload = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    // Revoke any previous objectURL to avoid memory leaks
+    if (cropSrc) URL.revokeObjectURL(cropSrc)
+    const objectUrl = URL.createObjectURL(file)
+    setCropSrc(objectUrl)
+    setIsCropOpen(true)
+    // Reset the input so the same file can be re-selected
+    e.target.value = ''
+  }
+
+  const handleCropApplied = async (blob) => {
+    setIsUploadingHorizontalLogo(true)
+    try {
+      const filePath = `branding/${Date.now()}.png`
+      const { error: uploadError } = await supabase.storage
+        .from('post-media')
+        .upload(filePath, blob, { contentType: 'image/png' })
+      if (uploadError) throw uploadError
+      const { data: { publicUrl } } = supabase.storage.from('post-media').getPublicUrl(filePath)
+      setHorizontalLogoUrl(publicUrl)
+      toast.success('Horizontal logo cropped! Click Save to apply.')
+    } finally {
+      setIsUploadingHorizontalLogo(false)
+      // objectURL cleanup happens in handleCropDialogOpenChange when dialog closes,
+      // so a failed upload doesn't wipe the image from the still-open dialog
+    }
+  }
+
+  const handleCropDialogOpenChange = (open) => {
+    setIsCropOpen(open)
+    if (!open) {
+      // Revoke the objectURL only once the dialog is fully closed
+      if (cropSrc) URL.revokeObjectURL(cropSrc)
+      setCropSrc(null)
+    }
+  }
+
+  const handleSaveHorizontalLogo = async () => {
+    if (horizontalLogoUrl === null) return
+    setIsSavingHorizontalLogo(true)
+    try {
+      const dbUrl = horizontalLogoUrl === '' ? null : horizontalLogoUrl
+      const { error: subErr } = await supabase
+        .from('agency_subscriptions')
+        .update({ logo_horizontal_url: dbUrl, updated_at: new Date().toISOString() })
+        .eq('user_id', user?.id)
+      if (subErr) throw subErr
+      // Pin the display URL locally before nulling so the preview doesn't flicker
+      // while agencySettings refetches in the background
+      setSavedHorizontalLogoUrl(dbUrl || '')
+      setHorizontalLogoUrl(null)
+      if (refreshAgency) refreshAgency()
+      toast.success('Horizontal logo updated!')
+    } catch {
+      toast.error('Failed to save horizontal logo.')
+    } finally {
+      setIsSavingHorizontalLogo(false)
+    }
+  }
 
   // ── Full-screen setup form ──
   if (isSetupModalOpen) {
@@ -222,6 +295,7 @@ export default function AgencySettings() {
   // ── PATH A: Workspace exists — show agency profile ──
   if (internalClient) {
     const displayLogoUrl = agencyLogoUrl !== null ? agencyLogoUrl : internalClient.logo_url
+    const displayHorizontalLogoUrl = horizontalLogoUrl !== null ? horizontalLogoUrl : savedHorizontalLogoUrl
     const platforms = internalClient.platforms || []
 
     return (
@@ -248,139 +322,198 @@ export default function AgencySettings() {
             </Button>
           </div>
 
-          <div className="flex flex-col md:flex-row gap-8 items-center md:items-start">
-            {/* Logo upload */}
-            <div className="shrink-0">
+          {/* Row 1: Logo uploads + save actions */}
+          <div className="flex items-start gap-6 flex-wrap">
+            {/* Square logo */}
+            <div
+              onClick={() => logoInputRef.current?.click()}
+              className={cn(
+                'group relative flex size-28 cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed transition-all hover:bg-muted/50 shrink-0',
+                displayLogoUrl ? 'border-primary/40' : 'border-border',
+              )}
+            >
+              {displayLogoUrl ? (
+                <div className="relative size-full overflow-hidden rounded-2xl border-2 border-border bg-background shadow-sm">
+                  <img
+                    src={displayLogoUrl}
+                    alt={internalClient.name}
+                    className="size-full object-cover transition-transform group-hover:scale-110"
+                  />
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/20 opacity-0 transition-opacity group-hover:opacity-100">
+                    <Camera className="size-6 text-white" />
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center gap-1 text-muted-foreground transition-colors group-hover:text-foreground">
+                  {isUploadingLogo ? (
+                    <Loader2 className="size-5 animate-spin text-primary" />
+                  ) : (
+                    <ImagePlus className="size-5" />
+                  )}
+                  <span className="text-xs font-medium">Logo</span>
+                </div>
+              )}
+              <input
+                ref={logoInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleLogoUpload}
+                disabled={isUploadingLogo}
+              />
+            </div>
+
+            {/* Horizontal logo */}
+            <div className="shrink-0 space-y-1.5">
               <div
-                onClick={() => logoInputRef.current?.click()}
+                onClick={() => horizontalLogoInputRef.current?.click()}
                 className={cn(
-                  'group relative flex size-32 cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed transition-all hover:bg-muted/50',
-                  displayLogoUrl ? 'border-primary/40' : 'border-border',
+                  'group relative cursor-pointer rounded-xl border-2 border-dashed transition-all hover:bg-muted/50',
+                  displayHorizontalLogoUrl
+                    ? 'border-primary/40 overflow-hidden'
+                    : 'border-border flex h-28 w-52 items-center justify-center',
                 )}
               >
-                {displayLogoUrl ? (
+                {displayHorizontalLogoUrl ? (
                   <>
-                    <div className="relative size-full overflow-hidden rounded-2xl border-2 border-border bg-background shadow-sm">
-                      <img
-                        src={displayLogoUrl}
-                        alt={internalClient.name}
-                        className="size-full object-cover transition-transform group-hover:scale-110"
-                      />
-                      <div className="absolute inset-0 flex items-center justify-center bg-black/20 opacity-0 transition-opacity group-hover:opacity-100">
-                        <Camera className="size-6 text-white" />
-                      </div>
+                    <img
+                      src={displayHorizontalLogoUrl}
+                      alt="Horizontal logo"
+                      className="block max-h-28 max-w-[280px] w-auto rounded-[10px]"
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/20 opacity-0 transition-opacity group-hover:opacity-100 rounded-xl">
+                      <Camera className="size-5 text-white" />
                     </div>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setHorizontalLogoUrl('')
+                      }}
+                      className="absolute top-1.5 right-1.5 z-10 flex size-5 items-center justify-center rounded-full bg-black/60 text-white opacity-0 transition-opacity group-hover:opacity-100 hover:bg-destructive"
+                    >
+                      <X size={11} />
+                    </button>
                   </>
                 ) : (
                   <div className="flex flex-col items-center gap-1 text-muted-foreground transition-colors group-hover:text-foreground">
-                    {isUploadingLogo ? (
+                    {isUploadingHorizontalLogo ? (
                       <Loader2 className="size-5 animate-spin text-primary" />
                     ) : (
                       <ImagePlus className="size-5" />
                     )}
-                    <span className="text-xs font-medium">Logo</span>
+                    <span className="text-xs font-medium">Horizontal Logo</span>
                   </div>
                 )}
                 <input
-                  ref={logoInputRef}
+                  ref={horizontalLogoInputRef}
                   type="file"
                   accept="image/*"
                   className="hidden"
-                  onChange={handleLogoUpload}
-                  disabled={isUploadingLogo}
+                  onChange={handleHorizontalLogoUpload}
+                  disabled={isUploadingHorizontalLogo}
                 />
               </div>
-
-              {agencyLogoUrl !== null && (
-                <Button
-                  size="sm"
-                  className="w-full mt-3 gap-2"
-                  onClick={handleSaveAgencyLogo}
-                  disabled={isSavingAgency}
-                >
-                  {isSavingAgency ? (
-                    <Loader2 size={14} className="animate-spin" />
-                  ) : (
-                    <Save size={14} />
-                  )}
-                  Save Logo
-                </Button>
-              )}
+              <p className="text-[11px] text-muted-foreground">
+                For invoices & documents.
+              </p>
             </div>
 
-            {/* Details */}
-            <div className="flex-1 w-full space-y-6">
-              <div className="space-y-1">
-                <h3 className="text-xl font-medium tracking-tight">
-                  {internalClient.name}
-                </h3>
-                <p className="text-sm text-muted-foreground">
-                  {internalClient.industry || 'Internal'}
-                  {/* {internalClient.tier} */}
-                </p>
+            {/* Save actions — aligned left of the same row */}
+            {(agencyLogoUrl !== null || horizontalLogoUrl !== null) && (
+              <div className="flex flex-col gap-2 self-end pb-0.5">
+                {agencyLogoUrl !== null && (
+                  <Button size="sm" className="gap-2" onClick={handleSaveAgencyLogo} disabled={isSavingAgency}>
+                    {isSavingAgency ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                    Save Logo
+                  </Button>
+                )}
+                {horizontalLogoUrl !== null && (
+                  <Button size="sm" className="gap-2" onClick={handleSaveHorizontalLogo} disabled={isSavingHorizontalLogo}>
+                    {isSavingHorizontalLogo ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                    {horizontalLogoUrl === '' ? 'Remove Horizontal Logo' : 'Save Horizontal Logo'}
+                  </Button>
+                )}
               </div>
+            )}
+          </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 w-full">
-                <InfoRow
-                  icon={<ShieldCheck size={16} />}
-                  label="Account Status"
-                  value={
-                    <span className={internalClient.status === 'ACTIVE' ? 'text-green-600 font-medium' : 'text-amber-600 font-medium'}>
-                      {internalClient.status === 'ACTIVE' ? 'Active' : 'Paused'}
-                    </span>
-                  }
-                />
-                <InfoRow
-                  icon={<ShieldCheck size={16} />}
-                  label="Account Tier"
-                  value={<span className="font-medium text-primary">{internalClient.tier || 'INTERNAL'}</span>}
-                />
-                <InfoRow
-                  icon={<Mail size={16} />}
-                  label="Agency Email"
-                  value={internalClient.email || '—'}
-                />
-                <InfoRow
-                  icon={<Phone size={16} />}
-                  label="Contact Number"
-                  value={internalClient.mobile_number || '—'}
-                />
-                <InfoRow
-                  icon={<Globe size={16} />}
-                  label="Official Website"
-                  value={
-                    internalClient.website ? (
-                      <a
-                        href={
-                          internalClient.website.startsWith('http')
-                            ? internalClient.website
-                            : `https://${internalClient.website}`
-                        }
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="hover:text-primary transition-colors flex items-center gap-1 group truncate"
-                      >
-                        <span className="truncate">{internalClient.website.replace(/(^\w+:|^)\/\//, '')}</span>
-                        <ExternalLink className="size-3 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
-                      </a>
-                    ) : (
-                      '—'
-                    )
-                  }
-                />
-                <InfoRow
-                  icon={<CalendarDays size={16} />}
-                  label="Created"
-                  value={
-                    internalClient.created_at
-                      ? format(
-                          new Date(internalClient.created_at),
-                          'MMMM d, yyyy',
-                        )
-                      : '—'
-                  }
-                />
-              </div>
+          {/* Horizontal Logo Crop Dialog */}
+          <HorizontalLogoCropDialog
+            open={isCropOpen}
+            onOpenChange={handleCropDialogOpenChange}
+            imageSrc={cropSrc || ''}
+            onCropComplete={handleCropApplied}
+          />
+
+          {/* Row 2: Details */}
+          <div className="space-y-6">
+            <div className="space-y-1">
+              <h3 className="text-xl font-medium tracking-tight">
+                {internalClient.name}
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                {internalClient.industry || 'Internal'}
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 w-full">
+              <InfoRow
+                icon={<ShieldCheck size={16} />}
+                label="Account Status"
+                value={
+                  <span className={internalClient.status === 'ACTIVE' ? 'text-green-600 font-medium' : 'text-amber-600 font-medium'}>
+                    {internalClient.status === 'ACTIVE' ? 'Active' : 'Paused'}
+                  </span>
+                }
+              />
+              <InfoRow
+                icon={<ShieldCheck size={16} />}
+                label="Account Tier"
+                value={<span className="font-medium text-primary">{internalClient.tier || 'INTERNAL'}</span>}
+              />
+              <InfoRow
+                icon={<Mail size={16} />}
+                label="Agency Email"
+                value={internalClient.email || '—'}
+              />
+              <InfoRow
+                icon={<Phone size={16} />}
+                label="Contact Number"
+                value={internalClient.mobile_number || '—'}
+              />
+              <InfoRow
+                icon={<Globe size={16} />}
+                label="Official Website"
+                value={
+                  internalClient.website ? (
+                    <a
+                      href={
+                        internalClient.website.startsWith('http')
+                          ? internalClient.website
+                          : `https://${internalClient.website}`
+                      }
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="hover:text-primary transition-colors flex items-center gap-1 group truncate"
+                    >
+                      <span className="truncate">{internalClient.website.replace(/(^\w+:|^)\/\//, '')}</span>
+                      <ExternalLink className="size-3 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+                    </a>
+                  ) : (
+                    '—'
+                  )
+                }
+              />
+              <InfoRow
+                icon={<CalendarDays size={16} />}
+                label="Created"
+                value={
+                  internalClient.created_at
+                    ? format(new Date(internalClient.created_at), 'MMMM d, yyyy')
+                    : '—'
+                }
+              />
             </div>
           </div>
         </section>

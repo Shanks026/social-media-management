@@ -34,23 +34,18 @@ export default function HTMLInvoicePreview({ invoice, agency }) {
           <p className="text-[13px] text-gray-500 mt-1">#{invoice.invoice_number}</p>
         </div>
         <div className="text-right">
-          {(agency.basic_whitelabel_enabled || agency.full_whitelabel_enabled) ? (
-            <div className="flex flex-col items-end">
-              <div className="flex items-center gap-3">
-                {agency.logo_url && (
-                  <img src={agency.logo_url} alt="Logo" className="h-10 object-contain rounded-lg" />
-                )}
-                <span className="text-2xl font-bold tracking-tight text-[#111827]">{agency.agency_name || 'Agency'}</span>
-              </div>
-              {agency.basic_whitelabel_enabled && !agency.full_whitelabel_enabled && (
-                <p className="text-[9px] text-gray-400 mt-1">Powered by Tercero, Ark Labs 2026</p>
-              )}
-            </div>
+          {agency.full_whitelabel_enabled || agency.basic_whitelabel_enabled ? (
+            /* Velocity / Quantum — agency branding: horizontal → square → name */
+            agency.logo_horizontal_url ? (
+              <img src={agency.logo_horizontal_url} alt="Logo" style={{ height: '36px', width: 'auto', display: 'block' }} className="rounded" />
+            ) : agency.logo_url ? (
+              <img src={agency.logo_url} alt="Logo" style={{ height: '28px', width: '28px', objectFit: 'contain' }} className="rounded" />
+            ) : (
+              <span className="text-2xl font-bold tracking-tight text-[#111827]">{agency.agency_name || 'Agency'}</span>
+            )
           ) : (
-            <div className="flex flex-col items-end">
-               <h2 className="text-3xl font-extrabold tracking-tight text-[#111827]">Tercero</h2>
-               <p className="text-xs font-medium text-gray-500">Ark Labs 2026</p>
-            </div>
+            /* Ignite — TerceroLand logo */
+            <img src="/TerceroLand.svg" alt="Tercero" style={{ height: '24px', maxWidth: '120px', objectFit: 'contain', marginTop: '4px' }} />
           )}
         </div>
       </div>
@@ -150,7 +145,16 @@ export default function HTMLInvoicePreview({ invoice, agency }) {
         </div>
       )}
 
-
+      {/* Footer — Quantum: none | Velocity: Tercero logo | Ignite: Tercero 2026 text */}
+      {agency.full_whitelabel_enabled ? null : agency.basic_whitelabel_enabled ? (
+        <div className="absolute bottom-5 left-0 right-0 flex justify-center">
+          <img src="/TerceroLand.svg" alt="Tercero" style={{ height: '12px', objectFit: 'contain', opacity: 0.4 }} />
+        </div>
+      ) : (
+        <p className="absolute bottom-6 left-0 right-0 text-center text-[8px] text-gray-400">
+          Tercero 2026
+        </p>
+      )}
     </div>
   )
 }

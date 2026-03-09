@@ -269,6 +269,7 @@ export function EditInvoiceDialog({
     () => ({
       agency_name: subscription?.agency_name || '',
       logo_url: subscription?.logo_url || null,
+      logo_horizontal_url: subscription?.logo_horizontal_url || null,
       email: subscription?.email || '',
       mobile_number: subscription?.mobile_number || '',
       basic_whitelabel_enabled: subscription?.basic_whitelabel_enabled ?? false,

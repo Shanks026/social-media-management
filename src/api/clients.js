@@ -108,6 +108,17 @@ export async function createClient(payload) {
     .single()
 
   if (error) throw error
+
+  // Trigger welcome email
+  try {
+    const { error: fnError } = await supabase.functions.invoke('send-client-welcome', {
+      body: { record: data },
+    })
+    if (fnError) console.error('[send-client-welcome] failed:', fnError)
+  } catch (err) {
+    console.error('[send-client-welcome] error:', err)
+  }
+
   return data
 }
 

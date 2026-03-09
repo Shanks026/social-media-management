@@ -43,6 +43,43 @@ const StatItem = ({ count, label, colorClass }) => {
   )
 }
 
+const CircularProgress = ({ progress, size = 32, strokeWidth = 3 }) => {
+  const radius = (size - strokeWidth) / 2
+  const circumference = radius * 2 * Math.PI
+  const offset = circumference - (progress / 100) * circumference
+
+  return (
+    <div className="relative flex items-center justify-center shrink-0" style={{ width: size, height: size }}>
+      <svg className="-rotate-90" width={size} height={size}>
+        {/* Background circle */}
+        <circle
+          className="text-muted/30"
+          stroke="currentColor"
+          strokeWidth={strokeWidth}
+          fill="transparent"
+          r={radius}
+          cx={size / 2}
+          cy={size / 2}
+        />
+        {/* Progress circle */}
+        <circle
+          className="text-primary transition-all duration-500 ease-in-out"
+          stroke="currentColor"
+          strokeWidth={strokeWidth}
+          strokeDasharray={circumference}
+          strokeDashoffset={offset}
+          strokeLinecap="round"
+          fill="transparent"
+          r={radius}
+          cx={size / 2}
+          cy={size / 2}
+        />
+      </svg>
+      <span className="absolute text-[10px] font-bold">{progress}%</span>
+    </div>
+  )
+}
+
 function formatDateRange(start, end) {
   if (!start && !end) return 'No dates set'
   const fmt = (d) => format(parseISO(d), 'MMM d, yyyy')
@@ -108,9 +145,10 @@ export function CampaignCard({
         </div>
 
         <div
-          className="flex items-center gap-2 shrink-0"
+          className="flex items-center gap-3 shrink-0"
           onClick={(e) => e.stopPropagation()}
         >
+          {total_posts > 0 && <CircularProgress progress={progress} />}
           <span
             className={cn(
               'px-2.5 py-0.5 rounded-full text-xs font-medium',
@@ -172,6 +210,7 @@ export function CampaignCard({
           </DropdownMenu>
         </div>
       </div>
+      <div className="flex-1" />
 
       {/* Goal */}
       {goal && (
@@ -184,7 +223,7 @@ export function CampaignCard({
       )}
 
       {/* Pipeline Stats */}
-      <div className="flex-1 min-w-0 mb-6">
+      <div className="min-w-0 mb-6">
         {hasPipelineData ? (
           <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
             {pipelineCounts.map((c) => (

@@ -82,85 +82,85 @@ export default function ManagementTab({ client }) {
           </Button>
         </div>
 
-        <div className="flex flex-col md:flex-row gap-8 items-center md:items-start">
-          <div className="shrink-0">
-            <div className="relative flex size-32 items-center justify-center rounded-2xl border border-border bg-muted/20 overflow-hidden shadow-sm">
-              {client.logo_url ? (
-                <img
-                  src={client.logo_url}
-                  alt={client.name}
-                  className="size-full object-cover"
-                />
-              ) : (
-                <span className="text-4xl font-bold text-muted-foreground/40">
-                  {client.name?.slice(0, 2).toUpperCase()}
-                </span>
-              )}
-            </div>
+        {/* Row 1: Logo */}
+        <div className="flex items-start gap-6">
+          <div className="relative flex size-28 items-center justify-center rounded-2xl border border-border bg-muted/20 overflow-hidden shadow-sm shrink-0">
+            {client.logo_url ? (
+              <img
+                src={client.logo_url}
+                alt={client.name}
+                className="size-full object-cover"
+              />
+            ) : (
+              <span className="text-3xl font-bold text-muted-foreground/40">
+                {client.name?.slice(0, 2).toUpperCase()}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Row 2: Details */}
+        <div className="space-y-6">
+          <div className="space-y-1">
+            <h3 className="text-xl font-medium tracking-tight">
+              {client.name}
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              {getIndustryLabel(client.industry)}
+            </p>
           </div>
 
-          <div className="flex-1 w-full space-y-6">
-            <div className="space-y-1 text-center md:text-left">
-              <h3 className="text-xl font-medium tracking-tight">
-                {client.name}
-              </h3>
-              <p className="text-sm text-muted-foreground">
-                {getIndustryLabel(client.industry)}
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 w-full">
-              <InfoRow
-                icon={<ShieldCheck size={16} />}
-                label="Account Status"
-                value={
-                  <span className={client.status === 'ACTIVE' ? 'text-green-600 font-medium' : 'text-amber-600 font-medium'}>
-                    {client.status === 'ACTIVE' ? 'Active' : 'Paused'}
-                  </span>
-                }
-              />
-              <InfoRow
-                icon={<ShieldCheck size={16} />}
-                label="Account Tier"
-                value={<span className="font-medium text-primary">{tier}</span>}
-              />
-              <InfoRow
-                icon={<Mail size={16} />}
-                label="Primary Email"
-                value={client.email || '—'}
-              />
-              <InfoRow
-                icon={<Phone size={16} />}
-                label="Contact Number"
-                value={client.mobile_number || '—'}
-              />
-              <InfoRow
-                icon={<Globe size={16} />}
-                label="Official Website"
-                value={
-                  client.website ? (
-                    <a
-                      href={client.website.startsWith('http') ? client.website : `https://${client.website}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="hover:text-primary transition-colors flex items-center gap-1 group truncate"
-                    >
-                      <span className="truncate">{client.website.replace(/(^\w+:|^)\/\//, '')}</span>
-                      <ExternalLink className="size-3 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
-                    </a>
-                  ) : (
-                    '—'
-                  )
-                }
-              />
-              <InfoRow
-                icon={<CalendarDays size={16} />}
-                label="Created"
-                value={
-                  client.created_at ? format(new Date(client.created_at), 'MMMM d, yyyy') : '—'
-                }
-              />
-            </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 w-full">
+            <InfoRow
+              icon={<ShieldCheck size={16} />}
+              label="Account Status"
+              value={
+                <span className={client.status === 'ACTIVE' ? 'text-green-600 font-medium' : 'text-amber-600 font-medium'}>
+                  {client.status === 'ACTIVE' ? 'Active' : 'Paused'}
+                </span>
+              }
+            />
+            <InfoRow
+              icon={<ShieldCheck size={16} />}
+              label="Account Tier"
+              value={<span className="font-medium text-primary">{tier}</span>}
+            />
+            <InfoRow
+              icon={<Mail size={16} />}
+              label="Primary Email"
+              value={client.email || '—'}
+            />
+            <InfoRow
+              icon={<Phone size={16} />}
+              label="Contact Number"
+              value={client.mobile_number || '—'}
+            />
+            <InfoRow
+              icon={<Globe size={16} />}
+              label="Official Website"
+              value={
+                client.website ? (
+                  <a
+                    href={client.website.startsWith('http') ? client.website : `https://${client.website}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:text-primary transition-colors flex items-center gap-1 group truncate"
+                  >
+                    <span className="truncate">{client.website.replace(/(^\w+:|^)\/\//, '')}</span>
+                    <ExternalLink className="size-3 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+                  </a>
+                ) : (
+                  '—'
+                )
+              }
+            />
+            <InfoRow
+              icon={<CalendarDays size={16} />}
+              label="Created"
+              value={
+                client.created_at ? format(new Date(client.created_at), 'MMMM d, yyyy') : '—'
+              }
+            />
           </div>
         </div>
       </section>
