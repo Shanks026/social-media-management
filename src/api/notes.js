@@ -58,6 +58,22 @@ export async function fetchAllNotes() {
   return data
 }
 
+export async function fetchCampaignNotes(campaignId) {
+  const { data: userData, error: userError } = await supabase.auth.getUser()
+  if (userError || !userData?.user) throw new Error('Not authenticated')
+
+  const { data, error } = await supabase
+    .from('client_notes')
+    .select('*')
+    .eq('user_id', userData.user.id)
+    .eq('campaign_id', campaignId)
+    .order('status', { ascending: false })
+    .order('created_at', { ascending: false })
+
+  if (error) throw error
+  return data
+}
+
 export async function createNote(noteData) {
   const { data: userData, error: userError } = await supabase.auth.getUser()
   if (userError || !userData?.user) {

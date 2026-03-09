@@ -120,6 +120,24 @@ export async function deleteMeeting(id) {
 }
 
 /**
+ * Fetch all meetings linked to a specific campaign.
+ */
+export async function fetchCampaignMeetings(campaignId) {
+  const { data, error } = await supabase
+    .from('meetings')
+    .select('*, clients!inner(name)')
+    .eq('campaign_id', campaignId)
+    .order('datetime', { ascending: true })
+
+  if (error) throw error
+
+  return data.map(m => ({
+    ...m,
+    client_name: m.clients?.name
+  }))
+}
+
+/**
  * Update a meeting.
  */
 export async function updateMeeting(id, payload) {

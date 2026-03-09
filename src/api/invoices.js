@@ -176,6 +176,7 @@ export function useCreateInvoice() {
           total: subtotal, // No tax for now
           notes: invoice.notes || null,
           payment_terms: invoice.payment_terms || null,
+          campaign_id: invoice.campaign_id || null,
         })
         .select()
         .single()

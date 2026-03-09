@@ -21,27 +21,31 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
-import { Building2 } from 'lucide-react'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { Building2, Megaphone } from 'lucide-react'
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query'
 import { createNote } from '@/api/notes'
 import { useClients } from '@/api/clients'
+import { fetchActiveCampaignsByClient } from '@/api/campaigns'
 import { toast } from 'sonner'
 import { ClientAvatar } from './NoteRow'
 
+const NONE = '__none__'
+
 /**
  * Props:
- *  - clientId    string | null  — Pre-selects a client on open.
- *  - lockClient  boolean        — When true, hides the selector and shows a
- *                                 read-only pill. Pass this from OverviewTab.
- *                                 Omit (or false) from the global page so the
- *                                 user can freely choose any client.
- *  - children                  — Trigger element.
- *  - open / onOpenChange       — Controlled open state (optional).
- *  - onSuccess   () => void    — Called after a successful save (optional).
+ *  - clientId      string | null  — Pre-selects a client on open.
+ *  - lockClient    boolean        — When true, shows read-only client pill.
+ *  - campaignId    string | null  — Locks the campaign (no selector shown).
+ *  - campaignName  string | null  — Display name for the locked campaign pill.
+ *  - children                    — Trigger element.
+ *  - open / onOpenChange         — Controlled open state (optional).
+ *  - onSuccess     () => void    — Called after a successful save (optional).
  */
 export default function CreateNoteDialog({
   clientId,
   lockClient = false,
+  campaignId = null,
+  campaignName = null,
   children,
   open,
   onOpenChange,
@@ -59,14 +63,16 @@ export default function CreateNoteDialog({
   const defaultSelectId = clientId || (clientsData?.internalAccount?.id ?? '')
 
   const [selectedClientId, setSelectedClientId] = useState(defaultSelectId)
+  const [selectedCampaignId, setSelectedCampaignId] = useState('')
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
   const [dueAt, setDueAt] = useState('')
 
-  // Re-apply the default whenever the dialog opens or dependencies change
+  // Re-apply defaults whenever the dialog opens or dependencies change
   useEffect(() => {
     if (isOpen) {
       setSelectedClientId(clientId || (clientsData?.internalAccount?.id ?? ''))
+      setSelectedCampaignId('')
     }
   }, [isOpen, clientId, clientsData?.internalAccount?.id])
 
@@ -80,13 +86,25 @@ export default function CreateNoteDialog({
 
   const selectedClient = allClients.find((c) => c.id === selectedClientId)
 
+  // Fetch active campaigns for selected client — only when campaign is not locked
+  const { data: availableCampaigns = [], isLoading: loadingCampaigns } = useQuery({
+    queryKey: ['campaigns', 'active-by-client', selectedClientId],
+    queryFn: () => fetchActiveCampaignsByClient(selectedClientId),
+    enabled: !!selectedClientId && !campaignId,
+  })
+
+  const effectiveCampaignId =
+    campaignId ||
+    (selectedCampaignId && selectedCampaignId !== NONE ? selectedCampaignId : null)
+
   const mutation = useMutation({
     mutationFn: (newNote) => createNote(newNote),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['global-notes'] })
-      queryClient.invalidateQueries({
-        queryKey: ['client-notes', selectedClientId],
-      })
+      queryClient.invalidateQueries({ queryKey: ['client-notes', selectedClientId] })
+      if (effectiveCampaignId) {
+        queryClient.invalidateQueries({ queryKey: ['campaign-notes', effectiveCampaignId] })
+      }
       toast.success('Note added successfully')
       resetForm()
       setIsOpen(false)
@@ -99,6 +117,7 @@ export default function CreateNoteDialog({
     setTitle('')
     setContent('')
     setDueAt('')
+    setSelectedCampaignId('')
     if (!lockClient)
       setSelectedClientId(clientId || (clientsData?.internalAccount?.id ?? ''))
   }
@@ -106,7 +125,6 @@ export default function CreateNoteDialog({
   const handleSubmit = (e) => {
     e.preventDefault()
 
-    // Fallback to internal account if nothing is selected. If none exists, pass null.
     const finalClientId =
       selectedClientId || clientsData?.internalAccount?.id || null
 
@@ -116,6 +134,7 @@ export default function CreateNoteDialog({
       content: content || null,
       due_at: dueAt ? new Date(dueAt).toISOString() : null,
       status: 'TODO',
+      ...(effectiveCampaignId ? { campaign_id: effectiveCampaignId } : {}),
     })
   }
 
@@ -136,7 +155,6 @@ export default function CreateNoteDialog({
             <Label>Client</Label>
 
             {lockClient && selectedClient ? (
-              // Read-only pill — used when opened from a specific client's OverviewTab
               <div className="flex items-center gap-2 h-9 px-3 rounded-md border bg-muted/40 text-sm">
                 <ClientAvatar client={selectedClient} />
                 <span className="font-medium text-foreground">
@@ -149,10 +167,12 @@ export default function CreateNoteDialog({
                 )}
               </div>
             ) : (
-              // Free selector — used from the global Notes & Reminders page
               <Select
                 value={selectedClientId}
-                onValueChange={setSelectedClientId}
+                onValueChange={(val) => {
+                  setSelectedClientId(val)
+                  setSelectedCampaignId('') // reset campaign when client changes
+                }}
                 disabled={isLoadingClients}
               >
                 <SelectTrigger className="h-9 text-sm w-full">
@@ -172,6 +192,53 @@ export default function CreateNoteDialog({
                             Internal
                           </Badge>
                         )}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
+
+          {/* ── Campaign ── */}
+          <div className="space-y-2">
+            <Label>
+              Campaign{' '}
+              <span className="text-muted-foreground font-normal">(Optional)</span>
+            </Label>
+
+            {campaignId ? (
+              // Locked — show read-only pill
+              <div className="flex items-center gap-2 h-9 px-3 rounded-md border bg-muted/40 text-sm">
+                <Megaphone className="size-3.5 text-muted-foreground shrink-0" />
+                <span className="font-medium text-foreground truncate">
+                  {campaignName ?? 'Campaign'}
+                </span>
+              </div>
+            ) : (
+              <Select
+                value={selectedCampaignId}
+                onValueChange={setSelectedCampaignId}
+                disabled={!selectedClientId || loadingCampaigns}
+              >
+                <SelectTrigger className="h-9 text-sm w-full">
+                  <SelectValue placeholder={
+                    !selectedClientId
+                      ? 'Select a client first'
+                      : availableCampaigns.length === 0
+                        ? 'No active campaigns'
+                        : 'Select campaign'
+                  } />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NONE}>
+                    <span className="text-muted-foreground">None</span>
+                  </SelectItem>
+                  {availableCampaigns.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      <div className="flex items-center gap-2">
+                        <Megaphone className="size-3.5 text-muted-foreground shrink-0" />
+                        <span className="truncate">{c.name}</span>
                       </div>
                     </SelectItem>
                   ))}

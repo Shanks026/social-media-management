@@ -205,7 +205,7 @@ export function useCampaignInvoices(campaignId) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('invoices')
-        .select('id, invoice_number, total_amount, status, due_date, created_at')
+        .select('id, invoice_number, total, status, due_date, created_at')
         .eq('campaign_id', campaignId)
         .order('created_at', { ascending: false })
       if (error) throw error
