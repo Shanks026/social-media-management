@@ -453,8 +453,9 @@ export default function CampaignReview() {
   if (!data) {
     return (
       <CentredState
-        icon={<Lock className="size-6 text-muted-foreground" />}
-        title="This link is not valid or has expired."
+        icon={<Lock className="size-8 text-amber-600 dark:text-amber-400" />}
+        title="Link Expired"
+        subtitle="This review link has expired or has already been used. Please contact your account manager for a new link."
       />
     )
   }

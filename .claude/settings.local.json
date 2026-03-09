@@ -20,7 +20,21 @@
       "Bash(node -e \"const p = JSON.parse\\(require\\(''fs''\\).readFileSync\\(''package.json'',''utf8''\\)\\); p.scripts.test=''vitest run''; p.scripts[''test:watch'']=''vitest''; require\\(''fs''\\).writeFileSync\\(''package.json'', JSON.stringify\\(p, null, 2\\)+''\\\\n''\\)\")",
       "Bash(npx vitest run src/tests/campaigns/phase1.test.jsx --reporter=verbose)",
       "Bash(npx vitest run src/tests/campaigns/phase2.test.jsx)",
-      "Bash(npx vitest run src/tests/campaigns/)"
+      "Bash(npx vitest run src/tests/campaigns/)",
+      "Bash(grep -n \"logo_horizontal\\\\|logo_vertical\\\\|second.*logo\\\\|additional.*logo\" /c/Users/chris_austin/Desktop/social-media-management/src/**/*.jsx /c/Users/chris_austin/Desktop/social-media-management/src/**/*.js)",
+      "Bash(ls c:/Users/chris_austin/Desktop/social-media-management/public/*.svg c:/Users/chris_austin/Desktop/social-media-management/public/*.png)",
+      "mcp__shadcn__get_item_examples_from_registries",
+      "mcp__shadcn__get_add_command_for_items",
+      "Bash(npm install react-easy-crop)",
+      "Bash(npx shadcn@latest add slider --yes)",
+      "Bash(git add src/components/HorizontalLogoCropDialog.jsx)",
+      "Bash(git commit -m \"feat: add HorizontalLogoCropDialog with react-easy-crop\")",
+      "Bash(git commit -m \"fix: add toast.error on crop failure in HorizontalLogoCropDialog\")",
+      "Bash(git add src/pages/settings/AgencySettings.jsx)",
+      "Bash(git commit:*)",
+      "Bash(npx eslint src/lib/cropImage.js src/components/HorizontalLogoCropDialog.jsx src/pages/settings/AgencySettings.jsx)",
+      "Bash(npm install react-image-crop)",
+      "Bash(node -e \"const r = require\\(''d:/Tertiary/node_modules/@react-pdf/renderer''\\); console.log\\(Object.keys\\(r\\).filter\\(k => [''Svg'',''Path'',''Image''].includes\\(k\\)\\)\\)\")"
     ]
   }
 }

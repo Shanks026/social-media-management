@@ -55,13 +55,20 @@ export function useSubscription() {
         remainingLabel = `${(bytesRemaining / gbThreshold).toFixed(1)} GB remaining`
       }
 
+      const brandingAgencySidebar = sub.branding_agency_sidebar ?? false
+      const brandingPoweredBy = sub.branding_powered_by ?? true
+
       return {
         agency_name: sub.agency_name || 'Tercero',
         logo_url: sub.logo_url,
+        logo_horizontal_url: sub.logo_horizontal_url ?? null,
         plan_name: sub.plan_name,
         // Branding flags (new column names)
-        branding_agency_sidebar: sub.branding_agency_sidebar ?? false,
-        branding_powered_by: sub.branding_powered_by ?? true,
+        branding_agency_sidebar: brandingAgencySidebar,
+        branding_powered_by: brandingPoweredBy,
+        // Derived whitelabel flags for invoice/document components
+        basic_whitelabel_enabled: brandingAgencySidebar && brandingPoweredBy,
+        full_whitelabel_enabled: brandingAgencySidebar && !brandingPoweredBy,
         // Feature flags
         finance_recurring_invoices: sub.finance_recurring_invoices ?? false,
         finance_subscriptions: sub.finance_subscriptions ?? false,

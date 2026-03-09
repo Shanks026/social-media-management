@@ -78,7 +78,7 @@ export default function PublicReview() {
         const { data: sub } = await supabase
           .from('agency_subscriptions')
           .select(
-            'agency_name, logo_url, primary_color, branding_agency_sidebar, branding_powered_by',
+            'agency_name, logo_url, logo_horizontal_url, primary_color, branding_agency_sidebar, branding_powered_by',
           )
           .eq('user_id', userId)
           .maybeSingle()
@@ -177,8 +177,16 @@ export default function PublicReview() {
 
   if (!post) {
     return (
-      <div className="flex h-screen items-center justify-center bg-background text-muted-foreground">
-        This link is invalid or has expired.
+      <div className="flex h-screen w-full flex-col items-center justify-center bg-background p-6 text-center">
+        <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400">
+          <Info size={32} />
+        </div>
+        <h2 className="text-2xl font-bold tracking-tight text-foreground">
+          Link Expired
+        </h2>
+        <p className="mt-2 max-w-md text-muted-foreground leading-relaxed">
+          This review link has expired or has already been used. Please contact your account manager for a new link.
+        </p>
       </div>
     )
   }
@@ -189,21 +197,7 @@ export default function PublicReview() {
       <div className="mx-auto max-w-7xl p-6 lg:p-16 w-full flex-1">
         {/* Header Branding */}
         <div className="mb-10 flex flex-col items-start gap-1">
-          {showAgencyBranding ? (
-            <div className="flex items-center gap-4">
-              {agencySub.logo_url ? (
-                <img
-                  src={agencySub.logo_url}
-                  alt="Agency Logo"
-                  className="h-8 w-auto object-contain rounded-lg"
-                  onError={(e) => (e.target.style.display = 'none')}
-                />
-              ) : null}
-              <h2 className="text-2xl font-bold tracking-tight">
-                {agencySub.agency_name || 'Agency'}
-              </h2>
-            </div>
-          ) : (
+          {!showAgencyBranding ? (
             <div
               className="h-7 w-28 bg-foreground"
               style={{
@@ -217,6 +211,21 @@ export default function PublicReview() {
                 WebkitMaskSize: 'contain',
               }}
             />
+          ) : (
+            <div className="flex items-center gap-4">
+              {agencySub.logo_horizontal_url || agencySub.logo_url ? (
+                <img
+                  src={agencySub.logo_horizontal_url || agencySub.logo_url}
+                  alt={agencySub.agency_name}
+                  className="h-12 w-auto object-contain rounded-lg"
+                  onError={(e) => (e.target.style.display = 'none')}
+                />
+              ) : (
+                <h2 className="text-2xl font-bold tracking-tight">
+                  {agencySub.agency_name || 'Agency'}
+                </h2>
+              )}
+            </div>
           )}
         </div>
 
@@ -502,11 +511,25 @@ export default function PublicReview() {
 
       {/* FOOTER */}
       <footer className="w-full py-6 mt-auto border-t border-border/40 flex items-center justify-center">
-        {showPoweredBy && (
+        {!showAgencyBranding ? (
           <p className="text-sm text-muted-foreground/60 font-medium tracking-wide">
-            Powered by Tercero 2026
+            Tercero 2026
           </p>
-        )}
+        ) : showPoweredBy ? (
+          <div
+            className="h-5 w-20 bg-muted-foreground/50"
+            style={{
+              maskImage: 'url(/TerceroLand.svg)',
+              maskRepeat: 'no-repeat',
+              maskPosition: 'center',
+              maskSize: 'contain',
+              WebkitMaskImage: 'url(/TerceroLand.svg)',
+              WebkitMaskRepeat: 'no-repeat',
+              WebkitMaskPosition: 'center',
+              WebkitMaskSize: 'contain',
+            }}
+          />
+        ) : null}
       </footer>
 
       {/* FULL-SCREEN LIGHTBOX */}
