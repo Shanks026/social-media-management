@@ -55,6 +55,7 @@ import {
 } from 'lucide-react'
 
 import { SUPPORTED_PLATFORMS } from '@/lib/platforms'
+import HorizontalLogoCropDialog from '@/components/HorizontalLogoCropDialog'
 
 export default function AgencySettings() {
   const { user } = useAuth()
@@ -79,6 +80,9 @@ export default function AgencySettings() {
   const [isUploadingHorizontalLogo, setIsUploadingHorizontalLogo] = useState(false)
   const [isSavingHorizontalLogo, setIsSavingHorizontalLogo] = useState(false)
   const horizontalLogoInputRef = useRef(null)
+
+  const [cropSrc, setCropSrc] = useState(null)        // local objectURL for the crop modal
+  const [isCropOpen, setIsCropOpen] = useState(false)  // controls crop dialog visibility
 
   const { data: internalClient, isLoading: isClientLoading } = useQuery({
     queryKey: ['internal-client', user?.id],
@@ -176,22 +180,36 @@ export default function AgencySettings() {
   const handleHorizontalLogoUpload = async (e) => {
     const file = e.target.files?.[0]
     if (!file) return
+    // Revoke any previous objectURL to avoid memory leaks
+    if (cropSrc) URL.revokeObjectURL(cropSrc)
+    const objectUrl = URL.createObjectURL(file)
+    setCropSrc(objectUrl)
+    setIsCropOpen(true)
+    // Reset the input so the same file can be re-selected
+    e.target.value = ''
+  }
+
+  const handleCropApplied = async (blob) => {
     try {
       setIsUploadingHorizontalLogo(true)
-      const fileExt = file.name.split('.').pop()
-      const filePath = `branding/${Date.now()}.${fileExt}`
+      const filePath = `branding/${Date.now()}.png`
       const { error: uploadError } = await supabase.storage
         .from('post-media')
-        .upload(filePath, file)
+        .upload(filePath, blob, { contentType: 'image/png' })
       if (uploadError) throw uploadError
       const { data: { publicUrl } } = supabase.storage.from('post-media').getPublicUrl(filePath)
       setHorizontalLogoUrl(publicUrl)
-      toast.success('Horizontal logo uploaded! Click Save to apply.')
+      toast.success('Horizontal logo cropped! Click Save to apply.')
     } catch (error) {
       console.error(error)
-      toast.error('Failed to upload horizontal logo')
+      toast.error('Failed to upload cropped logo')
     } finally {
       setIsUploadingHorizontalLogo(false)
+      // Clean up objectURL now that upload is done
+      if (cropSrc) {
+        URL.revokeObjectURL(cropSrc)
+        setCropSrc(null)
+      }
     }
   }
 
@@ -413,6 +431,14 @@ export default function AgencySettings() {
                 </Button>
               )}
             </div>
+
+            {/* Horizontal Logo Crop Dialog */}
+            <HorizontalLogoCropDialog
+              open={isCropOpen}
+              onOpenChange={setIsCropOpen}
+              imageSrc={cropSrc || ''}
+              onCropComplete={handleCropApplied}
+            />
 
             {/* Details */}
             <div className="flex-1 w-full space-y-6">
