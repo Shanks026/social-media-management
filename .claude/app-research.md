@@ -1,7 +1,7 @@
 # Tercero — Full Application Research Document
 
 > **Purpose**: Comprehensive product/feature reference for building a landing page for Tercero.
-> **Status**: Updated March 9, 2026 — reflects live codebase including campaigns (Phases 1–3), documents, subscription tier gating, calendar PDF export, and branding system.
+> **Status**: Updated March 10, 2026 — reflects live codebase including corrected post status values (PENDING_APPROVAL/NEEDS_REVISION/PUBLISHED), horizontal logo branding, derived whitelabel flags, campaigns full implementation, and accurate share token architecture.
 
 ---
 
@@ -124,11 +124,12 @@ This is the core of Tercero. The entire content workflow lives here.
 
 #### Post Statuses and Their Meaning
 ```
-DRAFT        → Being written by the agency; not submitted yet
-PENDING      → Submitted for review (client or internal approval)
-REVISIONS    → Client requested changes; new version created
-SCHEDULED    → Approved and ready to publish on target date
-ARCHIVED     → No longer active; preserved for history
+DRAFT            → Being written by the agency; not submitted yet
+PENDING_APPROVAL → Submitted for client/admin review via "Send for Approval"
+NEEDS_REVISION   → Client requested changes via public review link; new version created
+SCHEDULED        → Approved and ready to publish on target date
+PUBLISHED        → Marked as published after scheduling date passes
+ARCHIVED         → No longer active; preserved for history
 ```
 
 #### Post Versioning System
@@ -177,10 +178,12 @@ Platform-specific visual previews:
 - Click to view any historical version
 
 **Action Buttons** (vary by current status):
-- `DRAFT` → "Submit for Approval" (→ PENDING)
-- `PENDING` → "Request Revisions" (→ REVISIONS, creates new version) or "Approve & Schedule" (→ SCHEDULED)
-- `REVISIONS` → "Submit Updated Draft" (→ PENDING)
+- `DRAFT` → "Send for Approval" (→ `PENDING_APPROVAL` via `send_post_for_approval` RPC) or "Approve & Schedule" (internal-only shortcut → `SCHEDULED`)
+- `PENDING_APPROVAL` → Agency can approve or await client action via public review link
+- `NEEDS_REVISION` → "Submit Updated Draft" (→ `PENDING_APPROVAL`); creates new version
 - Any → "Archive"
+
+**Share Token**: Per-post public review tokens live in the `share_tokens` table (not a column on `post_versions`). `regeneratePostShareToken(versionId)` deactivates old tokens and inserts a new one.
 
 #### Content Calendar (`/calendar`)
 Two views:
@@ -322,31 +325,25 @@ One of Tercero's most client-friendly features.
 **What it is**: A shareable URL (`/review/:token`) that lets clients review and approve content **without needing to log in** to Tercero.
 
 **How it works**:
-1. Agency creates a post and marks it as PENDING
-2. A unique token is associated with the post (or version)
-3. Agency shares the link with the client (copy URL)
+1. Agency sends a post to `PENDING_APPROVAL` via "Send for Approval"
+2. A unique token is generated in the `share_tokens` table for that post version
+3. Agency shares the link with the client (copy URL from Post Details page)
 4. Client opens link in browser — sees a clean, read-only review page
-5. Client can write feedback in a textarea and click "Request Revisions"
-6. Agency receives the feedback (stored as a revision note)
-7. Agency creates a new version, status returns to DRAFT/REVISIONS
+5. Client either **approves** (→ `SCHEDULED`) or **requests revisions** with feedback (→ `NEEDS_REVISION`)
+6. Agency sees status update; for revisions a new version is created via `create_revision_version` RPC
 
 **Review page shows**:
-- Post title
-- Full content text
-- Media gallery (images/videos) with full-screen carousel with keyboard navigation (arrow keys + Escape)
+- Post title, content, target date, version number
+- Media gallery with full-screen carousel (arrow keys + Escape navigation)
 - Platform-specific social media preview (Instagram, LinkedIn, etc.)
-- Target date and version number
-- Feedback textarea
-- "Request Revisions" submit button
+- Feedback textarea (required when requesting revisions)
+- "Approve & Schedule" and "Request Revisions" buttons
 
-**Branding on the review page** (tier-controlled):
-- **Ignite**: Tercero app logo in header, "Powered by Tercero" footer
-- **Velocity**: Agency logo in header, "Powered by Tercero" footer
-- **Quantum**: Agency logo in header, no Tercero attribution footer (full whitelabel)
-- Branding data is fetched from `agency_subscriptions` via a secondary query using the `user_id` returned by the `get_post_by_token` RPC — the page remains fully unauthenticated
-- If agency logo is missing on Velocity/Quantum, falls back to Tercero app logo gracefully
-
-**Why this matters for the landing page**: This is a strong differentiator — clients don't need accounts. Zero friction for client review and approval.
+**Branding on the review page** (tier-controlled via `branding_agency_sidebar` and `branding_powered_by`):
+- **Ignite**: Tercero logo in header, "Powered by Tercero" text footer
+- **Velocity**: Agency logo/horizontal logo in header (prefers `logo_horizontal_url`, falls back to `logo_url`, then agency name text), "Powered by Tercero" text footer
+- **Quantum**: Agency logo in header, no footer (full whitelabel)
+- Branding data is fetched from `agency_subscriptions` using the `user_id` returned by the `get_post_by_token` RPC — the page stays fully unauthenticated
 
 ---
 
@@ -461,9 +458,9 @@ Button only visible when `campaign.review_token` exists AND at least one post ha
 
 Dialog contains:
 - Read-only URL + Copy button
-- "Regenerate link" button (invalidates old token, updates URL in real time)
-- "Last sent [date]" if previously emailed
-- If client has email: client name + email + "Send Email" button (invokes `send-campaign-review-email` edge function)
+- "Regenerate link" button (`useRegenerateCampaignReviewToken` mutation — sets `review_token_active=true`, updates URL in real time)
+- "Last sent [date]" if previously emailed (`last_review_sent_at` field)
+- If client has email: client name + email + "Send Email" button (invokes `send-campaign-review-email` edge function; `useMarkReviewSent` updates timestamp)
 - If no email: "Add email →" button navigates to client profile
 
 #### Public Campaign Review (`/campaign-review/:token`)
@@ -475,13 +472,20 @@ Fully unauthenticated. The single link lets the client review and action all `PE
 - **Left panel (280px)**: Post list with thumbnail, title, target date, and status dot (pending / approved / revised)
 - **Right panel**: Selected post — title, platforms, target date, content, media gallery (up to 4 items + overflow), feedback textarea, action buttons
 
-**Actions per post**:
-- "Approve This Post" → status → `SCHEDULED`; auto-advances to next unreviewed post
-- "Request Revisions" → status → `NEEDS_REVISION`; requires non-empty feedback; auto-advances
+**Actions per post** (call `submitCampaignPostReview(postReviewToken, status, feedback)`):
+- "Approve This Post" → `SCHEDULED`; auto-advances to next unreviewed post
+- "Request Revisions" → `NEEDS_REVISION`; requires non-empty feedback; auto-advances
 
-**Branding**: Same tier-controlled logic as per-post public review (agency logo if `branding_agency_sidebar`; "Powered by Tercero" footer if `branding_powered_by`).
+**Branding**: Identical tier-controlled logic to per-post public review — `branding_agency_sidebar` controls header logo (prefers `logo_horizontal_url`), `branding_powered_by` controls "Powered by Tercero" text footer.
 
-**Token architecture**: `campaigns.review_token` is a UUID on the campaign. Per-post review tokens come from the `share_tokens` table, resolved via a LATERAL JOIN in the `get_campaign_by_review_token` RPC — there is no `review_token` column on `post_versions`.
+**Token architecture**: `campaigns.review_token` is a UUID on the campaign. Per-post review tokens come from the `share_tokens` table resolved via a LATERAL JOIN in `get_campaign_by_review_token` RPC — there is **no** `review_token` column on `post_versions`.
+
+**Campaign mutations** (`src/api/campaigns.js`):
+- `useCreateCampaign`, `useUpdateCampaign`, `useDeleteCampaign`
+- `useAssignPostsToCampaign({ postIds, campaignId })` — batch-links posts
+- `useUnlinkPostFromCampaign(postId)` — sets `posts.campaign_id = null`
+- `useRegenerateCampaignReviewToken(campaignId)`, `useMarkReviewSent(campaignId)`
+- `submitCampaignPostReview(token, status, feedback)` — public, no auth
 
 ---
 
@@ -587,8 +591,8 @@ Each agency has an `agency_subscriptions` row (single row per user) that control
 ### Feature Flags (boolean columns on `agency_subscriptions`)
 | Flag | Ignite | Velocity | Quantum | Controls |
 |------|--------|----------|---------|---------|
-| `branding_agency_sidebar` | false | true | true | Show agency logo+name in sidebar |
-| `branding_powered_by` | true | true | false | Show "Tercero YYYY" + "Powered by Tercero" attribution |
+| `branding_agency_sidebar` | false | true | true | Show agency logo+name in sidebar + on public review pages |
+| `branding_powered_by` | true | true | false | Show "Tercero YYYY" sidebar footer + "Powered by Tercero" text on public pages |
 | `finance_recurring_invoices` | false | true | true | Recurring invoice templates tab |
 | `finance_subscriptions` | false | true | true | Expense subscriptions route |
 | `finance_accrual` | false | true | true | Accrual accounting mode toggle in Finance overview |
@@ -601,10 +605,14 @@ Accessed via `src/api/useSubscription.js`. Returns a React Query result. Consume
 
 The `data` object is a **flat object** — read flags directly (no `can.*` methods):
 - `sub?.plan_name` — `'trial'` | `'ignite'` | `'velocity'` | `'quantum'`
-- `sub?.agency_name`, `sub?.logo_url` — agency branding
+- `sub?.agency_name`, `sub?.logo_url` — agency branding (square logo)
+- `sub?.logo_horizontal_url` — landscape/horizontal logo (used in sidebar expanded state and public review headers; managed via `HorizontalLogoCropDialog`)
 - `sub?.client_count`, `sub?.max_clients` — for client limit checks
 - `sub?.storage_display` — `{ usage_value, usage_unit, max_value, max_unit, percent, remaining_label }`
 - All feature flags as direct booleans (e.g. `sub?.campaigns`, `sub?.calendar_export`)
+- Derived convenience flags:
+  - `sub?.basic_whitelabel_enabled` — `branding_agency_sidebar && branding_powered_by` (Velocity)
+  - `sub?.full_whitelabel_enabled` — `branding_agency_sidebar && !branding_powered_by` (Quantum)
 
 Defaults are defensive (most-restricted) except `branding_powered_by` which defaults to `true` to protect Tercero brand attribution.
 
@@ -681,24 +689,7 @@ Multi-client architecture from the ground up. Internal workspace for agency's ow
 
 ---
 
-## 11. POTENTIAL LANDING PAGE SECTIONS
-
-Based on the features above, here are logical landing page sections:
-
-1. **Hero** — "The command center for social media agencies" + dashboard screenshot
-2. **Problem section** — "You're juggling too many tools" (spreadsheets, email, scheduling apps, accounting)
-3. **Feature: Pipeline Dashboard** — See every client's content health in one view
-4. **Feature: Post Versioning & Approvals** — Draft → Review → Approve. Full history, zero email chains.
-5. **Feature: Client Review Links** — Clients approve with a link. No login. No friction.
-6. **Feature: Finance** — Invoice clients, track expenses, know your margin.
-7. **Feature: Meetings & Tasks** — Schedule meetings, manage tasks, all tied to each client.
-8. **Social proof / Testimonials** section
-9. **Pricing** — Plan tiers with client/storage limits
-10. **CTA** — Start free trial / Book a demo
-
----
-
-## 12. TONE & BRAND NOTES
+## 11. TONE & BRAND NOTES
 
 - Product name: **Tercero** (pronounced "ter-SAY-ro" — Spanish for "third", implying the third member of your team)
 - Aesthetic: Clean, professional, modern dark UI with neutral palette
@@ -748,15 +739,17 @@ src/pages/finance/RecurringInvoiceDialog.jsx — Recurring template create/edit
 src/pages/finance/EditInvoiceDialog.jsx     — Invoice edit/view (live preview)
 src/pages/MeetingsPage.jsx          — Meetings
 src/pages/NotesAndReminders.jsx     — Notes
-src/pages/PublicReview.jsx          — Per-post client review link (fetches agency branding via secondary query)
+src/pages/PublicReview.jsx          — Per-post client review link (fetches agency branding via secondary query using user_id from get_post_by_token)
 src/pages/billingAndUsage/BillingUsage.jsx        — Plan/billing shell
 src/pages/billingAndUsage/TertiarySubscriptionTab.jsx — Plan cards + comparison table + upgrade request dialog
 src/components/campaigns/CampaignTab.jsx        — Reusable campaigns tab (clientId prop = scoped; no prop = global)
 src/components/campaigns/CampaignDialog.jsx     — Create/edit campaign form (Zod validated; client selector shown when no clientId)
 src/components/campaigns/CampaignReportPDF.jsx  — Campaign PDF report (@react-pdf/renderer)
 src/components/documents/DocumentsTab.jsx       — Reusable documents tab (same clientId scoping pattern as CampaignTab)
-src/components/sidebar/nav-header.jsx — Sidebar header (branding_agency_sidebar logic)
-src/components/sidebar/app-sidebar.jsx — Sidebar composition + "Tercero YYYY" footer text
+src/components/sidebar/nav-header.jsx — Sidebar header (branding_agency_sidebar; prefers logo_horizontal_url when expanded)
+src/components/sidebar/app-sidebar.jsx — Sidebar composition + "Tercero YYYY" footer text (branding_powered_by)
+src/components/HorizontalLogoCropDialog.jsx — React Image Crop dialog for landscape logo management
+src/pages/settings/AgencySettings.jsx  — Agency settings including logo_horizontal_url upload + HorizontalLogoCropDialog
 src/lib/helper.js                   — formatDate(), formatFileSize(), MAX_DOCUMENT_SIZE_BYTES
 src/lib/client-helpers.js           — getUrgencyStatus()
 src/lib/industries.js               — Industry constants
