@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button'
 import { Slider } from '@/components/ui/slider'
 import { AspectRatio } from '@/components/ui/aspect-ratio'
 import { Loader2 } from 'lucide-react'
+import { toast } from 'sonner'
 
 const ASPECT = 3 / 1
 
@@ -50,6 +51,7 @@ export default function HorizontalLogoCropDialog({
       onOpenChange(false)
     } catch (err) {
       console.error('Crop failed:', err)
+      toast.error('Failed to crop image')
     } finally {
       setIsApplying(false)
     }
