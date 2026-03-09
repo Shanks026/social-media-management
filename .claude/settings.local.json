@@ -20,7 +20,9 @@
       "Bash(node -e \"const p = JSON.parse\\(require\\(''fs''\\).readFileSync\\(''package.json'',''utf8''\\)\\); p.scripts.test=''vitest run''; p.scripts[''test:watch'']=''vitest''; require\\(''fs''\\).writeFileSync\\(''package.json'', JSON.stringify\\(p, null, 2\\)+''\\\\n''\\)\")",
       "Bash(npx vitest run src/tests/campaigns/phase1.test.jsx --reporter=verbose)",
       "Bash(npx vitest run src/tests/campaigns/phase2.test.jsx)",
-      "Bash(npx vitest run src/tests/campaigns/)"
+      "Bash(npx vitest run src/tests/campaigns/)",
+      "Bash(grep -n \"logo_horizontal\\\\|logo_vertical\\\\|second.*logo\\\\|additional.*logo\" /c/Users/chris_austin/Desktop/social-media-management/src/**/*.jsx /c/Users/chris_austin/Desktop/social-media-management/src/**/*.js)",
+      "Bash(ls c:/Users/chris_austin/Desktop/social-media-management/public/*.svg c:/Users/chris_austin/Desktop/social-media-management/public/*.png)"
     ]
   }
 }
