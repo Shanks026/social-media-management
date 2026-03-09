@@ -34,6 +34,7 @@ export async function completeFullAgencySetup(payload) {
         user_id: user.id,
         agency_name: payload.name,
         logo_url: payload.logo_url,
+        logo_horizontal_url: payload.logo_horizontal_url ?? null,
         updated_at: new Date().toISOString(),
       },
       { onConflict: 'user_id' },
@@ -104,6 +105,7 @@ export async function setupBrandingOnly(payload) {
         user_id: user.id,
         agency_name: payload.name,
         logo_url: payload.logo_url,
+        logo_horizontal_url: payload.logo_horizontal_url ?? null,
         // Save the extra business/contact data here as well
         industry: payload.industry,
         platforms: payload.platforms,

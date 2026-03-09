@@ -16,6 +16,7 @@ import {
   Download,
   RefreshCw,
   Lock,
+  Megaphone,
 } from 'lucide-react'
 
 import {
@@ -251,7 +252,21 @@ export default function InvoicesTab({ clientId, subTabs }) {
     {
       header: 'Status',
       width: '130px',
-      render: (inv) => <StatusBadge status={inv.status} />,
+      render: (inv) => (
+        <div className="flex items-center gap-2">
+          <StatusBadge status={inv.status} />
+          {inv.campaign_id && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Badge variant="secondary" className="p-1 h-auto cursor-default">
+                  <Megaphone className="h-3 w-3" />
+                </Badge>
+              </TooltipTrigger>
+              <TooltipContent>Linked to campaign</TooltipContent>
+            </Tooltip>
+          )}
+        </div>
+      ),
     },
     {
       header: 'Amount',

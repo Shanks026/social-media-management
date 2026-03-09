@@ -11,6 +11,7 @@ import {
   CircleDashed,
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
+import { cn } from '@/lib/utils'
 
 const STATUS_CONFIG = {
   DRAFT: {
@@ -117,14 +118,18 @@ const STATUS_CONFIG = {
   },
 }
 
-export default function StatusBadge({ status }) {
+export default function StatusBadge({ status, className }) {
   const config = STATUS_CONFIG[status] || STATUS_CONFIG.INACTIVE
   const Icon = config.icon
 
   return (
     <Badge
       variant="none"
-      className={`flex items-center gap-2 rounded-full px-2.5 py-1 border-none shadow-none transition-colors ${config.className}`}
+      className={cn(
+        'flex items-center gap-2 rounded-full px-2.5 py-1 border-none shadow-none transition-colors',
+        config.className,
+        className,
+      )}
     >
       {Icon && <Icon className="size-4 shrink-0" aria-hidden />}
       <span className="text-xs font-semibold whitespace-nowrap">

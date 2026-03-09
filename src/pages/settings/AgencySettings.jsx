@@ -74,6 +74,11 @@ export default function AgencySettings() {
   const [isSavingAgency, setIsSavingAgency] = useState(false)
   const logoInputRef = useRef(null)
 
+  // Horizontal logo editing
+  const [horizontalLogoUrl, setHorizontalLogoUrl] = useState(null) // null = not editing
+  const [isUploadingHorizontalLogo, setIsUploadingHorizontalLogo] = useState(false)
+  const [isSavingHorizontalLogo, setIsSavingHorizontalLogo] = useState(false)
+  const horizontalLogoInputRef = useRef(null)
 
   const { data: internalClient, isLoading: isClientLoading } = useQuery({
     queryKey: ['internal-client', user?.id],
@@ -168,6 +173,47 @@ export default function AgencySettings() {
     }
   }
 
+  const handleHorizontalLogoUpload = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    try {
+      setIsUploadingHorizontalLogo(true)
+      const fileExt = file.name.split('.').pop()
+      const filePath = `branding/${Date.now()}.${fileExt}`
+      const { error: uploadError } = await supabase.storage
+        .from('post-media')
+        .upload(filePath, file)
+      if (uploadError) throw uploadError
+      const { data: { publicUrl } } = supabase.storage.from('post-media').getPublicUrl(filePath)
+      setHorizontalLogoUrl(publicUrl)
+      toast.success('Horizontal logo uploaded! Click Save to apply.')
+    } catch (error) {
+      console.error(error)
+      toast.error('Failed to upload horizontal logo')
+    } finally {
+      setIsUploadingHorizontalLogo(false)
+    }
+  }
+
+  const handleSaveHorizontalLogo = async () => {
+    if (horizontalLogoUrl === null) return
+    setIsSavingHorizontalLogo(true)
+    try {
+      const dbUrl = horizontalLogoUrl === '' ? null : horizontalLogoUrl
+      const { error: subErr } = await supabase
+        .from('agency_subscriptions')
+        .update({ logo_horizontal_url: dbUrl, updated_at: new Date().toISOString() })
+        .eq('user_id', user?.id)
+      if (subErr) throw subErr
+      if (refreshAgency) await refreshAgency()
+      setHorizontalLogoUrl(null)
+      toast.success('Horizontal logo updated!')
+    } catch {
+      toast.error('Failed to save horizontal logo.')
+    } finally {
+      setIsSavingHorizontalLogo(false)
+    }
+  }
 
   // ── Full-screen setup form ──
   if (isSetupModalOpen) {
@@ -222,6 +268,7 @@ export default function AgencySettings() {
   // ── PATH A: Workspace exists — show agency profile ──
   if (internalClient) {
     const displayLogoUrl = agencyLogoUrl !== null ? agencyLogoUrl : internalClient.logo_url
+    const displayHorizontalLogoUrl = horizontalLogoUrl !== null ? horizontalLogoUrl : (agencySettings?.logo_horizontal_url || '')
     const platforms = internalClient.platforms || []
 
     return (
@@ -248,7 +295,7 @@ export default function AgencySettings() {
             </Button>
           </div>
 
-          <div className="flex flex-col md:flex-row gap-8 items-center md:items-start">
+          <div className="flex flex-col md:flex-row gap-8 items-start flex-wrap">
             {/* Logo upload */}
             <div className="shrink-0">
               <div
@@ -304,6 +351,65 @@ export default function AgencySettings() {
                     <Save size={14} />
                   )}
                   Save Logo
+                </Button>
+              )}
+            </div>
+
+            {/* Horizontal logo upload */}
+            <div className="shrink-0">
+              <div
+                onClick={() => horizontalLogoInputRef.current?.click()}
+                className={cn(
+                  'group relative flex w-64 h-20 cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed transition-all hover:bg-muted/50',
+                  displayHorizontalLogoUrl ? 'border-primary/40' : 'border-border',
+                )}
+              >
+                {displayHorizontalLogoUrl ? (
+                  <div className="relative w-full h-full overflow-hidden rounded-xl border-2 border-border bg-background shadow-sm">
+                    <img
+                      src={displayHorizontalLogoUrl}
+                      alt="Horizontal logo"
+                      className="w-full h-full object-contain p-2 transition-opacity group-hover:opacity-70"
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center opacity-0 transition-opacity group-hover:opacity-100">
+                      <Camera className="size-5 text-muted-foreground" />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center gap-1 text-muted-foreground transition-colors group-hover:text-foreground">
+                    {isUploadingHorizontalLogo ? (
+                      <Loader2 className="size-5 animate-spin text-primary" />
+                    ) : (
+                      <ImagePlus className="size-5" />
+                    )}
+                    <span className="text-xs font-medium">Horizontal Logo</span>
+                  </div>
+                )}
+                <input
+                  ref={horizontalLogoInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleHorizontalLogoUpload}
+                  disabled={isUploadingHorizontalLogo}
+                />
+              </div>
+              <p className="text-[11px] text-muted-foreground mt-1.5 max-w-[256px]">
+                For invoices & documents. Recommended 3:1 ratio (e.g. 600×200px)
+              </p>
+              {horizontalLogoUrl !== null && (
+                <Button
+                  size="sm"
+                  className="w-full mt-2 gap-2"
+                  onClick={handleSaveHorizontalLogo}
+                  disabled={isSavingHorizontalLogo}
+                >
+                  {isSavingHorizontalLogo ? (
+                    <Loader2 size={14} className="animate-spin" />
+                  ) : (
+                    <Save size={14} />
+                  )}
+                  Save Horizontal Logo
                 </Button>
               )}
             </div>

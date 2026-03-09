@@ -1,7 +1,7 @@
 # Tercero — Full Application Research Document
 
 > **Purpose**: Comprehensive product/feature reference for building a landing page for Tercero.
-> **Status**: Updated March 2026 — reflects live codebase including subscription tier gating, calendar PDF export, and branding system.
+> **Status**: Updated March 9, 2026 — reflects live codebase including campaigns (Phases 1–3), documents, subscription tier gating, calendar PDF export, and branding system.
 
 ---
 
@@ -31,12 +31,15 @@ Tercero is a **social media agency management SaaS** — an all-in-one operation
 | Clients | `/clients` | Client management hub |
 | Posts | `/posts` | Global content management |
 | Calendar | `/calendar` | Visual content schedule |
+| Campaigns | `/campaigns` | Group posts into initiatives with analytics (Velocity+) |
 | Finance | `/finance` | Invoices, expenses, ledger, subscriptions |
+| Documents | `/documents` | Per-client file storage with collections (Velocity+) |
 | Meetings | `/operations/meetings` | Meeting scheduling and history |
 | Notes | `/operations/notes` | Tasks and reminders |
 | Settings | `/settings` | Profile and agency branding |
 | Billing | `/billing` | Agency's own subscription plan |
-| Public Review | `/review/:token` | Client-facing content approval (no login required) |
+| Public Review | `/review/:token` | Per-post client content approval (no login required) |
+| Campaign Review | `/campaign-review/:token` | Bulk campaign approval for clients (no login required) |
 
 ### Tech Stack (for developer-facing messaging)
 - React 19 + Vite SPA
@@ -392,6 +395,96 @@ The agency's own subscription to Tercero (separate from client finance).
 
 ---
 
+### 3.10 DOCUMENTS
+
+**What it is**: Centralised file storage per client. Agencies upload contracts, briefs, brand kits, reports, and any other files associated with each client.
+
+**Document record contains**:
+- File name, size, and MIME type
+- Category (e.g., Contract, Brief, Report, Asset, Other)
+- Optional collection assignment (Velocity+ feature)
+- `client_id` scope
+- Signed URL (private bucket — URLs expire; regenerated on access)
+
+**Two entry points**:
+1. **Global Documents page** (`/documents`) — shows all files across all clients with a client filter dropdown
+2. **Client Detail Documents tab** — same `DocumentsTab` component, filtered to that client via `clientId` prop
+
+**Collections** (Velocity+ — `documents_collections` flag):
+- Group related documents into named collections (e.g., "Q1 Brand Assets", "Onboarding Pack")
+- Hidden for Ignite/Trial; shown as locked with upgrade prompt
+
+**Storage**:
+- Files stored in private Supabase `client-documents` bucket (signed URLs, not public)
+- Quota tracked on `agency_subscriptions.current_storage_used`
+- Upload/delete uses `increment_storage_used` / `decrement_storage_used` RPCs to keep quota accurate
+- Max file size: 50 MB (`MAX_DOCUMENT_SIZE_BYTES` constant in `src/lib/helper.js`)
+
+---
+
+### 3.11 CAMPAIGNS
+
+**What it is**: Group related posts into a named campaign initiative with analytics, budget tracking, and a single-link client approval flow. Velocity+ feature.
+
+#### Campaign List (`/campaigns`)
+- Global grid of all campaigns across all clients (Velocity+ gated — shows `CampaignUpgradePrompt` for Trial/Ignite)
+- Same `CampaignTab` component is reused inside Client Detail (Campaigns tab), scoped to that client
+- **Filters**: Search by name or goal, Status dropdown (All / Draft / Active / Completed)
+- **Campaign card** shows: name, status badge, client name, date range, goal, post progress counts
+- Cards navigate to the campaign detail page
+
+#### Create / Edit Campaign
+- Fields: Name (required), Client (required — selector shown on global page, pre-filled on client-scoped page), Goal, Description, Status (Active / Completed / Archived), Start date, End date, Budget (numeric)
+- Zod-validated; `client_id` included in schema to prevent zodResolver stripping
+
+#### Campaign Detail (`/campaigns/:campaignId`)
+Four-section layout:
+
+**KPI bar** (4 cards):
+- Total Posts, Published, On-Time Rate (% published on or before target date), Avg Approval (days from creation to approval)
+
+**Posts panel** (left, 2/3 width):
+- All posts linked to this campaign; click any row → `/clients/:clientId/posts/:postId`
+- When campaign is Active: "New Post" button (opens `DraftPostForm` pre-filled with campaign), "Link Posts" button (bulk-link existing unlinked posts via `LinkPostsToCampaignDialog`)
+- Each row: thumbnail, title, target date, status badge, platform icons
+
+**Right column**:
+- Overall progress bar (published / total)
+- Platform distribution horizontal bar chart (platform icons as Y-axis ticks)
+- Budget tracker: Total Budget → Invoiced → Collected → Remaining (red if over-budget)
+- Linked invoices list (click to navigate to `/finance?invoice=:id`)
+
+**Header actions**: Edit, Export PDF (`CampaignReportPDF` — agency name/logo included), Share Review Link
+
+#### Share Review Link
+Button only visible when `campaign.review_token` exists AND at least one post has `PENDING_APPROVAL` status.
+
+Dialog contains:
+- Read-only URL + Copy button
+- "Regenerate link" button (invalidates old token, updates URL in real time)
+- "Last sent [date]" if previously emailed
+- If client has email: client name + email + "Send Email" button (invokes `send-campaign-review-email` edge function)
+- If no email: "Add email →" button navigates to client profile
+
+#### Public Campaign Review (`/campaign-review/:token`)
+Fully unauthenticated. The single link lets the client review and action all `PENDING_APPROVAL` posts in one session.
+
+**6 page states**: Loading → Fetch error → Invalid/expired token → No posts to review → Review active → All reviewed (completion screen)
+
+**Two-panel layout**:
+- **Left panel (280px)**: Post list with thumbnail, title, target date, and status dot (pending / approved / revised)
+- **Right panel**: Selected post — title, platforms, target date, content, media gallery (up to 4 items + overflow), feedback textarea, action buttons
+
+**Actions per post**:
+- "Approve This Post" → status → `SCHEDULED`; auto-advances to next unreviewed post
+- "Request Revisions" → status → `NEEDS_REVISION`; requires non-empty feedback; auto-advances
+
+**Branding**: Same tier-controlled logic as per-post public review (agency logo if `branding_agency_sidebar`; "Powered by Tercero" footer if `branding_powered_by`).
+
+**Token architecture**: `campaigns.review_token` is a UUID on the campaign. Per-post review tokens come from the `share_tokens` table, resolved via a LATERAL JOIN in the `get_campaign_by_review_token` RPC — there is no `review_token` column on `post_versions`.
+
+---
+
 ## 4. USER EXPERIENCE PATTERNS
 
 ### Navigation
@@ -441,6 +534,12 @@ Agency (user_id)
 └── Real Clients (is_internal = false)
     ├── Posts
     │   └── Post Versions (DRAFT → PENDING → REVISIONS → SCHEDULED → ARCHIVED)
+    │       └── share_tokens (per-version public review tokens)
+    ├── Campaigns (Velocity+)
+    │   ├── Posts (campaign_id FK on posts — nullable)
+    │   └── Invoices (campaign_id FK on invoices — nullable)
+    ├── Documents
+    │   └── Collections (optional grouping — Velocity+)
     ├── Meetings
     ├── Notes / Tasks
     ├── Invoices (One-off)
@@ -450,15 +549,19 @@ Agency (user_id)
 ```
 
 ### Key Database RPCs (complex operations)
-| RPC | What it does |
-|-----|-------------|
-| `get_clients_with_pipeline` | Returns clients + post counts per status + next_scheduled date |
-| `create_post_draft_v3` | Atomically creates posts row + post_versions row + links them |
-| `create_revision_version` | Creates new version, updates current_version_id |
-| `get_global_calendar` | Returns posts in date range with version data |
-| `advance_expense_billing_date` | Moves next_billing_date forward by one billing cycle |
-| `get_post_by_token` | Returns post + `user_id` for public review page (unauthenticated) |
-| `update_post_status_by_token` | Updates post status + stores feedback from public review page |
+| RPC | Auth | What it does |
+|-----|------|-------------|
+| `get_clients_with_pipeline` | Authenticated | Returns clients + post counts per status + next_scheduled date |
+| `create_post_draft_v3` | Authenticated | Atomically creates posts row + post_versions row + links them |
+| `create_revision_version` | Authenticated | Creates new version, updates current_version_id |
+| `get_global_calendar` | Authenticated | Returns posts in date range with version data |
+| `advance_expense_billing_date` | Authenticated | Moves next_billing_date forward by one billing cycle |
+| `get_post_by_token` | Public (SECURITY DEFINER) | Returns post + `user_id` for per-post public review page |
+| `update_post_status_by_token` | Public (SECURITY DEFINER) | Updates post status + stores feedback (per-post and campaign review) |
+| `get_campaigns_with_post_summary` | Authenticated | Lists campaigns with post counts per status |
+| `get_campaign_analytics` | Authenticated | Per-campaign KPIs: post counts, on-time rate, platform distribution, avg approval days, budget vs invoiced |
+| `get_campaign_by_review_token` | Public (SECURITY DEFINER) | Returns campaign + all PENDING_APPROVAL posts with per-post tokens via LATERAL JOIN on share_tokens |
+| `increment_storage_used` / `decrement_storage_used` | Authenticated | Keeps `agency_subscriptions.current_storage_used` accurate on document upload/delete |
 
 ### Database Views (read-only aggregations)
 | View | Purpose |
@@ -488,15 +591,20 @@ Each agency has an `agency_subscriptions` row (single row per user) that control
 | `branding_powered_by` | true | true | false | Show "Tercero YYYY" + "Powered by Tercero" attribution |
 | `finance_recurring_invoices` | false | true | true | Recurring invoice templates tab |
 | `finance_subscriptions` | false | true | true | Expense subscriptions route |
+| `finance_accrual` | false | true | true | Accrual accounting mode toggle in Finance overview |
 | `calendar_export` | false | true | true | Calendar PDF export button |
+| `documents_collections` | false | true | true | Document collections grouping |
+| `campaigns` | false | true | true | Campaigns feature (list, detail, review link) |
 
 ### `useSubscription()` Hook
-Accessed via `src/api/useSubscription.js`. Returns: `{ subscription, can, planName, data (raw row) }`.
+Accessed via `src/api/useSubscription.js`. Returns a React Query result. Consume via `const { data: sub } = useSubscription()`.
 
-The `can` object exposes checked methods:
-- `can.useAgencySidebar()`, `can.showPoweredBy()`
-- `can.recurringInvoices()`, `can.expenseSubscriptions()`, `can.calendarExport()`
-- `can.addClient(currentCount)` — checks against `max_clients`
+The `data` object is a **flat object** — read flags directly (no `can.*` methods):
+- `sub?.plan_name` — `'trial'` | `'ignite'` | `'velocity'` | `'quantum'`
+- `sub?.agency_name`, `sub?.logo_url` — agency branding
+- `sub?.client_count`, `sub?.max_clients` — for client limit checks
+- `sub?.storage_display` — `{ usage_value, usage_unit, max_value, max_unit, percent, remaining_label }`
+- All feature flags as direct booleans (e.g. `sub?.campaigns`, `sub?.calendar_export`)
 
 Defaults are defensive (most-restricted) except `branding_powered_by` which defaults to `true` to protect Tercero brand attribution.
 
@@ -525,13 +633,14 @@ When a new user signs up:
 
 ## 8. EDGE FUNCTIONS (Email Notifications)
 
-Three Supabase Edge Functions handle transactional email:
+Four Supabase Edge Functions handle transactional email (all use Resend, sent from `notifications@tercerospace.com`):
 
 | Function | Trigger | Email sent |
 |----------|---------|-----------|
 | `send-approval-email` | Post marked as PENDING | Notifies approver/client |
 | `send-client-welcome` | New client created | Welcome email to client |
 | `send-password-update-email` | Password changed | Confirmation to user |
+| `send-campaign-review-email` | Agency clicks "Send Email" in Share Review Link dialog | Campaign review link to client; `verify_jwt: false`; subject: "Action Required: Review posts for [campaign_name]" |
 
 ---
 
@@ -614,32 +723,46 @@ src/api/notes.js                    — Notes CRUD
 src/api/invoices.js                 — Invoice lifecycle
 src/api/transactions.js             — Ledger
 src/api/expenses.js                 — Subscriptions
-src/api/useSubscription.js          — Plan/branding hook (returns subscription row + can.* methods)
-src/api/useGlobalPosts.js           — Filtered post list
+src/api/useSubscription.js          — Plan/branding hook (returns flat data object with boolean flags; no can.* methods)
+src/api/useGlobalPosts.js           — Filtered post list (supports campaignId filter)
+src/api/campaigns.js                — All campaign hooks and mutations (useCampaigns, useCampaign, useCampaignAnalytics, useCampaignReview, useCreateCampaign, useUpdateCampaign, useDeleteCampaign, useAssignPostsToCampaign, useRegenerateCampaignReviewToken, useMarkReviewSent, submitCampaignPostReview, fetchActiveCampaignsByClient, fetchUnlinkedPostsByClient)
+src/api/documents.js                — Document CRUD + signed URL generation
 src/pages/dashboard/Dashboard.jsx  — Dashboard composition
 src/pages/clients/Clients.jsx       — Client list
 src/pages/clients/ClientDetails.jsx — Client detail + tabs
+src/pages/clients/ClientProfileView.jsx — Client profile with tabs (Overview, Management, Workflow, Campaigns, Documents)
 src/pages/Posts.jsx                 — Global post list
-src/pages/posts/postDetails/PostDetails.jsx — Post editor
+src/pages/posts/DraftPostForm.jsx   — Post create/edit form; used as page and as dialog (open/onOpenChange props); accepts initialCampaignId
+src/pages/posts/postDetails/PostDetails.jsx — Post editor with versioning, social preview, approval actions
 src/pages/calendar/ContentCalendar.jsx  — Calendar views + Export Report button
 src/pages/calendar/CalendarReportPDF.jsx — PDF document component (react-pdf/renderer)
 src/pages/calendar/useCalendarReport.js  — buildCalendarReport(), getPeriodLabel(), getPeriodFilename()
+src/pages/campaigns/CampaignsPage.jsx   — Global campaigns list (Velocity+ gated)
+src/pages/campaigns/CampaignDetailPage.jsx — Campaign detail: KPIs, posts, platform chart, budget, invoices, share dialog
+src/pages/campaigns/CampaignReview.jsx  — Public campaign review (unauthenticated two-panel UI)
+src/pages/documents/DocumentsPage.jsx   — Global documents list with client filter
 src/pages/finance/FinanceLayout.jsx          — Finance shell
-src/pages/finance/FinancialOverviewTab.jsx  — Finance overview (cash/accrual, charts)
-src/pages/finance/InvoicesTab.jsx           — One-off + recurring invoice tabs (recurring gated by can.recurringInvoices())
+src/pages/finance/FinancialOverviewTab.jsx  — Finance overview (cash/accrual toggle, charts)
+src/pages/finance/InvoicesTab.jsx           — One-off + recurring invoice tabs (recurring gated by finance_recurring_invoices)
 src/pages/finance/RecurringInvoiceDialog.jsx — Recurring template create/edit
 src/pages/finance/EditInvoiceDialog.jsx     — Invoice edit/view (live preview)
 src/pages/MeetingsPage.jsx          — Meetings
 src/pages/NotesAndReminders.jsx     — Notes
-src/pages/PublicReview.jsx          — Client review link (fetches agency branding via secondary query)
+src/pages/PublicReview.jsx          — Per-post client review link (fetches agency branding via secondary query)
 src/pages/billingAndUsage/BillingUsage.jsx        — Plan/billing shell
 src/pages/billingAndUsage/TertiarySubscriptionTab.jsx — Plan cards + comparison table + upgrade request dialog
+src/components/campaigns/CampaignTab.jsx        — Reusable campaigns tab (clientId prop = scoped; no prop = global)
+src/components/campaigns/CampaignDialog.jsx     — Create/edit campaign form (Zod validated; client selector shown when no clientId)
+src/components/campaigns/CampaignReportPDF.jsx  — Campaign PDF report (@react-pdf/renderer)
+src/components/documents/DocumentsTab.jsx       — Reusable documents tab (same clientId scoping pattern as CampaignTab)
 src/components/sidebar/nav-header.jsx — Sidebar header (branding_agency_sidebar logic)
 src/components/sidebar/app-sidebar.jsx — Sidebar composition + "Tercero YYYY" footer text
-src/lib/helper.js                   — formatDate()
+src/lib/helper.js                   — formatDate(), formatFileSize(), MAX_DOCUMENT_SIZE_BYTES
 src/lib/client-helpers.js           — getUrgencyStatus()
 src/lib/industries.js               — Industry constants
+src/lib/platforms.js                — SUPPORTED_PLATFORMS constant (id, label, color per platform)
 src/components/misc/header-context.jsx — useHeader() hook
 src/utils/finance.js                — formatCurrency()
 src/utils/downloadInvoicePDF.js     — Invoice PDF download utility
+supabase/functions/send-campaign-review-email/index.ts — Campaign review email edge function
 ```

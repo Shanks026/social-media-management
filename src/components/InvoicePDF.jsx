@@ -84,11 +84,12 @@ const s = StyleSheet.create({
     color: C.muted,
     marginTop: 4,
   },
-  logo: { 
-    height: 24, 
+  logo: {
+    height: 24,
+    maxWidth: 160,
     objectFit: 'contain',
     marginRight: 8,
-    borderRadius: 6
+    borderRadius: 4
   },
   logoText: {
     fontSize: 18,
@@ -268,7 +269,7 @@ export default function InvoicePDF({ invoice, agency = {} }) {
   return (
     <Document>
       <Page size="A4" style={s.page}>
-        
+
         {/* ─── Header ─── */}
         <View style={s.header}>
           <View>
@@ -276,22 +277,22 @@ export default function InvoicePDF({ invoice, agency = {} }) {
             <Text style={s.invoiceNumber}>#{invoice.invoice_number}</Text>
           </View>
           <View style={{ alignItems: 'flex-end' }}>
-            {(agency.basic_whitelabel_enabled || agency.full_whitelabel_enabled) ? (
-              <View style={{ alignItems: 'flex-end' }}>
+            {(agency.full_whitelabel_enabled || agency.basic_whitelabel_enabled) ? (
+              /* Velocity / Quantum — agency branding */
+              agency.logo_horizontal_url ? (
+                /* Horizontal logo only */
+                <Image src={agency.logo_horizontal_url} style={[s.logo, { height: 36, maxWidth: 240 }]} />
+              ) : (
+                /* Fallback: square logo + agency name */
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  {agency.logo_url && (
-                    <Image src={agency.logo_url} style={s.logo} />
-                  )}
+                  {agency.logo_url && <Image src={agency.logo_url} style={[s.logo, { width: 24, height: 24 }]} />}
                   <Text style={s.logoText}>{agency.agency_name || 'Agency'}</Text>
                 </View>
-                {agency.basic_whitelabel_enabled && !agency.full_whitelabel_enabled && (
-                  <Text style={[s.arkLabsText, { marginTop: 4 }]}>Powered by Tercero, Ark Labs 2026</Text>
-                )}
-              </View>
+              )
             ) : (
+              /* Ignite — Tercero branding */
               <View>
                 <Text style={s.tertiaryLogoText}>Tercero</Text>
-                <Text style={s.arkLabsText}>Ark Labs 2026</Text>
               </View>
             )}
           </View>
@@ -394,7 +395,12 @@ export default function InvoicePDF({ invoice, agency = {} }) {
           </View>
         )}
 
-
+        {/* ─── Footer (Tercero branding — Ignite + Velocity only) ─── */}
+        {!agency.full_whitelabel_enabled && (
+          <View style={s.footer}>
+            <Text style={s.footerText}>Tercero 2026</Text>
+          </View>
+        )}
 
       </Page>
     </Document>
