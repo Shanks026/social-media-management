@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useHeader } from '../../../components/misc/header-context'
 import { toast } from 'sonner'
-import { createRevision, fetchPostDetails } from '@/api/posts'
+import { createRevision, fetchPostDetails, deletePost } from '@/api/posts'
 
 // Sub-components
 import PostContent from './PostContent'
@@ -25,6 +25,7 @@ export default function PostDetails() {
   const [isPublishConfirmOpen, setIsPublishConfirmOpen] = useState(false)
   const [isEditOpen, setIsEditOpen] = useState(false)
   const [isRevisionConfirmOpen, setIsRevisionConfirmOpen] = useState(false)
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false)
   const [adminNotes, setAdminNotes] = useState('')
 
   // Internal lifecycle: Approve & Schedule dialog state
@@ -95,18 +96,23 @@ export default function PostDetails() {
   })
 
   const sendForApprovalMutation = useMutation({
-    mutationFn: async (versionId) => {
+    mutationFn: async ({ versionId, silent = false }) => {
+      // If post is already PENDING_APPROVAL, skip the RPC
+      if (post.status === 'PENDING_APPROVAL') return { silent }
+
       const { data, error: rpcError } = await supabase.rpc(
         'send_post_for_approval',
         { p_post_version_id: versionId },
       )
       if (rpcError) throw rpcError
-      return data
+      return { data, silent }
     },
-    onSuccess: () => {
+    onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ['post-version', postId] })
-      toast.success('Post sent for approval')
-      setIsConfirmOpen(false)
+      if (!res.silent) {
+        toast.success('Post sent for approval')
+        setIsConfirmOpen(false)
+      }
     },
     onError: (err) => toast.error(err.message),
   })
@@ -202,6 +208,27 @@ export default function PostDetails() {
     },
     onError: (err) => toast.error(err.message),
   })
+  
+  const deletePostMutation = useMutation({
+    mutationFn: (actualId) => {
+        if(!actualId) throw new Error("Post ID missing")
+        return deletePost(actualId)
+    },
+    onSuccess: () => {
+      toast.success('Post deleted permanently')
+      setIsDeleteConfirmOpen(false)
+      navigate(`/clients/${clientId}/posts`)
+    },
+    onError: (err) => {
+      console.error('Delete Mutation Failed:', err)
+      toast.error(err.message)
+    },
+  })
+
+  const handleRefresh = () => {
+    queryClient.invalidateQueries({ queryKey: ['post-version', postId] })
+    toast.success('Status refreshed')
+  }
 
   useEffect(() => {
     if (post) {
@@ -248,6 +275,8 @@ export default function PostDetails() {
         }}
         onCreateRevision={() => setIsRevisionConfirmOpen(true)}
         onEdit={() => setIsEditOpen(true)}
+        onDelete={() => setIsDeleteConfirmOpen(true)}
+        onRefresh={handleRefresh}
         isRevisionPending={createRevisionMutation.isPending}
         isApprovalPending={sendForApprovalMutation.isPending}
         isPublishPending={markAsPublishedMutation.isPending}
@@ -278,7 +307,7 @@ export default function PostDetails() {
         setIsConfirmOpen={setIsConfirmOpen}
         isPublishConfirmOpen={isPublishConfirmOpen}
         setIsPublishConfirmOpen={setIsPublishConfirmOpen}
-        onConfirmApproval={() => sendForApprovalMutation.mutate(post.id)}
+        onConfirmApproval={(args) => sendForApprovalMutation.mutate({ versionId: post.id, ...args })}
         onConfirmPublish={() => markAsPublishedMutation.mutate(post.id)}
         isApprovalPending={sendForApprovalMutation.isPending}
         isPublishPending={markAsPublishedMutation.isPending}
@@ -294,6 +323,10 @@ export default function PostDetails() {
         setApproveDate={setApproveDate}
         onConfirmApproveSchedule={() => approveAndScheduleMutation.mutate(post.id)}
         isApproveSchedulePending={approveAndScheduleMutation.isPending}
+        isDeleteConfirmOpen={isDeleteConfirmOpen}
+        setIsDeleteConfirmOpen={setIsDeleteConfirmOpen}
+        onConfirmDelete={() => deletePostMutation.mutate(post.actual_post_id)}
+        isDeletePending={deletePostMutation.isPending}
       />
     </div>
   )

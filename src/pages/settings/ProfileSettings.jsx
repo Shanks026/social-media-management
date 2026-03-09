@@ -162,130 +162,119 @@ export default function ProfileSettings() {
           </p>
         </div>
 
-        <div className="flex flex-col md:flex-row gap-8 items-center md:items-start">
-          {/* Avatar Upload */}
-          <div className="shrink-0">
-            <div
-              onClick={() => fileInputRef.current?.click()}
-              className={cn(
-                'group relative flex size-32 cursor-pointer flex-col items-center justify-center rounded-full border-2 border-dashed transition-all hover:bg-muted/50',
-                avatarUrl ? 'border-primary/40' : 'border-border',
-              )}
-            >
-              {avatarUrl ? (
-                <>
-                  <div className="relative size-full overflow-hidden rounded-full border-2 border-border bg-background shadow-sm">
-                    <img
-                      src={avatarUrl}
-                      alt="Avatar"
-                      className="size-full object-cover transition-transform group-hover:scale-110"
-                    />
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/20 opacity-0 transition-opacity group-hover:opacity-100">
-                      <Camera className="size-6 text-white" />
-                    </div>
+        {/* Row 1: Avatar + save action */}
+        <div className="flex items-start gap-6 flex-wrap">
+          <div
+            onClick={() => fileInputRef.current?.click()}
+            className={cn(
+              'group relative flex size-28 cursor-pointer flex-col items-center justify-center rounded-full border-2 border-dashed transition-all hover:bg-muted/50 shrink-0',
+              avatarUrl ? 'border-primary/40' : 'border-border',
+            )}
+          >
+            {avatarUrl ? (
+              <>
+                <div className="relative size-full overflow-hidden rounded-full border-2 border-border bg-background shadow-sm">
+                  <img
+                    src={avatarUrl}
+                    alt="Avatar"
+                    className="size-full object-cover transition-transform group-hover:scale-110"
+                  />
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/20 opacity-0 transition-opacity group-hover:opacity-100">
+                    <Camera className="size-6 text-white" />
                   </div>
-                  <button
-                    type="button"
-                    onClick={removeAvatar}
-                    className="absolute right-0 top-0 z-10 rounded-full bg-destructive p-1.5 text-white shadow-lg hover:bg-destructive/90 transition-colors"
-                  >
-                    <X className="size-3.5" />
-                  </button>
-                </>
-              ) : (
-                <div className="flex flex-col items-center gap-1 text-muted-foreground transition-colors group-hover:text-foreground">
-                  {isUploading ? (
-                    <Loader2 className="size-5 animate-spin text-primary" />
-                  ) : (
-                    <ImagePlus className="size-5" />
-                  )}
-                  <span className="text-xs font-medium">Photo</span>
                 </div>
-              )}
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={handleAvatarUpload}
-                disabled={isUploading}
-              />
-            </div>
+                <button
+                  type="button"
+                  onClick={removeAvatar}
+                  className="absolute right-0 top-0 z-10 rounded-full bg-destructive p-1.5 text-white shadow-lg hover:bg-destructive/90 transition-colors"
+                >
+                  <X className="size-3.5" />
+                </button>
+              </>
+            ) : (
+              <div className="flex flex-col items-center gap-1 text-muted-foreground transition-colors group-hover:text-foreground">
+                {isUploading ? (
+                  <Loader2 className="size-5 animate-spin text-primary" />
+                ) : (
+                  <ImagePlus className="size-5" />
+                )}
+                <span className="text-xs font-medium">Photo</span>
+              </div>
+            )}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleAvatarUpload}
+              disabled={isUploading}
+            />
           </div>
 
-          {/* Name & Details */}
-          <div className="flex-1 w-full space-y-6">
-            <div className="space-y-2">
-              <Label>Full Name</Label>
-              <Input
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                placeholder="Your name"
-              />
+          {hasChanges && (
+            <div className="self-end pb-0.5">
+              <Button onClick={handleSaveProfile} disabled={isSaving} size="sm" className="gap-2">
+                {isSaving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                Save Changes
+              </Button>
             </div>
+          )}
+        </div>
 
-            <div className="space-y-6">
-              <InfoRow
-                icon={<Mail size={16} />}
-                label="Email Address"
-                value={user?.email || '—'}
-              />
-              <InfoRow
-                icon={<CalendarDays size={16} />}
-                label="Account Created"
-                value={
-                  user?.created_at
-                    ? format(new Date(user.created_at), 'MMMM d, yyyy')
-                    : '—'
-                }
-              />
-              <div className="flex items-start gap-4">
-                <div className="mt-0.5 h-9 w-9 shrink-0 rounded-lg bg-secondary/50 flex items-center justify-center text-muted-foreground">
-                  <Hash size={16} />
-                </div>
-                <div className="flex-1 space-y-1 min-w-0">
-                  <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                    User ID
-                  </p>
-                  <div className="flex items-center gap-2">
-                    <code className="text-sm font-mono text-foreground/80 truncate">
-                      {user?.id || '—'}
-                    </code>
-                    <button
-                      type="button"
-                      onClick={copyUID}
-                      className="text-muted-foreground hover:text-foreground transition-colors p-1 rounded"
-                    >
-                      {copied ? (
-                        <Check size={14} className="text-green-500" />
-                      ) : (
-                        <Copy size={14} />
-                      )}
-                    </button>
-                  </div>
+        {/* Row 2: Name & Details */}
+        <div className="space-y-6">
+          <div className="space-y-2">
+            <Label>Full Name</Label>
+            <Input
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              placeholder="Your name"
+            />
+          </div>
+
+          <div className="space-y-6">
+            <InfoRow
+              icon={<Mail size={16} />}
+              label="Email Address"
+              value={user?.email || '—'}
+            />
+            <InfoRow
+              icon={<CalendarDays size={16} />}
+              label="Account Created"
+              value={
+                user?.created_at
+                  ? format(new Date(user.created_at), 'MMMM d, yyyy')
+                  : '—'
+              }
+            />
+            <div className="flex items-start gap-4">
+              <div className="mt-0.5 h-9 w-9 shrink-0 rounded-lg bg-secondary/50 flex items-center justify-center text-muted-foreground">
+                <Hash size={16} />
+              </div>
+              <div className="flex-1 space-y-1 min-w-0">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  User ID
+                </p>
+                <div className="flex items-center gap-2">
+                  <code className="text-sm font-mono text-foreground/80 truncate">
+                    {user?.id || '—'}
+                  </code>
+                  <button
+                    type="button"
+                    onClick={copyUID}
+                    className="text-muted-foreground hover:text-foreground transition-colors p-1 rounded"
+                  >
+                    {copied ? (
+                      <Check size={14} className="text-green-500" />
+                    ) : (
+                      <Copy size={14} />
+                    )}
+                  </button>
                 </div>
               </div>
             </div>
           </div>
         </div>
-
-        {/* Save Button */}
-        {hasChanges && (
-          <div className="flex justify-end animate-in fade-in slide-in-from-bottom-2 duration-300">
-            <Button
-              onClick={handleSaveProfile}
-              disabled={isSaving}
-              className="gap-2"
-            >
-              {isSaving ? (
-                <Loader2 size={16} className="animate-spin" />
-              ) : (
-                <Save size={16} />
-              )}
-              Save Changes
-            </Button>
-          </div>
-        )}
       </section>
 
       <Separator className="opacity-50" />

@@ -23,6 +23,7 @@ import {
   Facebook,
   Youtube,
   Globe,
+  RefreshCw,
 } from 'lucide-react'
 
 // UI Components
@@ -141,6 +142,8 @@ export default function PostContent({
   publishingPlatformId,
   isApproveSchedulePending,
   onEdit,
+  onDelete,
+  onRefresh,
 }) {
   const notesRef = useRef(null)
   const queryClient = useQueryClient()
@@ -348,6 +351,18 @@ export default function PostContent({
 
         {/* 🛠️ Consolidated Button Group */}
         <div className="flex items-center gap-3 shrink-0">
+          {post.status === 'PENDING_APPROVAL' && (
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={onRefresh}
+              className="h-10 w-10 text-muted-foreground hover:text-foreground transition-colors"
+              title="Refresh Status"
+            >
+              <RefreshCw size={18} />
+            </Button>
+          )}
+
           {/* 1. PRIMARY ACTION (Stand-alone for maximum focus) */}
           <div className="hidden sm:flex items-center gap-2">
 
@@ -521,9 +536,7 @@ export default function PostContent({
 
               <DropdownMenuItem
                 className="text-destructive focus:text-destructive"
-                onClick={() => {
-                  /* Trigger Delete Dialog */
-                }}
+                onClick={onDelete}
               >
                 <Trash2 size={14} className="mr-2" /> Delete Post
               </DropdownMenuItem>

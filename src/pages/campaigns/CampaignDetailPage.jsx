@@ -473,7 +473,7 @@ export default function CampaignDetailPage() {
                 onClick={handleShareLink}
               >
                 <Share2 className="size-4" />
-                Share Review Link
+                Send for Approval
               </Button>
             )}
             <Button className="gap-2 h-9" onClick={() => setEditOpen(true)}>
@@ -1136,10 +1136,9 @@ export default function CampaignDetailPage() {
         <Dialog open={shareDialogOpen} onOpenChange={setShareDialogOpen}>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
-              <DialogTitle>Share Review Link</DialogTitle>
+              <DialogTitle>Campaign Review Link</DialogTitle>
               <DialogDescription>
-                Send this link to your client so they can review and approve all
-                pending posts in one session.
+                Copy the link below or send it directly via email to your client for approval.
               </DialogDescription>
             </DialogHeader>
             <div className="flex gap-2">
@@ -1172,7 +1171,7 @@ export default function CampaignDetailPage() {
                     regenerateToken.isPending && 'animate-spin',
                   )}
                 />
-                Regenerate link
+                Resend link
               </Button>
               {campaign?.last_review_sent_at && (
                 <p className="text-xs text-muted-foreground">

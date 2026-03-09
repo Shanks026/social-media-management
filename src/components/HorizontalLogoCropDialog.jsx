@@ -1,7 +1,6 @@
-// src/components/HorizontalLogoCropDialog.jsx
-import { useState, useCallback } from 'react'
-import Cropper from 'react-easy-crop'
-import { getCroppedImg } from '@/lib/cropImage'
+import { useState, useRef } from 'react'
+import ReactCrop from 'react-image-crop'
+import 'react-image-crop/dist/ReactCrop.css'
 
 import {
   Dialog,
@@ -12,57 +11,84 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { Slider } from '@/components/ui/slider'
-import { AspectRatio } from '@/components/ui/aspect-ratio'
 import { Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 
-const ASPECT = 3 / 1
+function makeInitialCrop() {
+  return { unit: '%', x: 5, y: 5, width: 90, height: 90 }
+}
 
-/**
- * @param {{
- *   open: boolean,
- *   onOpenChange: (open: boolean) => void,
- *   imageSrc: string,
- *   onCropComplete: (blob: Blob) => void,
- * }} props
- */
 export default function HorizontalLogoCropDialog({
   open,
   onOpenChange,
   imageSrc,
   onCropComplete,
 }) {
-  const [crop, setCrop] = useState({ x: 0, y: 0 })
-  const [zoom, setZoom] = useState(1)
-  const [croppedAreaPixels, setCroppedAreaPixels] = useState(null)
+  const [crop, setCrop] = useState(undefined)
+  const [completedCrop, setCompletedCrop] = useState(null)
   const [isApplying, setIsApplying] = useState(false)
+  const imgRef = useRef(null)
 
-  const handleCropComplete = useCallback((_croppedArea, croppedAreaPixels) => {
-    setCroppedAreaPixels(croppedAreaPixels)
-  }, [])
+  function onImageLoad(e) {
+    const { width, height } = e.currentTarget
+    const pct = makeInitialCrop()
+    setCrop(pct)
+    // Pre-populate completedCrop in display pixels so Apply is enabled immediately
+    setCompletedCrop({
+      unit: 'px',
+      x: (pct.x * width) / 100,
+      y: (pct.y * height) / 100,
+      width: (pct.width * width) / 100,
+      height: (pct.height * height) / 100,
+    })
+  }
 
   const handleApply = async () => {
-    if (!croppedAreaPixels) return
+    if (!completedCrop || !imgRef.current) return
     setIsApplying(true)
     try {
-      const blob = await getCroppedImg(imageSrc, croppedAreaPixels)
-      onCropComplete(blob)
+      const image = imgRef.current
+      const scaleX = image.naturalWidth / image.width
+      const scaleY = image.naturalHeight / image.height
+      const cropW = Math.round(completedCrop.width * scaleX)
+      const cropH = Math.round(completedCrop.height * scaleY)
+
+      // Draw directly from the already-loaded img element — no re-fetch of the objectURL
+      const canvas = document.createElement('canvas')
+      canvas.width = cropW
+      canvas.height = cropH
+      const ctx = canvas.getContext('2d')
+      ctx.drawImage(
+        image,
+        Math.round(completedCrop.x * scaleX),
+        Math.round(completedCrop.y * scaleY),
+        cropW,
+        cropH,
+        0,
+        0,
+        cropW,
+        cropH,
+      )
+
+      const blob = await new Promise((resolve, reject) => {
+        canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('Canvas toBlob failed'))), 'image/png')
+      })
+
+      await onCropComplete(blob)
       onOpenChange(false)
     } catch (err) {
-      console.error('Crop failed:', err)
-      toast.error('Failed to crop image')
+      console.error('Crop/upload failed:', err)
+      toast.error('Failed to upload logo')
     } finally {
       setIsApplying(false)
     }
   }
 
   const handleOpenChange = (nextOpen) => {
+    if (isApplying) return
     if (!nextOpen) {
-      // Reset state when closing
-      setCrop({ x: 0, y: 0 })
-      setZoom(1)
-      setCroppedAreaPixels(null)
+      setCrop(undefined)
+      setCompletedCrop(null)
     }
     onOpenChange(nextOpen)
   }
@@ -73,49 +99,28 @@ export default function HorizontalLogoCropDialog({
         <DialogHeader>
           <DialogTitle>Adjust Horizontal Logo</DialogTitle>
           <DialogDescription>
-            Drag to reposition · Scroll to zoom
+            Drag the selection to reposition · Drag handles to resize
           </DialogDescription>
         </DialogHeader>
 
-        {/* Crop area — AspectRatio sets the 3:1 bounding box */}
-        <div className="w-full overflow-hidden rounded-lg border border-border">
-          <AspectRatio ratio={ASPECT} className="relative bg-muted/30">
-            {imageSrc && (
-              <Cropper
-                image={imageSrc}
-                crop={crop}
-                zoom={zoom}
-                aspect={ASPECT}
-                showGrid={false}
-                onCropChange={setCrop}
-                onZoomChange={setZoom}
-                onCropComplete={handleCropComplete}
-                style={{
-                  containerStyle: {
-                    position: 'absolute',
-                    inset: 0,
-                    borderRadius: '0.5rem',
-                  },
-                }}
+        <div className="flex items-center justify-center bg-muted/30 rounded-lg border border-border p-3">
+          {imageSrc && (
+            <ReactCrop
+              crop={crop}
+              onChange={(c) => setCrop(c)}
+              onComplete={(c) => setCompletedCrop(c)}
+              minWidth={20}
+              minHeight={20}
+            >
+              <img
+                ref={imgRef}
+                src={imageSrc}
+                alt="Crop preview"
+                onLoad={onImageLoad}
+                style={{ maxHeight: '320px', maxWidth: '100%', display: 'block' }}
               />
-            )}
-          </AspectRatio>
-        </div>
-
-        {/* Zoom slider */}
-        <div className="flex items-center gap-4 px-1">
-          <span className="text-xs text-muted-foreground w-8 shrink-0">Zoom</span>
-          <Slider
-            min={1}
-            max={3}
-            step={0.05}
-            value={[zoom]}
-            onValueChange={([val]) => setZoom(val)}
-            className="flex-1"
-          />
-          <span className="text-xs text-muted-foreground w-8 text-right shrink-0">
-            {zoom.toFixed(1)}x
-          </span>
+            </ReactCrop>
+          )}
         </div>
 
         <DialogFooter>
@@ -126,7 +131,7 @@ export default function HorizontalLogoCropDialog({
           >
             Cancel
           </Button>
-          <Button onClick={handleApply} disabled={isApplying || !croppedAreaPixels}>
+          <Button onClick={handleApply} disabled={isApplying || !completedCrop}>
             {isApplying ? (
               <>
                 <Loader2 className="size-4 animate-spin" />

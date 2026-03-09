@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'
 import {
@@ -8,6 +8,11 @@ import {
   MessageSquareText,
   CalendarDays,
   Clock,
+  Copy,
+  RefreshCw,
+  Mail,
+  Trash2,
+  Loader2,
 } from 'lucide-react'
 import {
   Dialog,
@@ -25,6 +30,10 @@ import {
 import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
 import { format } from 'date-fns'
+import { Input } from '@/components/ui/input'
+import { toast } from 'sonner'
+import { useRegeneratePostShareToken } from '@/api/posts'
+import { supabase } from '@/lib/supabase'
 
 export default function PostActionDialogs({
   post,
@@ -49,8 +58,49 @@ export default function PostActionDialogs({
   setApproveDate,
   onConfirmApproveSchedule,
   isApproveSchedulePending,
+  // Delete
+  isDeleteConfirmOpen,
+  setIsDeleteConfirmOpen,
+  onConfirmDelete,
+  isDeletePending,
 }) {
   const [calendarOpen, setCalendarOpen] = useState(false)
+  const [sendingEmail, setSendingEmail] = useState(false)
+
+  // Unified handler: Confirm status change + Send Email
+  async function handleConfirmAndSend() {
+    if (!post?.clients?.email) {
+      toast.error('Client email not found')
+      return
+    }
+
+    try {
+      setSendingEmail(true)
+      
+      // 1. Transition status to PENDING_APPROVAL
+      // onConfirmApproval is the mutation.mutate call from PostDetails
+      await onConfirmApproval({ silent: true })
+
+      // 2. Trigger the notification email
+      const { error } = await supabase.functions.invoke('send-approval-email', {
+        body: { 
+          record: { 
+            ...post, 
+            status: 'PENDING_APPROVAL' 
+          } 
+        },
+      })
+      if (error) throw error
+
+      toast.success(`Post sent for approval to ${post.clients.email}`)
+      setIsConfirmOpen(false)
+    } catch (err) {
+      console.error('Approval flow error:', err)
+      toast.error('Failed to complete approval request. Please try again.')
+    } finally {
+      setSendingEmail(false)
+    }
+  }
 
   return (
     <>
@@ -70,6 +120,16 @@ export default function PostActionDialogs({
                 and transition it from a <em>Draft</em> to <em>Pending</em>{' '}
                 status.
               </DialogDescription>
+
+              <div className="bg-primary/5 p-4 rounded-lg border border-primary/20 space-y-3 pt-2">
+                <div className="flex items-center gap-2 text-primary">
+                  <Mail size={18} />
+                  <span className="font-medium text-sm">Recipient Email:</span>
+                </div>
+                <p className="text-sm text-foreground/80 font-mono pl-7">
+                  {post?.clients?.email}
+                </p>
+              </div>
               <div className="bg-muted/50 p-4 rounded-lg border text-sm space-y-2">
                 <p className="font-semibold text-foreground">
                   What happens next?
@@ -90,11 +150,15 @@ export default function PostActionDialogs({
               Go Back
             </Button>
             <Button
-              onClick={onConfirmApproval}
-              disabled={isApprovalPending}
+              onClick={handleConfirmAndSend}
+              disabled={isApprovalPending || sendingEmail || post.status === 'PENDING_APPROVAL'}
               className="bg-primary hover:bg-primary/90"
             >
-              {isApprovalPending ? 'Submitting...' : 'Confirm & Send'}
+              {isApprovalPending || sendingEmail
+                ? 'Sending Request...'
+                : post.status === 'PENDING_APPROVAL'
+                  ? 'Already Sent'
+                  : 'Confirm & Send'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -304,6 +368,50 @@ export default function PostActionDialogs({
               disabled={isRevisionPending}
             >
               {isRevisionPending ? 'Creating...' : 'Create New Version'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* ── Delete Post confirmation ── */}
+      <Dialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader className="space-y-4">
+            <DialogTitle className="flex items-center gap-2 text-xl text-destructive">
+              <Trash2 className="h-6 w-6" /> Delete Post Permanently
+            </DialogTitle>
+            <div className="space-y-4">
+              <DialogDescription className="text-base text-foreground/90 leading-relaxed">
+                Are you absolutely sure? This will delete <strong>{post.title}</strong> and all its versions, along with any uploaded media.
+              </DialogDescription>
+              <div className="bg-destructive/5 p-4 rounded-lg border border-destructive/20 text-sm">
+                <p className="text-destructive font-medium italic">
+                  This action is final and cannot be undone.
+                </p>
+              </div>
+            </div>
+          </DialogHeader>
+          <DialogFooter className="mt-6 flex flex-row gap-3">
+            <Button
+              variant="outline"
+              onClick={() => setIsDeleteConfirmOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button 
+                variant="destructive" 
+                onClick={onConfirmDelete} 
+                disabled={isDeletePending}
+                className="gap-2"
+            >
+              {isDeletePending ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin" />
+                    Deleting...
+                  </>
+              ) : (
+                  'Confirm Delete'
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

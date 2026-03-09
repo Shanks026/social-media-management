@@ -222,7 +222,10 @@ export function useRegenerateCampaignReviewToken() {
     mutationFn: async (campaignId) => {
       const { data, error } = await supabase
         .from('campaigns')
-        .update({ review_token: crypto.randomUUID() })
+        .update({ 
+          review_token: crypto.randomUUID(),
+          review_token_active: true 
+        })
         .eq('id', campaignId)
         .select('review_token')
         .single()

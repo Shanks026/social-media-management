@@ -21,6 +21,58 @@ function formatPlatform(p: string): string {
   return map[p.toLowerCase()] ?? p.charAt(0).toUpperCase() + p.slice(1)
 }
 
+// --- BRANDING HELPERS ---
+async function getBranding(supabase: any, userId: string) {
+  const { data: sub } = await supabase
+    .from('agency_subscriptions')
+    .select('agency_name, logo_url, logo_horizontal_url, branding_agency_sidebar, branding_powered_by')
+    .eq('user_id', userId)
+    .single()
+
+  const showAgency = sub?.branding_agency_sidebar ?? false
+  const poweredBy = sub?.branding_powered_by ?? true
+  
+  return {
+    name: sub?.agency_name || 'Tercero',
+    logo: sub?.logo_url,
+    horizontalLogo: sub?.logo_horizontal_url,
+    showAgencyBranding: showAgency,
+    isVelocity: showAgency && poweredBy,
+    isQuantum: showAgency && !poweredBy,
+  }
+}
+
+function renderEmailHeader(branding: any) {
+  if (!branding.showAgencyBranding) {
+    return `<p style="font-size: 13px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #6B7280; margin: 0 0 32px;">Tercero</p>`
+  }
+
+  const logo = branding.horizontalLogo || branding.logo
+  if (logo) {
+    return `<img src="${logo}" alt="${branding.name}" style="height: 32px; width: auto; margin-bottom: 32px; display: block;" />`
+  }
+
+  return `<p style="font-size: 13px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #6B7280; margin: 0 0 32px;">${branding.name}</p>`
+}
+
+function renderEmailFooter(branding: any) {
+  if (branding.isQuantum) return ''
+
+  if (branding.isVelocity) {
+    return `
+      <div style="border-top: 1px solid #F3F4F6; padding: 20px 48px; text-align: center;">
+        <p style="color: #D1D5DB; font-size: 11px; margin: 0;">Powered by Tercero</p>
+      </div>
+    `
+  }
+
+  return `
+    <div style="border-top: 1px solid #F3F4F6; padding: 20px 48px; text-align: center;">
+      <p style="color: #D1D5DB; font-size: 11px; margin: 0;">Tercero 2026</p>
+    </div>
+  `
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -56,7 +108,7 @@ serve(async (req) => {
   // Fetch client
   const { data: client, error: cErr } = await supabase
     .from('clients')
-    .select('email, name, is_internal')
+    .select('email, name, is_internal, user_id')
     .eq('id', version.client_id)
     .single()
 
@@ -70,6 +122,8 @@ serve(async (req) => {
     console.log('[send-platform-published-email] skipped: internal client')
     return new Response('Skipped: internal client', { headers: corsHeaders })
   }
+
+  const branding = await getBranding(supabase, client.user_id)
 
   const postTitle = version.title || 'Untitled Post'
   const platformLabel = formatPlatform(platform)
@@ -135,20 +189,18 @@ serve(async (req) => {
   }
 
   const { data, error } = await resend.emails.send({
-    from: 'Tercero <notifications@tercerospace.com>',
+    from: `${branding.name} <notifications@tercerospace.com>`,
     to: [client.email],
     subject,
     html: `
-      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 560px; margin: auto; background: #ffffff; color: #111827;">
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 560px; margin: auto; background: #ffffff; color: #111827; border: 1px solid #E5E7EB;">
         <div style="padding: 40px 48px 0;">
-          <p style="font-size: 13px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #6B7280; margin: 0 0 32px;">Tercero</p>
+          ${renderEmailHeader(branding)}
         </div>
         <div style="padding: 0 48px 40px;">
           ${bodyHtml}
         </div>
-        <div style="border-top: 1px solid #F3F4F6; padding: 20px 48px;">
-          <p style="color: #D1D5DB; font-size: 11px; margin: 0;">Tercero &mdash; Ark Labs 2026</p>
-        </div>
+        ${renderEmailFooter(branding)}
       </div>
     `,
   })

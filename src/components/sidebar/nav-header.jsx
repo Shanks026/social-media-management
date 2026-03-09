@@ -30,11 +30,12 @@ export function AppSidebarHeader({ agencySettings }) {
     sub?.agency_name ||
     APP_NAME
   const logo = agencySettings?.logo_url || sub?.logo_url
+  const horizontalLogo = agencySettings?.logo_horizontal_url || sub?.logo_horizontal_url
   const plan = agencySettings?.tier || sub?.plan_name || APP_TAGLINE
 
   // Use the feature flag — not the name — to decide if agency branding is shown
   const showAgencyBranding = sub?.branding_agency_sidebar ?? false
-  const isBrandingComplete = !!(showAgencyBranding && name && logo && plan && name !== APP_NAME)
+  const isBrandingComplete = !!(showAgencyBranding && name && (logo || horizontalLogo) && plan && name !== APP_NAME)
 
   const getInitials = (name) => {
     const finalName = name || APP_NAME
@@ -64,7 +65,9 @@ export function AppSidebarHeader({ agencySettings }) {
                   ? isCollapsed
                     ? 'size-7'
                     : 'h-9 w-32 ml-[-4px]'
-                  : `shadow-sm bg-background ${isCollapsed ? 'size-6' : 'size-9'}`
+                  : isCollapsed || !horizontalLogo
+                    ? `shadow-sm bg-background ${isCollapsed ? 'size-6' : 'size-9'}`
+                    : 'h-10 w-auto max-w-[160px]'
               }`}
             >
               {isLoading ? (
@@ -84,42 +87,50 @@ export function AppSidebarHeader({ agencySettings }) {
                     WebkitMaskSize: 'contain',
                   }}
                 />
-              ) : logo ? (
-                // Velocity / Quantum with logo set
-                <img
-                  src={logo}
-                  alt={name}
-                  className="size-full object-cover rounded-lg"
-                  onError={(e) => {
-                    const parent = e.target.parentElement
-                    if (parent) {
-                      const fallback = document.createElement('div')
-                      fallback.className = 'size-6 bg-foreground'
-                      fallback.style.maskImage = `url(${DEFAULT_ICON})`
-                      fallback.style.maskRepeat = 'no-repeat'
-                      fallback.style.maskPosition = 'center'
-                      fallback.style.maskSize = 'contain'
-                      fallback.style.webkitMaskImage = `url(${DEFAULT_ICON})`
-                      fallback.style.webkitMaskRepeat = 'no-repeat'
-                      fallback.style.webkitMaskPosition = 'center'
-                      fallback.style.webkitMaskSize = 'contain'
-                      parent.innerHTML = ''
-                      parent.appendChild(fallback)
-                    }
-                  }}
-                />
+              ) : isCollapsed || !horizontalLogo ? (
+                // Collapsed OR No Horizontal Logo -> Show Square logo/Initials
+                logo ? (
+                  <img
+                    src={logo}
+                    alt={name}
+                    className="size-full object-cover rounded-lg"
+                    onError={(e) => {
+                      const parent = e.target.parentElement
+                      if (parent) {
+                        const fallback = document.createElement('div')
+                        fallback.className = 'size-6 bg-foreground'
+                        fallback.style.maskImage = `url(${DEFAULT_ICON})`
+                        fallback.style.maskRepeat = 'no-repeat'
+                        fallback.style.maskPosition = 'center'
+                        fallback.style.maskSize = 'contain'
+                        fallback.style.webkitMaskImage = `url(${DEFAULT_ICON})`
+                        fallback.style.webkitMaskRepeat = 'no-repeat'
+                        fallback.style.webkitMaskPosition = 'center'
+                        fallback.style.webkitMaskSize = 'contain'
+                        parent.innerHTML = ''
+                        parent.appendChild(fallback)
+                      }
+                    }}
+                  />
+                ) : (
+                  <div className="flex size-full items-center justify-center bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 rounded-lg">
+                    <span className="text-[10px] font-black uppercase tracking-tighter">
+                      {getInitials(name)}
+                    </span>
+                  </div>
+                )
               ) : (
-                // Velocity / Quantum without logo — show initials
-                <div className="flex size-full items-center justify-center bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 rounded-lg">
-                  <span className="text-[10px] font-black uppercase tracking-tighter">
-                    {getInitials(name)}
-                  </span>
-                </div>
+                // Expanded WITH Horizontal Logo -> Display just the horizontal logo
+                <img
+                  src={horizontalLogo}
+                  alt={name}
+                  className="h-full w-auto object-contain"
+                />
               )}
             </div>
 
-            {/* IDENTITY TEXT — only rendered when expanded and non-Tercero branding */}
-            {!isCollapsed && !!showAgencyBranding && (
+            {/* IDENTITY TEXT — only rendered when expanded, non-Tercero branding, AND horizontal logo is NOT available */}
+            {!isCollapsed && !!showAgencyBranding && !horizontalLogo && (
               <div className="flex flex-col text-left overflow-hidden ml-2">
                 {isLoading ? (
                   <div className="space-y-2 w-24">
