@@ -5,13 +5,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Commands
 
 ```bash
-npm run dev      # Start Vite dev server with HMR
-npm run build    # Production build
-npm run lint     # Run ESLint
-npm run preview  # Preview production build locally
+npm run dev           # Start Vite dev server with HMR
+npm run build         # Production build
+npm run lint          # Run ESLint
+npm run preview       # Preview production build locally
+npm test              # Run tests once (vitest run)
+npm run test:watch    # Run tests in watch mode
 ```
 
-No test framework is configured.
+Tests use **Vitest** + jsdom. Test files live in `src/tests/` (e.g. `src/tests/campaigns/phase1.test.jsx`). Import test helpers from `src/tests/test-utils.jsx`.
 
 ## Architecture Overview
 
