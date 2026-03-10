@@ -34,7 +34,15 @@
       "Bash(git commit:*)",
       "Bash(npx eslint src/lib/cropImage.js src/components/HorizontalLogoCropDialog.jsx src/pages/settings/AgencySettings.jsx)",
       "Bash(npm install react-image-crop)",
-      "Bash(node -e \"const r = require\\(''d:/Tertiary/node_modules/@react-pdf/renderer''\\); console.log\\(Object.keys\\(r\\).filter\\(k => [''Svg'',''Path'',''Image''].includes\\(k\\)\\)\\)\")"
+      "Bash(node -e \"const r = require\\(''d:/Tertiary/node_modules/@react-pdf/renderer''\\); console.log\\(Object.keys\\(r\\).filter\\(k => [''Svg'',''Path'',''Image''].includes\\(k\\)\\)\\)\")",
+      "Bash(git check-ignore:*)",
+      "Read(//c/Users/chris_austin/.claude/**)",
+      "Read(//c/Users/chris_austin/.config/claude/**)",
+      "Bash(npx --version)",
+      "Bash(npx -y @supabase/mcp-server-supabase@latest --help)",
+      "Bash(npx clear-npx-cache:*)",
+      "Bash(npm cache:*)",
+      "mcp__supabase__list_projects"
     ]
   }
 }
