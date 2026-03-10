@@ -341,7 +341,7 @@ export default function Posts() {
                 key={tab.key}
                 value={tab.key}
                 className="
-                  relative rounded-none bg-transparent px-0 pb-3 pt-0 text-sm font-medium transition-none
+                  relative rounded-none bg-transparent px-0 pb-3 pt-0 text-[13px] font-medium transition-none
                   shadow-none border-b-2 border-transparent text-muted-foreground
                   flex-none w-fit gap-2
                   data-[state=active]:bg-transparent

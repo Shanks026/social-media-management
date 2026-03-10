@@ -81,6 +81,8 @@ Pages/Components → API functions (src/api/) → Supabase client → PostgreSQL
 
 **Teams (`/settings` → Team tab):** Agency owners invite teammates via a generated link (`/join/:token`). Invited members get full workspace access. The multi-tenant workspace model is the key architectural concept: all DB queries are scoped by `workspaceUserId` (the owner's UID), resolved via `get_my_agency_user_id()` SECURITY DEFINER SQL function. API module: `src/api/team.js`; public join page: `src/pages/JoinTeam.jsx`; team management UI: `src/pages/settings/TeamSettings.jsx`. Both `useTeamMembers()` and `usePendingInvites()` maintain Supabase Realtime subscriptions for live updates.
 
+**Proposals (`/proposals`):** Statuses: `draft` → `sent` → `viewed` → `accepted` / `declined`; `expired` computed by DB when `valid_until < now()`; `archived` is manual. Three surfaces: global list (`/proposals`), detail page (`/proposals/:proposalId`, full inline-edit with auto-save), and public review (`/proposal/:token`, unauthenticated). Per-client `ProposalTab` reused in Client Detail. Hybrid gating: all surfaces always visible; creation blocked at `proposals_limit` (5 for Trial/Ignite, null = unlimited for Velocity/Quantum) with `ProposalsUpgradePrompt`. API module: `src/api/proposals.js`. PDF export: `src/utils/downloadProposalPDF.jsx` + `src/components/proposals/ProposalPDF.jsx` (canvas-rasterized Tercero SVG logo when no agency branding). Key RPCs: `get_proposals_with_totals`, `generate_proposal_token`, `get_proposal_by_token` (public), `mark_proposal_viewed` (public), `accept_proposal` (public), `decline_proposal` (public).
+
 **Supabase Edge Functions (supabase/):** `send-approval-email`, `send-client-welcome`, `send-password-update-email`, `send-campaign-review-email`.
 
 ### Subscription & Feature Gating
@@ -101,6 +103,7 @@ The `data` object includes:
   - `calendar_export` — calendar PDF export button (Velocity+)
   - `documents_collections` — document collections grouping (Velocity+)
   - `campaigns` — campaigns feature (Velocity+)
+- `proposals_limit` — integer | null — 5 for Trial/Ignite; null = unlimited (Velocity/Quantum)
 
 **Gating pattern:** Read flags directly from `data` (e.g. `data?.finance_subscriptions`). For locked features (visible but disabled), show with a disabled state + lock icon + tooltip. For hidden features (like nav items), conditionally render them. See `.claude/features/feature-tiers-v5.md` for the full feature matrix.
 

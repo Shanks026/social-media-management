@@ -2,7 +2,7 @@
 
 **Last Updated**: March 2026
 **Status**: Implemented. All features documented here are live in the codebase.
-**Scope**: Full feature set — Core platform, Finance gating, Whitelabeling, Campaigns, Documents, Teams.
+**Scope**: Full feature set — Core platform, Finance gating, Whitelabeling, Campaigns, Documents, Teams, Proposals.
 
 ---
 
@@ -161,6 +161,23 @@
 
 > Campaigns are hidden on Trial/Ignite — the `/campaigns` route and the per-client Campaigns tab both render a `CampaignUpgradePrompt` component instead. Controlled by the `campaigns` boolean flag.
 
+### Proposals
+
+| Feature                                              | Ignite | Velocity | Quantum |
+| ---------------------------------------------------- | :----: | :------: | :-----: |
+| Global Proposals page (`/proposals`)                 |   ✓    |    ✓     |    ✓    |
+| Proposal detail page (`/proposals/:id`)              |   ✓    |    ✓     |    ✓    |
+| Create / edit proposals (title, scope, pricing)      |   ✓    |    ✓     |    ✓    |
+| Proposal PDF export                                  |   ✓    |    ✓     |    ✓    |
+| Share proposal link (public review page)             |   ✓    |    ✓     |    ✓    |
+| Client accept / decline flow                         |   ✓    |    ✓     |    ✓    |
+| Per-client Proposals tab in Client Detail            |   ✓    |    ✓     |    ✓    |
+| Prospect proposals (no linked client)                |   ✓    |    ✓     |    ✓    |
+| Proposal limit: 5 total (non-archived)               |   5    |    ✗     |    ✗    |
+| Unlimited proposals                                  |   ✗    |    ✓     |    ✓    |
+
+> Proposals use a **hybrid gating pattern**: the nav item, page, and per-client tab are always visible on all tiers. Gating triggers only at the point of creation — Trial/Ignite show a live counter ("3 of 5 used") and open `ProposalsUpgradePrompt` when the limit is reached. Velocity+ has no counter and no limit. Controlled by `proposals_limit` integer column (`5` for Trial/Ignite, `null` for Velocity/Quantum).
+
 ### Teams
 
 | Feature                                          | Ignite | Velocity | Quantum |
@@ -222,6 +239,7 @@
 | `finance_recurring_invoices` | boolean     | `false`     |   YES    | Recurring invoice templates gate (Velocity+)                   |
 | `documents_collections`      | boolean     | `false`     |   YES    | Document collections create/manage/move gate (Velocity+)       |
 | `campaigns`                  | boolean     | `false`     |   YES    | Campaigns feature gate — list, detail, review link (Velocity+) |
+| `proposals_limit`            | integer     | `5`         |   YES    | Max non-archived proposals (null = unlimited; 5 for Trial/Ignite) |
 
 > **Column naming**: `branding_agency_sidebar` controls agency logo display in both the sidebar AND public review page headers. `branding_powered_by` controls the sidebar footer text AND "Powered by Tercero" on public pages. These are the canonical column names.
 
@@ -246,6 +264,7 @@
 | `max_clients`            |      5      |      5      |      15      |      35      |
 | `max_storage_bytes`      | 21474836480 | 21474836480 | 107374182400 | 536870912000 |
 | `extra_client_price_inr` |     500     |     500     |     500      |     450      |
+| `proposals_limit`        |      5      |      5      |    null      |    null      |
 
 ### Seed SQL (run when a plan is created or changed)
 
@@ -261,7 +280,8 @@ UPDATE agency_subscriptions SET
   finance_subscriptions      = FALSE,
   calendar_export            = FALSE,
   documents_collections      = FALSE,
-  campaigns                  = FALSE
+  campaigns                  = FALSE,
+  proposals_limit            = 5
 WHERE user_id = $1;
 
 -- IGNITE
@@ -276,7 +296,8 @@ UPDATE agency_subscriptions SET
   finance_subscriptions      = FALSE,
   calendar_export            = FALSE,
   documents_collections      = FALSE,
-  campaigns                  = FALSE
+  campaigns                  = FALSE,
+  proposals_limit            = 5
 WHERE user_id = $1;
 
 -- VELOCITY
@@ -291,7 +312,8 @@ UPDATE agency_subscriptions SET
   finance_subscriptions      = TRUE,
   calendar_export            = TRUE,
   documents_collections      = TRUE,
-  campaigns                  = TRUE
+  campaigns                  = TRUE,
+  proposals_limit            = NULL
 WHERE user_id = $1;
 
 -- QUANTUM
@@ -306,7 +328,8 @@ UPDATE agency_subscriptions SET
   finance_subscriptions      = TRUE,
   calendar_export            = TRUE,
   documents_collections      = TRUE,
-  campaigns                  = TRUE
+  campaigns                  = TRUE,
+  proposals_limit            = NULL
 WHERE user_id = $1;
 ```
 
@@ -344,6 +367,7 @@ sub?.finance_subscriptions      // Expense subscriptions route (Velocity+)
 sub?.calendar_export            // Calendar PDF export button (Velocity+)
 sub?.documents_collections      // Document collections grouping (Velocity+)
 sub?.campaigns                  // Campaigns feature (Velocity+)
+sub?.proposals_limit            // integer | null — 5 for Trial/Ignite; null = unlimited (Velocity/Quantum)
 
 // Derived convenience flags (computed in the hook, not DB columns)
 sub?.basic_whitelabel_enabled   // branding_agency_sidebar && branding_powered_by  → Velocity
@@ -480,6 +504,12 @@ Both `PublicReview.jsx` and `CampaignReview.jsx` receive branding flags from the
 
 `/campaigns` and per-client Campaigns tab both render `CampaignUpgradePrompt` on Trial/Ignite. Fully functional on Velocity+. The Campaigns nav item in the sidebar is always shown — gating is handled inside the page/component.
 
+### Proposals
+
+`/proposals`, `/proposals/:proposalId`, and per-client Proposals tab are all visible on all tiers. Gating triggers only at creation time — `useCreateProposal` counts non-archived proposals workspace-wide before inserting; if `proposals_limit` is not null and `count >= limit`, throws a typed `ProposalLimitError`. UI-side: `ProposalsPage` and `ProposalTab` compute `atLimit` from live `useProposals()` data and open `ProposalsUpgradePrompt` instead of the create form. `ProposalTab` uses a second `useProposals()` call (without `clientId`) for the workspace-wide count so the counter is accurate even when scoped to a single client.
+
+Public review page (`/proposal/:token`) is fully unauthenticated. Branding logic (header logo chain + "Powered by Tercero" footer) mirrors the per-post and campaign review pages — `branding_agency_sidebar` controls the logo, `branding_powered_by` controls the footer. PDF export uses `@react-pdf/renderer` + `downloadProposalPDF.jsx` (same canvas-rasterization pattern as invoices for the Tercero SVG logo).
+
 ### Documents Collections
 
 "New Collection" buttons, collection cards, and "Move to Collection" menu items all locked on Ignite with lock icon + upgrade tooltip. Basic document operations (upload, view, download, delete) open on all tiers.
@@ -512,3 +542,4 @@ Expired trials redirect to `/billing` with banner: "Your trial has ended. Your d
 | v5.1    | March 2026 | Documents Phase 6 — `documents_collections` flag (Velocity+). Collections locked on Ignite. |
 | v5.2    | March 2026 | Campaigns Phase 1 complete — `campaigns` flag (Velocity+). Campaign review page with whitelabeling. |
 | v5.3    | March 2026 | Teams Phase 1 complete — ungated (all plans). `logo_horizontal_url` column added. `useSubscription` flat object pattern documented. Gating patterns and whitelabeling architecture added. Seed SQL updated with `campaigns` flag. |
+| v5.4    | March 2026 | Proposals Phase 1 complete — `proposals_limit` column (integer, default 5, null = unlimited). Hybrid gating pattern: always visible, limit enforced at creation. Counter shown on Trial/Ignite, hidden on Velocity+. Seed SQL updated. |
