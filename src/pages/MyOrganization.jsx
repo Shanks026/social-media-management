@@ -10,7 +10,12 @@ import ClientProfileView from '@/pages/clients/ClientProfileView'
 import { Button } from '@/components/ui/button'
 import CreateClientPage from '@/pages/clients/CreateClientPage'
 import { fetchInternalClient } from '@/api/clients'
-import { activateInternalWorkspace, fetchAgencySettings, completeFullAgencySetup, setupBrandingOnly } from '@/api/agency'
+import {
+  activateInternalWorkspace,
+  fetchAgencySettings,
+  completeFullAgencySetup,
+  setupBrandingOnly,
+} from '@/api/agency'
 
 // UI Components
 import {
@@ -49,7 +54,11 @@ export default function MyOrganization() {
   const [setupMode, setSetupMode] = useState('full') // 'full' or 'branding'
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false)
 
-  const { data: internalClient, isLoading: isClientLoading, isRefetching: isClientRefetching } = useQuery({
+  const {
+    data: internalClient,
+    isLoading: isClientLoading,
+    isRefetching: isClientRefetching,
+  } = useQuery({
     queryKey: ['internal-client', user?.id],
     queryFn: fetchInternalClient,
     enabled: !!user,
@@ -112,7 +121,9 @@ export default function MyOrganization() {
             if (refreshAgency) await refreshAgency()
 
             if (setupMode !== 'branding') {
-              await queryClient.invalidateQueries({ queryKey: ['internal-client'] })
+              await queryClient.invalidateQueries({
+                queryKey: ['internal-client'],
+              })
               queryClient.invalidateQueries({ queryKey: ['clients'] })
             }
             // Then close the modal to reveal the newly branded workspace/settings
@@ -138,7 +149,7 @@ export default function MyOrganization() {
 
   return (
     <div className="h-full bg-background overflow-y-auto selection:bg-primary/10">
-      <div className="px-8 pt-8 pb-20 space-y-8 max-w-[1440px] mx-auto">
+      <div className="px-8 pt-8 pb-20 space-y-8 max-w-[1400px] mx-auto">
         {/* PAGE HEADER */}
         <div className="space-y-1">
           <h1 className="text-3xl font-light tracking-tight text-foreground">
@@ -164,9 +175,9 @@ export default function MyOrganization() {
                       <span className="font-normal italic">Workspace.</span>
                     </h2>
                     <p className="text-muted-foreground text-sm font-light leading-relaxed max-w-xl">
-                      Your agency identity is verified. Activate your operational
-                      workspace to unlock a dedicated environment for your
-                      brand's social strategy and creative workflows.
+                      Your agency identity is verified. Activate your
+                      operational workspace to unlock a dedicated environment
+                      for your brand's social strategy and creative workflows.
                     </p>
                   </div>
 
@@ -296,7 +307,6 @@ export default function MyOrganization() {
           </div>
         </DialogContent>
       </Dialog>
-
     </div>
   )
 }

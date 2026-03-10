@@ -62,7 +62,11 @@ const STATUS_LEGEND = [
   { id: 'NEEDS_REVISION', label: 'Needs Revision', color: 'bg-pink-600' },
   { id: 'SCHEDULED', label: 'Scheduled', color: 'bg-purple-600' },
   { id: 'PUBLISHED', label: 'Published', color: 'bg-emerald-600' },
-  { id: 'PARTIALLY_PUBLISHED', label: 'Partially Published', color: 'bg-lime-600' },
+  {
+    id: 'PARTIALLY_PUBLISHED',
+    label: 'Partially Published',
+    color: 'bg-lime-600',
+  },
 ]
 
 const PLATFORMS = [
@@ -163,33 +167,46 @@ export default function ContentCalendar({
       return matchesSearch && matchesStatus && matchesClient && matchesPlatform
     })
 
-    const filteredMeetings = meetings.filter((meeting) => {
-      const matchesSearch = meeting.title
-        ?.toLowerCase()
-        .includes(searchQuery.toLowerCase())
-      
-      const matchesClient = clientId
-        ? String(meeting.client_id) === String(clientId)
-        : clientFilter === 'all' || meeting.client_name === clientFilter
+    const filteredMeetings = meetings
+      .filter((meeting) => {
+        const matchesSearch = meeting.title
+          ?.toLowerCase()
+          .includes(searchQuery.toLowerCase())
 
-      // Meetings don't have these filters directly, but behave as 'SCHEDULED' and 'all' platforms
-      const matchesStatus = statusFilter === 'all' || statusFilter === 'SCHEDULED'
-      const matchesPlatform = platformFilter === 'all'
-      
-      return matchesSearch && matchesClient && matchesStatus && matchesPlatform
-    }).map(m => ({
-      ...m,
-      version_id: m.id,
-      target_date: m.datetime,
-      status: 'SCHEDULED', // Render like a scheduled post
-      isMeeting: true,
-      platforms: ['meeting'], // Give a pseudo platform
-      client_name: m.client_name || 'Unknown Client',
-      client_logo_url: null, // Since logo isn't fetched, default to null for fallback
-    }))
+        const matchesClient = clientId
+          ? String(meeting.client_id) === String(clientId)
+          : clientFilter === 'all' || meeting.client_name === clientFilter
+
+        // Meetings don't have these filters directly, but behave as 'SCHEDULED' and 'all' platforms
+        const matchesStatus =
+          statusFilter === 'all' || statusFilter === 'SCHEDULED'
+        const matchesPlatform = platformFilter === 'all'
+
+        return (
+          matchesSearch && matchesClient && matchesStatus && matchesPlatform
+        )
+      })
+      .map((m) => ({
+        ...m,
+        version_id: m.id,
+        target_date: m.datetime,
+        status: 'SCHEDULED', // Render like a scheduled post
+        isMeeting: true,
+        platforms: ['meeting'], // Give a pseudo platform
+        client_name: m.client_name || 'Unknown Client',
+        client_logo_url: null, // Since logo isn't fetched, default to null for fallback
+      }))
 
     return [...regularPosts, ...filteredMeetings]
-  }, [posts, meetings, searchQuery, statusFilter, clientFilter, platformFilter, clientId])
+  }, [
+    posts,
+    meetings,
+    searchQuery,
+    statusFilter,
+    clientFilter,
+    platformFilter,
+    clientId,
+  ])
 
   const postsByDate = useMemo(() => {
     return filteredPosts.reduce((acc, post) => {
@@ -247,7 +264,7 @@ export default function ContentCalendar({
     <div
       className={cn(
         'mx-auto space-y-6 animate-in fade-in duration-500',
-        !hideHeader ? 'p-8 max-w-[1440px]' : 'w-full',
+        !hideHeader ? 'p-8 max-w-[1400px]' : 'w-full',
       )}
     >
       <div className="flex items-center justify-between">
@@ -261,7 +278,6 @@ export default function ContentCalendar({
         </div>
 
         <div className="flex items-center gap-4">
-         
           <div className="flex items-center border rounded-lg overflow-hidden bg-background shadow-sm">
             <Button
               variant="ghost"
@@ -316,8 +332,7 @@ export default function ContentCalendar({
         </div>
 
         <div className="flex items-center gap-2">
-
-           {(searchQuery ||
+          {(searchQuery ||
             statusFilter !== 'all' ||
             (!clientId && clientFilter !== 'all') ||
             platformFilter !== 'all') && (
@@ -378,8 +393,14 @@ export default function ContentCalendar({
           </Select>
 
           {!isInternalClient && (
-            <CreateMeetingDialog defaultClientId={clientId} lockClient={!!clientId}>
-              <Button size="sm" className="h-9 px-3 text-xs font-semibold gap-2 hidden md:flex">
+            <CreateMeetingDialog
+              defaultClientId={clientId}
+              lockClient={!!clientId}
+            >
+              <Button
+                size="sm"
+                className="h-9 px-3 text-xs font-semibold gap-2 hidden md:flex"
+              >
                 <Plus size={14} /> Schedule Meeting
               </Button>
             </CreateMeetingDialog>
@@ -409,7 +430,6 @@ export default function ContentCalendar({
               <Lock size={12} />
             </Button>
           )}
-
         </div>
       </div>
 

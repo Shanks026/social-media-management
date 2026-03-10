@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/context/AuthContext'
+import { resolveWorkspace } from '@/lib/workspace'
 
 export const expenseKeys = {
   all: ['expenses'],
@@ -10,12 +11,12 @@ export const expenseKeys = {
 
 // --- 1. FETCH ALL EXPENSES ---
 export function useExpenses(filters = {}, options = {}) {
-  const { user } = useAuth()
+  const { workspaceUserId } = useAuth()
 
   return useQuery({
     queryKey: expenseKeys.list(filters),
     queryFn: async () => {
-      if (!user) throw new Error('User not authenticated')
+      if (!workspaceUserId) throw new Error('User not authenticated')
 
       let query = supabase
         .from('expenses')
@@ -49,40 +50,40 @@ export function useExpenses(filters = {}, options = {}) {
       if (error) throw error
       return data
     },
-    enabled: !!user,
+    enabled: !!workspaceUserId,
     ...options,
   })
 }
 
 // --- 2. FETCH BURN RATE ---
 export function useBurnRate() {
-  const { user } = useAuth()
+  const { workspaceUserId } = useAuth()
 
   return useQuery({
     queryKey: expenseKeys.burnRate(),
     queryFn: async () => {
-      if (!user) return 0
+      if (!workspaceUserId) return 0
 
       const { data, error } = await supabase
         .from('view_monthly_burn_rate')
         .select('total_monthly_burn')
-        .eq('user_id', user.id)
+        .eq('user_id', workspaceUserId)
         .maybeSingle()
 
       if (error) throw error
       return data?.total_monthly_burn || 0
     },
-    enabled: !!user,
+    enabled: !!workspaceUserId,
   })
 }
 
 // --- 3. CREATE EXPENSE ---
 export function useCreateExpense() {
   const queryClient = useQueryClient()
-  const { user } = useAuth()
 
   return useMutation({
     mutationFn: async (formData) => {
+      const { workspaceUserId } = await resolveWorkspace()
       const sanitizedClientId =
         !formData.assigned_client_id ||
         formData.assigned_client_id === '' ||
@@ -91,7 +92,7 @@ export function useCreateExpense() {
           : formData.assigned_client_id
 
       const payload = {
-        user_id: user.id,
+        user_id: workspaceUserId,
         name: formData.name,
         cost: parseFloat(formData.cost),
         billing_cycle: formData.billing_cycle,

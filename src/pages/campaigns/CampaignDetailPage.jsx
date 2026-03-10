@@ -372,7 +372,7 @@ export default function CampaignDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="px-8 pt-8 pb-20 space-y-8 max-w-[1440px] mx-auto animate-pulse">
+      <div className="px-8 pt-8 pb-20 space-y-8 max-w-[1400px] mx-auto animate-pulse">
         <div className="flex items-end justify-between">
           <div className="space-y-2">
             <Skeleton className="h-9 w-64 rounded-md" />
@@ -403,7 +403,7 @@ export default function CampaignDetailPage() {
 
   return (
     <div className="min-h-full bg-background selection:bg-primary/10">
-      <div className="px-8 pt-8 pb-20 space-y-4 max-w-[1440px] mx-auto">
+      <div className="px-8 pt-8 pb-20 space-y-4 max-w-[1400px] mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between gap-4 mb-8">
           <div className="flex items-center gap-3 min-w-0">
@@ -1138,7 +1138,8 @@ export default function CampaignDetailPage() {
             <DialogHeader>
               <DialogTitle>Campaign Review Link</DialogTitle>
               <DialogDescription>
-                Copy the link below or send it directly via email to your client for approval.
+                Copy the link below or send it directly via email to your client
+                for approval.
               </DialogDescription>
             </DialogHeader>
             <div className="flex gap-2">

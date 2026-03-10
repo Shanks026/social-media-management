@@ -27,6 +27,7 @@ import DocumentsPage from './pages/documents/DocumentsPage'
 import CampaignsPage from './pages/campaigns/CampaignsPage'
 import CampaignDetailPage from './pages/campaigns/CampaignDetailPage'
 import CampaignReview from './pages/campaigns/CampaignReview'
+import JoinTeam from './pages/JoinTeam'
 
 
 function SubscriptionsRoute() {
@@ -43,6 +44,7 @@ function AppRoutes() {
     <Routes>
       <Route path="/review/:token" element={<PublicReview />} />
       <Route path="/campaign-review/:token" element={<CampaignReview />} />
+      <Route path="/join/:token" element={<JoinTeam />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/signup" element={<SignupPage />} />
 

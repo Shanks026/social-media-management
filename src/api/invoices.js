@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/context/AuthContext'
+import { resolveWorkspace } from '@/lib/workspace'
 import { transactionKeys } from '@/api/transactions'
 
 // --- KEYS FOR CACHING ---
@@ -19,14 +20,14 @@ export const recurringInvoiceKeys = {
 
 // --- 1. FETCH INVOICES (List) ---
 export function useInvoices(filters = {}, options = {}) {
-  const { user } = useAuth()
+  const { workspaceUserId } = useAuth()
   const { clientId, status } = filters
 
   return useQuery({
     ...options,
     queryKey: invoiceKeys.list(filters),
     queryFn: async () => {
-      if (!user) throw new Error('User not authenticated')
+      if (!workspaceUserId) throw new Error('User not authenticated')
 
       let query = supabase
         .from('invoices')
@@ -56,18 +57,18 @@ export function useInvoices(filters = {}, options = {}) {
       if (error) throw error
       return data
     },
-    enabled: !!user,
+    enabled: !!workspaceUserId,
   })
 }
 
 // --- 2. FETCH SINGLE INVOICE WITH ITEMS ---
 export function useInvoice(id) {
-  const { user } = useAuth()
+  const { workspaceUserId } = useAuth()
 
   return useQuery({
     queryKey: invoiceKeys.detail(id),
     queryFn: async () => {
-      if (!user) throw new Error('User not authenticated')
+      if (!workspaceUserId) throw new Error('User not authenticated')
 
       // Fetch invoice with client
       const { data: invoice, error: invoiceError } = await supabase
@@ -100,23 +101,23 @@ export function useInvoice(id) {
 
       return { ...invoice, items: items || [] }
     },
-    enabled: !!user && !!id,
+    enabled: !!workspaceUserId && !!id,
   })
 }
 
 // --- 3. FETCH NEXT INVOICE NUMBER ---
 export function useNextInvoiceNumber() {
-  const { user } = useAuth()
+  const { workspaceUserId } = useAuth()
 
   return useQuery({
     queryKey: invoiceKeys.nextNumber(),
     queryFn: async () => {
-      if (!user) throw new Error('User not authenticated')
+      if (!workspaceUserId) throw new Error('User not authenticated')
 
       const { data, error } = await supabase
         .from('agency_subscriptions')
         .select('next_invoice_number')
-        .eq('user_id', user.id)
+        .eq('user_id', workspaceUserId)
         .single()
 
       if (error) throw error
@@ -128,24 +129,24 @@ export function useNextInvoiceNumber() {
         formatted: `INV-${year}-${String(num).padStart(3, '0')}`,
       }
     },
-    enabled: !!user,
+    enabled: !!workspaceUserId,
   })
 }
 
 // --- 4. CREATE INVOICE ---
 export function useCreateInvoice() {
   const queryClient = useQueryClient()
-  const { user } = useAuth()
+  const { workspaceUserId } = useAuth()
 
   return useMutation({
     mutationFn: async ({ invoice, items }) => {
-      if (!user) throw new Error('User not authenticated')
+      if (!workspaceUserId) throw new Error('User not authenticated')
 
       // 1. Get and format invoice number
       const { data: agencySub, error: subError } = await supabase
         .from('agency_subscriptions')
         .select('next_invoice_number')
-        .eq('user_id', user.id)
+        .eq('user_id', workspaceUserId)
         .single()
 
       if (subError) throw subError
@@ -164,7 +165,7 @@ export function useCreateInvoice() {
       const { data: newInvoice, error: invoiceError } = await supabase
         .from('invoices')
         .insert({
-          user_id: user.id,
+          user_id: workspaceUserId,
           client_id: invoice.client_id,
           invoice_number: invoiceNumber,
           status: 'DRAFT',
@@ -205,7 +206,7 @@ export function useCreateInvoice() {
       const { error: updateError } = await supabase
         .from('agency_subscriptions')
         .update({ next_invoice_number: num + 1 })
-        .eq('user_id', user.id)
+        .eq('user_id', workspaceUserId)
 
       if (updateError) throw updateError
 
@@ -220,11 +221,11 @@ export function useCreateInvoice() {
 // --- 5. UPDATE INVOICE ---
 export function useUpdateInvoice() {
   const queryClient = useQueryClient()
-  const { user } = useAuth()
+  const { workspaceUserId } = useAuth()
 
   return useMutation({
     mutationFn: async ({ id, updates }) => {
-      if (!user) throw new Error('User not authenticated')
+      if (!workspaceUserId) throw new Error('User not authenticated')
 
       const payload = {}
       if (updates.status !== undefined) payload.status = updates.status
@@ -298,7 +299,7 @@ export function useUpdateInvoice() {
       // 3. Auto-create INCOME transaction when marking as PAID
       if (updates.status === 'PAID') {
         const { error: txError } = await supabase.from('transactions').insert({
-          user_id: user.id,
+          user_id: workspaceUserId,
           client_id: updatedInvoice.client_id,
           invoice_id: updatedInvoice.id,
           type: 'INCOME',
@@ -351,14 +352,14 @@ export function useDeleteInvoice() {
 
 // --- 7. FETCH RECURRING INVOICES ---
 export function useRecurringInvoices(filters = {}, options = {}) {
-  const { user } = useAuth()
+  const { workspaceUserId } = useAuth()
   const { clientId } = filters
 
   return useQuery({
     ...options,
     queryKey: recurringInvoiceKeys.list(filters),
     queryFn: async () => {
-      if (!user) throw new Error('User not authenticated')
+      if (!workspaceUserId) throw new Error('User not authenticated')
 
       let query = supabase
         .from('recurring_invoices')
@@ -376,22 +377,22 @@ export function useRecurringInvoices(filters = {}, options = {}) {
       if (error) throw error
       return data
     },
-    enabled: !!user,
+    enabled: !!workspaceUserId,
   })
 }
 
 // --- 8. CREATE RECURRING INVOICE ---
 export function useCreateRecurringInvoice() {
   const queryClient = useQueryClient()
-  const { user } = useAuth()
+  const { workspaceUserId } = useAuth()
 
   return useMutation({
     mutationFn: async (payload) => {
-      if (!user) throw new Error('User not authenticated')
+      if (!workspaceUserId) throw new Error('User not authenticated')
 
       const { data, error } = await supabase
         .from('recurring_invoices')
-        .insert({ ...payload, user_id: user.id })
+        .insert({ ...payload, user_id: workspaceUserId })
         .select()
         .single()
 
@@ -407,11 +408,9 @@ export function useCreateRecurringInvoice() {
 // --- 9. UPDATE RECURRING INVOICE ---
 export function useUpdateRecurringInvoice() {
   const queryClient = useQueryClient()
-  const { user } = useAuth()
 
   return useMutation({
     mutationFn: async ({ id, updates }) => {
-      if (!user) throw new Error('User not authenticated')
 
       const { data, error } = await supabase
         .from('recurring_invoices')
@@ -432,12 +431,9 @@ export function useUpdateRecurringInvoice() {
 // --- 10. DELETE RECURRING INVOICE ---
 export function useDeleteRecurringInvoice() {
   const queryClient = useQueryClient()
-  const { user } = useAuth()
 
   return useMutation({
     mutationFn: async (id) => {
-      if (!user) throw new Error('User not authenticated')
-
       const { error } = await supabase
         .from('recurring_invoices')
         .delete()
@@ -455,18 +451,18 @@ export function useDeleteRecurringInvoice() {
 // --- 11. GENERATE INVOICE FROM RECURRING TEMPLATE ---
 export function useGenerateFromRecurring() {
   const queryClient = useQueryClient()
-  const { user } = useAuth()
+  const { workspaceUserId } = useAuth()
 
   return useMutation({
     mutationFn: async (templateId) => {
-      if (!user) throw new Error('User not authenticated')
+      if (!workspaceUserId) throw new Error('User not authenticated')
 
       // Call the atomic RPC to generate the invoice
       const { data: invoiceId, error: rpcError } = await supabase.rpc(
         'generate_invoice_from_template',
         {
           p_template_id: templateId,
-          p_user_id: user.id,
+          p_user_id: workspaceUserId,
         },
       )
 

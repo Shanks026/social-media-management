@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/context/AuthContext'
+import { resolveWorkspace } from '@/lib/workspace'
 
 // ─── Query Keys ────────────────────────────────────────────────────────────────
 
@@ -18,7 +19,7 @@ export const documentKeys = {
  * When no clientId is provided, returns all documents for the user.
  */
 export function useDocuments({ clientId, category, status } = {}) {
-  const { user } = useAuth()
+  const { workspaceUserId } = useAuth()
 
   return useQuery({
     queryKey: documentKeys.list({ clientId, category, status }),
@@ -26,7 +27,7 @@ export function useDocuments({ clientId, category, status } = {}) {
       let query = supabase
         .from('client_documents')
         .select('*, clients(name, is_internal, logo_url)')
-        .eq('user_id', user.id)
+        .eq('user_id', workspaceUserId)
         .order('created_at', { ascending: false })
 
       if (clientId) query = query.eq('client_id', clientId)
@@ -37,7 +38,7 @@ export function useDocuments({ clientId, category, status } = {}) {
       if (error) throw error
       return data
     },
-    enabled: !!user?.id,
+    enabled: !!workspaceUserId,
   })
 }
 
@@ -45,7 +46,7 @@ export function useDocuments({ clientId, category, status } = {}) {
  * Fetch a single document by ID.
  */
 export function useDocument(id) {
-  const { user } = useAuth()
+  const { workspaceUserId } = useAuth()
 
   return useQuery({
     queryKey: documentKeys.detail(id),
@@ -54,12 +55,12 @@ export function useDocument(id) {
         .from('client_documents')
         .select('*, clients(name, is_internal, logo_url)')
         .eq('id', id)
-        .eq('user_id', user.id)
+        .eq('user_id', workspaceUserId)
         .single()
       if (error) throw error
       return data
     },
-    enabled: !!id && !!user?.id,
+    enabled: !!id && !!workspaceUserId,
   })
 }
 
@@ -92,10 +93,11 @@ function sanitizeFilename(name) {
     || 'file'                          // fallback if everything was stripped
 }
 
-export async function uploadDocument({ userId, clientId, file, displayName, category, collectionId }) {
+export async function uploadDocument({ clientId, file, displayName, category, collectionId }) {
+  const { workspaceUserId } = await resolveWorkspace()
   const documentId = crypto.randomUUID()
   const safeFilename = sanitizeFilename(file.name)
-  const storagePath = `${userId}/${clientId}/${documentId}/${safeFilename}`
+  const storagePath = `${workspaceUserId}/${clientId}/${documentId}/${safeFilename}`
 
   // 1. Upload to storage
   const { error: uploadError } = await supabase.storage
@@ -107,7 +109,7 @@ export async function uploadDocument({ userId, clientId, file, displayName, cate
   const { data, error: insertError } = await supabase
     .from('client_documents')
     .insert({
-      user_id: userId,
+      user_id: workspaceUserId,
       client_id: clientId,
       display_name: displayName,
       original_filename: file.name,
@@ -128,7 +130,7 @@ export async function uploadDocument({ userId, clientId, file, displayName, cate
 
   // 3. Update agency storage usage
   await supabase.rpc('increment_storage_used', {
-    p_user_id: userId,
+    p_user_id: workspaceUserId,
     p_bytes: file.size,
   }).throwOnError()
 
@@ -230,7 +232,7 @@ export async function deleteDocument({ id, storagePath, fileSizeBytes, userId })
  * Includes a clients join so callers can group by client name.
  */
 export function useAllCollections() {
-  const { user } = useAuth()
+  const { workspaceUserId } = useAuth()
 
   return useQuery({
     queryKey: documentKeys.allCollections(),
@@ -238,12 +240,12 @@ export function useAllCollections() {
       const { data, error } = await supabase
         .from('document_collections')
         .select('*, clients(id, name, logo_url)')
-        .eq('user_id', user.id)
+        .eq('user_id', workspaceUserId)
         .order('created_at', { ascending: true })
       if (error) throw error
       return data
     },
-    enabled: !!user?.id,
+    enabled: !!workspaceUserId,
   })
 }
 
@@ -251,7 +253,7 @@ export function useAllCollections() {
  * Fetch all collections for a specific client.
  */
 export function useCollections(clientId) {
-  const { user } = useAuth()
+  const { workspaceUserId } = useAuth()
 
   return useQuery({
     queryKey: documentKeys.collections(clientId),
@@ -260,23 +262,24 @@ export function useCollections(clientId) {
         .from('document_collections')
         .select('*')
         .eq('client_id', clientId)
-        .eq('user_id', user.id)
+        .eq('user_id', workspaceUserId)
         .order('created_at', { ascending: true })
       if (error) throw error
       return data
     },
-    enabled: !!clientId && !!user?.id,
+    enabled: !!clientId && !!workspaceUserId,
   })
 }
 
 /**
  * Create a new collection for a client.
  */
-export async function createCollection({ userId, clientId, name, description }) {
+export async function createCollection({ clientId, name, description }) {
+  const { workspaceUserId } = await resolveWorkspace()
   const { data, error } = await supabase
     .from('document_collections')
     .insert({
-      user_id: userId,
+      user_id: workspaceUserId,
       client_id: clientId,
       name,
       description: description || null,

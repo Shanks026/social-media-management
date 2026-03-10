@@ -190,7 +190,7 @@ export default function PostContent({
   const formatDate = (date) => (date ? format(new Date(date), 'dd MMM, p') : '')
 
   return (
-    <div className="max-w-[1440px] mx-auto flex-1 p-8 space-y-6 min-w-0">
+    <div className="max-w-[1400px] mx-auto flex-1 p-8 space-y-6 min-w-0">
       {/* Revision Banner */}
       {post.status === 'NEEDS_REVISION' && (
         <div className="flex items-start gap-3 p-4 rounded-xl border border-amber-200 bg-amber-50/50 dark:bg-amber-500/5 dark:border-amber-500/20 max-w-2xl">
@@ -246,8 +246,8 @@ export default function PostContent({
               </span>
 
               {/* Single-date display — only when no per-platform schedules */}
-              {!post.platform_schedules && (
-                post.status === 'PUBLISHED' ? (
+              {!post.platform_schedules &&
+                (post.status === 'PUBLISHED' ? (
                   <div className="flex items-center gap-2 text-sm">
                     <div className="h-4 w-px bg-border hidden sm:block" />
                     <CheckCircle2 size={14} className="text-emerald-600" />
@@ -279,8 +279,7 @@ export default function PostContent({
                       </Badge>
                     </div>
                   )
-                )
-              )}
+                ))}
 
               {/* Per-platform: published state shows overall published badge */}
               {post.platform_schedules && post.status === 'PUBLISHED' && (
@@ -365,10 +364,9 @@ export default function PostContent({
 
           {/* 1. PRIMARY ACTION (Stand-alone for maximum focus) */}
           <div className="hidden sm:flex items-center gap-2">
-
             {/* DRAFT — internal: Approve & Schedule | external: Send for Approval */}
-            {post.status === 'DRAFT' && (
-              isInternal ? (
+            {post.status === 'DRAFT' &&
+              (isInternal ? (
                 <Button
                   disabled={!canApproveAndSchedule || isApproveSchedulePending}
                   onClick={onApproveAndSchedule}
@@ -394,8 +392,7 @@ export default function PostContent({
                   )}
                   Send for Approval
                 </Button>
-              )
-            )}
+              ))}
 
             {/* SCHEDULED — both get Publish Now (unless per-platform); internal also gets Create New Version */}
             {post.status === 'SCHEDULED' && (
@@ -480,23 +477,24 @@ export default function PostContent({
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
               <div className="sm:hidden">
-                {post.status === 'DRAFT' && (
-                  isInternal ? (
+                {post.status === 'DRAFT' &&
+                  (isInternal ? (
                     <DropdownMenuItem
                       onClick={onApproveAndSchedule}
                       disabled={!canApproveAndSchedule}
                     >
-                      <CheckCircle2 size={14} className="mr-2" /> Approve &amp; Schedule
+                      <CheckCircle2 size={14} className="mr-2" /> Approve &amp;
+                      Schedule
                     </DropdownMenuItem>
                   ) : (
                     <DropdownMenuItem
                       onClick={onSendForApproval}
                       disabled={!canSendForApproval}
                     >
-                      <CheckCircle2 size={14} className="mr-2" /> Send for Approval
+                      <CheckCircle2 size={14} className="mr-2" /> Send for
+                      Approval
                     </DropdownMenuItem>
-                  )
-                )}
+                  ))}
                 {post.status === 'SCHEDULED' && (
                   <>
                     {!post.platform_schedules && (

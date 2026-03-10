@@ -1,22 +1,23 @@
 import { supabase } from '@/lib/supabase'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useAuth } from '@/context/AuthContext'
+import { resolveWorkspace } from '@/lib/workspace'
 
 // ─── Read ─────────────────────────────────────────────────────────────────────
 
 export function useCampaigns({ clientId } = {}) {
+  const { workspaceUserId } = useAuth()
   return useQuery({
     queryKey: ['campaigns', 'list', { clientId: clientId ?? null }],
     queryFn: async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
       const { data, error } = await supabase.rpc(
         'get_campaigns_with_post_summary',
-        { p_user_id: user.id, p_client_id: clientId ?? null },
+        { p_user_id: workspaceUserId, p_client_id: clientId ?? null },
       )
       if (error) throw error
       return data ?? []
     },
+    enabled: !!workspaceUserId,
     staleTime: 30000,
     retry: 1,
   })
@@ -84,12 +85,10 @@ export function useCreateCampaign() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (payload) => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
+      const { workspaceUserId } = await resolveWorkspace()
       const { data, error } = await supabase
         .from('campaigns')
-        .insert({ ...payload, user_id: user.id })
+        .insert({ ...payload, user_id: workspaceUserId })
         .select()
         .single()
       if (error) throw error

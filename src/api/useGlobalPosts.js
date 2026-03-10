@@ -127,12 +127,12 @@ function normalizePosts(data) {
  * @param {Object} filters - { search, status, clientId, platform, dateRange }
  */
 export function useGlobalPosts(filters = {}) {
-  const { user } = useAuth()
+  const { workspaceUserId } = useAuth()
 
   return useQuery({
-    queryKey: ['global-posts', user?.id, filters],
+    queryKey: ['global-posts', workspaceUserId, filters],
     queryFn: async () => {
-      const { data, error } = await buildPostsQuery(user.id, filters)
+      const { data, error } = await buildPostsQuery(workspaceUserId, filters)
       if (error) throw error
       let posts = normalizePosts(data)
       if (filters.status === 'PARTIALLY_PUBLISHED') {
@@ -140,7 +140,7 @@ export function useGlobalPosts(filters = {}) {
       }
       return posts
     },
-    enabled: !!user?.id,
+    enabled: !!workspaceUserId,
     staleTime: 1000 * 30, // 30s
   })
 }
@@ -150,10 +150,10 @@ export function useGlobalPosts(filters = {}) {
  * Returns { all, DRAFT, SCHEDULED, PUBLISHED, FAILED }
  */
 export function usePostCounts() {
-  const { user } = useAuth()
+  const { workspaceUserId } = useAuth()
 
   return useQuery({
-    queryKey: ['global-post-counts', user?.id],
+    queryKey: ['global-post-counts', workspaceUserId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('posts')
@@ -164,7 +164,7 @@ export function usePostCounts() {
           post_versions!fk_current_version ( status, platform_schedules )
         `,
         )
-        .eq('clients.user_id', user.id)
+        .eq('clients.user_id', workspaceUserId)
 
       if (error) throw error
 
@@ -186,7 +186,7 @@ export function usePostCounts() {
       }
       return counts
     },
-    enabled: !!user?.id,
+    enabled: !!workspaceUserId,
     staleTime: 1000 * 30,
   })
 }

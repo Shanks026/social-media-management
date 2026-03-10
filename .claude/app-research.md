@@ -1,7 +1,7 @@
 # Tercero — Full Application Research Document
 
 > **Purpose**: Comprehensive product/feature reference for building a landing page for Tercero.
-> **Status**: Updated March 10, 2026 — reflects live codebase including corrected post status values (PENDING_APPROVAL/NEEDS_REVISION/PUBLISHED), horizontal logo branding, derived whitelabel flags, campaigns full implementation, and accurate share token architecture.
+> **Status**: Updated March 10, 2026 — reflects live codebase including corrected post status values (PENDING_APPROVAL/NEEDS_REVISION/PUBLISHED), horizontal logo branding, derived whitelabel flags, campaigns full implementation, accurate share token architecture, and Teams Phase 1 (agency_members, agency_invites, workspaceUserId, /join/:token).
 
 ---
 
@@ -40,6 +40,7 @@ Tercero is a **social media agency management SaaS** — an all-in-one operation
 | Billing | `/billing` | Agency's own subscription plan |
 | Public Review | `/review/:token` | Per-post client content approval (no login required) |
 | Campaign Review | `/campaign-review/:token` | Bulk campaign approval for clients (no login required) |
+| Join Team | `/join/:token` | Teammate signup via invite link (no login required) |
 
 ### Tech Stack (for developer-facing messaging)
 - React 19 + Vite SPA
@@ -533,7 +534,9 @@ Fully unauthenticated. The single link lets the client review and action all `PE
 
 ### Client Data Model
 ```
-Agency (user_id)
+Agency (user_id / workspaceUserId)
+├── agency_members — workspace participants (admin = owner row; member = invited teammate)
+│   └── agency_invites — pending invite tokens (7-day expiry; accepted_at set on join)
 ├── Internal Account (is_internal = true) — agency's own workspace
 └── Real Clients (is_internal = false)
     ├── Posts
@@ -552,6 +555,8 @@ Agency (user_id)
     └── Transactions (auto-created on invoice paid)
 ```
 
+**Team access resolution:** All tables scoped by `user_id` use the `get_my_agency_user_id()` SECURITY DEFINER helper in RLS policies. This returns the caller's own UID if they are a workspace owner, or their `agency_user_id` from `agency_members` if they are a team member — making all data transparently accessible to the full team.
+
 ### Key Database RPCs (complex operations)
 | RPC | Auth | What it does |
 |-----|------|-------------|
@@ -566,6 +571,9 @@ Agency (user_id)
 | `get_campaign_analytics` | Authenticated | Per-campaign KPIs: post counts, on-time rate, platform distribution, avg approval days, budget vs invoiced |
 | `get_campaign_by_review_token` | Public (SECURITY DEFINER) | Returns campaign + all PENDING_APPROVAL posts with per-post tokens via LATERAL JOIN on share_tokens |
 | `increment_storage_used` / `decrement_storage_used` | Authenticated | Keeps `agency_subscriptions.current_storage_used` accurate on document upload/delete |
+| `get_team_members(p_agency_user_id)` | SECURITY DEFINER | Returns active workspace members with full_name, email, functional_role, system_role, joined_at, avatar_url (from auth.users raw_user_meta_data) |
+| `get_invite_by_token(p_token)` | Public, SECURITY DEFINER | Validates invite token; returns valid flag, agency_name, logo_url, logo_horizontal_url |
+| `join_team(p_token, p_first_name, p_last_name, p_functional_role)` | Public, SECURITY DEFINER | Validates token, inserts agency_members row, marks invite as accepted |
 
 ### Database Views (read-only aggregations)
 | View | Purpose |
@@ -706,7 +714,7 @@ Key Files for Understanding the App:
 src/App.jsx                         — Route definitions
 src/AppShell.jsx                    — Layout wrapper
 src/main.jsx                        — App entry + providers
-src/context/AuthContext.jsx         — Auth state
+src/context/AuthContext.jsx         — Auth state + workspace resolution (workspaceUserId, userRole resolved from agency_members on login; workspaceUserId = owner UID for admins, owner's UID for team members)
 src/api/clients.js                  — Client CRUD + RPC
 src/api/posts.js                    — Post CRUD + versioning RPCs
 src/api/meetings.js                 — Meeting CRUD
@@ -714,7 +722,8 @@ src/api/notes.js                    — Notes CRUD
 src/api/invoices.js                 — Invoice lifecycle
 src/api/transactions.js             — Ledger
 src/api/expenses.js                 — Subscriptions
-src/api/useSubscription.js          — Plan/branding hook (returns flat data object with boolean flags; no can.* methods)
+src/api/useSubscription.js          — Plan/branding hook (returns flat data object with boolean flags; no can.* methods); uses workspaceUserId from AuthContext so team members query the owner's subscription row
+src/api/team.js                     — Teams: useTeamMembers, usePendingInvites, useGenerateInvite, useRevokeInvite, useRemoveMember, fetchInviteByToken (public), joinTeam (public)
 src/api/useGlobalPosts.js           — Filtered post list (supports campaignId filter)
 src/api/campaigns.js                — All campaign hooks and mutations (useCampaigns, useCampaign, useCampaignAnalytics, useCampaignReview, useCreateCampaign, useUpdateCampaign, useDeleteCampaign, useAssignPostsToCampaign, useRegenerateCampaignReviewToken, useMarkReviewSent, submitCampaignPostReview, fetchActiveCampaignsByClient, fetchUnlinkedPostsByClient)
 src/api/documents.js                — Document CRUD + signed URL generation
@@ -740,6 +749,8 @@ src/pages/finance/EditInvoiceDialog.jsx     — Invoice edit/view (live preview)
 src/pages/MeetingsPage.jsx          — Meetings
 src/pages/NotesAndReminders.jsx     — Notes
 src/pages/PublicReview.jsx          — Per-post client review link (fetches agency branding via secondary query using user_id from get_post_by_token)
+src/pages/JoinTeam.jsx              — Public /join/:token teammate signup page (token validation, branding bar, account creation form, calls join_team RPC)
+src/pages/settings/TeamSettings.jsx — Settings → Team tab (member roster with avatars, invite dialog, pending invites)
 src/pages/billingAndUsage/BillingUsage.jsx        — Plan/billing shell
 src/pages/billingAndUsage/TertiarySubscriptionTab.jsx — Plan cards + comparison table + upgrade request dialog
 src/components/campaigns/CampaignTab.jsx        — Reusable campaigns tab (clientId prop = scoped; no prop = global)

@@ -1,18 +1,19 @@
 import { supabase } from '@/lib/supabase'
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '@/context/AuthContext'
+import { resolveWorkspace } from '@/lib/workspace'
 
 export function useClients() {
-  const { user } = useAuth()
+  const { workspaceUserId } = useAuth()
   return useQuery({
-    queryKey: ['clients-list', user?.id],
+    queryKey: ['clients-list', workspaceUserId],
     queryFn: async () => {
-      if (!user) return { internalAccount: null, realClients: [] }
+      if (!workspaceUserId) return { internalAccount: null, realClients: [] }
 
       const { data, error } = await supabase
         .from('clients')
         .select('id, name, logo_url, is_internal')
-        .eq('user_id', user.id)
+        .eq('user_id', workspaceUserId)
 
       if (error) throw error
 
@@ -21,7 +22,7 @@ export function useClients() {
         realClients: data?.filter((c) => !c.is_internal) || [],
       }
     },
-    enabled: !!user?.id,
+    enabled: !!workspaceUserId,
   })
 }
 
@@ -46,13 +47,10 @@ export async function fetchClients(filters = {}) {
     urgency = 'all',
   } = filters
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) throw new Error('Not authenticated')
+  const { workspaceUserId } = await resolveWorkspace()
 
   const { data, error } = await supabase.rpc('get_clients_with_pipeline', {
-    p_user_id: user.id,
+    p_user_id: workspaceUserId,
     p_search: search,
     p_industry: industry,
     p_tier: tier,
@@ -91,18 +89,13 @@ export async function fetchClients(filters = {}) {
  * Create a client
  */
 export async function createClient(payload) {
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser()
-
-  if (authError || !user) throw new Error('Not authenticated')
+  const { workspaceUserId } = await resolveWorkspace()
 
   const { data, error } = await supabase
     .from('clients')
     .insert({
       ...payload,
-      user_id: user.id,
+      user_id: workspaceUserId,
     })
     .select()
     .single()
@@ -222,15 +215,12 @@ export async function fetchClientById(id) {
 }
 
 export async function fetchInternalClient() {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) return null
+  const { workspaceUserId } = await resolveWorkspace()
 
   const { data, error } = await supabase
     .from('clients')
     .select('*')
-    .eq('user_id', user.id)
+    .eq('user_id', workspaceUserId)
     .eq('is_internal', true)
     .maybeSingle()
 

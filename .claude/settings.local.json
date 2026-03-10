@@ -42,7 +42,15 @@
       "Bash(npx -y @supabase/mcp-server-supabase@latest --help)",
       "Bash(npx clear-npx-cache:*)",
       "Bash(npm cache:*)",
-      "mcp__supabase__list_projects"
+      "mcp__supabase__list_projects",
+      "Bash(find /c/Users/chris_austin/Desktop/social-media-management -name *.sql -type f)",
+      "Bash(find /c/Users/chris_austin/Desktop/social-media-management -name seed.sql -o -name *.sql)",
+      "Bash(grep -r \"profiles\\\\|user_profiles\" /c/Users/chris_austin/Desktop/social-media-management --include=*.jsx --include=*.js --include=*.sql)",
+      "Bash(grep -h \"\\\\.from\\(\" /c/Users/chris_austin/Desktop/social-media-management/src/api/*.js)",
+      "Bash(find /c/Users/chris_austin/Desktop/social-media-management -path *node_modules -prune -o -name schema* -o -name *migration* -o -name *seed*)",
+      "mcp__supabase__list_tables",
+      "mcp__supabase__apply_migration",
+      "mcp__supabase__execute_sql"
     ]
   }
 }

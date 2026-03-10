@@ -350,7 +350,10 @@ export default function NotesAndReminders() {
     const map = Object.fromEntries(allClients.map((c) => [c.id, c]))
     // Specifically handle null client_id to map to internal account
     map['null'] = clientsData?.internalAccount
-      ? { ...clientsData.internalAccount, name: clientsData.internalAccount.name || 'Internal' }
+      ? {
+          ...clientsData.internalAccount,
+          name: clientsData.internalAccount.name || 'Internal',
+        }
       : { id: null, name: 'Internal', is_internal: true }
     return map
   }, [allClients, clientsData])
@@ -436,7 +439,7 @@ export default function NotesAndReminders() {
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <div className="p-8 max-w-[1440px] mx-auto space-y-6">
+    <div className="p-8 max-w-[1400px] mx-auto space-y-6">
       {/* ── Header ─────────────────────── */}
       <div className="flex items-center justify-between">
         <div className="space-y-1">
