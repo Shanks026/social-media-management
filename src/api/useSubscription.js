@@ -3,18 +3,18 @@ import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/context/AuthContext'
 
 export function useSubscription() {
-  const { user } = useAuth()
+  const { user, workspaceUserId } = useAuth()
 
   return useQuery({
-    queryKey: ['subscription', user?.id],
-    enabled: !!user?.id,
+    queryKey: ['subscription', workspaceUserId],
+    enabled: !!workspaceUserId,
     queryFn: async () => {
-      if (!user?.id) return null
+      if (!workspaceUserId) return null
 
       const { data: sub, error: subError } = await supabase
         .from('agency_subscriptions')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', workspaceUserId)
         .single()
 
       if (subError) throw subError
@@ -22,7 +22,7 @@ export function useSubscription() {
       const { count } = await supabase
         .from('clients')
         .select('*', { count: 'exact', head: true })
-        .eq('user_id', user.id)
+        .eq('user_id', workspaceUserId)
         .eq('is_internal', false)
 
       // Storage Calculation Logic
@@ -76,6 +76,7 @@ export function useSubscription() {
         calendar_export: sub.calendar_export ?? false,
         documents_collections: sub.documents_collections ?? false,
         campaigns: sub.campaigns ?? false,
+        proposals_limit: sub.proposals_limit ?? null,
         client_count: count || 0,
         max_clients: sub.max_clients,
 

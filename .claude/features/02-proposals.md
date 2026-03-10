@@ -1,349 +1,538 @@
-# Feature: Proposals & Client Pipeline
-**Product**: Tercero — Social Media Agency Management SaaS  
-**Feature Folder**: `.claude/features/`  
-**Status**: Planned  
-**Phase 1**: Prospect client status + pre-onboarding pipeline  
-**Phase 2**: Full proposal builder with shareable preview link  
+# Tercero — Proposals Feature
+
+**Status**: Approved for Build — Phase 1
+**Last Updated**: March 2026
+**Build Sequence**: After Teams Phase 1 is complete and stable
 
 ---
 
-## 1. What Is This Feature?
+## What Are Proposals?
 
-**Proposals** cover the stage of the agency workflow that happens *before* a client is onboarded — the pitch, the scoping, and the conversion. Currently, Tercero's client lifecycle begins at onboarding. There is no representation of potential clients, active pitches, or proposals in progress.
+A proposal is the structured document an agency sends to a **prospective or existing client** before work begins or before a retainer renews. It outlines what the agency will do, for how long, at what price, and under what terms — and gives the client a clear, formal mechanism to accept or decline.
 
-### Current Client Lifecycle in Tercero:
-```
-[External tools: Google Docs, email, Notion]
-         ↓ (manual, disconnected)
-Client created in Tercero (Active)
-         ↓
-Posts, Invoices, Meetings begin
-```
+Currently, Indian social media agency owners build these in Canva, Google Docs, or PowerPoint, export to PDF, and send via email or WhatsApp. This is disconnected from their operations tool, inconsistent in quality, impossible to track, and leaves no formal record of acceptance.
 
-### Proposed Client Lifecycle:
-```
-Prospect created in Tercero
-         ↓
-Proposal drafted and sent (shareable link)
-         ↓
-Prospect converted → Active Client (one click)
-         ↓
-Posts, Invoices, Meetings begin (all pre-filled from proposal data)
-```
-
-This closes the lifecycle gap and positions Tercero as the single tool for the entire client relationship — from first contact to final invoice.
+Tercero already owns the **entire post-signature workflow** — content, finance, approvals, meetings. Proposals is the natural front door: it captures the moment before a client is a client and creates a seamless handoff into the rest of the workspace.
 
 ---
 
-## 2. Phase 1 — Prospect Pipeline (Pre-Proposal MVP)
+## The Problem It Solves
 
-### 2.1 Philosophy
-
-Phase 1 does **not** build the full proposal document creator. The risk of building a half-baked proposal tool is that it competes unfavorably with dedicated tools (PandaDoc, Proposify, Google Docs) and damages perception. Instead, Phase 1 introduces **Prospect** as a first-class client status — a lightweight pre-onboarding state that tracks potential clients and the pipeline stage they're in.
-
-This gives agency owners:
-- A place inside Tercero to track who they're pitching
-- Context on each prospect (notes, industry, platforms, source)
-- A clear conversion path from Prospect → Active Client
-- The foundation for Phase 2's full proposal builder
-
-### 2.2 What Gets Built
-
-#### New Client Status: `Prospect`
-Add `Prospect` as a valid status alongside `Active` and `Inactive` in the `clients` table's status field.
-
-Prospects:
-- Appear on the Clients page with a distinct visual treatment (e.g., dashed border, muted palette, "PROSPECT" badge)
-- Do NOT count against the plan's client slot limit (they're not paying clients yet)
-- Cannot have posts created under them (Phase 1)
-- CAN have notes, meetings, and file attachments (for tracking pitch conversations)
-- Have a dedicated **Pipeline Stage** field
-
-#### Pipeline Stages
-A new field on clients (or a separate `prospect_stages` concept):
-- `Lead` — identified, not yet contacted
-- `Contacted` — initial outreach made
-- `Pitch Sent` — proposal or pitch deck shared
-- `Negotiating` — in active back-and-forth
-- `Won` — converted to active client
-- `Lost` — did not convert (kept for historical tracking)
-
-#### Prospect-Specific Fields
-Additional fields on the client record for prospects:
-- `lead_source` — how they found the agency (Referral, Instagram, LinkedIn, Cold Outreach, Other)
-- `estimated_value` — expected monthly retainer or project value
-- `pipeline_stage` — from stages above
-- `expected_close_date` — target date to convert
-- `lost_reason` — if stage is Lost (optional text)
-
-#### Clients Page Enhancement
-The Clients page (`/clients`) gains:
-- A **Pipeline tab** alongside the existing client grid — shows only Prospects in a Kanban-style board grouped by pipeline stage
-- Existing All/Active/Inactive filters unchanged
-- Prospect count shown separately from active client count (so plan limits are clear)
-- "Convert to Client" action on prospect card — changes status to Active, clears pipeline fields, redirects to full client onboarding
-
-#### Dashboard Integration
-- New widget or section: **Prospect Pipeline** — shows count per pipeline stage and total estimated pipeline value
-- Only shown if at least one Prospect exists (progressive disclosure)
-
-### 2.3 Convert to Active Client Flow
-
-When "Convert to Client" is triggered:
-1. Confirmation dialog: "Convert [Name] to an active client? This will count against your plan's client slots."
-2. On confirm:
-   - `status` → `Active`
-   - `pipeline_stage` → NULL (or archived)
-   - `estimated_value` → can optionally pre-fill a draft invoice
-   - Redirect to Client Detail page
-   - Toast: "Nova Corps is now an active client. Start by creating their first post."
-
-### 2.4 Phase 1 Explicitly Out of Scope
-- Proposal document creation or editing
-- Shareable proposal preview links
-- E-signature or acceptance flow
-- Proposal templates
-- Proposal PDF export
-- Automated follow-up reminders
+- **Inconsistency** — Every proposal looks different depending on which template the owner found last time. No standardised structure, no consistent branding.
+- **Disconnection** — Agreed scope and pricing from a proposal has to be manually re-entered into Tercero when the client signs. Errors and double work.
+- **No tracking** — The agency has zero visibility into whether a prospect opened the proposal, is sitting on it, or has lost it entirely.
+- **No formal acceptance** — A WhatsApp "yes sounds good" is not a paper trail. There is no record of what was agreed.
+- **Lost revenue** — Informal proposals are easier to ghost. A professional, structured proposal with a clear acceptance mechanism closes faster.
 
 ---
 
-## 3. Phase 2 — Full Proposal Builder
+## Use Cases
 
-### 3.1 What Gets Built
+**New client pitch** — Agency has a discovery call with a D2C brand. Within 24 hours they need to send something professional before momentum dies. Create proposal in Tercero, share link, prospect clicks Accept.
 
-#### Proposal Record
-A new `proposals` table linked to a client (prospect or active):
-- Title (e.g., "Social Media Management Proposal — Q2 2026")
-- Status: `Draft`, `Sent`, `Accepted`, `Declined`, `Expired`
-- Valid until date (expiry)
-- Shareable token (like the existing Public Review link pattern)
-- Sections (ordered, rich content)
-- Line items / pricing table
-- Created at / Sent at / Accepted at timestamps
+**Retainer renewal** — Existing client's engagement is ending. Clone the previous proposal, adjust pricing, send link. Client formally accepts the renewed terms. Renewal is on record.
 
-#### Proposal Builder UI (`/clients/:clientId/proposals/new`)
-A full-page document editor with:
-- **Section blocks** (drag to reorder):
-  - Executive Summary (rich text)
-  - Scope of Work (rich text + bullet builder)
-  - Deliverables Table (structured rows: deliverable, quantity, frequency)
-  - Pricing Table (line items with qty, unit price, subtotal — same pattern as invoice line items)
-  - Timeline (milestone rows: date + description)
-  - Terms & Conditions (rich text, with agency default template)
-  - About Us (rich text, auto-populated from agency settings)
-- Live preview panel (right side) showing formatted proposal as client would see it
-- "Save Draft" and "Send to Client" actions
+**Scope expansion / upsell** — Existing client on Instagram retainer. Agency pitches adding LinkedIn and YouTube for ₹15,000/month extra. A formal proposal with a pricing breakdown closes this faster than a WhatsApp message.
 
-#### Shareable Proposal Preview (`/proposal/:token`)
-Public-facing, no-login-required page (same pattern as `/review/:token`):
-- Professionally formatted proposal view
-- Agency logo and branding from agency settings
-- All sections rendered clearly
-- **Accept / Decline** buttons at the bottom
-- Optional: message field for client to leave a note when declining
-- On Accept:
-  - Proposal status → `Accepted`
-  - Agency notified via email (Edge Function)
-  - One-click prompt in Tercero: "Proposal accepted — convert [Name] to active client?"
-
-#### Proposal Templates
-- Agency can save any proposal as a template
-- "Start from template" when creating a new proposal
-- Templates store section structure and default text, not pricing (pricing is always entered fresh)
-
-#### Proposal → Invoice Bridge
-- When a proposal is accepted, line items from the Pricing Table can be imported directly into a new invoice
-- Eliminates re-entry of scope and pricing data
-
-#### Proposal List per Client
-- New "Proposals" tab on Client Detail page
-- Shows all proposals (draft, sent, accepted, declined) with status badges and timestamps
-- History preserved even after conversion to active client
-
-### 3.2 Phase 2 Integration with Existing Features
-
-| Feature | Integration |
-|---------|-------------|
-| Agency Settings | About Us block auto-populated from agency name, logo, description |
-| Finance — Invoices | Accepted proposal line items importable as invoice line items |
-| Public Review link | Same token pattern reused for proposal shareable link |
-| Email Edge Functions | New `send-proposal-email` function triggered on "Send to Client" |
-| Client Detail tabs | New "Proposals" tab |
+**One-off campaign work** — Product launch, fixed scope, fixed fee. Locks deliverables in writing before work starts. Prevents scope creep.
 
 ---
 
-## 4. Database Analysis
+## Proposal Statuses
 
-### 4.1 Modified Table: `clients`
+```
+DRAFT      → Being built by the agency owner. Not shared yet.
+SENT       → Share link has been copied or shared. Prospect has access.
+VIEWED     → Prospect opened the public page (auto-tracked on first page load).
+ACCEPTED   → Prospect clicked Accept on the public page.
+DECLINED   → Prospect clicked Decline (optional reason recorded).
+EXPIRED    → valid_until date passed with no response.
+ARCHIVED   → Manually archived by owner. Out of active pipeline.
+```
+
+**Status flow:**
+
+```
+DRAFT → SENT → VIEWED → ACCEPTED
+                       → DECLINED
+      (any non-terminal) → EXPIRED  (automatic, date-based)
+      (any)              → ARCHIVED (manual)
+```
+
+**VIEWED** is important: when the public page loads via token, `mark_proposal_viewed()` fires automatically — sets `first_viewed_at` and advances SENT → VIEWED. This gives the owner meaningful signal: "they've seen it and haven't responded" is different from "they never opened it."
+
+---
+
+## Subscription Tier Scoping
+
+| Plan         | Proposals | Limit Behaviour                                                        |
+| ------------ | --------- | ---------------------------------------------------------------------- |
+| **Trial**    | 5 total   | Same as Ignite                                                         |
+| **Ignite**   | 5 total   | Counter shown: "3 of 5 used". At limit, creation opens upgrade dialog. |
+| **Velocity** | Unlimited | No restrictions                                                        |
+| **Quantum**  | Unlimited | No restrictions + AI features in Phase 3                               |
+
+### DB Column on `agency_subscriptions`
 
 ```sql
--- Phase 1 additions
-ALTER TABLE clients 
-ADD COLUMN pipeline_stage    TEXT CHECK (pipeline_stage IN 
-  ('Lead','Contacted','Pitch Sent','Negotiating','Won','Lost')),
-ADD COLUMN lead_source       TEXT,
-ADD COLUMN estimated_value   NUMERIC(12,2),
-ADD COLUMN expected_close    DATE,
-ADD COLUMN lost_reason       TEXT;
-
--- Status field already exists — add 'Prospect' as valid value
--- Requires updating the CHECK constraint or enum type
+proposals_limit   integer  default 5   -- null = unlimited
 ```
 
-Note on `status` field: If it's a `TEXT` with a CHECK constraint, add `'Prospect'` to the allowed values. If it's a PostgreSQL enum, run `ALTER TYPE client_status ADD VALUE 'Prospect'`.
+| Plan     | `proposals_limit` |
+| -------- | ----------------- |
+| Trial    | 5                 |
+| Ignite   | 5                 |
+| Velocity | null              |
+| Quantum  | null              |
 
-### 4.2 New Table: `proposals` (Phase 2)
+**Enforcement**: Count all non-archived proposals for the workspace. If `proposals_limit` is not null and count >= limit, block creation and show upgrade prompt. The "New Proposal" button on Ignite shows a live counter (e.g. "2 of 5 used"). At limit, button opens upgrade dialog instead of the create form.
+
+**Gating pattern**: Hybrid — the nav item and page are always visible. Gating only triggers at the point of creation. Ignite users can view, manage, and share their 5 proposals freely.
+
+---
+
+## Architecture — How It Fits the Existing App
+
+Proposals mirrors the **Campaigns** module architecture throughout:
+
+| Concern        | Campaigns (existing)                              | Proposals (new)         |
+| -------------- | ------------------------------------------------- | ----------------------- |
+| Global page    | `/campaigns`                                      | `/proposals`            |
+| Per-client tab | `CampaignTab.jsx`                                 | `ProposalTab.jsx`       |
+| Public page    | `/campaign-review/:token`                         | `/proposal/:token`      |
+| Public RPC     | `get_campaign_by_review_token`                    | `get_proposal_by_token` |
+| Branding logic | `branding_agency_sidebar` + `branding_powered_by` | Identical flags         |
+| PDF export     | `CampaignReportPDF.jsx`                           | `ProposalPDF.jsx`       |
+| API file       | `src/api/campaigns.js`                            | `src/api/proposals.js`  |
+
+**Sidebar placement**: Standalone nav item directly below Clients. Always visible regardless of tier; gating is internal.
+
+**Create/Edit layout**: Left form, right live preview — identical to `EditInvoiceDialog` + `HTMLInvoicePreview.jsx`. Preview updates reactively as the owner types.
+
+**Client Detail tab**: Proposals added as a tab to `ClientProfileView.jsx` using the same `clientId` scoping pattern as `CampaignTab` and `DocumentsTab`.
+
+---
+
+## Data Model
 
 ```sql
-CREATE TABLE proposals (
-  id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id           UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  client_id         UUID NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
-  title             TEXT NOT NULL,
-  status            TEXT NOT NULL DEFAULT 'Draft'
-                      CHECK (status IN ('Draft','Sent','Accepted','Declined','Expired')),
-  valid_until       DATE,
-  review_token      UUID DEFAULT gen_random_uuid() UNIQUE NOT NULL,
-  sections          JSONB DEFAULT '[]',   -- ordered array of section blocks
-  line_items        JSONB DEFAULT '[]',   -- pricing table rows
-  total_value       NUMERIC(12,2),
-  client_message    TEXT,                 -- message from client on decline
-  sent_at           TIMESTAMPTZ,
-  accepted_at       TIMESTAMPTZ,
-  declined_at       TIMESTAMPTZ,
-  created_at        TIMESTAMPTZ DEFAULT NOW(),
-  updated_at        TIMESTAMPTZ DEFAULT NOW()
-);
+proposals (
+  id                uuid primary key default gen_random_uuid(),
+  agency_user_id    uuid references auth.users not null,
+  client_id         uuid references clients,        -- null if prospect
+  prospect_name     text,                           -- used when client_id is null
+  prospect_email    text,
+  title             text not null,
+  status            text default 'draft',
+  introduction      text,
+  scope_notes       text,
+  payment_terms     text,
+  contract_duration text,
+  valid_until       date,
+  share_token       text unique,
+  first_viewed_at   timestamptz,
+  sent_at           timestamptz,
+  accepted_at       timestamptz,
+  declined_at       timestamptz,
+  decline_reason    text,
+  created_at        timestamptz default now(),
+  updated_at        timestamptz default now()
+)
 
-ALTER TABLE proposals ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Users manage own proposals"
-  ON proposals FOR ALL
-  USING (user_id = auth.uid());
-
--- Public access via token (no auth required — same pattern as post review)
-CREATE POLICY "Public read via token"
-  ON proposals FOR SELECT
-  USING (true);  -- filtered by token in application layer
+proposal_line_items (
+  id            uuid primary key default gen_random_uuid(),
+  proposal_id   uuid references proposals on delete cascade,
+  description   text not null,
+  amount        numeric not null,
+  sort_order    integer default 0
+)
 ```
 
-### 4.3 Relationship Map
+### RLS Policy Pattern
 
-```
-auth.users
-└── clients (user_id FK)
-    ├── status: Prospect | Active | Inactive
-    ├── pipeline_stage (nullable, only for Prospects)
-    └── proposals (Phase 2)
-        └── review_token → /proposal/:token (public)
-```
-
-### 4.4 Impact on Existing Tables
-
-| Table | Change | Risk |
-|-------|--------|------|
-| `clients` | Add 4 nullable prospect fields + new status value | Low — all nullable, existing rows unaffected |
-| `posts` | No change — prospects cannot have posts in Phase 1 | None |
-| `invoices` | Phase 2: optional `proposal_id` FK for bridge feature | Low |
-| `agency_subscriptions` | Client count logic must exclude Prospect status | Medium — needs careful query update |
-
-### 4.5 Critical: Plan Limit Enforcement
-
-The existing `agency_subscriptions` table enforces `max_clients`. This query must be updated to count only `Active` (and `Inactive`) clients, not Prospects:
+Uses the `get_my_agency_user_id()` SECURITY DEFINER helper established by Teams — team members get transparent access automatically:
 
 ```sql
--- Before (assumed current)
-SELECT COUNT(*) FROM clients WHERE user_id = $1;
-
--- After (must exclude prospects)
-SELECT COUNT(*) FROM clients 
-WHERE user_id = $1 AND status != 'Prospect';
+create policy "proposals_access" on proposals
+  for all using (
+    auth.uid() = agency_user_id
+    or auth.uid() in (
+      select member_user_id from agency_members
+      where agency_user_id = proposals.agency_user_id
+      and is_active = true
+    )
+  );
 ```
 
-This is the highest-risk change — if not updated, Prospects would incorrectly consume client slots.
+### RPCs Required
+
+| RPC                                      | Auth                    | Purpose                                         |
+| ---------------------------------------- | ----------------------- | ----------------------------------------------- |
+| `get_proposals_with_totals`              | Authenticated           | List proposals with calculated line item totals |
+| `get_proposal_by_token(p_token)`         | Public SECURITY DEFINER | Returns proposal + agency branding flags        |
+| `mark_proposal_viewed(p_token)`          | Public SECURITY DEFINER | Sets first_viewed_at, SENT → VIEWED             |
+| `accept_proposal(p_token)`               | Public SECURITY DEFINER | Sets status=accepted, accepted_at=now()         |
+| `decline_proposal(p_token, p_reason)`    | Public SECURITY DEFINER | Sets status=declined, records reason            |
+| `generate_proposal_token(p_proposal_id)` | Authenticated           | Creates or regenerates share token              |
 
 ---
 
-## 5. Impact Analysis
-
-### 5.1 Positive Impact
-
-**Client Lifecycle Completeness**
-The product story becomes "manage every client from first pitch to final invoice" — a fundamentally stronger value proposition than starting at onboarding.
-
-**Retention Through Early Lock-In**
-If agency owners track prospects in Tercero, the tool becomes part of their sales workflow, not just their delivery workflow. This dramatically increases daily engagement and switching cost.
-
-**Conversion Funnel Visibility**
-The Pipeline Kanban on the Clients page gives agency owners a view they've never had — how many leads are in the pipe, what's the estimated value, what stage is everything at. This is genuinely valuable business intelligence.
-
-**Phase 2 Proposal → Invoice Bridge**
-Eliminating the re-entry of scope and pricing from proposal to invoice is a meaningful time saving. Agencies that do 5+ new proposals per month feel this immediately.
-
-**Consistent UX Pattern**
-The shareable proposal link in Phase 2 reuses the same `/token` pattern as the existing Public Review link. Zero new UX paradigm to learn — for agency or client.
-
-### 5.2 Negative / Risk Considerations
-
-**Plan Limit Logic Complexity**
-Prospect status must be explicitly excluded from all plan limit enforcement queries. Missing even one check could silently allow over-quota usage or incorrectly block legitimate prospects.
-
-**Scope Creep Risk for Phase 1**
-"Just add prospect tracking" can quietly expand into "but we also need email reminders for follow-ups, and a pipeline value chart, and..." — Phase 1 must be strictly bounded to the fields and views described above.
-
-**Proposal Builder is High Effort**
-A good proposal builder is genuinely hard to build well. Rich text, drag-to-reorder sections, live preview, and a polished shareable view is 3-4 weeks of serious frontend work. Phase 2 must be scoped with this in mind.
-
-**Client Confusion: Prospect vs Client**
-Agency owners may accidentally create a post or invoice for a Prospect. The UI must clearly communicate that Prospects are pre-activation and restrict certain actions until conversion.
-
----
-
-## 6. Correlation with Existing Features
-
-| Existing Feature | Relationship |
-|-----------------|--------------|
-| Client List (`/clients`) | Gains Pipeline tab. Active/Inactive view unchanged. |
-| Client Detail Page | Prospect clients show limited tabs (no Posts, no Finance until converted) |
-| Client Health Grid (Dashboard) | Only shows Active clients — Prospects shown in separate Pipeline widget |
-| Finance — Invoices | Phase 2: Proposal line items importable to invoice |
-| Public Review Link | Phase 2: Same token architecture reused for proposal preview |
-| Agency Settings | Phase 2: Agency name/logo auto-populate proposal "About Us" section |
-| Billing & Usage | Client count guard must exclude Prospects |
-| Email Edge Functions | Phase 2: New `send-proposal-email` function |
-
----
-
-## 7. File & Component Structure (Suggested)
+## New Files
 
 ```
-src/
-├── api/
-│   ├── prospects.js              — Prospect-specific CRUD (Phase 1)
-│   └── proposals.js              — Proposal CRUD + token lookup (Phase 2)
-├── pages/
-│   ├── clients/
-│   │   └── ProspectPipeline.jsx  — Kanban board view on Clients page (Phase 1)
-│   └── proposals/
-│       ├── ProposalBuilder.jsx   — Full proposal editor (Phase 2)
-│       └── PublicProposal.jsx    — /proposal/:token public page (Phase 2)
-├── components/
-│   └── prospects/
-│       ├── ProspectCard.jsx      — Card in pipeline kanban
-│       ├── PipelineBoard.jsx     — Kanban columns
-│       ├── ConvertClientDialog.jsx — Confirmation + conversion flow
-│       └── ProspectForm.jsx      — Create/edit prospect
+src/api/proposals.js
+src/pages/proposals/ProposalsPage.jsx
+src/pages/proposals/ProposalDetailPage.jsx
+src/pages/proposals/ProposalReview.jsx           ← public, unauthenticated
+src/components/proposals/ProposalTab.jsx          ← reusable per-client tab
+src/components/proposals/ProposalDialog.jsx       ← create/edit form
+src/components/proposals/ProposalPreview.jsx      ← live HTML preview panel
+src/components/proposals/ProposalPDF.jsx          ← @react-pdf/renderer document
+src/components/proposals/ProposalsUpgradePrompt.jsx
 ```
+
+## Files Modified
+
+| File                                      | Change                                                            |
+| ----------------------------------------- | ----------------------------------------------------------------- |
+| `src/App.jsx`                             | Add routes: `/proposals`, `/proposals/:id`, `/proposal/:token`    |
+| `src/components/sidebar/app-sidebar.jsx`  | Add Proposals nav item below Clients                              |
+| `src/pages/clients/ClientProfileView.jsx` | Add Proposals tab                                                 |
+| `src/api/useSubscription.js`              | Expose `proposals_limit` from subscription row                    |
+| `feature-tiers-v5.md`                     | Add Proposals section, DB column, seed SQL                        |
+| `app-research.md`                         | Add Proposals to Core Modules table and feature deep-dive section |
 
 ---
 
-## 8. Landing Page Relevance
+---
 
-**Hero/Features copy angle:**
-> *"From first pitch to final invoice — without leaving Tercero. Track prospects, send proposals, convert clients, and invoice them — all in one place."*
+# PHASE 1 — Core Build
 
-**Phase 1 copy (Prospect Pipeline):**
-> *"Know exactly where every potential client stands. Track your pipeline, log conversations, and convert prospects to active clients in one click."*
+**Goal**: Working proposal creation, sharing, and acceptance flow with professional default Tercero design.
+**Prerequisite**: Teams Phase 1 complete — `get_my_agency_user_id()` SECURITY DEFINER helper must exist in the database.
 
-**Phase 2 copy (Proposal Builder):**
-> *"Send polished proposals with a shareable link. Clients accept online — no printing, no email chains, no back-and-forth."*
+> Claude Code: work through each section in order. Check off tasks as completed.
+> At the ⏸ marker at the end of each section — stop and wait for the user to confirm before continuing.
+
+---
+
+### Section 1 — Database
+
+- [ ] Add `proposals_limit integer default 5` column to `agency_subscriptions`
+- [ ] Update seed SQL for all plans (Trial=5, Ignite=5, Velocity=null, Quantum=null)
+- [ ] Create `proposals` table with all columns as defined in the data model above
+- [ ] Create `proposal_line_items` table with `on delete cascade` on `proposal_id`
+- [ ] Write RLS policy for `proposals` using `get_my_agency_user_id()` pattern
+- [ ] Write RLS policy for `proposal_line_items` (access via proposal ownership)
+- [ ] Write `get_proposals_with_totals` RPC — returns proposals list with sum of line item amounts as `total_value`
+- [ ] Write `get_proposal_by_token(p_token)` public SECURITY DEFINER RPC — returns full proposal data + agency branding flags (`agency_name`, `logo_url`, `logo_horizontal_url`, `branding_agency_sidebar`, `branding_powered_by`) joined from `agency_subscriptions`
+- [ ] Write `mark_proposal_viewed(p_token)` public SECURITY DEFINER RPC — sets `first_viewed_at = now()` (only if null), advances status SENT → VIEWED
+- [ ] Write `accept_proposal(p_token)` public SECURITY DEFINER RPC — sets `status = 'accepted'`, `accepted_at = now()`; no-op if already accepted
+- [ ] Write `decline_proposal(p_token, p_reason text)` public SECURITY DEFINER RPC — sets `status = 'declined'`, `declined_at = now()`, stores reason
+- [ ] Write `generate_proposal_token(p_proposal_id uuid)` authenticated RPC — generates a UUID token, sets `share_token` on the proposal, returns the full shareable URL
+
+**⏸ STOP — confirm all DB objects are created and tested before proceeding to Section 2.**
+
+---
+
+### Section 2 — API Layer
+
+**File**: `src/api/proposals.js`
+
+- [ ] `useProposals({ clientId? })` — React Query hook, fetches from `get_proposals_with_totals`, scoped by `workspaceUserId` from AuthContext; accepts optional `clientId` filter
+- [ ] `useProposal(proposalId)` — fetches single proposal with its `proposal_line_items`
+- [ ] `useCreateProposal()` — mutation that first counts non-archived proposals, compares to `proposals_limit`; if at limit, throws a typed upgrade error instead of inserting; otherwise inserts proposal + line items atomically
+- [ ] `useUpdateProposal(proposalId)` — updates proposal fields and replaces line items (delete existing, re-insert)
+- [ ] `useDeleteProposal(proposalId)` — hard delete if DRAFT; sets `status = 'archived'` for any other status
+- [ ] `useGenerateProposalToken(proposalId)` — calls `generate_proposal_token` RPC, returns shareable URL, invalidates proposal query
+- [ ] `fetchProposalByToken(token)` — plain async function, no auth, calls `get_proposal_by_token`
+- [ ] `markProposalViewed(token)` — plain async function, no auth, calls `mark_proposal_viewed`
+- [ ] `acceptProposal(token)` — plain async function, no auth, calls `accept_proposal`
+- [ ] `declineProposal(token, reason)` — plain async function, no auth, calls `decline_proposal`
+
+**⏸ STOP — confirm all API hooks are working before proceeding to Section 3.**
+
+---
+
+### Section 3 — Create/Edit Dialog
+
+**File**: `src/components/proposals/ProposalDialog.jsx`
+**File**: `src/components/proposals/ProposalPreview.jsx`
+
+- [ ] Dialog uses two-panel layout — form on the left, live HTML preview on the right — matching `EditInvoiceDialog` layout
+- [ ] Left panel form fields:
+  - [ ] Title (required, text input)
+  - [ ] Client selector — dropdown of existing clients; includes a "New Prospect" option that reveals prospect name + email fields below
+  - [ ] Validity date picker
+  - [ ] Introduction (textarea)
+  - [ ] Scope of work (textarea)
+  - [ ] Payment terms (select: Due on Receipt / Net 15 / Net 30 / Net 60 — mirrors invoice options)
+  - [ ] Contract duration (free text, placeholder: e.g. "3 months", "Ongoing")
+  - [ ] Additional notes (textarea)
+  - [ ] Line items section: add/remove rows, each row has description (text) + amount (number); same UX as invoice line items in `EditInvoiceDialog`; grand total calculated and displayed at bottom
+- [ ] Right panel `ProposalPreview.jsx` — styled HTML preview that updates reactively on every field change, renders: agency logo + name (from `useSubscription`), proposal title, "Prepared for: [client/prospect name]", validity date, all sections with headings, pricing table with line items and formatted grand total (`formatCurrency()`), payment terms, contract duration, notes
+- [ ] Zod validation — title required, at least one line item with description and amount required
+- [ ] Dialog functions as both create (no `proposalId` prop) and edit (pre-fills all fields when `proposalId` provided)
+- [ ] On save as DRAFT — closes dialog, shows success toast
+
+**⏸ STOP — confirm dialog and live preview are rendering correctly before proceeding to Section 4.**
+
+---
+
+### Section 4 — Global Proposals Page
+
+**File**: `src/pages/proposals/ProposalsPage.jsx`
+
+- [ ] Route `/proposals` added to `App.jsx`
+- [ ] Proposals nav item added to `app-sidebar.jsx` — placed directly below the Clients nav item
+- [ ] Page header: "Proposals" heading + "New Proposal" button on the right
+- [ ] Ignite/Trial: proposal limit counter displayed near the button ("2 of 5 proposals used"); hidden on Velocity+
+- [ ] "New Proposal" button behaviour: opens `ProposalDialog` if under limit; opens `ProposalsUpgradePrompt` dialog if at limit
+- [ ] Status filter tabs: All / Draft / Sent / Viewed / Accepted / Declined / Expired / Archived
+- [ ] Client filter dropdown (all clients in workspace)
+- [ ] Search input — filters by proposal title or prospect name
+- [ ] Proposal list rows/cards showing: title, client or prospect name, status badge, total value (formatted), valid until date, created date
+- [ ] Status badge colours: Draft=muted, Sent=blue, Viewed=amber, Accepted=green, Declined=red, Expired=muted-red, Archived=muted
+- [ ] Clicking a proposal row navigates to `/proposals/:proposalId`
+- [ ] Empty state: appropriate message + "Create your first proposal" CTA
+- [ ] `ProposalsUpgradePrompt.jsx`: "You've used all 5 proposals on your Ignite plan. Upgrade to Velocity for unlimited proposals." with upgrade button
+
+**⏸ STOP — confirm global proposals page is fully functional before proceeding to Section 5.**
+
+---
+
+### Section 5 — Proposal Detail Page
+
+**File**: `src/pages/proposals/ProposalDetailPage.jsx`
+
+- [ ] Route `/proposals/:proposalId` added to `App.jsx`
+- [ ] Same left-form / right-preview layout as `ProposalDialog` — editing is done inline on this page
+- [ ] Page header: proposal title + status badge + client/prospect name
+- [ ] Action bar:
+  - [ ] **Copy Link** button — calls `useGenerateProposalToken`, copies resulting URL to clipboard, if current status is DRAFT automatically advances to SENT, shows toast "Link copied — proposal marked as Sent"
+  - [ ] **Export PDF** button — triggers `ProposalPDF` download
+  - [ ] **Archive** button — confirmation dialog, then sets status to archived
+  - [ ] **Delete** button — only shown when status is DRAFT, confirmation dialog, hard deletes
+- [ ] Status timeline displayed below action bar: created date → sent date → viewed date (first_viewed_at) → accepted/declined date; each stage only shown if it has occurred
+- [ ] Decline reason displayed as a note if status is DECLINED
+- [ ] ACCEPTED and DECLINED proposals render as read-only — form fields are disabled, lock icon shown — same pattern as paid invoices in `EditInvoiceDialog`
+- [ ] Auto-save on field blur for DRAFT and SENT proposals
+
+**⏸ STOP — confirm detail page is complete before proceeding to Section 6.**
+
+---
+
+### Section 6 — Public Proposal Page
+
+**File**: `src/pages/proposals/ProposalReview.jsx`
+
+- [ ] Route `/proposal/:token` added to `App.jsx` — placed outside `AppShell`, fully unauthenticated
+- [ ] Page handles 6 states:
+  - [ ] **Loading** — skeleton screen while fetching
+  - [ ] **Invalid/not found token** — "This proposal link is invalid. Please contact the agency for a new link."
+  - [ ] **Expired** — "This proposal is no longer valid (expired [date]). Please contact [agency name] for an updated proposal."
+  - [ ] **Already accepted** — confirmation message, no action buttons
+  - [ ] **Already declined** — decline confirmation, no action buttons
+  - [ ] **Active** — full proposal view with Accept/Decline buttons
+- [ ] Agency branding in header: identical logic to `PublicReview.jsx` — Ignite shows Tercero logo; Velocity+ shows agency logo (prefers `logo_horizontal_url`, falls back to `logo_url`, falls back to agency name text)
+- [ ] "Powered by Tercero" footer — controlled by `branding_powered_by` flag, same as all other public pages
+- [ ] On page load when status is SENT: calls `markProposalViewed(token)` once — fires on mount, not on re-renders
+- [ ] Proposal rendered in default Tercero design style — clean, professional, readable, consistent with preview
+- [ ] Sections displayed: title, "Prepared for [name]", validity date, introduction, scope of work, pricing table with line items and grand total, payment terms, contract duration, notes
+- [ ] **Accept flow**: prominent green "Accept Proposal" button → confirmation dialog ("By accepting, you agree to the terms outlined in this proposal.") → on confirm calls `acceptProposal(token)` → success state: "You've accepted this proposal. [Agency name] will be in touch shortly."
+- [ ] **Decline flow**: ghost "Decline" button → dialog with optional reason textarea → calls `declineProposal(token, reason)` → "You've declined this proposal."
+- [ ] After accept/decline: action buttons hidden, replaced by confirmation message; no page reload needed
+
+**⏸ STOP — confirm all 6 page states and both action flows work correctly before proceeding to Section 7.**
+
+---
+
+### Section 7 — PDF Export
+
+**File**: `src/components/proposals/ProposalPDF.jsx`
+
+- [ ] Uses `@react-pdf/renderer` — consistent with `CampaignReportPDF.jsx` and invoice PDF
+- [ ] Renders: agency logo, agency name, "Proposal" label, proposal title, "Prepared for: [name]", issue date, validity date
+- [ ] All content sections: introduction, scope of work, pricing table (line items + grand total), payment terms, contract duration, notes
+- [ ] Professional layout and typography matching Tercero's design language
+- [ ] Download triggered from detail page "Export PDF" button using the same `downloadPDF` utility pattern
+- [ ] Filename: `Proposal-[ClientOrProspectName]-[YYYY-MM-DD].pdf`
+
+**⏸ STOP — confirm PDF renders correctly and downloads before proceeding to Section 8.**
+
+---
+
+### Section 8 — Per-Client Proposals Tab
+
+**File**: `src/components/proposals/ProposalTab.jsx`
+
+- [ ] `ProposalTab.jsx` component accepts `clientId` prop — uses `useProposals({ clientId })` to scope the list
+- [ ] Same list UI as global page: status tabs, search, proposal rows
+- [ ] Client filter dropdown omitted (redundant — already on a specific client's page)
+- [ ] "New Proposal" button pre-fills the client field in `ProposalDialog`
+- [ ] Empty state: "No proposals for this client yet." + New Proposal button
+- [ ] Tab added to `ClientProfileView.jsx` after the Documents tab
+- [ ] Tab label: "Proposals"
+
+**⏸ STOP — confirm per-client tab is rendering and filtering correctly before proceeding to Section 9.**
+
+---
+
+### Section 9 — Subscription Enforcement
+
+- [ ] `useSubscription` hook updated to read and expose `proposals_limit` from the subscription row
+- [ ] `useCreateProposal` mutation correctly counts non-archived proposals before inserting and throws an upgrade error at the limit
+- [ ] `ProposalsUpgradePrompt.jsx` renders the upgrade message and CTA correctly
+- [ ] Limit counter on global page updates correctly after creating or archiving a proposal
+- [ ] Counter is hidden entirely on Velocity+ accounts
+- [ ] Trial accounts correctly enforce the 5-proposal limit (same as Ignite)
+- [ ] Test: create 5 proposals on an Ignite account → 6th creation attempt opens upgrade prompt, not the create form
+
+**⏸ STOP — confirm subscription enforcement is airtight before proceeding to Section 10.**
+
+---
+
+### Section 10 — Documentation and Final Wiring
+
+- [ ] `app-research.md` updated: Proposals added to Core Modules table, new Section 3.12 Proposals deep-dive written, file map updated with all new files and modified files
+- [ ] `feature-tiers-v5.md` updated: Proposals section added to feature matrix, `proposals_limit` column added to DB reference table, seed SQL updated for all plans
+- [ ] All routes confirmed working and accessible in `App.jsx`
+- [ ] Sidebar nav item shows correct active state when on `/proposals` or `/proposals/:id`
+- [ ] End-to-end test: create proposal → copy link → open link in incognito → verify VIEWED status updates → accept → verify ACCEPTED status and accepted_at timestamp in DB
+- [ ] Decline flow end-to-end tested with and without a reason
+- [ ] Expired status tested: set `valid_until` to yesterday, confirm proposal shows as Expired on list and detail pages
+- [ ] Team member access tested: log in as a team member, confirm they can see, edit, and share the owner's proposals
+- [ ] Ignite limit tested end-to-end: hit the 5-proposal cap, confirm upgrade prompt appears
+
+**⏸ STOP — Phase 1 is complete. Present full feature to user for review and sign-off before Phase 2 begins.**
+
+---
+
+---
+
+# PHASE 2 — Integration & Templates
+
+**Goal**: Connect accepted proposals to the rest of Tercero. Reduce manual re-entry after a client signs.
+**Prerequisite**: Phase 1 stable and in active use.
+
+---
+
+## Scope
+
+**On-acceptance automations** — when a proposal moves to ACCEPTED, Tercero prompts the owner with contextual next steps. These are prompted (not automatic) — the owner confirms each one:
+
+- If prospect: "Would you like to create a client profile for [Prospect Name]?" — pre-fills client form
+- "Would you like to create an invoice from this proposal?" — pre-fills with proposal line items, client, payment terms
+- If proposal has an end date: "Would you like to create a campaign for this project?" — pre-fills with title, client, date range
+
+**Proposal templates** — save any completed proposal as a reusable template; "Start from template" option in the create flow; templates store introduction, scope, line items, payment terms, contract duration (never client or title)
+
+**Email delivery** — "Send via Email" button on detail page; calls new Edge Function `send-proposal-email`; subject: "Proposal from [Agency Name]: [Proposal Title]"; updates `sent_at`
+
+**Cloning** — "Duplicate" action on any proposal; creates a new DRAFT with all fields copied, title prefixed "Copy of —"
+
+---
+
+## Phase 2 Checklist
+
+- [ ] On-acceptance prompt: convert prospect to client (pre-filled form)
+- [ ] On-acceptance prompt: generate first invoice from proposal pricing
+- [ ] On-acceptance prompt: create campaign (conditional — only when end date exists)
+- [ ] Proposal templates — save as template action on detail page
+- [ ] Proposal templates — "start from template" option in create flow
+- [ ] `send-proposal-email` Edge Function (Resend, same pattern as `send-campaign-review-email`)
+- [ ] "Send via Email" button and confirmation dialog on detail page
+- [ ] Clone / Duplicate action on detail page and proposal list
+- [ ] `app-research.md` and `feature-tiers-v5.md` updated to reflect Phase 2
+
+**⏸ STOP — Phase 2 complete. Present to user for review before Phase 3 begins.**
+
+---
+
+---
+
+# PHASE 3 — AI-Powered Proposals
+
+**Goal**: AI-assisted proposal writing. Two tiers of capability.
+**Prerequisite**: Phase 2 stable. AI post generation feature already live (shared Edge Function infrastructure).
+
+---
+
+## Phase 3a — AI Introduction Generator (Velocity+)
+
+A "Write with AI" button next to the introduction field. Owner's client, industry, and services are pre-loaded as context. AI generates a professional 2–3 paragraph introduction that streams into the field. Owner can accept, edit, or discard — never overwrites without confirmation.
+
+Uses the same `generate-content` Edge Function as post caption generation.
+
+**Tier**: Velocity+. Locked with tooltip on Ignite: "Upgrade to Velocity to use AI writing."
+
+---
+
+## Phase 3b — Full AI Proposal Generator (Quantum only)
+
+Owner fills a brief form (client, industry, services, deliverable types, budget range, tone, talking points). Claude generates a complete proposal — all sections, all fields populated. Owner reviews and edits before saving. Optional PDF template upload to mirror an existing proposal's structure and tone.
+
+**Tier**: Quantum only.
+
+### New DB Columns
+
+```sql
+ai_proposal_intro      boolean  default false   -- Velocity+
+ai_proposal_generation boolean  default false   -- Quantum only
+```
+
+| Plan     | `ai_proposal_intro` | `ai_proposal_generation` |
+| -------- | ------------------- | ------------------------ |
+| Trial    | false               | false                    |
+| Ignite   | false               | false                    |
+| Velocity | true                | false                    |
+| Quantum  | true                | true                     |
+
+---
+
+## Phase 3 Checklist
+
+- [ ] `ai_proposal_intro` and `ai_proposal_generation` columns added to `agency_subscriptions`
+- [ ] Seed SQL updated for all plans
+- [ ] `useSubscription` exposes both new flags
+- [ ] "Write with AI" button added next to introduction field in `ProposalDialog` and `ProposalDetailPage` — Velocity+ only; shows lock tooltip on Ignite
+- [ ] Edge Function handles proposal intro generation (reuse `generate-content` with proposal-specific system prompt, or create `generate-proposal-intro`)
+- [ ] Streaming response into introduction field with accept / discard UI — never overwrites existing content without user action
+- [ ] Full AI proposal generator — Quantum only, gated by `ai_proposal_generation` flag
+- [ ] Brief form: client/industry, services, deliverables, budget range, tone, talking points
+- [ ] Optional PDF template upload for structure/tone mirroring — Quantum only
+- [ ] Claude API call via Edge Function with structured JSON output for all proposal fields
+- [ ] Generated content loaded into `ProposalDialog` for review and editing before saving as DRAFT
+- [ ] `app-research.md` and `feature-tiers-v5.md` updated
+
+**⏸ STOP — Phase 3 complete. Present to user for review.**
+
+---
+
+---
+
+# Summary
+
+| Phase        | What                                                                           | Tier                        | Prerequisite                      |
+| ------------ | ------------------------------------------------------------------------------ | --------------------------- | --------------------------------- |
+| **Phase 1**  | Core build — create, preview, share link, accept/decline, PDF, status tracking | All tiers (5 cap on Ignite) | Teams Phase 1 done                |
+| **Phase 2**  | On-acceptance automations, templates, email delivery, cloning                  | All tiers                   | Phase 1 stable                    |
+| **Phase 3a** | AI introduction generator                                                      | Velocity+                   | Phase 2 stable + AI post gen live |
+| **Phase 3b** | Full AI generator + template upload                                            | Quantum only                | Phase 3a done                     |
+
+---
+
+# Key Design Decisions (Confirmed)
+
+| Decision                      | Choice                                                                                  |
+| ----------------------------- | --------------------------------------------------------------------------------------- |
+| Create/Edit layout            | Left form / right live preview — matches `EditInvoiceDialog` + `HTMLInvoicePreview.jsx` |
+| Default proposal style        | Tercero default design — no custom client branding in Phase 1 or 2                      |
+| VIEWED status                 | Auto-tracked on first public page load, not manual                                      |
+| Prospect support              | Proposal can target a prospect (free text) or an existing client record                 |
+| Sidebar gating                | Nav item always visible; limit only enforced at point of creation                       |
+| Teams compatibility           | RLS uses `get_my_agency_user_id()` helper from day one                                  |
+| Public page branding          | Identical whitelabeling to all other public pages                                       |
+| AI in Phase 1                 | Excluded — get the core stable first                                                    |
+| AI introduction (Phase 3a)    | Velocity+                                                                               |
+| Full AI generation (Phase 3b) | Quantum only                                                                            |

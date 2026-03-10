@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/context/AuthContext'
+import { resolveWorkspace } from '@/lib/workspace'
 
 // --- KEYS FOR CACHING ---
 export const transactionKeys = {
@@ -11,13 +12,13 @@ export const transactionKeys = {
 
 // --- 1. FETCH TRANSACTIONS (Ledger) ---
 export function useTransactions(filters = {}, options = {}) {
-  const { user } = useAuth()
+  const { workspaceUserId } = useAuth()
   const { clientId, limit } = filters
 
   return useQuery({
     queryKey: transactionKeys.list(filters),
     queryFn: async () => {
-      if (!user) throw new Error('User not authenticated')
+      if (!workspaceUserId) throw new Error('User not authenticated')
 
       let query = supabase
         .from('transactions')
@@ -54,24 +55,24 @@ export function useTransactions(filters = {}, options = {}) {
       if (error) throw error
       return data
     },
-    enabled: !!user,
+    enabled: !!workspaceUserId,
     ...options,
   })
 }
 
 // --- 2. FETCH FINANCE OVERVIEW ---
 export function useFinanceOverview() {
-  const { user } = useAuth()
+  const { workspaceUserId } = useAuth()
 
   return useQuery({
     queryKey: transactionKeys.overview(),
     queryFn: async () => {
-      if (!user) return null
+      if (!workspaceUserId) return null
 
       const { data, error } = await supabase
         .from('view_finance_overview')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', workspaceUserId)
         .maybeSingle()
 
       if (error) throw error
@@ -84,17 +85,17 @@ export function useFinanceOverview() {
         }
       )
     },
-    enabled: !!user,
+    enabled: !!workspaceUserId,
   })
 }
 
 // --- 3. CREATE TRANSACTION ---
 export function useCreateTransaction() {
   const queryClient = useQueryClient()
-  const { user } = useAuth()
 
   return useMutation({
     mutationFn: async (formData) => {
+      const { workspaceUserId } = await resolveWorkspace()
       // Data Sanitization
       const sanitizedClientId =
         !formData.client_id ||
@@ -104,7 +105,7 @@ export function useCreateTransaction() {
           : formData.client_id
 
       const payload = {
-        user_id: user.id,
+        user_id: workspaceUserId,
         type: formData.type,
         amount: parseFloat(formData.amount),
         date: formData.date,

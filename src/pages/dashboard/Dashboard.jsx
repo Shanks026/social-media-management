@@ -19,7 +19,7 @@ export default function Dashboard() {
   }, [setHeader])
 
   return (
-    <div className="px-4 sm:px-6 lg:px-8 pt-6 pb-20 max-w-[1440px] mx-auto flex flex-col gap-4 animate-in fade-in duration-500">
+    <div className="px-4 sm:px-6 lg:px-8 pt-6 pb-20 max-w-[1400px] mx-auto flex flex-col gap-4 animate-in fade-in duration-500">
       {/* Row 1: Welcome Message */}
       <DashboardWelcomeMessage />
 

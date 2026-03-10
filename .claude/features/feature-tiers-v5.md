@@ -1,8 +1,8 @@
 # Tercero — Feature Tiers & Implementation Guide (v5 — Final)
 
 **Last Updated**: March 2026
-**Status**: Implemented. All v5 features have been built and are live. This document reflects the current state of the codebase.
-**Scope**: Current built features only. Campaigns, proposals, and documents are out of scope until those modules are built.
+**Status**: Implemented. All features documented here are live in the codebase.
+**Scope**: Full feature set — Core platform, Finance gating, Whitelabeling, Campaigns, Documents, Teams, Proposals.
 
 ---
 
@@ -32,13 +32,16 @@
 | Agency logo & name                      |   ✗    |    ✓     |    ✓    |
 | "Tercero 2026" footer text              |   ✓    |    ✓     |    ✗    |
 
-### Client Review Page (`/review/:token`)
+### Client Review Pages (`/review/:token` and `/campaign-review/:token`)
 
 | Feature                                  | Ignite | Velocity | Quantum |
 | ---------------------------------------- | :----: | :------: | :-----: |
 | Application logo in header               |   ✓    |    ✗     |    ✗    |
 | Agency logo in header                    |   ✗    |    ✓     |    ✓    |
+| Horizontal logo preferred in header      |   ✗    |    ✓     |    ✓    |
 | "Powered by Tercero" footer              |   ✓    |    ✓     |    ✗    |
+
+> Both `/review/:token` (per-post) and `/campaign-review/:token` (campaign bulk review) use identical branding logic.
 
 ### Finance — Ledger
 
@@ -70,14 +73,7 @@
 | Profitability trend chart        |   ✓    |    ✓     |    ✓    |
 | Per-client profitability metrics |   ✓    |    ✓     |    ✓    |
 | Outstanding invoices KPI         |   ✓    |    ✓     |    ✓    |
-
-### Finance — Advanced
-
-| Feature                           | Ignite | Velocity | Quantum |
-| --------------------------------- | :----: | :------: | :-----: |
-| Cash vs Accrual accounting toggle |   ✓    |    ✓     |    ✓    |
-| CFO analysis / advanced reports   |   ✓    |    ✓     |    ✓    |
-| Multi-currency support            |   ✓    |    ✓     |    ✓    |
+| Cash vs Accrual accounting toggle|   ✓    |    ✓     |    ✓    |
 
 ### Content Calendar
 
@@ -86,7 +82,6 @@
 | Month view                                           |   ✓    |    ✓     |    ✓    |
 | Week view                                            |   ✓    |    ✓     |    ✓    |
 | Filter by client / platform / status                 |   ✓    |    ✓     |    ✓    |
-| View posts & meetings on calendar                    |   ✓    |    ✓     |    ✓    |
 | Create post from calendar                            |   ✓    |    ✓     |    ✓    |
 | Generate & export calendar report (PDF)              |   ✗    |    ✓     |    ✓    |
 
@@ -102,7 +97,6 @@
 | Public client review link                    |   ✓    |    ✓     |    ✓    |
 | Admin notes on posts                         |   ✓    |    ✓     |    ✓    |
 | Global posts page                            |   ✓    |    ✓     |    ✓    |
-| Bulk post actions                            |   ✓    |    ✓     |    ✓    |
 
 ### Dashboard
 
@@ -115,7 +109,6 @@
 | Financial snapshot        |   ✓    |    ✓     |    ✓    |
 | Lifetime revenue chart    |   ✓    |    ✓     |    ✓    |
 | Recent invoices widget    |   ✓    |    ✓     |    ✓    |
-| Profitability trend chart |   ✓    |    ✓     |    ✓    |
 | Meetings & notes widgets  |   ✓    |    ✓     |    ✓    |
 
 ### Client Management
@@ -126,7 +119,6 @@
 | Internal workspace                     |   ✓    |    ✓     |    ✓    |
 | Client tiers (Bronze/Silver/Gold etc.) |   ✓    |    ✓     |    ✓    |
 | Per-client profitability metrics       |   ✓    |    ✓     |    ✓    |
-| Client activity log                    |   ✓    |    ✓     |    ✓    |
 
 ### Meetings
 
@@ -143,7 +135,6 @@
 | Create & manage notes                   |   ✓    |    ✓     |    ✓    |
 | Status cycling (Todo / Done / Archived) |   ✓    |    ✓     |    ✓    |
 | Client assignment                       |   ✓    |    ✓     |    ✓    |
-| Due date email reminders                |   ✓    |    ✓     |    ✓    |
 
 ### Documents
 
@@ -155,7 +146,51 @@
 | Per-client Documents tab                    |   ✓    |    ✓     |    ✓    |
 | Collections (create, manage, move)          |   ✗    |    ✓     |    ✓    |
 
-> Collections locked on Ignite (visible, disabled with lock icon). All basic document operations open on all tiers.
+> Collections locked on Ignite — visible, disabled with lock icon. All basic document operations open on all tiers.
+
+### Campaigns
+
+| Feature                                        | Ignite | Velocity | Quantum |
+| ---------------------------------------------- | :----: | :------: | :-----: |
+| Campaign list (`/campaigns`)                   |   ✗    |    ✓     |    ✓    |
+| Campaign detail page (KPIs, posts, budget)     |   ✗    |    ✓     |    ✓    |
+| Campaign PDF report export                     |   ✗    |    ✓     |    ✓    |
+| Share review link (bulk client approval)       |   ✗    |    ✓     |    ✓    |
+| Campaign review email                          |   ✗    |    ✓     |    ✓    |
+| Per-client Campaigns tab in Client Detail      |   ✗    |    ✓     |    ✓    |
+
+> Campaigns are hidden on Trial/Ignite — the `/campaigns` route and the per-client Campaigns tab both render a `CampaignUpgradePrompt` component instead. Controlled by the `campaigns` boolean flag.
+
+### Proposals
+
+| Feature                                              | Ignite | Velocity | Quantum |
+| ---------------------------------------------------- | :----: | :------: | :-----: |
+| Global Proposals page (`/proposals`)                 |   ✓    |    ✓     |    ✓    |
+| Proposal detail page (`/proposals/:id`)              |   ✓    |    ✓     |    ✓    |
+| Create / edit proposals (title, scope, pricing)      |   ✓    |    ✓     |    ✓    |
+| Proposal PDF export                                  |   ✓    |    ✓     |    ✓    |
+| Share proposal link (public review page)             |   ✓    |    ✓     |    ✓    |
+| Client accept / decline flow                         |   ✓    |    ✓     |    ✓    |
+| Per-client Proposals tab in Client Detail            |   ✓    |    ✓     |    ✓    |
+| Prospect proposals (no linked client)                |   ✓    |    ✓     |    ✓    |
+| Proposal limit: 5 total (non-archived)               |   5    |    ✗     |    ✗    |
+| Unlimited proposals                                  |   ✗    |    ✓     |    ✓    |
+
+> Proposals use a **hybrid gating pattern**: the nav item, page, and per-client tab are always visible on all tiers. Gating triggers only at the point of creation — Trial/Ignite show a live counter ("3 of 5 used") and open `ProposalsUpgradePrompt` when the limit is reached. Velocity+ has no counter and no limit. Controlled by `proposals_limit` integer column (`5` for Trial/Ignite, `null` for Velocity/Quantum).
+
+### Teams
+
+| Feature                                          | Ignite | Velocity | Quantum |
+| ------------------------------------------------ | :----: | :------: | :-----: |
+| Invite team members via link                     |   ✓    |    ✓     |    ✓    |
+| Team member roster (Settings → Team tab)         |   ✓    |    ✓     |    ✓    |
+| Remove team members                              |   ✓    |    ✓     |    ✓    |
+| Revoke pending invites                           |   ✓    |    ✓     |    ✓    |
+| Full workspace access for team members           |   ✓    |    ✓     |    ✓    |
+| Real-time team roster updates                    |   ✓    |    ✓     |    ✓    |
+| Seat limits per plan                             |   ✗    |    ✗     |    ✗    |
+
+> **Teams Phase 1**: No subscription gating — all plans allow unlimited team members. Seat limits deferred until beta usage data is collected. Teams lives in Settings → Team tab (not the sidebar).
 
 ### Storage & Support
 
@@ -171,7 +206,7 @@
 
 ### Confirmed `agency_subscriptions` Table (Live — March 2026)
 
-This is the current confirmed state of the table after the v5 migration + Phase 6 documents gating. 28 columns total.
+30 columns total.
 
 | column_name                  | data_type   | default     | nullable | purpose                                                        |
 | ---------------------------- | ----------- | ----------- | :------: | -------------------------------------------------------------- |
@@ -184,7 +219,8 @@ This is the current confirmed state of the table after the v5 migration + Phase 
 | `created_at`                 | timestamptz | `now()`     |   YES    | Account creation timestamp                                     |
 | `updated_at`                 | timestamptz | `now()`     |   YES    | Last update timestamp                                          |
 | `agency_name`                | text        | —           |   YES    | Agency display name — sidebar + invoice PDF                    |
-| `logo_url`                   | text        | —           |   YES    | Agency logo — sidebar + review page                            |
+| `logo_url`                   | text        | —           |   YES    | Agency square logo — sidebar + review pages                    |
+| `logo_horizontal_url`        | text        | —           |   YES    | Agency landscape logo — preferred in sidebar expanded state and review page headers (Velocity+); managed via HorizontalLogoCropDialog |
 | `primary_color`              | text        | `'#6366f1'` |   YES    | Agency brand colour                                            |
 | `social_links`               | jsonb       | `'{}'`      |   YES    | Agency social media links                                      |
 | `industry`                   | text        | —           |   YES    | Agency industry (settings)                                     |
@@ -193,8 +229,8 @@ This is the current confirmed state of the table after the v5 migration + Phase 
 | `mobile_number`              | text        | —           |   YES    | Agency contact number                                          |
 | `description`                | text        | —           |   YES    | Agency description                                             |
 | `next_invoice_number`        | integer     | `1`         |    NO    | Sequential invoice number counter                              |
-| `branding_agency_sidebar`    | boolean     | `false`     |   YES    | Show agency logo+name in sidebar (Velocity+)                   |
-| `branding_powered_by`        | boolean     | `true`      |   YES    | Show "Tercero 2026" + "Powered by Tercero" (Ignite + Velocity) |
+| `branding_agency_sidebar`    | boolean     | `false`     |   YES    | Show agency logo+name in sidebar + on public review page headers (Velocity+) |
+| `branding_powered_by`        | boolean     | `true`      |   YES    | Show "Tercero 2026" sidebar footer + "Powered by Tercero" on public pages (Ignite + Velocity) |
 | `billing_cycle`              | text        | `'monthly'` |   YES    | monthly / annual                                               |
 | `trial_ends_at`              | timestamptz | —           |   YES    | Trial expiry — null after conversion                           |
 | `extra_client_price_inr`     | integer     | `500`       |   YES    | Add-on client price in INR                                     |
@@ -202,8 +238,10 @@ This is the current confirmed state of the table after the v5 migration + Phase 
 | `calendar_export`            | boolean     | `false`     |   YES    | Calendar PDF export gate (Velocity+)                           |
 | `finance_recurring_invoices` | boolean     | `false`     |   YES    | Recurring invoice templates gate (Velocity+)                   |
 | `documents_collections`      | boolean     | `false`     |   YES    | Document collections create/manage/move gate (Velocity+)       |
+| `campaigns`                  | boolean     | `false`     |   YES    | Campaigns feature gate — list, detail, review link (Velocity+) |
+| `proposals_limit`            | integer     | `5`         |   YES    | Max non-archived proposals (null = unlimited; 5 for Trial/Ignite) |
 
-> **Renamed columns**: `basic_whitelabel_enabled` → `branding_agency_sidebar`, `full_whitelabel_enabled` → `branding_powered_by`. Update all references in the codebase accordingly — search for both old names and replace.
+> **Column naming**: `branding_agency_sidebar` controls agency logo display in both the sidebar AND public review page headers. `branding_powered_by` controls the sidebar footer text AND "Powered by Tercero" on public pages. These are the canonical column names.
 
 ---
 
@@ -217,6 +255,7 @@ This is the current confirmed state of the table after the v5 migration + Phase 
 | `finance_subscriptions`      | FALSE | FALSE  |   TRUE   |  TRUE   |
 | `calendar_export`            | FALSE | FALSE  |   TRUE   |  TRUE   |
 | `documents_collections`      | FALSE | FALSE  |   TRUE   |  TRUE   |
+| `campaigns`                  | FALSE | FALSE  |   TRUE   |  TRUE   |
 
 ### Plan Limit Values per Plan
 
@@ -225,6 +264,7 @@ This is the current confirmed state of the table after the v5 migration + Phase 
 | `max_clients`            |      5      |      5      |      15      |      35      |
 | `max_storage_bytes`      | 21474836480 | 21474836480 | 107374182400 | 536870912000 |
 | `extra_client_price_inr` |     500     |     500     |     500      |     450      |
+| `proposals_limit`        |      5      |      5      |    null      |    null      |
 
 ### Seed SQL (run when a plan is created or changed)
 
@@ -239,7 +279,9 @@ UPDATE agency_subscriptions SET
   finance_recurring_invoices = FALSE,
   finance_subscriptions      = FALSE,
   calendar_export            = FALSE,
-  documents_collections      = FALSE
+  documents_collections      = FALSE,
+  campaigns                  = FALSE,
+  proposals_limit            = 5
 WHERE user_id = $1;
 
 -- IGNITE
@@ -253,7 +295,9 @@ UPDATE agency_subscriptions SET
   finance_recurring_invoices = FALSE,
   finance_subscriptions      = FALSE,
   calendar_export            = FALSE,
-  documents_collections      = FALSE
+  documents_collections      = FALSE,
+  campaigns                  = FALSE,
+  proposals_limit            = 5
 WHERE user_id = $1;
 
 -- VELOCITY
@@ -267,7 +311,9 @@ UPDATE agency_subscriptions SET
   finance_recurring_invoices = TRUE,
   finance_subscriptions      = TRUE,
   calendar_export            = TRUE,
-  documents_collections      = TRUE
+  documents_collections      = TRUE,
+  campaigns                  = TRUE,
+  proposals_limit            = NULL
 WHERE user_id = $1;
 
 -- QUANTUM
@@ -281,418 +327,198 @@ UPDATE agency_subscriptions SET
   finance_recurring_invoices = TRUE,
   finance_subscriptions      = TRUE,
   calendar_export            = TRUE,
-  documents_collections      = TRUE
+  documents_collections      = TRUE,
+  campaigns                  = TRUE,
+  proposals_limit            = NULL
 WHERE user_id = $1;
 ```
 
 ---
 
-## `useSubscription` Hook — Updated
+## `useSubscription` Hook — Current Implementation
 
-Extend the existing `src/api/useSubscription.js` to expose only the flags that are actively enforced:
+The hook lives at `src/api/useSubscription.js`. Returns a **React Query result** — consume via `const { data: sub } = useSubscription()`.
 
-```javascript
-// src/api/useSubscription.js
+The `data` object is a **flat object** — read flags directly. There are **no** `can.*` methods.
 
-export function useSubscription() {
-  // ... existing query fetching agency_subscriptions row ...
+```js
+const { data: sub } = useSubscription()
 
-  const sub = data // the subscription row
+// Plan name
+sub?.plan_name          // 'trial' | 'ignite' | 'velocity' | 'quantum'
 
-  const can = {
-    // Branding
-    useAgencySidebar: () => sub.branding_agency_sidebar ?? false,
-    showPoweredBy: () => sub.branding_powered_by ?? true,
+// Agency branding
+sub?.agency_name
+sub?.logo_url                 // square logo
+sub?.logo_horizontal_url      // landscape logo; preferred in sidebar expanded + review page headers
 
-    // Finance
-    recurringInvoices: () => sub.finance_recurring_invoices ?? false,
-    expenseSubscriptions: () => sub.finance_subscriptions ?? false,
+// Limits
+sub?.client_count             // current active client count (excludes is_internal clients)
+sub?.max_clients              // plan limit
 
-    // Calendar
-    calendarExport: () => sub.calendar_export ?? false,
+// Storage (pre-calculated display strings)
+sub?.storage_display          // { usage_value, usage_unit, max_value, max_unit, percent, remaining_label }
 
-    // Limits
-    addClient: (currentCount) =>
-      sub.max_clients === null || currentCount < sub.max_clients,
-  }
+// Feature flags (all boolean, read directly)
+sub?.branding_agency_sidebar    // Agency logo+name in sidebar (Velocity+)
+sub?.branding_powered_by        // "Tercero YYYY" footer + "Powered by Tercero" on public pages (Ignite + Velocity)
+sub?.finance_recurring_invoices // Recurring invoice templates tab (Velocity+)
+sub?.finance_subscriptions      // Expense subscriptions route (Velocity+)
+sub?.calendar_export            // Calendar PDF export button (Velocity+)
+sub?.documents_collections      // Document collections grouping (Velocity+)
+sub?.campaigns                  // Campaigns feature (Velocity+)
+sub?.proposals_limit            // integer | null — 5 for Trial/Ignite; null = unlimited (Velocity/Quantum)
 
-  return { subscription: sub, can, planName: sub.plan_name }
-}
+// Derived convenience flags (computed in the hook, not DB columns)
+sub?.basic_whitelabel_enabled   // branding_agency_sidebar && branding_powered_by  → Velocity
+sub?.full_whitelabel_enabled    // branding_agency_sidebar && !branding_powered_by → Quantum
 ```
 
-> **Defaults are defensive**: if a flag is missing from the DB row for any reason, it falls back to the most restricted state — except `branding_powered_by` which defaults to `true` (show Tercero branding) to protect brand exposure.
+**Defaults are defensive**: if a flag is missing from the DB row, it falls back to the most restricted state — **except** `branding_powered_by` which defaults to `true` to protect Tercero brand attribution.
+
+**Important**: Always use this hook — never query `agency_subscriptions` directly in components. The hook uses `workspaceUserId` from `AuthContext` internally, so team members correctly read the workspace owner's subscription row.
 
 ---
 
-## Implementation Notes
+## Gating Patterns
 
-Three features were built from scratch. Each section below documents what was built and where.
+Two distinct patterns depending on the feature:
+
+### Pattern 1 — Visible but locked (disabled + lock icon)
+
+Use for individual UI elements where showing the locked state communicates value.
+
+```jsx
+import { Lock } from 'lucide-react'
+const { data: sub } = useSubscription()
+
+{sub?.calendar_export ? (
+  <Button onClick={handleExport}>Export Report</Button>
+) : (
+  <Button disabled title="Upgrade to Velocity to export calendar reports">
+    Export Report
+    <Lock className="ml-2 h-3 w-3 opacity-50" />
+  </Button>
+)}
+```
+
+Use for: `calendar_export`, `documents_collections` UI elements.
+
+### Pattern 2 — Hidden entirely
+
+Use for nav items and routes that would be confusing to show disabled.
+
+```jsx
+// Nav item — hidden on Ignite
+{sub?.finance_subscriptions && (
+  <NavItem to="/finance/subscriptions">Subscriptions</NavItem>
+)}
+
+// Route — redirect if accessed directly on Ignite
+{!sub?.finance_subscriptions && (
+  <Route path="/finance/subscriptions" element={<Navigate to="/finance/invoices" replace />} />
+)}
+```
+
+Use for: `finance_subscriptions` nav item, `finance_recurring_invoices` tab.
+
+### Pattern 3 — Upgrade prompt component
+
+For whole features that warrant their own upgrade CTA.
+
+```jsx
+{!sub?.campaigns ? (
+  <CampaignUpgradePrompt />
+) : (
+  <CampaignsList />
+)}
+```
+
+Use for: `campaigns` on Trial/Ignite.
 
 ---
 
-### Feature 1 — Sidebar Footer "Tercero 2026" Text
+## Whitelabeling Architecture
 
-**What**: A small text label reading "Tercero 2026" (or the current year dynamically) rendered just above the existing `SidebarFooter` component. Visible on Ignite and Velocity. Hidden on Quantum.
+Two flags work together to control all branding surfaces:
 
-**Why it exists**: Tercero brand attribution for non-whitelabelled tiers. On Quantum, the sidebar is fully agency-branded with no Tercero identity.
+| Plan     | `branding_agency_sidebar` | `branding_powered_by` | Result |
+|----------|:-------------------------:|:---------------------:|--------|
+| Ignite   | FALSE | TRUE  | Tercero logo everywhere, "Powered by Tercero" on public pages |
+| Velocity | TRUE  | TRUE  | Agency logo everywhere, "Powered by Tercero" on public pages |
+| Quantum  | TRUE  | FALSE | Agency logo everywhere, no Tercero attribution (full whitelabel) |
 
-**Where to implement**: `src/AppShell.jsx` (or wherever your sidebar layout is composed — the file that renders the sidebar and includes the footer section).
+**Derived flags** (computed in `useSubscription`, not DB columns):
+- `basic_whitelabel_enabled` = Velocity (agency logo + Tercero attribution)
+- `full_whitelabel_enabled` = Quantum (agency logo, no Tercero attribution)
 
-**Implementation**:
+**Logo priority on public pages**: prefer `logo_horizontal_url`, fall back to `logo_url`, fall back to agency name text. Never render a broken `<img>` — always have a text fallback.
 
-```jsx
-// Inside your sidebar layout, just above <SidebarFooter /> (or equivalent):
-
-import { useSubscription } from '@/api/useSubscription'
-
-const { can } = useSubscription()
-const currentYear = new Date().getFullYear()
-
-{
-  can.showPoweredBy() && (
-    <div className="px-3 py-2">
-      <p className="text-xs text-muted-foreground/50 select-none">
-        Tercero {currentYear}
-      </p>
-    </div>
-  )
-}
-```
-
-**Important — do not change**:
-
-- The existing `SidebarFooter` component (user account, settings link) must remain untouched and always visible on all tiers.
-- The sidebar header (logo + agency name area) already reads from `useSubscription` for `branding_agency_sidebar` — this new addition is only the footer text, independent of that logic.
-
-**Checklist**:
-
-- [x]Text appears on Ignite (app logo in header, "Tercero 2026" above footer)
-- [x]Text appears on Velocity (agency logo in header, "Tercero 2026" above footer)
-- [x]Text hidden on Quantum (agency logo in header, no Tercero attribution)
-- [x]Year is dynamic (`new Date().getFullYear()`) — not hardcoded
-- [x]Existing sidebar footer component unchanged
+**Where whitelabeling applies:**
+1. **Sidebar header** (`nav-header.jsx`) — agency logo+name vs Tercero logo; prefers `logo_horizontal_url` when expanded
+2. **Sidebar footer** (`app-sidebar.jsx`) — "Tercero YYYY" text; controlled by `branding_powered_by`
+3. **Per-post review page** (`/review/:token`) — header logo + "Powered by Tercero" footer; data fetched via secondary query using `user_id` from `get_post_by_token` RPC
+4. **Campaign review page** (`/campaign-review/:token`) — identical branding logic; flags returned directly in `get_campaign_by_review_token` RPC response
+5. **Horizontal logo management** — `HorizontalLogoCropDialog` in `AgencySettings.jsx`
 
 ---
 
-### Feature 2 — "Powered by Tercero" Footer on Public Review Page
+## Teams — No Subscription Scope (Phase 1)
 
-**What**: A footer strip at the bottom of the public review page (`/review/:token`) that reads "Powered by Tercero". Visible on Ignite and Velocity. Hidden on Quantum.
+Teams is ungated — all plans allow unlimited team members. No feature flag controls it.
 
-**Where to implement**: `src/pages/PublicReview.jsx`
+**How team access works:**
+- `agency_members` table stores all workspace participants (owner row with `system_role = 'admin'` + member rows with `system_role = 'member'`)
+- `agency_invites` table stores pending invite tokens (7-day expiry)
+- `get_my_agency_user_id()` SECURITY DEFINER helper in RLS policies resolves the correct workspace for both owners and members
+- `AuthContext` exposes `workspaceUserId` (owner's UID for everyone in the workspace) and `userRole`
+- All API hooks use `workspaceUserId` — team members see the same workspace data as the owner transparently
 
-**Data source**: The review page is public and unauthenticated — it does not have access to `useSubscription()` directly. The subscription data needs to be fetched server-side or passed through the review token lookup.
-
-**How to fetch plan data on the public page**:
-
-The review token lookup already queries the `post_versions` table (or similar) to fetch the post. That query joins to `posts → clients → user_id`. From `user_id` you can fetch the relevant `agency_subscriptions` row in the same query or as a secondary query.
-
-Option A — add to existing token query (recommended):
-
-```javascript
-// In your existing review token fetch (src/api/posts.js or similar)
-// Extend the query to also return the agency's branding_powered_by flag
-
-const { data } = await supabase
-  .from('post_versions')
-  .select(
-    `
-    *,
-    posts (
-      *,
-      clients (
-        *,
-        agency_subscriptions!inner (
-          branding_agency_sidebar,
-          branding_powered_by,
-          agency_name,
-          logo_url
-        )
-      )
-    )
-  `,
-  )
-  .eq('review_token', token)
-  .single()
-
-// branding_powered_by and logo_url are now available from data.posts.clients.agency_subscriptions
-```
-
-Option B — separate lightweight query using the agency's user_id from the resolved post.
-
-**Implementation in `PublicReview.jsx`**:
-
-```jsx
-// Derive from your review data fetch:
-const agencySub = reviewData?.posts?.clients?.agency_subscriptions
-const showPoweredBy = agencySub?.branding_powered_by ?? true
-const showAgencyLogo = agencySub?.branding_agency_sidebar ?? false
-const agencyLogoUrl = agencySub?.logo_url
-
-// Header — conditional logo
-;<header>
-  {
-    showAgencyLogo && agencyLogoUrl ? (
-      <img src={agencyLogoUrl} alt="Agency logo" className="h-8 w-auto" />
-    ) : (
-      <TerceroLogo />
-    ) // your existing app logo component
-  }
-</header>
-
-// ... existing review page content (unchanged) ...
-
-// Footer — add at the bottom of the page
-{
-  showPoweredBy && (
-    <footer className="mt-auto py-4 text-center border-t border-border">
-      <p className="text-xs text-muted-foreground/60">Powered by Tercero</p>
-    </footer>
-  )
-}
-```
-
-**Important — do not change**:
-
-- The entire existing review flow (feedback textarea, "Request Revisions" button, media gallery, platform previews, version number display) must remain completely untouched.
-- This is purely additive — a header logo swap and an optional footer line.
-- The page remains fully public and unauthenticated. No auth changes.
-
-**Checklist**:
-
-- [x]Ignite: Tercero app logo in header, "Powered by Tercero" in footer
-- [x]Velocity: Agency logo in header (from `logo_url`), "Powered by Tercero" in footer
-- [x]Quantum: Agency logo in header, no footer text
-- [x]If `logo_url` is null on Velocity/Quantum, fall back to app logo gracefully (don't render broken image)
-- [x]Footer does not appear if `branding_powered_by = false`
-- [x]Existing review functionality (feedback, revisions, media) unchanged
-- [x]Page still works with no authentication
+**When building any new feature**, always use `workspaceUserId` (not `user.id`) for queries scoped to the agency workspace. The RLS helper handles the rest.
 
 ---
 
-### Feature 3 — Calendar Report Generation & PDF Export
+## Implementation Notes — Built Features
 
-**What**: A "Generate Report" button on the calendar page that produces a PDF summary of the content schedule for the selected month or week. Visible and functional on Velocity and Quantum. Hidden (or locked with upgrade nudge) on Ignite.
+### Sidebar Footer "Tercero 2026" Text
 
-**Where to implement**: `src/pages/calendar/ContentCalendar.jsx`
+Rendered just above `<SidebarFooter>` in `src/components/sidebar/app-sidebar.jsx`. Year is dynamic (`new Date().getFullYear()`). The user account footer is always visible on all tiers regardless of this flag.
 
-**What the report should contain**:
+### "Powered by Tercero" on Public Review Pages
 
-- Agency name and logo (from subscription branding)
-- Report period label (e.g. "March 2026" for month view, "3–9 Mar 2026" for week view)
-- For each day in the period: list of posts with title, client name, platform badges, and status
-- Summary counts at the top: total posts, breakdown by status, breakdown by platform
-- Generated date in the footer
+Both `PublicReview.jsx` and `CampaignReview.jsx` receive branding flags from the RPC response. The RPC joins back to `agency_subscriptions` through the token chain, keeping the page fully unauthenticated. Header logo prefers `logo_horizontal_url`, falls back to `logo_url`, falls back to Tercero logo. Footer conditionally rendered on `branding_powered_by`.
 
-**PDF generation**: Use `@react-pdf/renderer` — it is already installed in the project (used for invoice PDF export). Follow the same pattern as the existing invoice PDF utility.
+### Calendar Report PDF Export
 
-**Suggested file structure**:
-
-```
-src/pages/calendar/
-  ContentCalendar.jsx          ← existing, add button here
-  CalendarReportPDF.jsx        ← new: PDF document component
-  useCalendarReport.js         ← new: data preparation hook
-```
-
-**Implementation outline**:
-
-```jsx
-// src/pages/calendar/useCalendarReport.js
-// Transforms existing calendar data (already fetched by ContentCalendar)
-// into a flat structure suitable for the PDF renderer.
-
-export function useCalendarReport(posts, viewMode, currentDate) {
-  // viewMode: 'month' | 'week'
-  // posts: already fetched array from useGlobalPosts or get_global_calendar RPC
-  // Returns: { days: [{ date, posts: [] }], summary: { total, byStatus, byPlatform } }
-}
-```
-
-```jsx
-// src/pages/calendar/CalendarReportPDF.jsx
-import {
-  Document,
-  Page,
-  Text,
-  View,
-  Image,
-  StyleSheet,
-} from '@react-pdf/renderer'
-
-// Follows same styling conventions as existing invoice PDF
-// Accepts: { reportData, agencyName, agencyLogoUrl, period }
-```
-
-```jsx
-// In ContentCalendar.jsx — add to the filters bar:
-import { useSubscription } from '@/api/useSubscription'
-import { pdf } from '@react-pdf/renderer'
-
-const { can } = useSubscription()
-
-// In the filters/controls bar, alongside existing filter dropdowns:
-{
-  can.calendarExport() ? (
-    <Button
-      variant="outline"
-      size="sm"
-      onClick={handleGenerateReport}
-      disabled={isGenerating}
-    >
-      {isGenerating ? 'Generating...' : 'Export Report'}
-    </Button>
-  ) : (
-    <Button
-      variant="outline"
-      size="sm"
-      disabled
-      title="Upgrade to Velocity to export calendar reports"
-    >
-      Export Report
-      <LockIcon className="ml-2 h-3 w-3 opacity-50" />
-    </Button>
-  )
-}
-
-// Handler:
-const handleGenerateReport = async () => {
-  setIsGenerating(true)
-  const reportData = buildCalendarReport(posts, viewMode, currentDate)
-  const blob = await pdf(
-    <CalendarReportPDF
-      reportData={reportData}
-      agencyName={subscription.agency_name}
-      agencyLogoUrl={subscription.logo_url}
-      period={getPeriodLabel(viewMode, currentDate)}
-    />,
-  ).toBlob()
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `tercero-calendar-${getPeriodLabel(viewMode, currentDate)}.pdf`
-  a.click()
-  URL.revokeObjectURL(url)
-  setIsGenerating(false)
-}
-```
-
-**Important — do not change**:
-
-- Existing calendar data fetching logic (the `get_global_calendar` RPC or equivalent) is read-only input — do not modify it.
-- Month view and week view rendering must remain exactly as-is.
-- All existing filters (status, client, platform, search) remain unchanged.
-- The export button is purely additive to the filters bar — do not restructure the calendar layout.
-
-**Checklist**:
-
-- [x]Export button visible on Velocity and Quantum
-- [x]Export button visible but disabled (with lock icon + tooltip) on Ignite
-- [x]Report generates correctly for both month view and week view
-- [x]Report includes agency name and logo (respects branding tier)
-- [x]PDF filename includes period (e.g. `tercero-calendar-march-2026.pdf`)
-- [x]Loading state shown during generation (button disabled, "Generating..." text)
-- [x]No changes to existing calendar rendering or data fetching
-- [x]Uses `@react-pdf/renderer` consistent with invoice PDF implementation
-
----
-
-## Finance Enforcement — Recurring Invoices & Subscriptions
-
-These are existing built features that need gating — no new UI to build, just conditional rendering.
+`CalendarReportPDF.jsx` (PDF document) + `useCalendarReport.js` (data prep) in `src/pages/calendar/`. Button in `ContentCalendar.jsx` — locked on Ignite, active on Velocity+. Uses `@react-pdf/renderer` consistent with invoice PDF implementation.
 
 ### Recurring Invoice Templates
 
-**Where**: `src/pages/finance/InvoicesTab.jsx`
+`InvoicesTab.jsx` — Recurring tab is hidden entirely on Ignite. One-off invoicing fully accessible on all tiers.
 
-The invoices page has two tabs: "One-off" and "Recurring". On Ignite, hide the "Recurring" tab entirely. The one-off tab remains fully functional.
+### Expense Subscriptions
 
-```jsx
-import { useSubscription } from '@/api/useSubscription'
-const { can } = useSubscription()
+`/finance/subscriptions` nav item hidden on Ignite. Direct navigation to the route redirects to `/finance/invoices` on Ignite.
 
-// In the tab list:
-;<TabsList>
-  <TabsTrigger value="one-off">Invoices</TabsTrigger>
-  {can.recurringInvoices() && (
-    <TabsTrigger value="recurring">Recurring</TabsTrigger>
-  )}
-</TabsList>
+### Campaigns
 
-// Guard the TabsContent too:
-{
-  can.recurringInvoices() && (
-    <TabsContent value="recurring">
-      {/* existing recurring tab content */}
-    </TabsContent>
-  )
-}
-```
+`/campaigns` and per-client Campaigns tab both render `CampaignUpgradePrompt` on Trial/Ignite. Fully functional on Velocity+. The Campaigns nav item in the sidebar is always shown — gating is handled inside the page/component.
 
-**Do not change**: The one-off invoice creation flow, `CreateInvoiceDialog`, `EditInvoiceDialog`, the invoice list table, PDF download, or any mutation hooks.
+### Proposals
 
-**Checklist**:
+`/proposals`, `/proposals/:proposalId`, and per-client Proposals tab are all visible on all tiers. Gating triggers only at creation time — `useCreateProposal` counts non-archived proposals workspace-wide before inserting; if `proposals_limit` is not null and `count >= limit`, throws a typed `ProposalLimitError`. UI-side: `ProposalsPage` and `ProposalTab` compute `atLimit` from live `useProposals()` data and open `ProposalsUpgradePrompt` instead of the create form. `ProposalTab` uses a second `useProposals()` call (without `clientId`) for the workspace-wide count so the counter is accurate even when scoped to a single client.
 
-- [x]Recurring tab hidden on Ignite
-- [x]Recurring tab visible and functional on Velocity and Quantum
-- [x]One-off invoicing fully functional on all tiers
-- [x]No changes to invoice hooks or dialogs
+Public review page (`/proposal/:token`) is fully unauthenticated. Branding logic (header logo chain + "Powered by Tercero" footer) mirrors the per-post and campaign review pages — `branding_agency_sidebar` controls the logo, `branding_powered_by` controls the footer. PDF export uses `@react-pdf/renderer` + `downloadProposalPDF.jsx` (same canvas-rasterization pattern as invoices for the Tercero SVG logo).
 
-### Expense Subscriptions Route
+### Documents Collections
 
-**Where**: Finance nav item + `src/pages/finance/FinanceLayout.jsx` (or wherever finance sub-routes are defined)
-
-On Ignite, hide the Subscriptions nav item and redirect `/finance/subscriptions` to `/finance/invoices` with a toast nudge.
-
-```jsx
-// In finance nav/sidebar sub-items:
-{
-  can.expenseSubscriptions() && (
-    <NavItem to="/finance/subscriptions">Subscriptions</NavItem>
-  )
-}
-
-// In route definitions (or FinanceLayout):
-{
-  !can.expenseSubscriptions() && (
-    <Route
-      path="/finance/subscriptions"
-      element={
-        <Navigate to="/finance/invoices" replace />
-        // optionally fire a toast: "Upgrade to Velocity to track recurring expenses"
-      }
-    />
-  )
-}
-```
-
-**Checklist**:
-
-- [x]Subscriptions nav item hidden on Ignite
-- [x]Navigating to `/finance/subscriptions` on Ignite redirects to `/finance/invoices`
-- [x]Subscriptions fully accessible on Velocity and Quantum
-- [x]No changes to the subscriptions page itself or its hooks
+"New Collection" buttons, collection cards, and "Move to Collection" menu items all locked on Ignite with lock icon + upgrade tooltip. Basic document operations (upload, view, download, delete) open on all tiers.
 
 ---
 
 ## Trial Account Behaviour
 
-Trial accounts (`plan_name = 'trial'`) receive full **Ignite-level** access with a `trial_ends_at` timestamp.
-
-```javascript
-// src/context/AuthContext.jsx or AppShell.jsx
-
-const isTrialExpired = () => {
-  if (subscription?.plan_name !== 'trial') return false
-  return new Date() > new Date(subscription.trial_ends_at)
-}
-
-// If expired:
-// → Redirect to /billing with banner: "Your trial has ended. Your data is safe — choose a plan to continue."
-// → 48h grace period: read-only (all create/edit actions blocked)
-// → Day 30 post-expiry: soft delete
-```
-
-**Trial expiry UX timeline**:
+Trial accounts (`plan_name = 'trial'`) receive full Ignite-level access with a `trial_ends_at` timestamp.
 
 - Day 10: Dashboard banner — "4 days left on your trial."
 - Day 13: Email — "Your trial ends tomorrow."
@@ -700,53 +526,20 @@ const isTrialExpired = () => {
 - Day 14 + 48h: Read-only mode.
 - Day 44: Soft delete.
 
----
-
-## Testing Checklist — Three Accounts
-
-Create one account per tier and verify the following across all three.
-
-### Sidebar
-
-- [x]Ignite: Tercero app logo, "Tercero 2026" above footer, no agency branding
-- [x]Velocity: Agency logo & name, "Tercero 2026" above footer
-- [x]Quantum: Agency logo & name, no "Tercero 2026" text
-
-### Public Review Page (`/review/:token`)
-
-- [x]Ignite: App logo in header, "Powered by Tercero" in footer
-- [x]Velocity: Agency logo in header, "Powered by Tercero" in footer
-- [x]Quantum: Agency logo in header, no footer text
-- [x]All three: Review flow (feedback, revisions, media) works identically
-
-### Finance
-
-- [x]Ignite: One-off invoices work fully. Recurring tab not visible. Subscriptions nav item not visible.
-- [x]Velocity: Both invoice tabs visible. Subscriptions accessible.
-- [x]Quantum: Same as Velocity.
-- [x]All three: Ledger, finance overview, reports, per-client profitability all accessible.
-
-### Calendar
-
-- [x]Ignite: Calendar fully functional. Export button visible but disabled with lock icon.
-- [x]Velocity: Export button active. PDF generates correctly for month and week view.
-- [x]Quantum: Same as Velocity.
-
-### Limits
-
-- [x]Ignite: Cannot create a 6th client (hard block with message)
-- [x]Velocity: Cannot create a 16th client
-- [x]Quantum: Cannot create a 36th client
+Expired trials redirect to `/billing` with banner: "Your trial has ended. Your data is safe — choose a plan to continue."
 
 ---
 
 ## Change Log
 
-| Version | Date       | Summary                                                                                                                                                                                                                                                                                                                                                                                                                   |
-| ------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| v1      | March 2026 | Original                                                                                                                                                                                                                                                                                                                                                                                                                  |
-| v2      | March 2026 | Updated pricing, restructured finance gating                                                                                                                                                                                                                                                                                                                                                                              |
-| v3      | March 2026 | Stripped campaigns, proposals, documents                                                                                                                                                                                                                                                                                                                                                                                  |
-| v4      | March 2026 | Basic invoicing open to all tiers. Per-client profitability open to all tiers. Recurring templates → Velocity+.                                                                                                                                                                                                                                                                                                           |
-| v5      | March 2026 | Final confirmed decisions. Most features open to all tiers. Only gates: sidebar branding, review page branding, recurring invoices, expense subscriptions, calendar export. Three new features to build: sidebar footer text, review page "Powered by Tercero" footer, calendar PDF export. Payment reminders deferred. Full implementation instructions added. DB table confirmed and documented with live column state. |
-| v5.1    | March 2026 | Documents Phase 6 — subscription-based scoping for Collections. Added `documents_collections` flag (Velocity+). DB column live. UI: "New Collection" buttons locked, CollectionCards dimmed with lock icon, "Move to Collection" menu item disabled, Collections section on global page shows upgrade banner. Per-client basic document operations remain open on all tiers. |
+| Version | Date       | Summary |
+| ------- | ---------- | ------- |
+| v1      | March 2026 | Original |
+| v2      | March 2026 | Updated pricing, restructured finance gating |
+| v3      | March 2026 | Stripped campaigns, proposals, documents from scope |
+| v4      | March 2026 | Basic invoicing open to all tiers. Recurring templates → Velocity+. |
+| v5      | March 2026 | Final confirmed decisions. Sidebar footer, review page branding, calendar PDF export built. DB table confirmed. |
+| v5.1    | March 2026 | Documents Phase 6 — `documents_collections` flag (Velocity+). Collections locked on Ignite. |
+| v5.2    | March 2026 | Campaigns Phase 1 complete — `campaigns` flag (Velocity+). Campaign review page with whitelabeling. |
+| v5.3    | March 2026 | Teams Phase 1 complete — ungated (all plans). `logo_horizontal_url` column added. `useSubscription` flat object pattern documented. Gating patterns and whitelabeling architecture added. Seed SQL updated with `campaigns` flag. |
+| v5.4    | March 2026 | Proposals Phase 1 complete — `proposals_limit` column (integer, default 5, null = unlimited). Hybrid gating pattern: always visible, limit enforced at creation. Counter shown on Trial/Ignite, hidden on Velocity+. Seed SQL updated. |

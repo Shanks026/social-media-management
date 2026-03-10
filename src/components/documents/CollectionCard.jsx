@@ -65,7 +65,6 @@ export default function CollectionCard({ collection, documents = [], locked = fa
   const uploadMutation = useUploadMutation({
     mutationFn: ({ file, displayName, category }) =>
       uploadDocument({
-        userId: user.id,
         clientId: collection.client_id,
         file,
         displayName,

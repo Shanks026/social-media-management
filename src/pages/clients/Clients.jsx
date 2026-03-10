@@ -182,7 +182,7 @@ export default function Clients() {
 
   return (
     <div className="min-h-full bg-background selection:bg-primary/10">
-      <div className="px-8 pt-8 pb-20 space-y-8 max-w-[1440px] mx-auto">
+      <div className="px-8 pt-8 pb-20 space-y-8 max-w-[1400px] mx-auto">
         {/* --- SECTION 1: HEADER & PRIMARY ACTION --- */}
         <div className="flex items-end justify-between">
           <div className="space-y-1">
@@ -204,7 +204,8 @@ export default function Clients() {
             disabled={isSubLoading}
             className={cn(
               'h-9 gap-2 transition-all duration-300',
-              subscription?.is_client_limit_reached && 'bg-secondary text-secondary-foreground hover:bg-secondary/80 border border-border text-xs'
+              subscription?.is_client_limit_reached &&
+                'bg-secondary text-secondary-foreground hover:bg-secondary/80 border border-border text-xs',
             )}
           >
             {subscription?.is_client_limit_reached ? (

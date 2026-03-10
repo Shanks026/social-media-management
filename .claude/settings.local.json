@@ -34,7 +34,25 @@
       "Bash(git commit:*)",
       "Bash(npx eslint src/lib/cropImage.js src/components/HorizontalLogoCropDialog.jsx src/pages/settings/AgencySettings.jsx)",
       "Bash(npm install react-image-crop)",
-      "Bash(node -e \"const r = require\\(''d:/Tertiary/node_modules/@react-pdf/renderer''\\); console.log\\(Object.keys\\(r\\).filter\\(k => [''Svg'',''Path'',''Image''].includes\\(k\\)\\)\\)\")"
+      "Bash(node -e \"const r = require\\(''d:/Tertiary/node_modules/@react-pdf/renderer''\\); console.log\\(Object.keys\\(r\\).filter\\(k => [''Svg'',''Path'',''Image''].includes\\(k\\)\\)\\)\")",
+      "Bash(git check-ignore:*)",
+      "Read(//c/Users/chris_austin/.claude/**)",
+      "Read(//c/Users/chris_austin/.config/claude/**)",
+      "Bash(npx --version)",
+      "Bash(npx -y @supabase/mcp-server-supabase@latest --help)",
+      "Bash(npx clear-npx-cache:*)",
+      "Bash(npm cache:*)",
+      "mcp__supabase__list_projects",
+      "Bash(find /c/Users/chris_austin/Desktop/social-media-management -name *.sql -type f)",
+      "Bash(find /c/Users/chris_austin/Desktop/social-media-management -name seed.sql -o -name *.sql)",
+      "Bash(grep -r \"profiles\\\\|user_profiles\" /c/Users/chris_austin/Desktop/social-media-management --include=*.jsx --include=*.js --include=*.sql)",
+      "Bash(grep -h \"\\\\.from\\(\" /c/Users/chris_austin/Desktop/social-media-management/src/api/*.js)",
+      "Bash(find /c/Users/chris_austin/Desktop/social-media-management -path *node_modules -prune -o -name schema* -o -name *migration* -o -name *seed*)",
+      "mcp__supabase__list_tables",
+      "mcp__supabase__apply_migration",
+      "mcp__supabase__execute_sql",
+      "mcp__supabase__list_migrations",
+      "Bash(grep -n proposals c:/Users/chris_austin/Desktop/social-media-management/supabase/migrations/*.sql)"
     ]
   }
 }

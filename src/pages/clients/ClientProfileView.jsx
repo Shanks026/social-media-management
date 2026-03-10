@@ -8,6 +8,7 @@ import {
   Receipt,
   FolderOpen,
   Megaphone,
+  FileText,
 } from 'lucide-react'
 
 // UI Components
@@ -24,6 +25,7 @@ import { cn } from '@/lib/utils'
 import { ClientBillingTab } from './ClientBillingTab'
 import DocumentsTab from '@/components/documents/DocumentsTab'
 import { CampaignTab } from '@/components/campaigns/CampaignTab'
+import { ProposalTab } from '@/components/proposals/ProposalTab'
 
 export default function ClientProfileView({ client }) {
   if (!client) return null
@@ -61,6 +63,7 @@ export default function ClientProfileView({ client }) {
       ? [{ value: 'billing', label: 'Billing', icon: Receipt }]
       : []),
 
+    { value: 'proposals', label: 'Proposals', icon: FileText },
     { value: 'documents', label: 'Documents', icon: FolderOpen },
     { value: 'calendar', label: 'Calendar', icon: Calendar },
     { value: 'management', label: 'Settings', icon: Settings2 },
@@ -68,8 +71,8 @@ export default function ClientProfileView({ client }) {
 
   return (
     <div className="min-h-full bg-background selection:bg-primary/10">
-      {/* MAIN CONTAINER: Standardised to max-w-[1440px] to match the Clients List Page */}
-      <div className="px-8 pt-6 pb-10 space-y-6 max-w-[1440px] mx-auto animate-in fade-in duration-700">
+      {/* MAIN CONTAINER: Standardised to max-w-[1400px] to match the Clients List Page */}
+      <div className="px-8 pt-6 pb-10 space-y-6 max-w-[1400px] mx-auto animate-in fade-in duration-700">
         {/* --- HEADER SECTION --- */}
         <div className="flex items-center gap-6">
           <div className="h-16 w-16 shrink-0 rounded-2xl bg-muted/20 border border-border/40 flex items-center justify-center overflow-hidden shadow-sm transition-transform hover:scale-[1.02]">
@@ -163,6 +166,13 @@ export default function ClientProfileView({ client }) {
               className="mt-2 focus-visible:outline-none"
             >
               <CampaignTab clientId={client.id} />
+            </TabsContent>
+
+            <TabsContent
+              value="proposals"
+              className="mt-2 focus-visible:outline-none"
+            >
+              <ProposalTab clientId={client.id} />
             </TabsContent>
 
             <TabsContent

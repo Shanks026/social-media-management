@@ -5,13 +5,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Commands
 
 ```bash
-npm run dev      # Start Vite dev server with HMR
-npm run build    # Production build
-npm run lint     # Run ESLint
-npm run preview  # Preview production build locally
+npm run dev           # Start Vite dev server with HMR
+npm run build         # Production build
+npm run lint          # Run ESLint
+npm run preview       # Preview production build locally
+npm test              # Run tests once (vitest run)
+npm run test:watch    # Run tests in watch mode
 ```
 
-No test framework is configured.
+Tests use **Vitest** + jsdom. Test files live in `src/tests/` (e.g. `src/tests/campaigns/phase1.test.jsx`). Import test helpers from `src/tests/test-utils.jsx`.
 
 ## Architecture Overview
 
@@ -40,7 +42,7 @@ Pages/Components → API functions (src/api/) → Supabase client → PostgreSQL
 
 **Entry (main.jsx):** Wraps app in `QueryClientProvider`, `ThemeProvider`, `SidebarProvider`, `TooltipProvider`, `Toaster`, `BrowserRouter`.
 
-**Auth (src/context/AuthContext.jsx):** Supabase `onAuthStateChange` listener; session checked in `App.jsx` to protect routes.
+**Auth (src/context/AuthContext.jsx):** Supabase `onAuthStateChange` listener; session checked in `App.jsx` to protect routes. Resolves `workspaceUserId` and `userRole` on every auth state change — for workspace owners `workspaceUserId === user.id`; for invited members it is the owner's UID. All API hooks use `workspaceUserId` (not `user.id`) to scope DB queries to the correct workspace.
 
 **Layout (AppShell.jsx):** Sidebar nav + header wrapper; feature content renders via React Router `<Outlet>`.
 
@@ -57,6 +59,7 @@ Pages/Components → API functions (src/api/) → Supabase client → PostgreSQL
 **Shared utilities:**
 - `src/lib/helper.js` — `formatDate(dateInput)` → "2 Jan, 2026"; `formatFileSize(bytes)` → "2.3 MB"; `MAX_DOCUMENT_SIZE_BYTES` constant (50 MB)
 - `src/lib/client-helpers.js` — `getUrgencyStatus(nextPostAt)` → urgency color/label for pipeline indicators
+- `src/lib/workspace.js` — `resolveWorkspace()` async helper for plain mutation functions that need `workspaceUserId` without React context (calls `auth.getUser()` then checks `agency_members`)
 
 ### Domain Patterns
 
@@ -75,6 +78,10 @@ Pages/Components → API functions (src/api/) → Supabase client → PostgreSQL
 **Finance (`/finance`):** Agency-side financial tracking — invoice generation with PDF export, expense tracking, transaction ledger, client subscription plan management. Nested routes: `overview`, `subscriptions`, `ledger`, `invoices`.
 
 **Billing (`/billing`):** The agency's own subscription to Tercero — plan details, usage stats, and internal invoices. Separate from client Finance.
+
+**Teams (`/settings` → Team tab):** Agency owners invite teammates via a generated link (`/join/:token`). Invited members get full workspace access. The multi-tenant workspace model is the key architectural concept: all DB queries are scoped by `workspaceUserId` (the owner's UID), resolved via `get_my_agency_user_id()` SECURITY DEFINER SQL function. API module: `src/api/team.js`; public join page: `src/pages/JoinTeam.jsx`; team management UI: `src/pages/settings/TeamSettings.jsx`. Both `useTeamMembers()` and `usePendingInvites()` maintain Supabase Realtime subscriptions for live updates.
+
+**Proposals (`/proposals`):** Statuses: `draft` → `sent` → `viewed` → `accepted` / `declined`; `expired` computed by DB when `valid_until < now()`; `archived` is manual. Three surfaces: global list (`/proposals`), detail page (`/proposals/:proposalId`, full inline-edit with auto-save), and public review (`/proposal/:token`, unauthenticated). Per-client `ProposalTab` reused in Client Detail. Hybrid gating: all surfaces always visible; creation blocked at `proposals_limit` (5 for Trial/Ignite, null = unlimited for Velocity/Quantum) with `ProposalsUpgradePrompt`. API module: `src/api/proposals.js`. PDF export: `src/utils/downloadProposalPDF.jsx` + `src/components/proposals/ProposalPDF.jsx` (canvas-rasterized Tercero SVG logo when no agency branding). Key RPCs: `get_proposals_with_totals`, `generate_proposal_token`, `get_proposal_by_token` (public), `mark_proposal_viewed` (public), `accept_proposal` (public), `decline_proposal` (public).
 
 **Supabase Edge Functions (supabase/):** `send-approval-email`, `send-client-welcome`, `send-password-update-email`, `send-campaign-review-email`.
 
@@ -96,6 +103,7 @@ The `data` object includes:
   - `calendar_export` — calendar PDF export button (Velocity+)
   - `documents_collections` — document collections grouping (Velocity+)
   - `campaigns` — campaigns feature (Velocity+)
+- `proposals_limit` — integer | null — 5 for Trial/Ignite; null = unlimited (Velocity/Quantum)
 
 **Gating pattern:** Read flags directly from `data` (e.g. `data?.finance_subscriptions`). For locked features (visible but disabled), show with a disabled state + lock icon + tooltip. For hidden features (like nav items), conditionally render them. See `.claude/features/feature-tiers-v5.md` for the full feature matrix.
 
@@ -106,4 +114,5 @@ The `data` object includes:
 ```
 VITE_SUPABASE_URL
 VITE_SUPABASE_ANON_KEY
+VITE_APP_URL          # Base URL for invite link generation (e.g. https://tercerospace.com)
 ```

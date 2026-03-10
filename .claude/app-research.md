@@ -1,7 +1,7 @@
 # Tercero — Full Application Research Document
 
 > **Purpose**: Comprehensive product/feature reference for building a landing page for Tercero.
-> **Status**: Updated March 9, 2026 — reflects live codebase including campaigns (Phases 1–3), documents, subscription tier gating, calendar PDF export, and branding system.
+> **Status**: Updated March 10, 2026 — reflects live codebase including corrected post status values (PENDING_APPROVAL/NEEDS_REVISION/PUBLISHED), horizontal logo branding, derived whitelabel flags, campaigns full implementation, accurate share token architecture, Teams Phase 1 (agency_members, agency_invites, workspaceUserId, /join/:token), and Proposals Phase 1 (proposals, proposal_line_items, public review, PDF export, per-client tab, subscription enforcement).
 
 ---
 
@@ -32,6 +32,7 @@ Tercero is a **social media agency management SaaS** — an all-in-one operation
 | Posts | `/posts` | Global content management |
 | Calendar | `/calendar` | Visual content schedule |
 | Campaigns | `/campaigns` | Group posts into initiatives with analytics (Velocity+) |
+| Proposals | `/proposals` | Create, send, and track client proposals with accept/decline flow |
 | Finance | `/finance` | Invoices, expenses, ledger, subscriptions |
 | Documents | `/documents` | Per-client file storage with collections (Velocity+) |
 | Meetings | `/operations/meetings` | Meeting scheduling and history |
@@ -40,6 +41,8 @@ Tercero is a **social media agency management SaaS** — an all-in-one operation
 | Billing | `/billing` | Agency's own subscription plan |
 | Public Review | `/review/:token` | Per-post client content approval (no login required) |
 | Campaign Review | `/campaign-review/:token` | Bulk campaign approval for clients (no login required) |
+| Proposal Review | `/proposal/:token` | Proposal accept/decline for prospects (no login required) |
+| Join Team | `/join/:token` | Teammate signup via invite link (no login required) |
 
 ### Tech Stack (for developer-facing messaging)
 - React 19 + Vite SPA
@@ -124,11 +127,12 @@ This is the core of Tercero. The entire content workflow lives here.
 
 #### Post Statuses and Their Meaning
 ```
-DRAFT        → Being written by the agency; not submitted yet
-PENDING      → Submitted for review (client or internal approval)
-REVISIONS    → Client requested changes; new version created
-SCHEDULED    → Approved and ready to publish on target date
-ARCHIVED     → No longer active; preserved for history
+DRAFT            → Being written by the agency; not submitted yet
+PENDING_APPROVAL → Submitted for client/admin review via "Send for Approval"
+NEEDS_REVISION   → Client requested changes via public review link; new version created
+SCHEDULED        → Approved and ready to publish on target date
+PUBLISHED        → Marked as published after scheduling date passes
+ARCHIVED         → No longer active; preserved for history
 ```
 
 #### Post Versioning System
@@ -177,10 +181,12 @@ Platform-specific visual previews:
 - Click to view any historical version
 
 **Action Buttons** (vary by current status):
-- `DRAFT` → "Submit for Approval" (→ PENDING)
-- `PENDING` → "Request Revisions" (→ REVISIONS, creates new version) or "Approve & Schedule" (→ SCHEDULED)
-- `REVISIONS` → "Submit Updated Draft" (→ PENDING)
+- `DRAFT` → "Send for Approval" (→ `PENDING_APPROVAL` via `send_post_for_approval` RPC) or "Approve & Schedule" (internal-only shortcut → `SCHEDULED`)
+- `PENDING_APPROVAL` → Agency can approve or await client action via public review link
+- `NEEDS_REVISION` → "Submit Updated Draft" (→ `PENDING_APPROVAL`); creates new version
 - Any → "Archive"
+
+**Share Token**: Per-post public review tokens live in the `share_tokens` table (not a column on `post_versions`). `regeneratePostShareToken(versionId)` deactivates old tokens and inserts a new one.
 
 #### Content Calendar (`/calendar`)
 Two views:
@@ -322,31 +328,25 @@ One of Tercero's most client-friendly features.
 **What it is**: A shareable URL (`/review/:token`) that lets clients review and approve content **without needing to log in** to Tercero.
 
 **How it works**:
-1. Agency creates a post and marks it as PENDING
-2. A unique token is associated with the post (or version)
-3. Agency shares the link with the client (copy URL)
+1. Agency sends a post to `PENDING_APPROVAL` via "Send for Approval"
+2. A unique token is generated in the `share_tokens` table for that post version
+3. Agency shares the link with the client (copy URL from Post Details page)
 4. Client opens link in browser — sees a clean, read-only review page
-5. Client can write feedback in a textarea and click "Request Revisions"
-6. Agency receives the feedback (stored as a revision note)
-7. Agency creates a new version, status returns to DRAFT/REVISIONS
+5. Client either **approves** (→ `SCHEDULED`) or **requests revisions** with feedback (→ `NEEDS_REVISION`)
+6. Agency sees status update; for revisions a new version is created via `create_revision_version` RPC
 
 **Review page shows**:
-- Post title
-- Full content text
-- Media gallery (images/videos) with full-screen carousel with keyboard navigation (arrow keys + Escape)
+- Post title, content, target date, version number
+- Media gallery with full-screen carousel (arrow keys + Escape navigation)
 - Platform-specific social media preview (Instagram, LinkedIn, etc.)
-- Target date and version number
-- Feedback textarea
-- "Request Revisions" submit button
+- Feedback textarea (required when requesting revisions)
+- "Approve & Schedule" and "Request Revisions" buttons
 
-**Branding on the review page** (tier-controlled):
-- **Ignite**: Tercero app logo in header, "Powered by Tercero" footer
-- **Velocity**: Agency logo in header, "Powered by Tercero" footer
-- **Quantum**: Agency logo in header, no Tercero attribution footer (full whitelabel)
-- Branding data is fetched from `agency_subscriptions` via a secondary query using the `user_id` returned by the `get_post_by_token` RPC — the page remains fully unauthenticated
-- If agency logo is missing on Velocity/Quantum, falls back to Tercero app logo gracefully
-
-**Why this matters for the landing page**: This is a strong differentiator — clients don't need accounts. Zero friction for client review and approval.
+**Branding on the review page** (tier-controlled via `branding_agency_sidebar` and `branding_powered_by`):
+- **Ignite**: Tercero logo in header, "Powered by Tercero" text footer
+- **Velocity**: Agency logo/horizontal logo in header (prefers `logo_horizontal_url`, falls back to `logo_url`, then agency name text), "Powered by Tercero" text footer
+- **Quantum**: Agency logo in header, no footer (full whitelabel)
+- Branding data is fetched from `agency_subscriptions` using the `user_id` returned by the `get_post_by_token` RPC — the page stays fully unauthenticated
 
 ---
 
@@ -461,9 +461,9 @@ Button only visible when `campaign.review_token` exists AND at least one post ha
 
 Dialog contains:
 - Read-only URL + Copy button
-- "Regenerate link" button (invalidates old token, updates URL in real time)
-- "Last sent [date]" if previously emailed
-- If client has email: client name + email + "Send Email" button (invokes `send-campaign-review-email` edge function)
+- "Regenerate link" button (`useRegenerateCampaignReviewToken` mutation — sets `review_token_active=true`, updates URL in real time)
+- "Last sent [date]" if previously emailed (`last_review_sent_at` field)
+- If client has email: client name + email + "Send Email" button (invokes `send-campaign-review-email` edge function; `useMarkReviewSent` updates timestamp)
 - If no email: "Add email →" button navigates to client profile
 
 #### Public Campaign Review (`/campaign-review/:token`)
@@ -475,13 +475,88 @@ Fully unauthenticated. The single link lets the client review and action all `PE
 - **Left panel (280px)**: Post list with thumbnail, title, target date, and status dot (pending / approved / revised)
 - **Right panel**: Selected post — title, platforms, target date, content, media gallery (up to 4 items + overflow), feedback textarea, action buttons
 
-**Actions per post**:
-- "Approve This Post" → status → `SCHEDULED`; auto-advances to next unreviewed post
-- "Request Revisions" → status → `NEEDS_REVISION`; requires non-empty feedback; auto-advances
+**Actions per post** (call `submitCampaignPostReview(postReviewToken, status, feedback)`):
+- "Approve This Post" → `SCHEDULED`; auto-advances to next unreviewed post
+- "Request Revisions" → `NEEDS_REVISION`; requires non-empty feedback; auto-advances
 
-**Branding**: Same tier-controlled logic as per-post public review (agency logo if `branding_agency_sidebar`; "Powered by Tercero" footer if `branding_powered_by`).
+**Branding**: Identical tier-controlled logic to per-post public review — `branding_agency_sidebar` controls header logo (prefers `logo_horizontal_url`), `branding_powered_by` controls "Powered by Tercero" text footer.
 
-**Token architecture**: `campaigns.review_token` is a UUID on the campaign. Per-post review tokens come from the `share_tokens` table, resolved via a LATERAL JOIN in the `get_campaign_by_review_token` RPC — there is no `review_token` column on `post_versions`.
+**Token architecture**: `campaigns.review_token` is a UUID on the campaign. Per-post review tokens come from the `share_tokens` table resolved via a LATERAL JOIN in `get_campaign_by_review_token` RPC — there is **no** `review_token` column on `post_versions`.
+
+**Campaign mutations** (`src/api/campaigns.js`):
+- `useCreateCampaign`, `useUpdateCampaign`, `useDeleteCampaign`
+- `useAssignPostsToCampaign({ postIds, campaignId })` — batch-links posts
+- `useUnlinkPostFromCampaign(postId)` — sets `posts.campaign_id = null`
+- `useRegenerateCampaignReviewToken(campaignId)`, `useMarkReviewSent(campaignId)`
+- `submitCampaignPostReview(token, status, feedback)` — public, no auth
+
+
+---
+
+### 3.12 PROPOSALS
+
+**What it is**: The structured document an agency sends to a prospective or existing client before work begins or before a retainer renews. It captures the formal moment of agreement — scope, pricing, and terms — and gives the client a clean mechanism to accept or decline without needing a Tercero account.
+
+**Proposal Statuses**:
+```
+DRAFT    → Being built by the agency. Not shared yet.
+SENT     → Share link copied; prospect has access.
+VIEWED   → Prospect opened the public page (auto-tracked on first load).
+ACCEPTED → Prospect clicked Accept.
+DECLINED → Prospect clicked Decline (optional reason recorded).
+EXPIRED  → valid_until date passed with no response (computed by DB, not a background job).
+ARCHIVED → Manually archived by owner.
+```
+
+**Three entry points**:
+1. **Global Proposals page** (`/proposals`) — all proposals across all clients/prospects; client filter dropdown (includes "Prospects" option); status tab strip (All / Draft / Sent / Viewed / Accepted / Declined / Expired / Archived)
+2. **Proposal Detail page** (`/proposals/:proposalId`) — full two-panel inline-edit layout; auto-saves on blur; action bar with Copy Link, Export PDF, Archive, Delete
+3. **Per-client Proposals tab** — `ProposalTab` component reused inside Client Detail; scoped to that client via `clientId` prop; same table/status tabs, same limit counter
+
+**Create / Edit Dialog** (`ProposalDialog`):
+- Two-panel: left = form, right = live preview (`ProposalPreview`)
+- Fields: Title, Client (existing client UUID or "New Prospect" sentinel `__prospect__`), Prospect Name + Email (shown when Prospect selected), Valid Until, Introduction, Scope of Work, Pricing (unlimited line items, each with Description + Amount), Payment Terms (Due on Receipt / Net 15 / Net 30 / Net 60), Contract Duration, Additional Notes
+- Zod-validated on submit; line items require at least 1 row with description and amount
+- Creates proposal + line items atomically; checks workspace proposal limit before inserting
+
+**Detail Page** (`ProposalDetailPage`):
+- Same two-panel layout as the dialog, as a full page
+- Auto-saves all fields on blur (no Zod, uses `getValues()` directly)
+- Save indicator in header: "Saving…" / "Saved ✓" / "Error"
+- Status timeline shows milestone pills (Sent, Viewed, Accepted/Declined) with dates
+- Read-only mode when status is accepted or declined
+- Copy Link button: generates `review_token` via `generate_proposal_token` RPC + copies `{VITE_APP_URL}/proposal/{token}` to clipboard; first copy advances draft → sent
+
+**Public Proposal Review** (`/proposal/:token`):
+- Fully unauthenticated. 6 states: Loading → Invalid → Expired → Accepted (pre-existing) → Declined (pre-existing) → Active
+- On first load when status = sent: fires `mark_proposal_viewed` RPC (once, via `viewedRef` guard)
+- Accept: confirm dialog → `accept_proposal(token)` → inline green success card
+- Decline: optional reason dialog → `decline_proposal(token, reason)` → inline grey card
+- Branding: identical tier-controlled logic to post/campaign review pages — `branding_agency_sidebar` controls header logo chain (`logo_horizontal_url` → `logo_url` → agency name text → Tercero SVG mask), `branding_powered_by` controls "Powered by Tercero" footer
+
+**PDF Export**:
+- `downloadProposalPDF.jsx` + `ProposalPDF.jsx` — mirrors invoice PDF pattern exactly
+- Inter font from Google Fonts; sections: header (title + logo) → Prepared For + Valid Until → Introduction → Scope of Work → Pricing table → Payment Terms + Duration → Additional Notes → footer
+- Tercero SVG rasterized to PNG canvas (3×) when `!branding_agency_sidebar` — `@react-pdf/renderer` cannot render SVG natively
+- Filename: `Proposal-{ClientName}-{YYYY-MM-DD}.pdf`
+
+**Subscription enforcement** (hybrid gating):
+- All surfaces (nav, page, per-client tab) always visible — no upgrade wall
+- `useCreateProposal` counts non-archived proposals workspace-wide before inserting; throws typed `ProposalLimitError` at limit
+- UI pre-checks: `atLimit = proposalsLimit !== null && activeCount >= proposalsLimit`; `ProposalTab` uses a second `useProposals()` (no clientId) so the counter reflects workspace total, not just the current client
+- `ProposalsUpgradePrompt` dialog shown when at limit; CTA navigates to `/billing`
+- Counter (`X of N used`) shown only when `proposalsLimit !== null` (i.e., hidden on Velocity/Quantum)
+
+**Proposals mutations** (`src/api/proposals.js`):
+- `useProposals({ clientId? })` — React Query hook; scoped by `workspaceUserId`; optional `clientId` filter
+- `useProposal(proposalId)` — fetches proposal + line items
+- `useCreateProposal()` — limit check + atomically inserts proposal + line items
+- `useUpdateProposal()` — updates fields; replaces line items (delete all, re-insert)
+- `useDeleteProposal()` — hard delete if DRAFT; soft archive otherwise
+- `useGenerateProposalToken()` — calls `generate_proposal_token` RPC; returns `{ token, url }`
+- `useMarkProposalSent()` — sets status = sent, sent_at = now() (only from draft)
+- `fetchProposalByToken(token)` — public, calls `get_proposal_by_token` RPC
+- `markProposalViewed(token)` / `acceptProposal(token)` / `declineProposal(token, reason)` — public, unauthenticated
 
 ---
 
@@ -529,7 +604,9 @@ Fully unauthenticated. The single link lets the client review and action all `PE
 
 ### Client Data Model
 ```
-Agency (user_id)
+Agency (user_id / workspaceUserId)
+├── agency_members — workspace participants (admin = owner row; member = invited teammate)
+│   └── agency_invites — pending invite tokens (7-day expiry; accepted_at set on join)
 ├── Internal Account (is_internal = true) — agency's own workspace
 └── Real Clients (is_internal = false)
     ├── Posts
@@ -538,6 +615,8 @@ Agency (user_id)
     ├── Campaigns (Velocity+)
     │   ├── Posts (campaign_id FK on posts — nullable)
     │   └── Invoices (campaign_id FK on invoices — nullable)
+    ├── Proposals
+    │   └── Proposal Line Items (proposal_line_items)
     ├── Documents
     │   └── Collections (optional grouping — Velocity+)
     ├── Meetings
@@ -547,6 +626,8 @@ Agency (user_id)
     ├── Recurring Invoice Templates
     └── Transactions (auto-created on invoice paid)
 ```
+
+**Team access resolution:** All tables scoped by `user_id` use the `get_my_agency_user_id()` SECURITY DEFINER helper in RLS policies. This returns the caller's own UID if they are a workspace owner, or their `agency_user_id` from `agency_members` if they are a team member — making all data transparently accessible to the full team.
 
 ### Key Database RPCs (complex operations)
 | RPC | Auth | What it does |
@@ -562,6 +643,15 @@ Agency (user_id)
 | `get_campaign_analytics` | Authenticated | Per-campaign KPIs: post counts, on-time rate, platform distribution, avg approval days, budget vs invoiced |
 | `get_campaign_by_review_token` | Public (SECURITY DEFINER) | Returns campaign + all PENDING_APPROVAL posts with per-post tokens via LATERAL JOIN on share_tokens |
 | `increment_storage_used` / `decrement_storage_used` | Authenticated | Keeps `agency_subscriptions.current_storage_used` accurate on document upload/delete |
+| `get_team_members(p_agency_user_id)` | SECURITY DEFINER | Returns active workspace members with full_name, email, functional_role, system_role, joined_at, avatar_url (from auth.users raw_user_meta_data) |
+| `get_invite_by_token(p_token)` | Public, SECURITY DEFINER | Validates invite token; returns valid flag, agency_name, logo_url, logo_horizontal_url |
+| `join_team(p_token, p_first_name, p_last_name, p_functional_role)` | Public, SECURITY DEFINER | Validates token, inserts agency_members row, marks invite as accepted |
+| `get_proposals_with_totals(p_user_id, p_client_id?)` | Authenticated | Returns proposals with computed total_value, client_name; scoped to workspace; optional client filter |
+| `generate_proposal_token(p_proposal_id)` | Authenticated | Generates/rotates review_token UUID on a proposal; returns the token |
+| `get_proposal_by_token(p_token)` | Public (SECURITY DEFINER) | Returns proposal + line_items + agency branding flags for public review page |
+| `mark_proposal_viewed(p_token)` | Public (SECURITY DEFINER) | Sets first_viewed_at, advances status SENT → VIEWED |
+| `accept_proposal(p_token)` | Public (SECURITY DEFINER) | Sets status = accepted, accepted_at = now() |
+| `decline_proposal(p_token, p_reason?)` | Public (SECURITY DEFINER) | Sets status = declined, decline_reason, declined_at = now() |
 
 ### Database Views (read-only aggregations)
 | View | Purpose |
@@ -587,24 +677,30 @@ Each agency has an `agency_subscriptions` row (single row per user) that control
 ### Feature Flags (boolean columns on `agency_subscriptions`)
 | Flag | Ignite | Velocity | Quantum | Controls |
 |------|--------|----------|---------|---------|
-| `branding_agency_sidebar` | false | true | true | Show agency logo+name in sidebar |
-| `branding_powered_by` | true | true | false | Show "Tercero YYYY" + "Powered by Tercero" attribution |
+| `branding_agency_sidebar` | false | true | true | Show agency logo+name in sidebar + on public review pages |
+| `branding_powered_by` | true | true | false | Show "Tercero YYYY" sidebar footer + "Powered by Tercero" text on public pages |
 | `finance_recurring_invoices` | false | true | true | Recurring invoice templates tab |
 | `finance_subscriptions` | false | true | true | Expense subscriptions route |
 | `finance_accrual` | false | true | true | Accrual accounting mode toggle in Finance overview |
 | `calendar_export` | false | true | true | Calendar PDF export button |
 | `documents_collections` | false | true | true | Document collections grouping |
 | `campaigns` | false | true | true | Campaigns feature (list, detail, review link) |
+| `proposals_limit` (integer, not boolean) | 5 | 5 | null | Max non-archived proposals; null = unlimited |
 
 ### `useSubscription()` Hook
 Accessed via `src/api/useSubscription.js`. Returns a React Query result. Consume via `const { data: sub } = useSubscription()`.
 
 The `data` object is a **flat object** — read flags directly (no `can.*` methods):
 - `sub?.plan_name` — `'trial'` | `'ignite'` | `'velocity'` | `'quantum'`
-- `sub?.agency_name`, `sub?.logo_url` — agency branding
+- `sub?.agency_name`, `sub?.logo_url` — agency branding (square logo)
+- `sub?.logo_horizontal_url` — landscape/horizontal logo (used in sidebar expanded state and public review headers; managed via `HorizontalLogoCropDialog`)
 - `sub?.client_count`, `sub?.max_clients` — for client limit checks
 - `sub?.storage_display` — `{ usage_value, usage_unit, max_value, max_unit, percent, remaining_label }`
 - All feature flags as direct booleans (e.g. `sub?.campaigns`, `sub?.calendar_export`)
+- `sub?.proposals_limit` — integer | null — 5 for Trial/Ignite; null = unlimited (Velocity/Quantum)
+- Derived convenience flags:
+  - `sub?.basic_whitelabel_enabled` — `branding_agency_sidebar && branding_powered_by` (Velocity)
+  - `sub?.full_whitelabel_enabled` — `branding_agency_sidebar && !branding_powered_by` (Quantum)
 
 Defaults are defensive (most-restricted) except `branding_powered_by` which defaults to `true` to protect Tercero brand attribution.
 
@@ -681,24 +777,7 @@ Multi-client architecture from the ground up. Internal workspace for agency's ow
 
 ---
 
-## 11. POTENTIAL LANDING PAGE SECTIONS
-
-Based on the features above, here are logical landing page sections:
-
-1. **Hero** — "The command center for social media agencies" + dashboard screenshot
-2. **Problem section** — "You're juggling too many tools" (spreadsheets, email, scheduling apps, accounting)
-3. **Feature: Pipeline Dashboard** — See every client's content health in one view
-4. **Feature: Post Versioning & Approvals** — Draft → Review → Approve. Full history, zero email chains.
-5. **Feature: Client Review Links** — Clients approve with a link. No login. No friction.
-6. **Feature: Finance** — Invoice clients, track expenses, know your margin.
-7. **Feature: Meetings & Tasks** — Schedule meetings, manage tasks, all tied to each client.
-8. **Social proof / Testimonials** section
-9. **Pricing** — Plan tiers with client/storage limits
-10. **CTA** — Start free trial / Book a demo
-
----
-
-## 12. TONE & BRAND NOTES
+## 11. TONE & BRAND NOTES
 
 - Product name: **Tercero** (pronounced "ter-SAY-ro" — Spanish for "third", implying the third member of your team)
 - Aesthetic: Clean, professional, modern dark UI with neutral palette
@@ -715,7 +794,7 @@ Key Files for Understanding the App:
 src/App.jsx                         — Route definitions
 src/AppShell.jsx                    — Layout wrapper
 src/main.jsx                        — App entry + providers
-src/context/AuthContext.jsx         — Auth state
+src/context/AuthContext.jsx         — Auth state + workspace resolution (workspaceUserId, userRole resolved from agency_members on login; workspaceUserId = owner UID for admins, owner's UID for team members)
 src/api/clients.js                  — Client CRUD + RPC
 src/api/posts.js                    — Post CRUD + versioning RPCs
 src/api/meetings.js                 — Meeting CRUD
@@ -723,14 +802,15 @@ src/api/notes.js                    — Notes CRUD
 src/api/invoices.js                 — Invoice lifecycle
 src/api/transactions.js             — Ledger
 src/api/expenses.js                 — Subscriptions
-src/api/useSubscription.js          — Plan/branding hook (returns flat data object with boolean flags; no can.* methods)
+src/api/useSubscription.js          — Plan/branding hook (returns flat data object with boolean flags; no can.* methods); uses workspaceUserId from AuthContext so team members query the owner's subscription row
+src/api/team.js                     — Teams: useTeamMembers, usePendingInvites, useGenerateInvite, useRevokeInvite, useRemoveMember, fetchInviteByToken (public), joinTeam (public)
 src/api/useGlobalPosts.js           — Filtered post list (supports campaignId filter)
 src/api/campaigns.js                — All campaign hooks and mutations (useCampaigns, useCampaign, useCampaignAnalytics, useCampaignReview, useCreateCampaign, useUpdateCampaign, useDeleteCampaign, useAssignPostsToCampaign, useRegenerateCampaignReviewToken, useMarkReviewSent, submitCampaignPostReview, fetchActiveCampaignsByClient, fetchUnlinkedPostsByClient)
 src/api/documents.js                — Document CRUD + signed URL generation
 src/pages/dashboard/Dashboard.jsx  — Dashboard composition
 src/pages/clients/Clients.jsx       — Client list
 src/pages/clients/ClientDetails.jsx — Client detail + tabs
-src/pages/clients/ClientProfileView.jsx — Client profile with tabs (Overview, Management, Workflow, Campaigns, Documents)
+src/pages/clients/ClientProfileView.jsx — Client profile with tabs (Overview, Workflow, Campaigns, Billing, Proposals, Documents, Calendar, Settings)
 src/pages/Posts.jsx                 — Global post list
 src/pages/posts/DraftPostForm.jsx   — Post create/edit form; used as page and as dialog (open/onOpenChange props); accepts initialCampaignId
 src/pages/posts/postDetails/PostDetails.jsx — Post editor with versioning, social preview, approval actions
@@ -748,21 +828,35 @@ src/pages/finance/RecurringInvoiceDialog.jsx — Recurring template create/edit
 src/pages/finance/EditInvoiceDialog.jsx     — Invoice edit/view (live preview)
 src/pages/MeetingsPage.jsx          — Meetings
 src/pages/NotesAndReminders.jsx     — Notes
-src/pages/PublicReview.jsx          — Per-post client review link (fetches agency branding via secondary query)
+src/pages/PublicReview.jsx          — Per-post client review link (fetches agency branding via secondary query using user_id from get_post_by_token)
+src/pages/JoinTeam.jsx              — Public /join/:token teammate signup page (token validation, branding bar, account creation form, calls join_team RPC)
+src/pages/settings/TeamSettings.jsx — Settings → Team tab (member roster with avatars, invite dialog, pending invites)
 src/pages/billingAndUsage/BillingUsage.jsx        — Plan/billing shell
 src/pages/billingAndUsage/TertiarySubscriptionTab.jsx — Plan cards + comparison table + upgrade request dialog
 src/components/campaigns/CampaignTab.jsx        — Reusable campaigns tab (clientId prop = scoped; no prop = global)
 src/components/campaigns/CampaignDialog.jsx     — Create/edit campaign form (Zod validated; client selector shown when no clientId)
 src/components/campaigns/CampaignReportPDF.jsx  — Campaign PDF report (@react-pdf/renderer)
 src/components/documents/DocumentsTab.jsx       — Reusable documents tab (same clientId scoping pattern as CampaignTab)
-src/components/sidebar/nav-header.jsx — Sidebar header (branding_agency_sidebar logic)
-src/components/sidebar/app-sidebar.jsx — Sidebar composition + "Tercero YYYY" footer text
+src/components/sidebar/nav-header.jsx — Sidebar header (branding_agency_sidebar; prefers logo_horizontal_url when expanded)
+src/components/sidebar/app-sidebar.jsx — Sidebar composition + "Tercero YYYY" footer text (branding_powered_by)
+src/components/HorizontalLogoCropDialog.jsx — React Image Crop dialog for landscape logo management
+src/pages/settings/AgencySettings.jsx  — Agency settings including logo_horizontal_url upload + HorizontalLogoCropDialog
 src/lib/helper.js                   — formatDate(), formatFileSize(), MAX_DOCUMENT_SIZE_BYTES
 src/lib/client-helpers.js           — getUrgencyStatus()
 src/lib/industries.js               — Industry constants
 src/lib/platforms.js                — SUPPORTED_PLATFORMS constant (id, label, color per platform)
 src/components/misc/header-context.jsx — useHeader() hook
 src/utils/finance.js                — formatCurrency()
-src/utils/downloadInvoicePDF.js     — Invoice PDF download utility
+src/utils/downloadInvoicePDF.jsx    — Invoice PDF download utility
+src/utils/downloadProposalPDF.jsx   — Proposal PDF download utility (same canvas-rasterization pattern)
+src/api/proposals.js                — All proposal hooks and mutations (useProposals, useProposal, useCreateProposal, useUpdateProposal, useDeleteProposal, useGenerateProposalToken, useMarkProposalSent, fetchProposalByToken, markProposalViewed, acceptProposal, declineProposal, ProposalLimitError)
+src/pages/proposals/ProposalsPage.jsx        — Global proposals list with search, client filter, status tabs, limit counter
+src/pages/proposals/ProposalDetailPage.jsx   — Full inline-edit proposal detail page (auto-save, status timeline, PDF export, Copy Link)
+src/pages/proposals/ProposalReview.jsx       — Public /proposal/:token review page (unauthenticated, accept/decline flow)
+src/components/proposals/ProposalDialog.jsx  — Create/edit proposal form with live preview (Zod validated)
+src/components/proposals/ProposalPreview.jsx — Live HTML preview of a proposal (mirrors PDF layout)
+src/components/proposals/ProposalPDF.jsx     — @react-pdf/renderer document component for proposal PDF export
+src/components/proposals/ProposalTab.jsx     — Reusable proposals tab (clientId prop = scoped; no prop = global)
+src/components/proposals/ProposalsUpgradePrompt.jsx — Upgrade dialog shown when proposal limit is reached
 supabase/functions/send-campaign-review-email/index.ts — Campaign review email edge function
 ```
