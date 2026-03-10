@@ -8,6 +8,7 @@ import {
   Receipt,
   FolderOpen,
   Megaphone,
+  FileText,
 } from 'lucide-react'
 
 // UI Components
@@ -24,6 +25,7 @@ import { cn } from '@/lib/utils'
 import { ClientBillingTab } from './ClientBillingTab'
 import DocumentsTab from '@/components/documents/DocumentsTab'
 import { CampaignTab } from '@/components/campaigns/CampaignTab'
+import { ProposalTab } from '@/components/proposals/ProposalTab'
 
 export default function ClientProfileView({ client }) {
   if (!client) return null
@@ -61,6 +63,7 @@ export default function ClientProfileView({ client }) {
       ? [{ value: 'billing', label: 'Billing', icon: Receipt }]
       : []),
 
+    { value: 'proposals', label: 'Proposals', icon: FileText },
     { value: 'documents', label: 'Documents', icon: FolderOpen },
     { value: 'calendar', label: 'Calendar', icon: Calendar },
     { value: 'management', label: 'Settings', icon: Settings2 },
@@ -163,6 +166,13 @@ export default function ClientProfileView({ client }) {
               className="mt-2 focus-visible:outline-none"
             >
               <CampaignTab clientId={client.id} />
+            </TabsContent>
+
+            <TabsContent
+              value="proposals"
+              className="mt-2 focus-visible:outline-none"
+            >
+              <ProposalTab clientId={client.id} />
             </TabsContent>
 
             <TabsContent

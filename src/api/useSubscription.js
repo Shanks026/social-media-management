@@ -76,6 +76,7 @@ export function useSubscription() {
         calendar_export: sub.calendar_export ?? false,
         documents_collections: sub.documents_collections ?? false,
         campaigns: sub.campaigns ?? false,
+        proposals_limit: sub.proposals_limit ?? null,
         client_count: count || 0,
         max_clients: sub.max_clients,
 

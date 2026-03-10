@@ -28,6 +28,9 @@ import CampaignsPage from './pages/campaigns/CampaignsPage'
 import CampaignDetailPage from './pages/campaigns/CampaignDetailPage'
 import CampaignReview from './pages/campaigns/CampaignReview'
 import JoinTeam from './pages/JoinTeam'
+import ProposalsPage from './pages/proposals/ProposalsPage'
+import ProposalDetailPage from './pages/proposals/ProposalDetailPage'
+import ProposalReview from './pages/proposals/ProposalReview'
 
 
 function SubscriptionsRoute() {
@@ -44,6 +47,7 @@ function AppRoutes() {
     <Routes>
       <Route path="/review/:token" element={<PublicReview />} />
       <Route path="/campaign-review/:token" element={<CampaignReview />} />
+      <Route path="/proposal/:token" element={<ProposalReview />} />
       <Route path="/join/:token" element={<JoinTeam />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/signup" element={<SignupPage />} />
@@ -63,6 +67,8 @@ function AppRoutes() {
             path="/clients/:clientId/posts/:postId"
             element={<PostDetails />}
           />
+          <Route path="/proposals" element={<ProposalsPage />} />
+          <Route path="/proposals/:proposalId" element={<ProposalDetailPage />} />
           <Route path="/campaigns" element={<CampaignsPage />} />
           <Route path="/campaigns/:campaignId" element={<CampaignDetailPage />} />
           <Route path="/posts" element={<Posts />} />

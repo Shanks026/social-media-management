@@ -50,7 +50,9 @@
       "Bash(find /c/Users/chris_austin/Desktop/social-media-management -path *node_modules -prune -o -name schema* -o -name *migration* -o -name *seed*)",
       "mcp__supabase__list_tables",
       "mcp__supabase__apply_migration",
-      "mcp__supabase__execute_sql"
+      "mcp__supabase__execute_sql",
+      "mcp__supabase__list_migrations",
+      "Bash(grep -n proposals c:/Users/chris_austin/Desktop/social-media-management/supabase/migrations/*.sql)"
     ]
   }
 }
