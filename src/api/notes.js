@@ -1,15 +1,15 @@
 import { supabase } from '@/lib/supabase'
+import { resolveWorkspace } from '@/lib/workspace'
 
 export async function fetchClientNotes(clientId) {
   if (!clientId) throw new Error('Client ID is required')
 
-  const { data: userData, error: userError } = await supabase.auth.getUser()
-  if (userError || !userData?.user) throw new Error('Not authenticated')
+  const { workspaceUserId } = await resolveWorkspace()
 
   const { data, error } = await supabase
     .from('client_notes')
     .select('*')
-    .eq('user_id', userData.user.id)
+    .eq('user_id', workspaceUserId)
     .eq('client_id', clientId)
     .order('status', { ascending: false })
     .order('due_at', { ascending: true, nullsFirst: false })
@@ -24,13 +24,12 @@ export async function fetchClientNotes(clientId) {
 export async function fetchInternalClientNotes(clientId) {
   if (!clientId) throw new Error('Client ID is required')
 
-  const { data: userData, error: userError } = await supabase.auth.getUser()
-  if (userError || !userData?.user) throw new Error('Not authenticated')
+  const { workspaceUserId } = await resolveWorkspace()
 
   const { data, error } = await supabase
     .from('client_notes')
     .select('*')
-    .eq('user_id', userData.user.id)
+    .eq('user_id', workspaceUserId)
     .or(`client_id.eq.${clientId},client_id.is.null`)
     .order('status', { ascending: false })
     .order('due_at', { ascending: true, nullsFirst: false })
@@ -41,15 +40,12 @@ export async function fetchInternalClientNotes(clientId) {
 }
 
 export async function fetchAllNotes() {
-  const { data: userData, error: userError } = await supabase.auth.getUser()
-  if (userError || !userData?.user) {
-    throw new Error('Not authenticated')
-  }
+  const { workspaceUserId } = await resolveWorkspace()
 
   const { data, error } = await supabase
     .from('client_notes')
     .select('*')
-    .eq('user_id', userData.user.id)
+    .eq('user_id', workspaceUserId)
     .order('status', { ascending: false })
     .order('due_at', { ascending: true, nullsFirst: false })
     .order('created_at', { ascending: false })
@@ -59,13 +55,12 @@ export async function fetchAllNotes() {
 }
 
 export async function fetchCampaignNotes(campaignId) {
-  const { data: userData, error: userError } = await supabase.auth.getUser()
-  if (userError || !userData?.user) throw new Error('Not authenticated')
+  const { workspaceUserId } = await resolveWorkspace()
 
   const { data, error } = await supabase
     .from('client_notes')
     .select('*')
-    .eq('user_id', userData.user.id)
+    .eq('user_id', workspaceUserId)
     .eq('campaign_id', campaignId)
     .order('status', { ascending: false })
     .order('created_at', { ascending: false })
@@ -75,14 +70,11 @@ export async function fetchCampaignNotes(campaignId) {
 }
 
 export async function createNote(noteData) {
-  const { data: userData, error: userError } = await supabase.auth.getUser()
-  if (userError || !userData?.user) {
-    throw new Error('Not authenticated')
-  }
+  const { workspaceUserId } = await resolveWorkspace()
 
   const { data, error } = await supabase
     .from('client_notes')
-    .insert([{ ...noteData, user_id: userData.user.id }])
+    .insert([{ ...noteData, user_id: workspaceUserId }])
     .select()
     .single()
 

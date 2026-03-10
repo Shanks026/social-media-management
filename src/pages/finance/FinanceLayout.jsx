@@ -22,7 +22,7 @@ export default function FinanceLayout() {
 
   // This component now just acts as a container for the child pages
   return (
-    <div className="h-full overflow-y-auto p-8 max-w-[1440px] mx-auto animate-in fade-in duration-700">
+    <div className="h-full overflow-y-auto p-8 max-w-[1400px] mx-auto animate-in fade-in duration-700">
       <Outlet />
     </div>
   )

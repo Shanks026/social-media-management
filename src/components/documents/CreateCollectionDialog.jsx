@@ -99,7 +99,6 @@ export default function CreateCollectionDialog({
         return updateCollection(editCollection.id, { name: values.name, description: values.description })
       }
       return createCollection({
-        userId: user.id,
         clientId: resolvedClientId(values),
         name: values.name,
         description: values.description || undefined,

@@ -42,7 +42,7 @@ Pages/Components → API functions (src/api/) → Supabase client → PostgreSQL
 
 **Entry (main.jsx):** Wraps app in `QueryClientProvider`, `ThemeProvider`, `SidebarProvider`, `TooltipProvider`, `Toaster`, `BrowserRouter`.
 
-**Auth (src/context/AuthContext.jsx):** Supabase `onAuthStateChange` listener; session checked in `App.jsx` to protect routes.
+**Auth (src/context/AuthContext.jsx):** Supabase `onAuthStateChange` listener; session checked in `App.jsx` to protect routes. Resolves `workspaceUserId` and `userRole` on every auth state change — for workspace owners `workspaceUserId === user.id`; for invited members it is the owner's UID. All API hooks use `workspaceUserId` (not `user.id`) to scope DB queries to the correct workspace.
 
 **Layout (AppShell.jsx):** Sidebar nav + header wrapper; feature content renders via React Router `<Outlet>`.
 
@@ -59,6 +59,7 @@ Pages/Components → API functions (src/api/) → Supabase client → PostgreSQL
 **Shared utilities:**
 - `src/lib/helper.js` — `formatDate(dateInput)` → "2 Jan, 2026"; `formatFileSize(bytes)` → "2.3 MB"; `MAX_DOCUMENT_SIZE_BYTES` constant (50 MB)
 - `src/lib/client-helpers.js` — `getUrgencyStatus(nextPostAt)` → urgency color/label for pipeline indicators
+- `src/lib/workspace.js` — `resolveWorkspace()` async helper for plain mutation functions that need `workspaceUserId` without React context (calls `auth.getUser()` then checks `agency_members`)
 
 ### Domain Patterns
 
@@ -77,6 +78,8 @@ Pages/Components → API functions (src/api/) → Supabase client → PostgreSQL
 **Finance (`/finance`):** Agency-side financial tracking — invoice generation with PDF export, expense tracking, transaction ledger, client subscription plan management. Nested routes: `overview`, `subscriptions`, `ledger`, `invoices`.
 
 **Billing (`/billing`):** The agency's own subscription to Tercero — plan details, usage stats, and internal invoices. Separate from client Finance.
+
+**Teams (`/settings` → Team tab):** Agency owners invite teammates via a generated link (`/join/:token`). Invited members get full workspace access. The multi-tenant workspace model is the key architectural concept: all DB queries are scoped by `workspaceUserId` (the owner's UID), resolved via `get_my_agency_user_id()` SECURITY DEFINER SQL function. API module: `src/api/team.js`; public join page: `src/pages/JoinTeam.jsx`; team management UI: `src/pages/settings/TeamSettings.jsx`. Both `useTeamMembers()` and `usePendingInvites()` maintain Supabase Realtime subscriptions for live updates.
 
 **Supabase Edge Functions (supabase/):** `send-approval-email`, `send-client-welcome`, `send-password-update-email`, `send-campaign-review-email`.
 
@@ -108,4 +111,5 @@ The `data` object includes:
 ```
 VITE_SUPABASE_URL
 VITE_SUPABASE_ANON_KEY
+VITE_APP_URL          # Base URL for invite link generation (e.g. https://tercerospace.com)
 ```

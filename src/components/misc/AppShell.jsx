@@ -4,7 +4,8 @@ import { AppHeader } from './AppHeader'
 import { AppBody } from './AppBody'
 import { Outlet } from 'react-router-dom'
 import { SidebarProvider } from '@/components/ui/sidebar'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { useLocation } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 
 import { fetchAgencySettings } from '../../api/agency'
@@ -17,6 +18,12 @@ import { useMeetingReminders } from '../../hooks/useMeetingReminders'
 
 export function AppShell({ user }) {
   const queryClient = useQueryClient()
+  const scrollContainerRef = useRef(null)
+  const { pathname } = useLocation()
+
+  useEffect(() => {
+    scrollContainerRef.current?.scrollTo({ top: 0 })
+  }, [pathname])
   useMeetingReminders(user?.id)
   const [agencySettings, setAgencySettings] = useState(null)
   const [showWelcome, setShowWelcome] = useState(false)
@@ -102,7 +109,7 @@ export function AppShell({ user }) {
             user={user}
             agencySettings={agencySettings}
           />
-          <div className="flex flex-1 flex-col w-full h-screen min-w-0 overflow-y-auto overflow-x-hidden relative [scrollbar-gutter:stable]">
+          <div ref={scrollContainerRef} className="flex flex-1 flex-col w-full h-screen min-w-0 overflow-y-auto overflow-x-hidden relative [scrollbar-gutter:stable]">
             <AppHeader user={user} agencySettings={agencySettings} />
             <AppBody>
               <Outlet

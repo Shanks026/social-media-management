@@ -94,7 +94,7 @@ export default function DocumentsTab({ clientId }) {
 
   const uploadMutation = useMutation({
     mutationFn: ({ file, displayName, category }) =>
-      uploadDocument({ userId: user.id, clientId, file, displayName, category }),
+      uploadDocument({ clientId, file, displayName, category }),
     onMutate: () => setUploadProgress(10),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['documents', 'list'] })

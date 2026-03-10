@@ -1,15 +1,13 @@
 import { supabase } from '@/lib/supabase'
+import { resolveWorkspace } from '@/lib/workspace'
 
 export async function fetchAgencySettings() {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) throw new Error('Not authenticated')
+  const { workspaceUserId } = await resolveWorkspace()
 
   const { data, error } = await supabase
     .from('agency_subscriptions')
     .select('*')
-    .eq('user_id', user.id)
+    .eq('user_id', workspaceUserId)
     .maybeSingle()
 
   if (error) throw error
@@ -22,16 +20,14 @@ export async function fetchAgencySettings() {
  * but strictly avoids modifying the administrative Subscription Plan.
  */
 export async function completeFullAgencySetup(payload) {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const { workspaceUserId } = await resolveWorkspace()
 
   // 1. Update Branding (Explicitly OMIT plan/subscription columns)
   const { error: subError } = await supabase
     .from('agency_subscriptions')
     .upsert(
       {
-        user_id: user.id,
+        user_id: workspaceUserId,
         agency_name: payload.name,
         logo_url: payload.logo_url,
         logo_horizontal_url: payload.logo_horizontal_url ?? null,
@@ -47,12 +43,12 @@ export async function completeFullAgencySetup(payload) {
   const { data: existingClient } = await supabase
     .from('clients')
     .select('id')
-    .eq('user_id', user.id)
+    .eq('user_id', workspaceUserId)
     .eq('is_internal', true)
     .maybeSingle()
 
   const clientPayload = {
-    user_id: user.id,
+    user_id: workspaceUserId,
     name: payload.name,
     logo_url: payload.logo_url,
     industry: payload.industry,
@@ -94,15 +90,13 @@ export async function completeFullAgencySetup(payload) {
  * Strictly updates identity; leaves clients table and plan_name alone.
  */
 export async function setupBrandingOnly(payload) {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const { workspaceUserId } = await resolveWorkspace()
 
   const { data, error } = await supabase
     .from('agency_subscriptions')
     .upsert(
       {
-        user_id: user.id,
+        user_id: workspaceUserId,
         agency_name: payload.name,
         logo_url: payload.logo_url,
         logo_horizontal_url: payload.logo_horizontal_url ?? null,
@@ -125,21 +119,18 @@ export async function setupBrandingOnly(payload) {
 }
 
 export async function activateInternalWorkspace(brandingData) {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) throw new Error('Not authenticated')
+  const { user, workspaceUserId } = await resolveWorkspace()
 
   // Check for existing internal client
   const { data: existingClient } = await supabase
     .from('clients')
     .select('id')
-    .eq('user_id', user.id)
+    .eq('user_id', workspaceUserId)
     .eq('is_internal', true)
     .maybeSingle()
 
   const clientPayload = {
-    user_id: user.id,
+    user_id: workspaceUserId,
     name: brandingData.agency_name,
     logo_url: brandingData.logo_url,
     industry: brandingData.industry,

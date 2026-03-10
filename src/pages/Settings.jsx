@@ -1,14 +1,14 @@
 import { useEffect } from 'react'
 import { useHeader } from '../components/misc/header-context'
-import { User, Building2 } from 'lucide-react'
+import { User, Building2, Users } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 import ProfileSettings from './settings/ProfileSettings'
 import AgencySettings from './settings/AgencySettings'
+import TeamSettings from './settings/TeamSettings'
 
 export default function Settings() {
   const { setHeader } = useHeader()
-
   useEffect(() => {
     setHeader({
       title: 'Settings',
@@ -19,7 +19,7 @@ export default function Settings() {
   return (
     <div className="h-full bg-background overflow-y-auto overflow-x-hidden selection:bg-primary/10 [scrollbar-gutter:stable]">
       <div className="overflow-hidden">
-        <div className="px-8 pt-8 pb-20 space-y-8 max-w-[1440px] mx-auto animate-in fade-in slide-in-from-bottom-4 duration-700 fill-mode-both">
+        <div className="px-8 pt-8 pb-20 space-y-8 max-w-[1400px] mx-auto animate-in fade-in slide-in-from-bottom-4 duration-700 fill-mode-both">
           {/* PAGE HEADER */}
           <div className="space-y-1">
             <h1 className="text-3xl font-light tracking-tight text-foreground">
@@ -35,22 +35,23 @@ export default function Settings() {
               {[
                 { value: 'profile', icon: User, label: 'Profile' },
                 { value: 'agency', icon: Building2, label: 'Agency' },
+                { value: 'team', icon: Users, label: 'Team' },
               ].map((tab) => (
                 <TabsTrigger
                   key={tab.value}
                   value={tab.value}
                   className="
-                    relative rounded-none bg-transparent px-0 pb-3 pt-0 text-sm font-medium transition-none 
+                    relative rounded-none bg-transparent px-0 pb-3 pt-0 text-sm font-medium transition-none
                     shadow-none border-b-2 border-transparent text-muted-foreground
                     flex-none w-fit
-                    data-[state=active]:bg-transparent 
+                    data-[state=active]:bg-transparent
                     dark:data-[state=active]:bg-transparent
-                    data-[state=active]:text-black 
-                    dark:data-[state=active]:text-white 
+                    data-[state=active]:text-black
+                    dark:data-[state=active]:text-white
                     data-[state=active]:border-black
                     dark:data-[state=active]:border-white
                     data-[state=active]:shadow-none
-                    data-[state=active]:border-x-0 
+                    data-[state=active]:border-x-0
                     data-[state=active]:border-t-0
                     focus-visible:ring-0
                   "
@@ -73,6 +74,13 @@ export default function Settings() {
               className="pt-4 focus-visible:outline-none"
             >
               <AgencySettings />
+            </TabsContent>
+
+            <TabsContent
+              value="team"
+              className="pt-4 focus-visible:outline-none"
+            >
+              <TeamSettings />
             </TabsContent>
           </Tabs>
         </div>

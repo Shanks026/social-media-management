@@ -179,13 +179,18 @@ function MeetingCard({ meeting, clientMap }) {
                       variant="ghost"
                       size="sm"
                       className="h-7 text-xs gap-1.5 text-muted-foreground hover:text-primary px-2 -mr-2"
-                      onClick={() => window.open(meeting.meeting_link, '_blank')}
+                      onClick={() =>
+                        window.open(meeting.meeting_link, '_blank')
+                      }
                     >
                       <LinkIcon className="h-3 w-3" />
                       Meet Link
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent side="top" className="max-w-[260px] break-all text-xs">
+                  <TooltipContent
+                    side="top"
+                    className="max-w-[260px] break-all text-xs"
+                  >
                     {meeting.meeting_link}
                   </TooltipContent>
                 </Tooltip>
@@ -377,7 +382,7 @@ export default function MeetingsPage() {
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <div className="p-8 max-w-[1440px] mx-auto space-y-6">
+    <div className="p-8 max-w-[1400px] mx-auto space-y-6">
       {/* ── Header ── */}
       <div className="flex items-center justify-between">
         <div className="space-y-1">

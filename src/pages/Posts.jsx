@@ -308,7 +308,7 @@ export default function Posts() {
 
   // ─── Render ──────────────────────────────────
   return (
-    <div className="p-8 max-w-[1440px] mx-auto space-y-6">
+    <div className="p-8 max-w-[1400px] mx-auto space-y-6">
       {/* ── Header ─────────────────────── */}
       <div className="flex items-center justify-between">
         <div className="space-y-1">
@@ -469,7 +469,10 @@ export default function Posts() {
 
           {/* Campaign Filter — only shown when user has campaigns access */}
           {sub?.campaigns && allCampaigns.length > 0 && (
-            <Select value={selectedCampaign} onValueChange={setSelectedCampaign}>
+            <Select
+              value={selectedCampaign}
+              onValueChange={setSelectedCampaign}
+            >
               <SelectTrigger className="w-[160px] h-9 text-xs font-semibold shadow-none">
                 <FolderOpen size={14} className="mr-1.5 shrink-0 opacity-50" />
                 <SelectValue placeholder="Campaign" />
@@ -570,7 +573,10 @@ export default function Posts() {
           {isLoading ? (
             <div className="grid gap-6 grid-cols-[repeat(auto-fill,minmax(350px,1fr))]">
               {Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} className="rounded-2xl border overflow-hidden bg-card/50">
+                <div
+                  key={i}
+                  className="rounded-2xl border overflow-hidden bg-card/50"
+                >
                   <Skeleton className="aspect-video w-full" />
                   <div className="p-8 space-y-4">
                     <Skeleton className="h-4 w-3/4" />
@@ -628,7 +634,11 @@ export default function Posts() {
         open={!!editingPost}
         onOpenChange={(open) => !open && setEditingPost(null)}
         clientId={editingPost?.client_id}
-        initialData={editingPost ? { ...editingPost, platform: editingPost.platforms } : null}
+        initialData={
+          editingPost
+            ? { ...editingPost, platform: editingPost.platforms }
+            : null
+        }
       />
     </div>
   )
