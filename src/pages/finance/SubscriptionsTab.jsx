@@ -8,6 +8,7 @@ import {
   Building2,
   Filter,
   Edit2,
+  CreditCard,
 } from 'lucide-react'
 
 // API & Libs
@@ -30,6 +31,14 @@ import { Badge } from '@/components/ui/badge'
 import StatusBadge from '@/components/StatusBadge'
 import { CustomTable } from '@/components/CustomTable'
 import { AddSubscriptionDialog } from './AddSubscriptionDialog'
+import {
+  Empty,
+  EmptyContent,
+  EmptyHeader,
+  EmptyTitle,
+  EmptyDescription,
+  EmptyMedia,
+} from '@/components/ui/empty'
 import { Switch } from '@/components/ui/switch'
 import { toast } from 'sonner'
 
@@ -321,11 +330,40 @@ export default function SubscriptionsTab({ clientId, subTabs }) {
         </Card>
       </div>
 
-      <CustomTable
-        columns={columns}
-        data={filteredExpenses}
-        isLoading={isLoadingExpenses}
-      />
+      {isLoadingExpenses ? (
+        <CustomTable columns={columns} data={[]} isLoading={true} />
+      ) : filteredExpenses.length === 0 ? (
+        <Empty className="py-20 border border-dashed rounded-2xl bg-muted/5">
+          <EmptyContent>
+            <EmptyMedia variant="icon">
+              {filterMode !== 'ALL'
+                ? <CreditCard className="size-6 text-muted-foreground/60" />
+                : <CreditCard className="size-6 text-muted-foreground/60" />}
+            </EmptyMedia>
+            <EmptyHeader>
+              <EmptyTitle className="font-normal text-xl">
+                No subscriptions tracked
+              </EmptyTitle>
+              <EmptyDescription className="font-light">
+                Track recurring software or service costs your agency pays for clients.
+              </EmptyDescription>
+            </EmptyHeader>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setEditingExpense(null)
+                setIsDialogOpen(true)
+              }}
+            >
+              <Plus className="size-4 mr-2" />
+              Add Subscription
+            </Button>
+          </EmptyContent>
+        </Empty>
+      ) : (
+        <CustomTable columns={columns} data={filteredExpenses} isLoading={false} />
+      )}
 
       <AddSubscriptionDialog
         open={isDialogOpen}

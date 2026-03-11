@@ -41,6 +41,13 @@ import {
 import { cn } from '@/lib/utils'
 import ChangePasswordDialog from '@/components/settings/ChangePasswordDialog'
 
+function extractStoragePath(publicUrl) {
+  if (!publicUrl) return null
+  const marker = '/post-media/'
+  const idx = publicUrl.indexOf(marker)
+  return idx !== -1 ? publicUrl.slice(idx + marker.length) : null
+}
+
 export default function ProfileSettings() {
   const { user } = useAuth()
   const navigate = useNavigate()
@@ -119,6 +126,7 @@ export default function ProfileSettings() {
   const handleSaveProfile = async () => {
     setIsSaving(true)
     try {
+      const previousAvatarUrl = user?.user_metadata?.avatar_url || ''
       const { error } = await supabase.auth.updateUser({
         data: {
           full_name: fullName,
@@ -126,6 +134,13 @@ export default function ProfileSettings() {
         },
       })
       if (error) throw error
+
+      // Delete old avatar from storage if it changed
+      if (previousAvatarUrl && previousAvatarUrl !== avatarUrl) {
+        const path = extractStoragePath(previousAvatarUrl)
+        if (path) await supabase.storage.from('post-media').remove([path])
+      }
+
       toast.success('Profile updated!')
     } catch {
       toast.error('Failed to update profile.')

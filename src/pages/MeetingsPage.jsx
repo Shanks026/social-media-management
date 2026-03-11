@@ -47,6 +47,14 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
+import {
+  Empty,
+  EmptyContent,
+  EmptyHeader,
+  EmptyTitle,
+  EmptyDescription,
+  EmptyMedia,
+} from '@/components/ui/empty'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -379,10 +387,12 @@ export default function MeetingsPage() {
     }
   }, [allMeetings])
 
+  const isFiltered = Boolean(search || selectedClient !== 'all' || statusTab !== 'ALL')
+
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <div className="p-8 max-w-[1400px] mx-auto space-y-6">
+    <div className="p-8 max-w-[1400px] mx-auto space-y-6 animate-in fade-in duration-500">
       {/* ── Header ── */}
       <div className="flex items-center justify-between">
         <div className="space-y-1">
@@ -516,17 +526,50 @@ export default function MeetingsPage() {
           ))}
         </div>
       ) : filteredMeetings.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-24 text-center gap-3">
-          <div className="size-14 rounded-2xl border border-dashed flex items-center justify-center text-muted-foreground">
-            <Calendar className="size-6 opacity-40" />
-          </div>
-          <p className="text-sm font-medium text-muted-foreground">
-            No meetings found
-          </p>
-          <p className="text-xs text-muted-foreground/70 max-w-xs">
-            Schedule a new meeting or adjust your filters.
-          </p>
-        </div>
+        <Empty className="py-20 border border-dashed rounded-2xl bg-muted/5">
+          <EmptyContent>
+            <EmptyMedia variant="icon">
+              {isFiltered
+                ? <Search className="size-6 text-muted-foreground/60" />
+                : <Calendar className="size-6 text-muted-foreground/60" />}
+            </EmptyMedia>
+            <EmptyHeader>
+              <EmptyTitle className="font-normal text-xl">
+                {isFiltered ? 'No meetings found' : 'No meetings scheduled'}
+              </EmptyTitle>
+              <EmptyDescription className="font-light">
+                {isFiltered
+                  ? 'No meetings match your current filters. Try adjusting your search.'
+                  : 'Schedule a meeting to stay on top of client calls, check-ins, and reviews.'}
+              </EmptyDescription>
+            </EmptyHeader>
+            {isFiltered ? (
+              <Button
+                variant="link"
+                onClick={() => {
+                  setSearch('')
+                  setSelectedClient('all')
+                  setStatusTab('ALL')
+                }}
+                className="text-primary font-medium"
+              >
+                Clear all filters
+              </Button>
+            ) : (
+              <CreateMeetingDialog
+                onSuccess={() => {
+                  queryClient.invalidateQueries({ queryKey: ['global-meetings'] })
+                  queryClient.invalidateQueries({ queryKey: ['meetings'] })
+                }}
+              >
+                <Button variant="outline" size="sm">
+                  <Plus className="size-4 mr-2" />
+                  Schedule a Meeting
+                </Button>
+              </CreateMeetingDialog>
+            )}
+          </EmptyContent>
+        </Empty>
       ) : (
         <div className="space-y-8 pt-1">
           {(statusTab === 'ALL' || statusTab === 'UPCOMING') &&

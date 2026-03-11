@@ -35,6 +35,10 @@ export function AppSidebarHeader({ agencySettings }) {
 
   // Use the feature flag — not the name — to decide if agency branding is shown
   const showAgencyBranding = sub?.branding_agency_sidebar ?? false
+  // Whether the user has actually uploaded any logo (regardless of feature flag)
+  const hasAgencyLogo = !!(logo || horizontalLogo)
+  // Show Tercero default when: Ignite (flag off) OR Velocity/Quantum with no logo uploaded yet
+  const showTerceroDefault = !showAgencyBranding || !hasAgencyLogo
   const isBrandingComplete = !!(showAgencyBranding && name && (logo || horizontalLogo) && plan && name !== APP_NAME)
 
   const getInitials = (name) => {
@@ -61,7 +65,7 @@ export function AppSidebarHeader({ agencySettings }) {
             {/* LOGO SECTION */}
             <div
               className={`flex shrink-0 items-center justify-center overflow-hidden rounded-lg ${
-                !showAgencyBranding
+                showTerceroDefault
                   ? isCollapsed
                     ? 'size-7'
                     : 'h-9 w-32 ml-[-4px]'
@@ -72,8 +76,8 @@ export function AppSidebarHeader({ agencySettings }) {
             >
               {isLoading ? (
                 <Skeleton className="size-full rounded-lg" />
-              ) : !showAgencyBranding ? (
-                // Ignite: always show Tercero logo regardless of any agency logo set
+              ) : showTerceroDefault ? (
+                // No agency logo configured (any tier) — show Tercero SVG, dark-mode aware via bg-foreground mask
                 <div
                   className={`${isCollapsed ? 'size-5' : 'h-7 w-28'} bg-foreground`}
                   style={{
@@ -130,7 +134,7 @@ export function AppSidebarHeader({ agencySettings }) {
             </div>
 
             {/* IDENTITY TEXT — only rendered when expanded, non-Tercero branding, AND horizontal logo is NOT available */}
-            {!isCollapsed && !!showAgencyBranding && !horizontalLogo && (
+            {!isCollapsed && !showTerceroDefault && !horizontalLogo && (
               <div className="flex flex-col text-left overflow-hidden ml-2">
                 {isLoading ? (
                   <div className="space-y-2 w-24">

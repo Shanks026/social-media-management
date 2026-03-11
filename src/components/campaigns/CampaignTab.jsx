@@ -199,13 +199,13 @@ function CampaignTabContent({ clientId, isCreateOpen, setIsCreateOpen }) {
           ))}
         </div>
       ) : (
-        <Empty className="py-20 border border-dashed rounded-2xl bg-muted/5 animate-in fade-in zoom-in-95 duration-500">
+        <Empty className="py-20 border border-dashed rounded-2xl bg-muted/5">
           <EmptyContent>
             <EmptyMedia variant="icon">
               <Megaphone className="size-6 text-muted-foreground/60" />
             </EmptyMedia>
             <EmptyHeader>
-              <EmptyTitle className="font-light text-xl">No Campaigns Found</EmptyTitle>
+              <EmptyTitle className="font-normal text-xl">No Campaigns Found</EmptyTitle>
               <EmptyDescription className="font-light">
                 {isFilterActive 
                   ? "We couldn't find any campaigns matching your current filters."

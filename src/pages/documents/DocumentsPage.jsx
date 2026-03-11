@@ -248,7 +248,7 @@ export default function DocumentsPage() {
 
   return (
     <div className="min-h-full bg-background selection:bg-primary/10">
-      <div className="px-8 pt-8 pb-20 space-y-8 max-w-[1400px] mx-auto">
+      <div className="px-8 pt-8 pb-20 space-y-8 max-w-[1400px] mx-auto animate-in fade-in duration-500">
         {/* ── SECTION 1: HEADER ── */}
         <div className="flex items-center justify-between">
           <div className="space-y-1">
@@ -424,34 +424,35 @@ export default function DocumentsPage() {
                 {/* ── ALL ── */}
                 <TabsContent value="all" className="mt-0">
                   {filteredDocs.length === 0 ? (
-                    <Empty className="border">
-                      <EmptyHeader>
+                    <Empty className="py-20 border border-dashed rounded-2xl bg-muted/5">
+                      <EmptyContent>
                         <EmptyMedia variant="icon">
-                          {isFilterActive ? <Search /> : <FolderOpen />}
+                          {isFilterActive
+                            ? <Search className="size-6 text-muted-foreground/60" />
+                            : <FolderOpen className="size-6 text-muted-foreground/60" />}
                         </EmptyMedia>
-                        <EmptyTitle>
-                          {isFilterActive
-                            ? 'No documents match your filters'
-                            : 'No documents yet'}
-                        </EmptyTitle>
-                        <EmptyDescription>
-                          {isFilterActive
-                            ? "Adjust your filters to find what you're looking for."
-                            : 'Upload a contract, brief, or brand asset to get started.'}
-                        </EmptyDescription>
-                      </EmptyHeader>
-                      {isFilterActive && (
-                        <EmptyContent className="mt-4">
+                        <EmptyHeader>
+                          <EmptyTitle className="font-normal text-xl">
+                            {isFilterActive
+                              ? 'No documents match your filters'
+                              : 'No documents yet'}
+                          </EmptyTitle>
+                          <EmptyDescription className="font-light">
+                            {isFilterActive
+                              ? "Adjust your filters to find what you're looking for."
+                              : 'Upload a contract, brief, or brand asset to keep everything in one place.'}
+                          </EmptyDescription>
+                        </EmptyHeader>
+                        {isFilterActive && (
                           <Button
-                            variant="ghost"
-                            size="sm"
+                            variant="link"
                             onClick={clearFilters}
-                            className="gap-1.5"
+                            className="text-primary font-medium"
                           >
-                            <X className="size-3.5" /> Clear all filters
+                            Clear all filters
                           </Button>
-                        </EmptyContent>
-                      )}
+                        )}
+                      </EmptyContent>
                     </Empty>
                   ) : (
                     <div className="space-y-2 animate-in fade-in duration-500">
@@ -485,18 +486,20 @@ export default function DocumentsPage() {
                     </div>
                   )}
                   {collections.length === 0 ? (
-                    <Empty className="border">
-                      <EmptyHeader>
+                    <Empty className="py-20 border border-dashed rounded-2xl bg-muted/5">
+                      <EmptyContent>
                         <EmptyMedia variant="icon">
-                          <FolderOpen />
+                          <FolderOpen className="size-6 text-muted-foreground/60" />
                         </EmptyMedia>
-                        <EmptyTitle>No collections yet</EmptyTitle>
-                        <EmptyDescription>
-                          {activeClientId
-                            ? 'Open this client\u2019s Documents tab to create a collection.'
-                            : 'Open a client\u2019s Documents tab to create collections.'}
-                        </EmptyDescription>
-                      </EmptyHeader>
+                        <EmptyHeader>
+                          <EmptyTitle className="font-normal text-xl">No collections yet</EmptyTitle>
+                          <EmptyDescription className="font-light">
+                            {activeClientId
+                              ? 'Open this client\u2019s Documents tab to create a collection.'
+                              : 'Open a client\u2019s Documents tab to create collections.'}
+                          </EmptyDescription>
+                        </EmptyHeader>
+                      </EmptyContent>
                     </Empty>
                   ) : activeClientId ? (
                     // Single client - flat list of CollectionCards

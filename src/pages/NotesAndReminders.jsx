@@ -13,6 +13,7 @@ import {
   Pencil,
   Trash2,
   Search,
+  StickyNote,
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { toast } from 'sonner'
@@ -46,6 +47,14 @@ import CreateNoteDialog from '@/components/CreateNoteDialog'
 import EditNoteDialog from '@/components/EditNoteDialog'
 import { ClientAvatar } from '@/components/NoteRow'
 import { cn } from '@/lib/utils'
+import {
+  Empty,
+  EmptyContent,
+  EmptyHeader,
+  EmptyTitle,
+  EmptyDescription,
+  EmptyMedia,
+} from '@/components/ui/empty'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -439,7 +448,7 @@ export default function NotesAndReminders() {
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <div className="p-8 max-w-[1400px] mx-auto space-y-6">
+    <div className="p-8 max-w-[1400px] mx-auto space-y-6 animate-in fade-in duration-500">
       {/* ── Header ─────────────────────── */}
       <div className="flex items-center justify-between">
         <div className="space-y-1">
@@ -579,17 +588,52 @@ export default function NotesAndReminders() {
           ))}
         </div>
       ) : filteredNotes.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-24 text-center gap-3">
-          <div className="size-14 rounded-2xl border border-dashed flex items-center justify-center text-muted-foreground">
-            <FileText className="size-6 opacity-40" />
-          </div>
-          <p className="text-sm font-medium text-muted-foreground">
-            No notes found
-          </p>
-          <p className="text-xs text-muted-foreground/70 max-w-xs">
-            Create a new note or adjust your filters.
-          </p>
-        </div>
+        <Empty className="py-20 border border-dashed rounded-2xl bg-muted/5">
+          <EmptyContent>
+            <EmptyMedia variant="icon">
+              {(search.trim() || statusTab !== 'ALL' || selectedClient !== 'all')
+                ? <Search className="size-6 text-muted-foreground/60" />
+                : <StickyNote className="size-6 text-muted-foreground/60" />}
+            </EmptyMedia>
+            <EmptyHeader>
+              <EmptyTitle className="font-normal text-xl">
+                {(search.trim() || statusTab !== 'ALL' || selectedClient !== 'all')
+                  ? 'No notes found'
+                  : 'No notes yet'}
+              </EmptyTitle>
+              <EmptyDescription className="font-light">
+                {(search.trim() || statusTab !== 'ALL' || selectedClient !== 'all')
+                  ? 'No notes match your current filters. Try adjusting your search.'
+                  : 'Capture important reminders, action items, or client instructions here.'}
+              </EmptyDescription>
+            </EmptyHeader>
+            {(search.trim() || statusTab !== 'ALL' || selectedClient !== 'all') ? (
+              <Button
+                variant="link"
+                onClick={() => {
+                  setSearch('')
+                  setStatusTab('ALL')
+                  setSelectedClient('all')
+                }}
+                className="text-primary font-medium"
+              >
+                Clear all filters
+              </Button>
+            ) : (
+              <CreateNoteDialog
+                clientId={defaultClientId}
+                onSuccess={() =>
+                  queryClient.invalidateQueries({ queryKey: ['global-notes'] })
+                }
+              >
+                <Button variant="outline" size="sm">
+                  <Plus className="size-4 mr-2" />
+                  New Note
+                </Button>
+              </CreateNoteDialog>
+            )}
+          </EmptyContent>
+        </Empty>
       ) : (
         <div className="space-y-8 pt-1">
           {(statusTab === 'ALL' || statusTab === 'TODO') &&

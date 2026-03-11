@@ -170,7 +170,7 @@ export default function MyOrganization() {
                     <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-primary/5 border border-primary/10 text-primary text-[10px] font-semibold uppercase tracking-wider">
                       <Zap size={12} fill="currentColor" /> Ready to Deploy
                     </div>
-                    <h2 className="text-3xl md:text-4xl font-light tracking-tight">
+                    <h2 className="text-3xl font-light tracking-tight">
                       Initialize your{' '}
                       <span className="font-normal italic">Workspace.</span>
                     </h2>
@@ -197,16 +197,15 @@ export default function MyOrganization() {
 
                 <div className="lg:col-span-5 flex flex-col items-center lg:items-end gap-4">
                   <Button
-                    size="xl"
                     disabled={isActivating}
                     onClick={() => setIsConfirmModalOpen(true)}
-                    className="w-full lg:w-fit px-10 h-14 rounded-full text-base font-medium shadow-lg shadow-primary/10 transition-all gap-3"
+                    className="w-full lg:w-fit gap-2"
                   >
                     {isActivating ? (
-                      <Loader2 className="animate-spin" />
+                      <Loader2 className="size-4 animate-spin" />
                     ) : (
                       <>
-                        Create Workspace <ArrowRight size={18} />
+                        Create Workspace <ArrowRight size={14} />
                       </>
                     )}
                   </Button>
@@ -224,7 +223,7 @@ export default function MyOrganization() {
           /* PATH C: Zero Data - Choice Architecture */
           <div className="space-y-8 animate-in fade-in slide-in-from-bottom-6 duration-1000">
             <div className="text-center space-y-2">
-              <h2 className="text-2xl font-light tracking-tight">
+              <h2 className="text-3xl font-light tracking-tight">
                 Get Started
               </h2>
               <p className="text-muted-foreground text-sm font-light">
@@ -235,7 +234,7 @@ export default function MyOrganization() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
               {/* Option 1: Branding Only */}
               <ChoiceCard
-                icon={<Palette className="size-6" />}
+                icon={<Palette className="size-4" />}
                 title="Identity Branding"
                 description="Set your agency name and logo. Perfect if you just want to white-label your reports and portal."
                 onClick={() => handleOpenSetup('branding')}
@@ -243,7 +242,7 @@ export default function MyOrganization() {
 
               {/* Option 2: Full Setup */}
               <ChoiceCard
-                icon={<Rocket className="size-6 text-primary" />}
+                icon={<Rocket className="size-4" />}
                 title="Operational Workspace"
                 description="Full identity setup plus a dedicated internal account for managing your own agency's social media."
                 highlight
@@ -256,55 +255,47 @@ export default function MyOrganization() {
 
       {/* --- CONFIRMATION MODAL --- */}
       <Dialog open={isConfirmModalOpen} onOpenChange={setIsConfirmModalOpen}>
-        <DialogContent className="sm:max-w-xl p-0 overflow-hidden border-none shadow-2xl bg-background rounded-[32px]">
-          <div className="p-10 space-y-8">
-            <DialogHeader className="text-left space-y-4">
-              <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
-                <Sparkles size={28} />
-              </div>
-              <div className="space-y-1.5">
-                <DialogTitle className="text-3xl font-semibold tracking-tight">
-                  Activate Agency Hub
-                </DialogTitle>
-                <DialogDescription className="text-base font-light leading-relaxed text-muted-foreground">
-                  Initialize a dedicated operational environment for{' '}
-                  <span className="text-foreground font-medium">
-                    {agencySettings?.agency_name}
-                  </span>
-                  .
-                </DialogDescription>
-              </div>
-            </DialogHeader>
-
-            <div className="grid grid-cols-1 gap-6 py-2">
-              <BenefitDetail
-                icon={<Layout size={20} />}
-                title="Workflow Management"
-                desc="Access custom approval pipelines designed for your brand's strategy."
-              />
-              <BenefitDetail
-                icon={<Zap size={20} />}
-                title="Full Creative Suite"
-                desc="Unlock insights and scheduling tools usually reserved for clients."
-              />
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <div className="flex items-center gap-3 mb-1">
+              {/* <div className="h-9 w-9 rounded-lg bg-transparent flex items-center justify-center text-primary shrink-0"> */}
+                <Sparkles size={16} />
+              {/* </div> */}
+              <DialogTitle className="text-2xl font-semibold">Activate Agency Hub</DialogTitle>
             </div>
+            <DialogDescription className="text-sm leading-relaxed text-muted-foreground">
+              Initialize a dedicated operational environment for{' '}
+              <span className="text-foreground font-medium">
+                {agencySettings?.agency_name}
+              </span>
+              .
+            </DialogDescription>
+          </DialogHeader>
 
-            <DialogFooter className="flex-col sm:flex-row gap-3 pt-2">
-              <Button
-                variant="ghost"
-                className="flex-1 h-14 rounded-full text-muted-foreground"
-                onClick={() => setIsConfirmModalOpen(false)}
-              >
-                Maybe Later
-              </Button>
-              <Button
-                className="flex-1 h-14 rounded-full"
-                onClick={handleOneClickActivation}
-              >
-                Activate Now
-              </Button>
-            </DialogFooter>
+          <div className="grid grid-cols-1 gap-3 py-2">
+            <BenefitDetail
+              icon={<Layout size={16} />}
+              title="Workflow Management"
+              desc="Access custom approval pipelines designed for your brand's strategy."
+            />
+            <BenefitDetail
+              icon={<Zap size={16} />}
+              title="Full Creative Suite"
+              desc="Unlock insights and scheduling tools usually reserved for clients."
+            />
           </div>
+
+          <DialogFooter className="gap-2 pt-1">
+            <Button
+              variant="ghost"
+              onClick={() => setIsConfirmModalOpen(false)}
+            >
+              Maybe Later
+            </Button>
+            <Button onClick={handleOneClickActivation}>
+              Activate Now
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
@@ -316,33 +307,31 @@ function ChoiceCard({ icon, title, description, onClick, highlight = false }) {
     <div
       onClick={onClick}
       className={cn(
-        'group relative p-8 rounded-[32px] border transition-all cursor-pointer flex flex-col items-center text-center space-y-4',
+        'group relative p-5 rounded-xl border transition-all cursor-pointer flex flex-col gap-4 text-left',
         highlight
-          ? 'border-primary/20 bg-primary/2 hover:bg-primary/4 hover:border-primary/40'
-          : 'border-border/60 bg-muted/5 hover:bg-muted/10 hover:border-border',
+          ? 'border-primary/20 bg-primary/5 hover:bg-primary/8 hover:border-primary/40'
+          : 'border-border/60 bg-muted/30 hover:bg-muted/50 hover:border-border',
       )}
     >
       <div
         className={cn(
-          'size-14 rounded-2xl flex items-center justify-center mb-2 transition-transform group-hover:scale-110 duration-500',
+          'size-9 rounded-lg flex items-center justify-center',
           highlight
             ? 'bg-primary/10 text-primary'
-            : 'bg-background text-muted-foreground border border-border/50 shadow-sm',
+            : 'bg-muted text-muted-foreground',
         )}
       >
         {icon}
       </div>
-      <div className="space-y-2">
-        <h3 className="text-xl font-medium tracking-tight">{title}</h3>
-        <p className="text-sm text-muted-foreground font-light leading-relaxed line-clamp-3">
+      <div className="space-y-1.5 flex-1">
+        <h3 className="text-xl font-medium">{title}</h3>
+        <p className="text-sm text-muted-foreground leading-relaxed">
           {description}
         </p>
       </div>
-      <div className="pt-4 opacity-0 group-hover:opacity-100 transition-opacity">
-        <Button variant="link" className="text-xs h-auto p-0 gap-1">
-          Select Path <ArrowRight size={14} />
-        </Button>
-      </div>
+      <span className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+        Select <ArrowRight className="size-3 transition-transform group-hover:translate-x-0.5" />
+      </span>
     </div>
   )
 }
@@ -363,15 +352,13 @@ function CompactBenefit({ icon, title, desc }) {
 
 function BenefitDetail({ icon, title, desc }) {
   return (
-    <div className="flex gap-4">
-      <div className="mt-1 h-10 w-10 shrink-0 rounded-xl bg-secondary/50 flex items-center justify-center text-primary">
+    <div className="flex gap-3">
+      <div className="mt-0.5 h-8 w-8 shrink-0 rounded-lg bg-muted flex items-center justify-center text-muted-foreground">
         {icon}
       </div>
-      <div className="space-y-1 text-sm font-light">
-        <h4 className="font-semibold text-foreground tracking-tight">
-          {title}
-        </h4>
-        <p className="text-muted-foreground leading-relaxed">{desc}</p>
+      <div className="space-y-1">
+        <h4 className="text-sm font-semibold text-foreground">{title}</h4>
+        <p className="text-sm text-muted-foreground leading-relaxed">{desc}</p>
       </div>
     </div>
   )
