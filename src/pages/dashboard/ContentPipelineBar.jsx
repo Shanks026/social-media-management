@@ -110,11 +110,11 @@ export default function ContentPipelineBar() {
             </div>
           </div>
         ) : totalPosts === 0 ? (
-          <div className="flex-1 flex flex-col items-center justify-center text-sm text-muted-foreground gap-2 py-10">
-            <div className="h-12 w-12 rounded-full bg-muted/50 flex items-center justify-center">
-              <FileText className="h-5 w-5 text-muted-foreground/50" />
+          <div className="flex-1 flex flex-col items-center justify-center text-center py-8 gap-2">
+            <div className="h-10 w-10 border border-dashed rounded-full flex items-center justify-center text-muted-foreground">
+              <FileText className="h-4 w-4" />
             </div>
-            <p>No active posts</p>
+            <p className="text-sm text-muted-foreground">No active posts</p>
           </div>
         ) : (
           <>

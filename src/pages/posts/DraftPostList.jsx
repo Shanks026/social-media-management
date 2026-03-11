@@ -14,6 +14,8 @@ import {
   Clock,
   FolderOpen,
   Megaphone,
+  LayoutGrid,
+  Plus,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -39,8 +41,10 @@ import { AssignCampaignDialog } from '@/components/campaigns/AssignCampaignDialo
 import { useSubscription } from '@/api/useSubscription'
 import {
   Empty,
+  EmptyContent,
   EmptyDescription,
   EmptyHeader,
+  EmptyMedia,
   EmptyTitle,
 } from '@/components/ui/empty'
 import { toast } from 'sonner'
@@ -123,7 +127,7 @@ const PlatformIcon = ({ name }) => {
   )
 }
 
-export default function DraftPostList({ clientId }) {
+export default function DraftPostList({ clientId, onCreatePost }) {
   const queryClient = useQueryClient()
   const navigate = useNavigate()
 
@@ -237,13 +241,28 @@ export default function DraftPostList({ clientId }) {
 
   if (data.length === 0)
     return (
-      <Empty className="mt-12">
-        <EmptyHeader>
-          <EmptyTitle>No drafts yet</EmptyTitle>
-          <EmptyDescription>
-            Create your first post to see it appearing here.
-          </EmptyDescription>
-        </EmptyHeader>
+      <Empty className="py-20 border border-dashed rounded-2xl bg-muted/5">
+        <EmptyContent>
+          <EmptyMedia variant="icon">
+            <LayoutGrid className="size-6 text-muted-foreground/60" />
+          </EmptyMedia>
+          <EmptyHeader>
+            <EmptyTitle className="font-normal text-xl">No posts yet</EmptyTitle>
+            <EmptyDescription className="font-light">
+              Create your first draft to start building content for this client.
+            </EmptyDescription>
+          </EmptyHeader>
+          {onCreatePost && (
+            <Button
+              onClick={onCreatePost}
+              variant="outline"
+              className="mt-2"
+            >
+              <Plus className="size-4 mr-2" />
+              Create Post
+            </Button>
+          )}
+        </EmptyContent>
       </Empty>
     )
 

@@ -40,6 +40,11 @@ export const AuthProvider = ({ children }) => {
     }
   }
 
+  const refreshWorkspace = async () => {
+    const { data: { user: currentUser } } = await supabase.auth.getUser()
+    await resolveWorkspace(currentUser?.id ?? null)
+  }
+
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session)
@@ -59,7 +64,7 @@ export const AuthProvider = ({ children }) => {
   }, [])
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, workspaceUserId, userRole }}>
+    <AuthContext.Provider value={{ user, session, loading, workspaceUserId, userRole, refreshWorkspace }}>
       {!loading && children}
     </AuthContext.Provider>
   )

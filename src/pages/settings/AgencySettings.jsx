@@ -57,6 +57,13 @@ import {
 import { SUPPORTED_PLATFORMS } from '@/lib/platforms'
 import HorizontalLogoCropDialog from '@/components/HorizontalLogoCropDialog'
 
+function extractStoragePath(publicUrl) {
+  if (!publicUrl) return null
+  const marker = '/post-media/'
+  const idx = publicUrl.indexOf(marker)
+  return idx !== -1 ? publicUrl.slice(idx + marker.length) : null
+}
+
 export default function AgencySettings() {
   const { user } = useAuth()
   const { agencySettings, refreshAgency } = useOutletContext() || {}
@@ -149,6 +156,7 @@ export default function AgencySettings() {
     if (agencyLogoUrl === null || !internalClient) return
     setIsSavingAgency(true)
     try {
+      const oldUrl = internalClient.logo_url
       const dbUrl = agencyLogoUrl === '' ? null : agencyLogoUrl
       // Update client record
       const { error: clientErr } = await supabase
@@ -168,6 +176,12 @@ export default function AgencySettings() {
         .eq('user_id', user?.id)
 
       if (subErr) throw subErr
+
+      // Delete old logo from storage if replaced or removed
+      if (oldUrl && oldUrl !== (agencyLogoUrl || '')) {
+        const path = extractStoragePath(oldUrl)
+        if (path) await supabase.storage.from('post-media').remove([path])
+      }
 
       await queryClient.invalidateQueries({ queryKey: ['internal-client'] })
       if (refreshAgency) await refreshAgency()
@@ -223,12 +237,20 @@ export default function AgencySettings() {
     if (horizontalLogoUrl === null) return
     setIsSavingHorizontalLogo(true)
     try {
+      const oldUrl = savedHorizontalLogoUrl
       const dbUrl = horizontalLogoUrl === '' ? null : horizontalLogoUrl
       const { error: subErr } = await supabase
         .from('agency_subscriptions')
         .update({ logo_horizontal_url: dbUrl, updated_at: new Date().toISOString() })
         .eq('user_id', user?.id)
       if (subErr) throw subErr
+
+      // Delete old horizontal logo from storage if replaced or removed
+      if (oldUrl && oldUrl !== (horizontalLogoUrl || '')) {
+        const path = extractStoragePath(oldUrl)
+        if (path) await supabase.storage.from('post-media').remove([path])
+      }
+
       // Pin the display URL locally before nulling so the preview doesn't flicker
       // while agencySettings refetches in the background
       setSavedHorizontalLogoUrl(dbUrl || '')
@@ -603,65 +625,236 @@ export default function AgencySettings() {
 
   // ── PATH B: Brand done, no workspace ──
   if (agencySettings?.agency_name) {
+    const displayHorizontalLogoUrl =
+      horizontalLogoUrl !== null
+        ? horizontalLogoUrl
+        : savedHorizontalLogoUrl || agencySettings?.logo_horizontal_url || ''
+    const bPlatforms = agencySettings.platforms || []
+
     return (
       <>
-        <div className="max-w-4xl animate-in fade-in slide-in-from-bottom-4 duration-700">
-          <div className="rounded-2xl border border-border/50 bg-card/30 overflow-hidden">
-            <div className="p-8 lg:p-12 grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-              <div className="lg:col-span-7 space-y-6">
-                <div className="space-y-3">
-                  <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-primary/5 border border-primary/10 text-primary text-[10px] font-semibold uppercase tracking-wider">
-                    <Zap size={12} fill="currentColor" /> Ready to Deploy
-                  </div>
-                  <h2 className="text-3xl md:text-4xl font-light tracking-tight">
-                    Initialize your{' '}
-                    <span className="font-normal italic">Workspace.</span>
-                  </h2>
-                  <p className="text-muted-foreground text-sm font-light leading-relaxed max-w-xl">
-                    Your agency identity is verified. Activate your operational
-                    workspace to unlock a dedicated environment for your
-                    brand&apos;s social strategy.
-                  </p>
-                </div>
+        <div className="max-w-4xl mx-auto space-y-14 animate-in fade-in slide-in-from-bottom-4 duration-700">
 
-                <div className="flex flex-wrap gap-x-10 gap-y-4 pt-2">
-                  <CompactBenefit
-                    icon={<CheckCircle2 size={16} />}
-                    title="Subscription Exempt"
-                    desc="No client slots used"
-                  />
-                  <CompactBenefit
-                    icon={<HardDrive size={16} />}
-                    title="Shared Storage"
-                    desc="Unified media pool"
-                  />
-                </div>
-              </div>
-
-              <div className="lg:col-span-5 flex flex-col items-center lg:items-end gap-4">
-                <Button
-                  size="xl"
-                  disabled={isActivating}
-                  onClick={() => setIsConfirmModalOpen(true)}
-                  className="w-full lg:w-fit px-10 h-14 rounded-full text-base font-medium shadow-lg shadow-primary/10 transition-all gap-3"
-                >
-                  {isActivating ? (
-                    <Loader2 className="animate-spin" />
-                  ) : (
-                    <>
-                      Create Workspace <ArrowRight size={18} />
-                    </>
-                  )}
-                </Button>
-                <button
-                  className="text-xs text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2"
-                  onClick={() => handleOpenSetup('full')}
-                >
-                  Reset &amp; reconfigure &rarr;
-                </button>
-              </div>
+          {/* Compact workspace banner */}
+          <div className="rounded-xl border border-primary/20 bg-muted/30 px-6 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="space-y-0.5">
+              <p className="text-sm font-semibold text-foreground flex items-center gap-2">
+                <Zap size={13} className="text-primary" fill="currentColor" />
+                Workspace not initialized
+              </p>
+              <p className="text-xs text-muted-foreground font-light">
+                Activate your operational workspace to manage your agency&apos;s social media.
+              </p>
+            </div>
+            <div className="flex items-center gap-3 shrink-0">
+              <button
+                className="text-xs text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2"
+                onClick={() => handleOpenSetup('full')}
+              >
+                Reconfigure
+              </button>
+              <Button
+                size="sm"
+                disabled={isActivating}
+                onClick={() => setIsConfirmModalOpen(true)}
+                className="gap-2"
+              >
+                {isActivating ? (
+                  <Loader2 size={14} className="animate-spin" />
+                ) : (
+                  <ArrowRight size={14} />
+                )}
+                Create Workspace
+              </Button>
             </div>
           </div>
+
+          {/* Section: Branding & Identity */}
+          <section className="space-y-8">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="space-y-1">
+                <h2 className="text-2xl font-normal tracking-tight">Agency Profile</h2>
+                <p className="text-sm text-muted-foreground font-light">
+                  Your internal agency identity and workspace details.
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleOpenSetup('branding')}
+                className="gap-2 w-fit shrink-0"
+              >
+                <Pencil size={14} />
+                Edit Profile
+              </Button>
+            </div>
+
+            {/* Row 1: Logos */}
+            <div className="flex items-start gap-6 flex-wrap">
+              {/* Square logo — display only; edit via Edit Profile */}
+              <div className="shrink-0">
+                {agencySettings.logo_url ? (
+                  <div className="size-28 rounded-2xl border border-border overflow-hidden bg-background shadow-sm">
+                    <img
+                      src={agencySettings.logo_url}
+                      alt={agencySettings.agency_name}
+                      className="size-full object-cover"
+                    />
+                  </div>
+                ) : (
+                  <div className="size-28 rounded-2xl border-2 border-dashed border-border flex flex-col items-center justify-center gap-1 text-muted-foreground">
+                    <ImagePlus size={20} />
+                    <span className="text-xs">No logo</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Horizontal logo — editable (saves directly to agency_subscriptions) */}
+              <div className="shrink-0 space-y-1.5">
+                <div
+                  onClick={() => horizontalLogoInputRef.current?.click()}
+                  className={cn(
+                    'group relative cursor-pointer rounded-xl border-2 border-dashed transition-all hover:bg-muted/50',
+                    displayHorizontalLogoUrl
+                      ? 'border-primary/40 overflow-hidden'
+                      : 'border-border flex h-28 w-52 items-center justify-center',
+                  )}
+                >
+                  {displayHorizontalLogoUrl ? (
+                    <>
+                      <img
+                        src={displayHorizontalLogoUrl}
+                        alt="Horizontal logo"
+                        className="block max-h-28 max-w-[280px] w-auto rounded-[10px]"
+                      />
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/20 opacity-0 transition-opacity group-hover:opacity-100 rounded-xl">
+                        <Camera className="size-5 text-white" />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setHorizontalLogoUrl('')
+                        }}
+                        className="absolute top-1.5 right-1.5 z-10 flex size-5 items-center justify-center rounded-full bg-black/60 text-white opacity-0 transition-opacity group-hover:opacity-100 hover:bg-destructive"
+                      >
+                        <X size={11} />
+                      </button>
+                    </>
+                  ) : (
+                    <div className="flex flex-col items-center gap-1 text-muted-foreground transition-colors group-hover:text-foreground">
+                      {isUploadingHorizontalLogo ? (
+                        <Loader2 className="size-5 animate-spin text-primary" />
+                      ) : (
+                        <ImagePlus className="size-5" />
+                      )}
+                      <span className="text-xs font-medium">Horizontal Logo</span>
+                    </div>
+                  )}
+                  <input
+                    ref={horizontalLogoInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleHorizontalLogoUpload}
+                    disabled={isUploadingHorizontalLogo}
+                  />
+                </div>
+                <p className="text-[11px] text-muted-foreground">For invoices &amp; documents.</p>
+              </div>
+
+              {/* Save horizontal logo */}
+              {horizontalLogoUrl !== null && (
+                <div className="flex flex-col gap-2 self-end pb-0.5">
+                  <Button size="sm" className="gap-2" onClick={handleSaveHorizontalLogo} disabled={isSavingHorizontalLogo}>
+                    {isSavingHorizontalLogo ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                    {horizontalLogoUrl === '' ? 'Remove Horizontal Logo' : 'Save Horizontal Logo'}
+                  </Button>
+                </div>
+              )}
+            </div>
+
+            {/* Horizontal Logo Crop Dialog */}
+            <HorizontalLogoCropDialog
+              open={isCropOpen}
+              onOpenChange={handleCropDialogOpenChange}
+              imageSrc={cropSrc || ''}
+              onCropComplete={handleCropApplied}
+            />
+
+            {/* Row 2: Details */}
+            <div className="space-y-6">
+              <div className="space-y-1">
+                <h3 className="text-xl font-medium tracking-tight">
+                  {agencySettings.agency_name}
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  {agencySettings.industry || 'Internal'}
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 w-full">
+                <InfoRow
+                  icon={<Mail size={16} />}
+                  label="Agency Email"
+                  value={agencySettings.email || '—'}
+                />
+                <InfoRow
+                  icon={<Phone size={16} />}
+                  label="Contact Number"
+                  value={agencySettings.mobile_number || '—'}
+                />
+                <InfoRow
+                  icon={<CalendarDays size={16} />}
+                  label="Created"
+                  value={
+                    agencySettings.created_at
+                      ? format(new Date(agencySettings.created_at), 'MMMM d, yyyy')
+                      : '—'
+                  }
+                />
+              </div>
+            </div>
+          </section>
+
+          <Separator className="opacity-50" />
+
+          {/* Section: Platforms */}
+          <section className="space-y-6">
+            <div className="space-y-1">
+              <h2 className="text-2xl font-normal tracking-tight">Platforms</h2>
+              <p className="text-sm text-muted-foreground font-light">
+                Social platforms linked to your agency workspace.
+              </p>
+            </div>
+
+            {bPlatforms.length > 0 ? (
+              <div className="flex flex-wrap gap-3">
+                {bPlatforms.map((pId) => {
+                  const platform = SUPPORTED_PLATFORMS.find((p) => p.id === pId)
+                  if (!platform) return null
+                  return (
+                    <div
+                      key={pId}
+                      className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border bg-card/50"
+                    >
+                      <img
+                        src={`/platformIcons/${platform.id === 'google_business' ? 'google_busines' : platform.id}.png`}
+                        alt={platform.label}
+                        className="size-4 object-contain"
+                      />
+                      <span className="text-sm font-medium">{platform.label}</span>
+                    </div>
+                  )
+                })}
+              </div>
+            ) : (
+              <div className="flex items-center gap-3 text-sm text-muted-foreground py-4">
+                <Globe size={16} />
+                No platforms configured yet.
+              </div>
+            )}
+          </section>
         </div>
 
         {/* Activation Confirmation */}
@@ -677,7 +870,7 @@ export default function AgencySettings() {
 
   // ── PATH C: Nothing set up ──
   return (
-    <div className="max-w-4xl space-y-8 animate-in fade-in slide-in-from-bottom-6 duration-1000">
+    <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-6 duration-1000">
       <div className="text-center space-y-2">
         <h2 className="text-2xl font-light tracking-tight">Get Started</h2>
         <p className="text-muted-foreground text-sm font-light">

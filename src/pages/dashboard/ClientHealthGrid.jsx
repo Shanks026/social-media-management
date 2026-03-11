@@ -6,7 +6,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import { cn } from '@/lib/utils'
 import { fetchClients } from '@/api/clients'
-import { ArrowUpRight } from 'lucide-react'
+import { ArrowUpRight, UserStar } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 function getHealthStatus(client) {
@@ -79,6 +79,13 @@ export default function ClientHealthGrid() {
             {[...Array(4)].map((_, i) => (
               <Skeleton key={i} className="h-24 w-full rounded-lg" />
             ))}
+          </div>
+        ) : realClients.length === 0 ? (
+          <div className="flex flex-col items-center justify-center text-center py-8 gap-2">
+            <div className="h-10 w-10 border border-dashed rounded-full flex items-center justify-center text-muted-foreground">
+              <UserStar className="h-4 w-4" />
+            </div>
+            <p className="text-sm text-muted-foreground">No clients yet</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 mt-2">

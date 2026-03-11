@@ -21,84 +21,69 @@ export default function OnboardingPage({ user, onComplete, onSkip }) {
   if (!mode) {
     return (
       <div className="w-full min-h-screen bg-background flex flex-col items-center justify-center p-4">
-        <div className="max-w-4xl w-full space-y-10 animate-in fade-in zoom-in-95 duration-700">
-          <div className="space-y-4 text-center">
-            <h1 className="text-4xl md:text-5xl font-medium tracking-tight mb-2">
+        <div className="max-w-4xl w-full space-y-8 animate-in fade-in zoom-in-95 duration-500">
+          <div className="space-y-1.5 text-center">
+            <h1 className="text-3xl font-medium tracking-tight">
               Welcome to Tercero
             </h1>
-            <h2 className="text-3xl md:text-4xl font-medium tracking-tight text-muted-foreground">
-              Make it yours
-            </h2>
-            <p className="text-lg text-muted-foreground p-2">
-              How would you like to begin your journey with Tercero?
+            <p className="text-sm text-muted-foreground">
+              How would you like to set up your workspace?
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <button
               onClick={() => setMode('full')}
-              className="group flex flex-col p-8 rounded-3xl border border-primary/20 bg-primary/2 hover:bg-primary/4 transition-all text-left space-y-6"
+              className="group flex flex-col p-5 rounded-xl border border-primary/20 bg-primary/5 hover:bg-primary/8 transition-all text-left gap-4"
             >
-              <div className="size-12 rounded-xl bg-primary/10 flex items-center justify-center">
-                <ShieldCheck className="size-6 text-primary" />
+              <div className="size-9 rounded-lg bg-primary/10 flex items-center justify-center">
+                <ShieldCheck className="size-4 text-primary" />
               </div>
-              <div className="space-y-3 flex-1">
-                <h3 className="text-xl font-medium tracking-tight">
-                  Full setup
-                </h3>
-                <p className="text-sm leading-relaxed text-muted-foreground/90">
-                  Brand your workspace and create a free agency account for your
-                  own content. Recommended.
+              <div className="space-y-1.5 flex-1">
+                <h3 className="text-xl font-medium">Full setup</h3>
+                <p className="text-sm leading-relaxed text-muted-foreground">
+                  Brand your workspace and create a free agency account for your own content. Recommended.
                 </p>
               </div>
-              <div className="pt-4 flex items-center text-sm font-medium text-primary">
-                Get started{' '}
-                <ArrowRight className="ml-2 size-4 transition-transform group-hover:translate-x-1" />
-              </div>
+              <span className="text-xs font-medium text-primary flex items-center gap-1">
+                Get started <ArrowRight className="size-3 transition-transform group-hover:translate-x-0.5" />
+              </span>
             </button>
 
             <button
               onClick={() => setMode('branding')}
-              className="group flex flex-col p-8 rounded-3xl border border-muted bg-muted/3 hover:bg-muted/8 transition-all text-left space-y-6"
+              className="group flex flex-col p-5 rounded-xl border bg-muted/30 hover:bg-muted/50 transition-all text-left gap-4"
             >
-              <div className="size-12 rounded-xl bg-muted flex items-center justify-center">
-                <Sparkles className="size-6 text-muted-foreground" />
+              <div className="size-9 rounded-lg bg-muted flex items-center justify-center">
+                <Sparkles className="size-4 text-muted-foreground" />
               </div>
-              <div className="space-y-3 flex-1">
-                <h3 className="text-xl font-medium tracking-tight">
-                  Visual identity
-                </h3>
-                <p className="text-sm leading-relaxed text-muted-foreground/90">
-                  Update the logo and name in your sidebar. You can set up your
-                  internal account later.
+              <div className="space-y-1.5 flex-1">
+                <h3 className="text-xl font-medium">Visual identity</h3>
+                <p className="text-sm leading-relaxed text-muted-foreground">
+                  Update the logo and name in your sidebar. You can set up your internal account later.
                 </p>
               </div>
-              <div className="pt-4 flex items-center text-sm font-medium text-muted-foreground">
-                Set identity{' '}
-                <ArrowRight className="ml-2 size-4 transition-transform group-hover:translate-x-1" />
-              </div>
+              <span className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                Set identity <ArrowRight className="size-3 transition-transform group-hover:translate-x-0.5" />
+              </span>
             </button>
 
             <button
               onClick={handleSkip}
-              className="group flex flex-col p-8 rounded-3xl border border-muted bg-muted/3 hover:bg-muted/8 transition-all text-left space-y-6"
+              className="group flex flex-col p-5 rounded-xl border bg-muted/30 hover:bg-muted/50 transition-all text-left gap-4"
             >
-              <div className="size-12 rounded-xl bg-muted flex items-center justify-center">
-                <Rocket className="size-6 text-muted-foreground" />
+              <div className="size-9 rounded-lg bg-muted flex items-center justify-center">
+                <Rocket className="size-4 text-muted-foreground" />
               </div>
-              <div className="space-y-3 flex-1">
-                <h3 className="text-xl font-medium tracking-tight">
-                  Explore first
-                </h3>
-                <p className="text-sm leading-relaxed text-muted-foreground/90">
-                  Head straight to your dashboard. You can customize your
-                  branding anytime from the settings.
+              <div className="space-y-1.5 flex-1">
+                <h3 className="text-xl font-medium">Explore first</h3>
+                <p className="text-sm leading-relaxed text-muted-foreground">
+                  Head straight to your dashboard. You can customize your branding anytime from settings.
                 </p>
               </div>
-              <div className="pt-4 flex items-center text-sm font-medium text-muted-foreground">
-                Skip for now{' '}
-                <ArrowRight className="ml-2 size-4 transition-transform group-hover:translate-x-1" />
-              </div>
+              <span className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                Skip for now <ArrowRight className="size-3 transition-transform group-hover:translate-x-0.5" />
+              </span>
             </button>
           </div>
         </div>

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/context/AuthContext'
-import { useTeamMembers, usePendingInvites, useGenerateInvite, useRevokeInvite, useRemoveMember } from '@/api/team'
+import { useTeamMembers, usePendingInvites, useGenerateInvite, useRevokeInvite, useRemoveMember, useRemovedMembers, useRestoreMember, useDeleteMemberPermanently } from '@/api/team'
 import { formatDate } from '@/lib/helper'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -25,7 +25,16 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { UserPlus, Copy, Check, Link, Trash2, Users, CalendarDays, Briefcase, Clock, Loader2 } from 'lucide-react'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { UserPlus, Copy, Check, Link, Trash2, Users, CalendarDays, Briefcase, Clock, Loader2, RotateCcw } from 'lucide-react'
+import {
+  Empty,
+  EmptyContent,
+  EmptyHeader,
+  EmptyTitle,
+  EmptyDescription,
+  EmptyMedia,
+} from '@/components/ui/empty'
 
 // ─── Invite Dialog ─────────────────────────────────────────────────────────────
 
@@ -122,11 +131,15 @@ export default function TeamSettings() {
 
   const { data: members = [], isLoading: membersLoading } = useTeamMembers()
   const { data: pendingInvites = [] } = usePendingInvites()
+  const { data: removedMembers = [] } = useRemovedMembers()
   const removeMember = useRemoveMember()
   const revokeInvite = useRevokeInvite()
+  const restoreMember = useRestoreMember()
+  const deleteMemberPermanently = useDeleteMemberPermanently()
 
   const [inviteOpen, setInviteOpen] = useState(false)
   const [removingMember, setRemovingMember] = useState(null)
+  const [deletingMember, setDeletingMember] = useState(null)
 
   const handleRemove = async () => {
     if (!removingMember) return
@@ -146,6 +159,27 @@ export default function TeamSettings() {
       toast.success('Invite revoked')
     } catch (err) {
       toast.error(err.message || 'Failed to revoke invite')
+    }
+  }
+
+  const handleRestore = async (member) => {
+    try {
+      await restoreMember.mutateAsync(member.id)
+      toast.success(`${member.full_name || 'Member'} restored`)
+    } catch (err) {
+      toast.error(err.message || 'Failed to restore member')
+    }
+  }
+
+  const handleDeletePermanently = async () => {
+    if (!deletingMember) return
+    try {
+      await deleteMemberPermanently.mutateAsync(deletingMember.id)
+      toast.success(`${deletingMember.full_name || 'Member'} permanently deleted`)
+    } catch (err) {
+      toast.error(err.message || 'Failed to delete member')
+    } finally {
+      setDeletingMember(null)
     }
   }
 
@@ -196,23 +230,25 @@ export default function TeamSettings() {
         </div>
 
         {members.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 rounded-2xl border border-dashed border-border text-center space-y-4">
-            <div className="size-14 rounded-2xl bg-muted flex items-center justify-center">
-              <Users className="size-6 text-muted-foreground" />
-            </div>
-            <div className="space-y-1">
-              <p className="text-sm font-medium">No team members yet</p>
-              <p className="text-sm text-muted-foreground font-light">
-                Invite someone to collaborate on this workspace.
-              </p>
-            </div>
-            {isAdmin && (
-              <Button size="sm" variant="outline" onClick={() => setInviteOpen(true)} className="gap-2 mt-2">
-                <UserPlus size={14} />
-                Invite Team Member
-              </Button>
-            )}
-          </div>
+          <Empty className="py-16 border border-dashed rounded-2xl bg-muted/5">
+            <EmptyContent>
+              <EmptyMedia variant="icon">
+                <Users className="size-6 text-muted-foreground/60" />
+              </EmptyMedia>
+              <EmptyHeader>
+                <EmptyTitle className="font-normal text-xl">Just you for now</EmptyTitle>
+                <EmptyDescription className="font-light">
+                  Invite a teammate to collaborate on client accounts and share the workload.
+                </EmptyDescription>
+              </EmptyHeader>
+              {isAdmin && (
+                <Button variant="outline" size="sm" onClick={() => setInviteOpen(true)}>
+                  <UserPlus className="size-4 mr-2" />
+                  Invite Team Member
+                </Button>
+              )}
+            </EmptyContent>
+          </Empty>
         ) : (
           <div className="space-y-3">
             {members.map((member) => {
@@ -338,8 +374,98 @@ export default function TeamSettings() {
         </>
       )}
 
+      {/* ── Removed Members ── */}
+      {isAdmin && removedMembers.length > 0 && (
+        <>
+          <Separator className="opacity-50" />
+
+          <section className="space-y-8">
+            <div className="space-y-1">
+              <h2 className="text-2xl font-normal tracking-tight">Removed Members</h2>
+              <p className="text-sm text-muted-foreground font-light">
+                Members who have been removed from your workspace.
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              {removedMembers.map((member) => (
+                <div
+                  key={member.id}
+                  className="flex items-center gap-4 rounded-xl border border-border/50 bg-card/30 px-5 py-4 opacity-60"
+                >
+                  <MemberAvatar name={member.full_name} email={member.email} avatarUrl={member.avatar_url} />
+
+                  <div className="flex-1 min-w-0 space-y-1">
+                    <p className="text-sm font-medium truncate">{member.full_name || member.email}</p>
+                    <p className="text-xs text-muted-foreground truncate">{member.email}</p>
+                  </div>
+
+                  {member.functional_role && (
+                    <div className="hidden sm:flex items-center gap-1.5 text-xs text-muted-foreground shrink-0">
+                      <Briefcase size={12} />
+                      {member.functional_role}
+                    </div>
+                  )}
+
+                  <div className="flex items-center gap-1 shrink-0">
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="size-8 text-muted-foreground hover:text-foreground"
+                          onClick={() => handleRestore(member)}
+                        >
+                          <RotateCcw className="size-3.5" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Restore access</TooltipContent>
+                    </Tooltip>
+
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="size-8 text-muted-foreground hover:text-destructive"
+                          onClick={() => setDeletingMember(member)}
+                        >
+                          <Trash2 className="size-3.5" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Delete permanently</TooltipContent>
+                    </Tooltip>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        </>
+      )}
+
       {/* ── Dialogs ── */}
       <InviteDialog open={inviteOpen} onOpenChange={setInviteOpen} />
+
+      <AlertDialog open={!!deletingMember} onOpenChange={(open) => !open && setDeletingMember(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete permanently?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently remove {deletingMember?.full_name || 'this member'} from the database.
+              They will need to be re-invited to rejoin. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={handleDeletePermanently}
+            >
+              Delete permanently
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog open={!!removingMember} onOpenChange={(open) => !open && setRemovingMember(null)}>
         <AlertDialogContent>

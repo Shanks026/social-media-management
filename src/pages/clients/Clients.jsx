@@ -6,7 +6,7 @@ import {
   useOutletContext,
 } from 'react-router-dom'
 import { toast } from 'sonner'
-import { UserStar, X, Lock, Plus, Search } from 'lucide-react'
+import { UserStar, Lock, Plus, Search } from 'lucide-react'
 
 import { fetchClients, deleteClient } from '@/api/clients'
 import { getUrgencyStatus } from '@/lib/client-helpers'
@@ -247,40 +247,41 @@ export default function Clients() {
 
         {/* --- SECTION 3: THE CONTENT GRID --- */}
         {sortedClients.length === 0 ? (
-          <Empty className="py-32 bg-card/20 rounded-[32px] border border-dashed border-border/60">
-            <EmptyHeader className="flex flex-col items-center">
-              <div className="h-20 w-20 rounded-full bg-primary/5 flex items-center justify-center mb-6">
-                <UserStar className="size-10 text-primary/40" />
-              </div>
-              <EmptyTitle className="text-2xl font-light">
+          <Empty className="py-20 border border-dashed rounded-2xl bg-muted/5">
+            <EmptyContent>
+              <EmptyMedia variant="icon">
                 {isFilterActive
-                  ? 'No clients match your criteria'
-                  : 'Ready to scale your agency?'}
-              </EmptyTitle>
-              <EmptyDescription className="max-w-md text-center font-light">
-                {isFilterActive
-                  ? 'Adjust your filters or search terms to find specific client profiles.'
-                  : 'Onboard your first partner to start managing their content strategy and workflow.'}
-              </EmptyDescription>
-            </EmptyHeader>
-            <EmptyContent className="mt-8">
+                  ? <Search className="size-6 text-muted-foreground/60" />
+                  : <UserStar className="size-6 text-muted-foreground/60" />}
+              </EmptyMedia>
+              <EmptyHeader>
+                <EmptyTitle className="font-normal text-xl">
+                  {isFilterActive
+                    ? 'No clients match your criteria'
+                    : 'Ready to scale your agency?'}
+                </EmptyTitle>
+                <EmptyDescription className="font-light">
+                  {isFilterActive
+                    ? 'Adjust your filters or search terms to find specific client profiles.'
+                    : 'Onboard your first partner to start managing their content strategy and workflow.'}
+                </EmptyDescription>
+              </EmptyHeader>
               {isFilterActive ? (
                 <Button
-                  variant="ghost"
+                  variant="link"
                   onClick={resetFilters}
-                  className="rounded-full gap-2"
+                  className="text-primary font-medium"
                 >
-                  <X className="size-4" /> Clear all filters
+                  Clear all filters
                 </Button>
               ) : (
                 <Button
                   onClick={handleCreateClick}
-                  size="xl"
-                  disabled={
-                    isSubLoading || subscription?.is_client_limit_reached
-                  }
-                  className="rounded-full px-10 h-14"
+                  variant="outline"
+                  size="sm"
+                  disabled={isSubLoading || subscription?.is_client_limit_reached}
                 >
+                  <Plus className="size-4 mr-2" />
                   Onboard Your First Client
                 </Button>
               )}

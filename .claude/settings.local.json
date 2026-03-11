@@ -52,7 +52,11 @@
       "mcp__supabase__apply_migration",
       "mcp__supabase__execute_sql",
       "mcp__supabase__list_migrations",
-      "Bash(grep -n proposals c:/Users/chris_austin/Desktop/social-media-management/supabase/migrations/*.sql)"
+      "Bash(grep -n proposals c:/Users/chris_austin/Desktop/social-media-management/supabase/migrations/*.sql)",
+      "mcp__supabase__deploy_edge_function",
+      "Bash(find c:Userschris_austinDesktopsocial-media-management.claude -type f -name *.md)",
+      "Bash(grep -E \"\\\\.\\(jsx|js\\)$\")",
+      "Bash(node -e \":*)"
     ]
   }
 }
