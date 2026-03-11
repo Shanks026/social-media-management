@@ -8,6 +8,7 @@ import { useAuth } from '@/context/AuthContext'
 export const teamKeys = {
   members: (agencyUserId) => ['team', 'members', agencyUserId],
   invites: (agencyUserId) => ['team', 'invites', agencyUserId],
+  removed: (agencyUserId) => ['team', 'removed', agencyUserId],
 }
 
 // ─── Read Hooks ────────────────────────────────────────────────────────────────
@@ -179,6 +180,73 @@ export function useRemoveMember() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: teamKeys.members(workspaceUserId) })
+      queryClient.invalidateQueries({ queryKey: teamKeys.removed(workspaceUserId) })
+    },
+  })
+}
+
+/**
+ * Fetch removed (is_active = false) team members.
+ */
+export function useRemovedMembers() {
+  const { workspaceUserId } = useAuth()
+
+  return useQuery({
+    queryKey: teamKeys.removed(workspaceUserId),
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('get_removed_members', {
+        p_agency_user_id: workspaceUserId,
+      })
+
+      if (error) throw error
+      return data ?? []
+    },
+    enabled: !!workspaceUserId,
+  })
+}
+
+/**
+ * Restore a removed member (set is_active = true).
+ */
+export function useRestoreMember() {
+  const queryClient = useQueryClient()
+  const { workspaceUserId } = useAuth()
+
+  return useMutation({
+    mutationFn: async (memberId) => {
+      const { error } = await supabase
+        .from('agency_members')
+        .update({ is_active: true })
+        .eq('id', memberId)
+
+      if (error) throw error
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: teamKeys.members(workspaceUserId) })
+      queryClient.invalidateQueries({ queryKey: teamKeys.removed(workspaceUserId) })
+    },
+  })
+}
+
+/**
+ * Permanently delete a member from agency_members AND auth.users.
+ * Uses the delete-team-member edge function (requires service role).
+ */
+export function useDeleteMemberPermanently() {
+  const queryClient = useQueryClient()
+  const { workspaceUserId } = useAuth()
+
+  return useMutation({
+    mutationFn: async (memberId) => {
+      const { data, error } = await supabase.functions.invoke('delete-team-member', {
+        body: { memberId },
+      })
+
+      if (error) throw error
+      if (data?.error) throw new Error(data.error)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: teamKeys.removed(workspaceUserId) })
     },
   })
 }

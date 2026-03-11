@@ -122,14 +122,21 @@ export default function DashboardInvoiceTable() {
         </Button>
       </CardHeader>
       <CardContent className="flex-1 overflow-hidden px-6 rounded-b-2xl">
-        <CustomTable
-          columns={columns}
-          data={tableData}
-          isLoading={isLoadingInvoices}
-          emptyMessage="No recent invoices found."
-          emptyIcon={FileText}
-          onRowClick={(row) => navigate(`/finance/overview?tab=invoices&invoiceId=${row.id}`)}
-        />
+        {!isLoadingInvoices && tableData.length === 0 ? (
+          <div className="flex-1 flex flex-col items-center justify-center text-center py-8 gap-2">
+            <div className="h-10 w-10 border border-dashed rounded-full flex items-center justify-center text-muted-foreground">
+              <FileText className="h-4 w-4" />
+            </div>
+            <p className="text-sm text-muted-foreground">No recent invoices</p>
+          </div>
+        ) : (
+          <CustomTable
+            columns={columns}
+            data={tableData}
+            isLoading={isLoadingInvoices}
+            onRowClick={(row) => navigate(`/finance/overview?tab=invoices&invoiceId=${row.id}`)}
+          />
+        )}
       </CardContent>
     </Card>
   )

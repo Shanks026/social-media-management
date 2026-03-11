@@ -67,6 +67,13 @@ const clientSchema = z.object({
   ),
 })
 
+function extractStoragePath(publicUrl) {
+  if (!publicUrl) return null
+  const marker = '/post-media/'
+  const idx = publicUrl.indexOf(marker)
+  return idx !== -1 ? publicUrl.slice(idx + marker.length) : null
+}
+
 export default function CreateClientPage({
   customSubmit,
   onSuccess,
@@ -222,6 +229,8 @@ export default function CreateClientPage({
     const file = e.target.files?.[0]
     if (!file) return
 
+    const previousUrl = previewUrl
+
     try {
       setIsUploading(true)
       const fileExt = file.name.split('.').pop()
@@ -243,6 +252,13 @@ export default function CreateClientPage({
         shouldDirty: true,
       })
       setPreviewUrl(publicUrl)
+
+      // Delete previous logo from storage (old saved logo or unsubmitted upload)
+      if (previousUrl) {
+        const path = extractStoragePath(previousUrl)
+        if (path) await supabase.storage.from('post-media').remove([path])
+      }
+
       toast.success('Logo uploaded!')
     } catch (error) {
       console.error('Upload error:', error)
@@ -254,6 +270,11 @@ export default function CreateClientPage({
 
   const removeLogo = (e) => {
     e.stopPropagation()
+    // Delete the file from storage (uploaded but not yet saved, or existing logo being cleared)
+    if (previewUrl) {
+      const path = extractStoragePath(previewUrl)
+      if (path) supabase.storage.from('post-media').remove([path])
+    }
     form.setValue('logo_url', '', { shouldValidate: true, shouldDirty: true })
     setPreviewUrl(null)
     if (fileInputRef.current) fileInputRef.current.value = ''

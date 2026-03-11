@@ -5,6 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { supabase } from '@/lib/supabase'
 import { fetchInviteByToken, joinTeam } from '@/api/team'
+import { useAuth } from '@/context/AuthContext'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -44,6 +45,7 @@ const schema = z
 export default function JoinTeam() {
   const { token } = useParams()
   const navigate = useNavigate()
+  const { refreshWorkspace } = useAuth()
 
   const [invite, setInvite] = useState(null)
   const [tokenError, setTokenError] = useState(null)
@@ -123,6 +125,7 @@ export default function JoinTeam() {
         functionalRole: values.functionalRole || null,
       })
 
+      await refreshWorkspace()
       navigate('/dashboard', { replace: true })
     } catch (err) {
       setSubmitError(err.message || 'Something went wrong. Please try again.')

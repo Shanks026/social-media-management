@@ -3,13 +3,15 @@ import { supabase } from '@/lib/supabase'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
-import { Field, FieldDescription, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Loader2, AlertCircle, CheckCircle2 } from 'lucide-react'
 
 export function SignupForm({ className, ...props }) {
   const navigate = useNavigate()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  const [success, setSuccess] = useState(false)
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -41,112 +43,87 @@ export function SignupForm({ className, ...props }) {
     } else if (data?.session) {
       navigate('/dashboard')
     } else {
-      setError('Success! Please check your email to confirm your account.')
+      setSuccess(true)
     }
+  }
+
+  if (success) {
+    return (
+      <div className="flex items-start gap-3 rounded-xl border border-green-500/30 bg-green-500/5 px-4 py-3 text-sm text-green-700 dark:text-green-400 text-left">
+        <CheckCircle2 className="size-4 mt-0.5 shrink-0" />
+        <span>Account created! Check your email to confirm your address before signing in.</span>
+      </div>
+    )
   }
 
   return (
     <form
       onSubmit={handleSubmit}
-      className={cn('flex flex-col gap-6', className)}
+      className={cn('space-y-5 text-left', className)}
       {...props}
     >
-      <div className="flex flex-col gap-2 text-center md:text-left">
-        <h1 className="text-3xl font-medium tracking-tight text-foreground">
-          Create account
-        </h1>
-        <p className="text-[15px] text-muted-foreground leading-relaxed">
-          to start managing your agency
-        </p>
+      {/* Full name */}
+      <div className="space-y-2">
+        <Label htmlFor="name">Full name</Label>
+        <Input
+          id="name"
+          name="name"
+          type="text"
+          placeholder="Jane Smith"
+          required
+        />
       </div>
 
-      <div className="grid gap-4">
-        {/* Name and Email remain vertical for readability at this width */}
-        <Field className="space-y-1.5">
-          <FieldLabel htmlFor="name" className="text-sm font-medium ml-4">
-            Full Name
-          </FieldLabel>
+      {/* Email */}
+      <div className="space-y-2">
+        <Label htmlFor="email">Email</Label>
+        <Input
+          id="email"
+          name="email"
+          type="email"
+          placeholder="m@example.com"
+          required
+        />
+      </div>
+
+      {/* Passwords */}
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="password">Password</Label>
           <Input
-            id="name"
-            name="name"
-            type="text"
-            placeholder="John Doe"
+            id="password"
+            name="password"
+            type="password"
             required
-            className="h-12 rounded-full border-input bg-background px-6 focus-visible:ring-1"
           />
-        </Field>
-
-        <Field className="space-y-1.5">
-          <FieldLabel htmlFor="email" className="text-sm font-medium ml-4">
-            Email
-          </FieldLabel>
-          <Input
-            id="email"
-            name="email"
-            type="email"
-            placeholder="m@example.com"
-            required
-            className="h-12 rounded-full border-input bg-background px-6 focus-visible:ring-1"
-          />
-        </Field>
-
-        {/* Realignment: Side-by-side grid for passwords to save vertical space */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Field className="space-y-1.5">
-            <FieldLabel
-              htmlFor="password"
-              title="Password"
-              className="text-sm font-medium ml-4"
-            >
-              Password
-            </FieldLabel>
-            <Input
-              id="password"
-              name="password"
-              type="password"
-              required
-              className="h-12 rounded-full border-input bg-background px-6 focus-visible:ring-1"
-            />
-          </Field>
-
-          <Field className="space-y-1.5">
-            <FieldLabel
-              htmlFor="confirm-password"
-              title="Confirm Password"
-              className="text-sm font-medium ml-4"
-            >
-              Confirm
-            </FieldLabel>
-            <Input
-              id="confirm-password"
-              name="confirm-password"
-              type="password"
-              required
-              className="h-12 rounded-full border-input bg-background px-6 focus-visible:ring-1"
-            />
-          </Field>
         </div>
-
-        <FieldDescription className="text-[12px] ml-4 text-muted-foreground/80 -mt-1">
-          Use 8 or more characters with a mix of letters and numbers.
-        </FieldDescription>
+        <div className="space-y-2">
+          <Label htmlFor="confirm-password">Confirm</Label>
+          <Input
+            id="confirm-password"
+            name="confirm-password"
+            type="password"
+            required
+          />
+        </div>
       </div>
+      <p className="text-xs text-muted-foreground -mt-2">
+        Use 8 or more characters with a mix of letters and numbers.
+      </p>
 
+      {/* Error */}
       {error && (
-        <p className={cn('text-sm', error.includes('Success') ? 'text-green-600 dark:text-green-400' : 'text-destructive')}>
-          {error}
-        </p>
+        <div className="flex items-start gap-3 rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+          <AlertCircle className="size-4 mt-0.5 shrink-0" />
+          <span>{error}</span>
+        </div>
       )}
 
-      <div className="flex flex-col gap-3 pt-2">
-        <Button
-          type="submit"
-          className="h-12 w-full rounded-full font-medium text-[15px] shadow-sm hover:shadow-md transition-all active:scale-[0.98]"
-          disabled={loading}
-        >
-          {loading ? 'Getting you started...' : 'Create account'}
-        </Button>
-      </div>
+      {/* Submit */}
+      <Button type="submit" size="lg" className="w-full" disabled={loading}>
+        {loading && <Loader2 className="size-4 animate-spin" />}
+        {loading ? 'Getting you started…' : 'Create account'}
+      </Button>
     </form>
   )
 }

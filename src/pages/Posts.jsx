@@ -18,6 +18,7 @@ import {
   Users,
   Filter,
   FolderOpen,
+  Newspaper,
 } from 'lucide-react'
 
 // UI Components
@@ -26,6 +27,14 @@ import { Input } from '@/components/ui/input'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
+import {
+  Empty,
+  EmptyContent,
+  EmptyHeader,
+  EmptyTitle,
+  EmptyDescription,
+  EmptyMedia,
+} from '@/components/ui/empty'
 import {
   Select,
   SelectContent,
@@ -308,7 +317,7 @@ export default function Posts() {
 
   // ─── Render ──────────────────────────────────
   return (
-    <div className="p-8 max-w-[1400px] mx-auto space-y-6">
+    <div className="p-8 max-w-[1400px] mx-auto space-y-6 animate-in fade-in duration-500">
       {/* ── Header ─────────────────────── */}
       <div className="flex items-center justify-between">
         <div className="space-y-1">
@@ -587,28 +596,35 @@ export default function Posts() {
               ))}
             </div>
           ) : posts.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 text-center">
-              <div className="size-16 rounded-2xl bg-muted flex items-center justify-center mb-4">
-                <LayoutGrid className="size-8 text-muted-foreground" />
-              </div>
-              <h3 className="text-lg font-semibold text-foreground mb-1">
-                No posts found
-              </h3>
-              <p className="text-sm text-muted-foreground max-w-sm">
-                No posts match your current filters. Try adjusting your search
-                or filter criteria.
-              </p>
-              {hasActiveFilters && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={resetFilters}
-                  className="mt-4"
-                >
-                  Clear Filters
-                </Button>
-              )}
-            </div>
+            <Empty className="py-20 border border-dashed rounded-2xl bg-muted/5">
+              <EmptyContent>
+                <EmptyMedia variant="icon">
+                  {hasActiveFilters
+                    ? <Search className="size-6 text-muted-foreground/60" />
+                    : <Newspaper className="size-6 text-muted-foreground/60" />}
+                </EmptyMedia>
+                <EmptyHeader>
+                  <EmptyTitle className="font-normal text-xl">
+                    {hasActiveFilters ? 'No posts found' : 'No posts yet'}
+                  </EmptyTitle>
+                  <EmptyDescription className="font-light">
+                    {hasActiveFilters
+                      ? 'No posts match your current filters. Try adjusting your search or filter criteria.'
+                      : 'Create your first draft to start building content for your clients.'}
+                  </EmptyDescription>
+                </EmptyHeader>
+                {hasActiveFilters ? (
+                  <Button variant="link" onClick={resetFilters} className="text-primary font-medium">
+                    Clear filters
+                  </Button>
+                ) : (
+                  <Button variant="outline" size="sm" onClick={() => setIsCreatePostOpen(true)}>
+                    <Plus className="size-4 mr-2" />
+                    New Post
+                  </Button>
+                )}
+              </EmptyContent>
+            </Empty>
           ) : (
             <div className="grid gap-6 grid-cols-[repeat(auto-fill,minmax(350px,1fr))]">
               {posts.map((post) => (
