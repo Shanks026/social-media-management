@@ -52,7 +52,7 @@ export default function WorkflowTab({ client }) {
         </div>
       </div>
 
-      <DraftPostList clientId={client.id} />
+      <DraftPostList clientId={client.id} onCreatePost={() => setCreateOpen(true)} />
       <CreateDraftPost
         clientId={client.id}
         open={createOpen}

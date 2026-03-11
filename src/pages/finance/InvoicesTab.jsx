@@ -17,6 +17,7 @@ import {
   RefreshCw,
   Lock,
   Megaphone,
+  Receipt,
 } from 'lucide-react'
 
 import {
@@ -65,6 +66,14 @@ import { toast } from 'sonner'
 import { useSubscription } from '@/api/useSubscription'
 import { downloadInvoicePDF } from '@/utils/downloadInvoicePDF'
 import { supabase } from '@/lib/supabase'
+import {
+  Empty,
+  EmptyContent,
+  EmptyHeader,
+  EmptyTitle,
+  EmptyDescription,
+  EmptyMedia,
+} from '@/components/ui/empty'
 
 const STATUS_OPTIONS = [
   { value: 'ALL', label: 'All Statuses' },
@@ -700,11 +709,51 @@ export default function InvoicesTab({ clientId, subTabs }) {
         </div>
 
         {/* --- One-off Table --- */}
-        <CustomTable
-          columns={columns}
-          data={filteredData}
-          isLoading={isLoading}
-        />
+        {isLoading ? (
+          <CustomTable columns={columns} data={[]} isLoading={true} />
+        ) : filteredData.length === 0 ? (
+          <Empty className="py-20 border border-dashed rounded-2xl bg-muted/5">
+            <EmptyContent>
+              <EmptyMedia variant="icon">
+                {(searchTerm || filterStatus !== 'ALL' || filterClient !== 'ALL')
+                  ? <Search className="size-6 text-muted-foreground/60" />
+                  : <Receipt className="size-6 text-muted-foreground/60" />}
+              </EmptyMedia>
+              <EmptyHeader>
+                <EmptyTitle className="font-normal text-xl">
+                  {(searchTerm || filterStatus !== 'ALL' || filterClient !== 'ALL')
+                    ? 'No invoices found'
+                    : 'No invoices yet'}
+                </EmptyTitle>
+                <EmptyDescription className="font-light">
+                  {(searchTerm || filterStatus !== 'ALL' || filterClient !== 'ALL')
+                    ? 'No invoices match your current filters. Try adjusting your search.'
+                    : 'Generate your first invoice and start tracking client billing.'}
+                </EmptyDescription>
+              </EmptyHeader>
+              {(searchTerm || filterStatus !== 'ALL' || filterClient !== 'ALL') ? (
+                <Button
+                  variant="link"
+                  onClick={() => {
+                    setSearchTerm('')
+                    setFilterStatus('ALL')
+                    setFilterClient('ALL')
+                  }}
+                  className="text-primary font-medium"
+                >
+                  Clear filters
+                </Button>
+              ) : (
+                <Button variant="outline" size="sm" onClick={() => setIsDialogOpen(true)}>
+                  <Plus className="size-4 mr-2" />
+                  New Invoice
+                </Button>
+              )}
+            </EmptyContent>
+          </Empty>
+        ) : (
+          <CustomTable columns={columns} data={filteredData} isLoading={false} />
+        )}
       </TabsContent>
 
       {subscription?.finance_recurring_invoices && (

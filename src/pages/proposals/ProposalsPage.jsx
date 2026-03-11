@@ -21,6 +21,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   Select,
   SelectContent,
@@ -280,32 +281,46 @@ export default function ProposalsPage() {
         </div>
 
         {/* ── Status tabs ── */}
-        <div className="flex gap-1 flex-wrap border-b border-border/50 pb-0">
-          {STATUS_TABS.map((tab) => {
-            const count = tab === 'all'
-              ? proposals.filter((p) => p.status !== 'archived').length
-              : proposals.filter((p) => p.status === tab).length
-            return (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={cn(
-                  'px-3 py-2 text-[13px] font-medium capitalize border-b-2 -mb-px transition-colors',
-                  activeTab === tab
-                    ? 'border-primary text-foreground'
-                    : 'border-transparent text-muted-foreground hover:text-foreground',
-                )}
-              >
-                {tab === 'all' ? 'All' : STATUS_CONFIG[tab]?.label ?? tab}
-                {count > 0 && (
-                  <span className="ml-1.5 text-[10px] opacity-60 tabular-nums">
-                    {count}
-                  </span>
-                )}
-              </button>
-            )
-          })}
-        </div>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="bg-transparent h-auto w-full justify-start rounded-none p-0 gap-8 border-b border-border/40">
+            {STATUS_TABS.map((tab) => {
+              const count = tab === 'all'
+                ? proposals.filter((p) => p.status !== 'archived').length
+                : proposals.filter((p) => p.status === tab).length
+              return (
+                <TabsTrigger
+                  key={tab}
+                  value={tab}
+                  className="
+                    relative rounded-none bg-transparent px-0 pb-3 pt-0 text-[13px] font-medium transition-none
+                    shadow-none border-b-2 border-transparent text-muted-foreground
+                    flex-none w-fit gap-2
+                    data-[state=active]:bg-transparent
+                    dark:data-[state=active]:bg-transparent
+                    data-[state=active]:text-black
+                    dark:data-[state=active]:text-white
+                    data-[state=active]:border-black
+                    dark:data-[state=active]:border-white
+                    data-[state=active]:shadow-none
+                    data-[state=active]:border-x-0
+                    data-[state=active]:border-t-0
+                    focus-visible:ring-0
+                  "
+                >
+                  {tab === 'all' ? 'All' : STATUS_CONFIG[tab]?.label ?? tab}
+                  {count > 0 && (
+                    <Badge
+                      variant="secondary"
+                      className="text-xs px-1.5 py-0 min-w-5 text-center"
+                    >
+                      {count}
+                    </Badge>
+                  )}
+                </TabsTrigger>
+              )
+            })}
+          </TabsList>
+        </Tabs>
 
         {/* ── Content ── */}
         {isLoading ? (
@@ -315,13 +330,13 @@ export default function ProposalsPage() {
             ))}
           </div>
         ) : filtered.length === 0 ? (
-          <Empty className="py-20 border border-dashed rounded-2xl bg-muted/5 animate-in fade-in zoom-in-95 duration-500">
+          <Empty className="py-20 border border-dashed rounded-2xl bg-muted/5 animate-in fade-in duration-500">
             <EmptyContent>
               <EmptyMedia variant="icon">
                 <FileText className="size-6 text-muted-foreground/60" />
               </EmptyMedia>
               <EmptyHeader>
-                <EmptyTitle className="font-light text-xl">No Proposals Found</EmptyTitle>
+                <EmptyTitle className="font-normal text-xl">No Proposals Found</EmptyTitle>
                 <EmptyDescription className="font-light">
                   {isFiltered || activeTab !== 'all'
                     ? "No proposals match your current filters."
@@ -332,7 +347,7 @@ export default function ProposalsPage() {
                 <Button
                   onClick={openNewDialog}
                   variant="outline"
-                  className="mt-2 rounded-full px-6 font-medium"
+                  className="mt-2"
                 >
                   <Plus className="size-4 mr-2" />
                   Create your first proposal

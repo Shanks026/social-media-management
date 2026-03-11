@@ -137,67 +137,65 @@ export default function ClientProfileView({ client }) {
           </TabsList>
 
           {/* Tab Content */}
-          <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
-            <TabsContent
-              value="overview"
-              className="mt-2 focus-visible:ring-0 outline-none"
-            >
-              <OverviewTab client={client} />
-            </TabsContent>
+          <TabsContent
+            value="overview"
+            className="mt-2 focus-visible:ring-0 outline-none data-[state=active]:animate-in data-[state=active]:fade-in data-[state=active]:duration-300"
+          >
+            <OverviewTab client={client} />
+          </TabsContent>
 
-            <TabsContent
-              value="workflow"
-              className="mt-2 focus-visible:ring-0 outline-none"
-            >
-              <WorkflowTab client={client} />
-            </TabsContent>
+          <TabsContent
+            value="workflow"
+            className="mt-2 focus-visible:ring-0 outline-none data-[state=active]:animate-in data-[state=active]:fade-in data-[state=active]:duration-300"
+          >
+            <WorkflowTab client={client} />
+          </TabsContent>
 
-            {!client.is_internal && (
-              <TabsContent
-                value="billing"
-                className="mt-2 focus-visible:outline-none"
-              >
-                <ClientBillingTab clientId={client.id} />
-              </TabsContent>
-            )}
-
+          {!client.is_internal && (
             <TabsContent
-              value="campaigns"
-              className="mt-2 focus-visible:outline-none"
+              value="billing"
+              className="mt-2 focus-visible:outline-none data-[state=active]:animate-in data-[state=active]:fade-in data-[state=active]:duration-300"
             >
-              <CampaignTab clientId={client.id} />
+              <ClientBillingTab clientId={client.id} />
             </TabsContent>
+          )}
 
-            <TabsContent
-              value="proposals"
-              className="mt-2 focus-visible:outline-none"
-            >
-              <ProposalTab clientId={client.id} />
-            </TabsContent>
+          <TabsContent
+            value="campaigns"
+            className="mt-2 focus-visible:outline-none data-[state=active]:animate-in data-[state=active]:fade-in data-[state=active]:duration-300"
+          >
+            <CampaignTab clientId={client.id} />
+          </TabsContent>
 
-            <TabsContent
-              value="documents"
-              className="mt-2 focus-visible:outline-none"
-            >
-              <DocumentsTab clientId={client.id} />
-            </TabsContent>
+          <TabsContent
+            value="proposals"
+            className="mt-2 focus-visible:outline-none data-[state=active]:animate-in data-[state=active]:fade-in data-[state=active]:duration-300"
+          >
+            <ProposalTab clientId={client.id} />
+          </TabsContent>
 
-            <TabsContent
-              value="calendar"
-              className="focus-visible:outline-none"
-            >
-              <div className="mt-2">
-                <ContentCalendar clientId={client.id} hideHeader={true} />
-              </div>
-            </TabsContent>
+          <TabsContent
+            value="documents"
+            className="mt-2 focus-visible:outline-none data-[state=active]:animate-in data-[state=active]:fade-in data-[state=active]:duration-300"
+          >
+            <DocumentsTab clientId={client.id} />
+          </TabsContent>
 
-            <TabsContent
-              value="management"
-              className="mt-2 focus-visible:outline-none"
-            >
-              <ManagementTab client={client} />
-            </TabsContent>
-          </div>
+          <TabsContent
+            value="calendar"
+            className="focus-visible:outline-none data-[state=active]:animate-in data-[state=active]:fade-in data-[state=active]:duration-300"
+          >
+            <div className="mt-2">
+              <ContentCalendar clientId={client.id} hideHeader={true} />
+            </div>
+          </TabsContent>
+
+          <TabsContent
+            value="management"
+            className="mt-2 focus-visible:outline-none data-[state=active]:animate-in data-[state=active]:fade-in data-[state=active]:duration-300"
+          >
+            <ManagementTab client={client} />
+          </TabsContent>
         </Tabs>
       </div>
     </div>

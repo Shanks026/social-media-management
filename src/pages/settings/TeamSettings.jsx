@@ -27,6 +27,14 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { UserPlus, Copy, Check, Link, Trash2, Users, CalendarDays, Briefcase, Clock, Loader2, RotateCcw } from 'lucide-react'
+import {
+  Empty,
+  EmptyContent,
+  EmptyHeader,
+  EmptyTitle,
+  EmptyDescription,
+  EmptyMedia,
+} from '@/components/ui/empty'
 
 // ─── Invite Dialog ─────────────────────────────────────────────────────────────
 
@@ -222,23 +230,25 @@ export default function TeamSettings() {
         </div>
 
         {members.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 rounded-2xl border border-dashed border-border text-center space-y-4">
-            <div className="size-14 rounded-2xl bg-muted flex items-center justify-center">
-              <Users className="size-6 text-muted-foreground" />
-            </div>
-            <div className="space-y-1">
-              <p className="text-sm font-medium">No team members yet</p>
-              <p className="text-sm text-muted-foreground font-light">
-                Invite someone to collaborate on this workspace.
-              </p>
-            </div>
-            {isAdmin && (
-              <Button size="sm" variant="outline" onClick={() => setInviteOpen(true)} className="gap-2 mt-2">
-                <UserPlus size={14} />
-                Invite Team Member
-              </Button>
-            )}
-          </div>
+          <Empty className="py-16 border border-dashed rounded-2xl bg-muted/5">
+            <EmptyContent>
+              <EmptyMedia variant="icon">
+                <Users className="size-6 text-muted-foreground/60" />
+              </EmptyMedia>
+              <EmptyHeader>
+                <EmptyTitle className="font-normal text-xl">Just you for now</EmptyTitle>
+                <EmptyDescription className="font-light">
+                  Invite a teammate to collaborate on client accounts and share the workload.
+                </EmptyDescription>
+              </EmptyHeader>
+              {isAdmin && (
+                <Button variant="outline" size="sm" onClick={() => setInviteOpen(true)}>
+                  <UserPlus className="size-4 mr-2" />
+                  Invite Team Member
+                </Button>
+              )}
+            </EmptyContent>
+          </Empty>
         ) : (
           <div className="space-y-3">
             {members.map((member) => {

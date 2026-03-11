@@ -223,13 +223,13 @@ export function ProposalTab({ clientId }) {
           ))}
         </div>
       ) : filtered.length === 0 ? (
-        <Empty className="py-16 border border-dashed rounded-2xl bg-muted/5 animate-in fade-in zoom-in-95 duration-500">
+        <Empty className="py-16 border border-dashed rounded-2xl bg-muted/5">
           <EmptyContent>
             <EmptyMedia variant="icon">
               <FileText className="size-6 text-muted-foreground/60" />
             </EmptyMedia>
             <EmptyHeader>
-              <EmptyTitle className="font-light text-lg">No Proposals</EmptyTitle>
+              <EmptyTitle className="font-normal text-lg">No Proposals</EmptyTitle>
               <EmptyDescription className="font-light">
                 {search || activeTab !== 'all'
                   ? 'No proposals match your current filters.'
@@ -240,7 +240,7 @@ export function ProposalTab({ clientId }) {
               <Button
                 onClick={openNewDialog}
                 variant="outline"
-                className="mt-2 rounded-full px-6 font-medium"
+                className="mt-2"
               >
                 <Plus className="size-4 mr-2" />
                 New Proposal

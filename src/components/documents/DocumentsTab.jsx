@@ -255,24 +255,24 @@ export default function DocumentsTab({ clientId }) {
         <TabsContent value="all" className="mt-4 space-y-4">
           {filteredDocs.length === 0 ? (
             isFilterActive ? (
-              <Empty className="border">
+              <Empty className="py-20 border border-dashed rounded-2xl bg-muted/5">
                 <EmptyHeader>
                   <EmptyMedia variant="icon"><Search /></EmptyMedia>
-                  <EmptyTitle>No documents match your search</EmptyTitle>
-                  <EmptyDescription>Try adjusting your filters or search terms.</EmptyDescription>
+                  <EmptyTitle className="font-normal text-xl">No documents match your search</EmptyTitle>
+                  <EmptyDescription className="font-light">Try adjusting your filters or search terms.</EmptyDescription>
                 </EmptyHeader>
                 <EmptyContent className="mt-4">
-                  <Button variant="ghost" size="sm" onClick={clearFilters} className="gap-1.5">
-                    <X className="size-3.5" /> Clear filters
+                  <Button variant="link" onClick={clearFilters} className="text-primary font-medium">
+                    Clear filters
                   </Button>
                 </EmptyContent>
               </Empty>
             ) : (
-              <Empty className="border">
+              <Empty className="py-20 border border-dashed rounded-2xl bg-muted/5">
                 <EmptyHeader>
                   <EmptyMedia variant="icon"><FolderOpen /></EmptyMedia>
-                  <EmptyTitle>No documents yet</EmptyTitle>
-                  <EmptyDescription>Upload a contract, brief, or brand asset to get started.</EmptyDescription>
+                  <EmptyTitle className="font-normal text-xl">No documents yet</EmptyTitle>
+                  <EmptyDescription className="font-light">Upload a contract, brief, or brand asset to get started.</EmptyDescription>
                 </EmptyHeader>
               </Empty>
             )
@@ -308,22 +308,22 @@ export default function DocumentsTab({ clientId }) {
         {/* Collections */}
         <TabsContent value="collections" className="mt-4 space-y-3">
           {filteredCollections.length === 0 ? (
-            <Empty className="border">
+            <Empty className="py-20 border border-dashed rounded-2xl bg-muted/5">
               <EmptyHeader>
                 <EmptyMedia variant="icon"><FolderOpen /></EmptyMedia>
-                <EmptyTitle>No collections yet</EmptyTitle>
-                <EmptyDescription>Create a collection to group related documents.</EmptyDescription>
+                <EmptyTitle className="font-normal text-xl">No collections yet</EmptyTitle>
+                <EmptyDescription className="font-light">Create a collection to group related documents.</EmptyDescription>
               </EmptyHeader>
               <EmptyContent className="mt-4">
                 {collectionsUnlocked ? (
-                  <Button size="sm" className="gap-1.5" onClick={() => setCreateCollectionOpen(true)}>
-                    <FolderPlus className="size-3.5" /> New Collection
+                  <Button variant="outline" size="sm" onClick={() => setCreateCollectionOpen(true)}>
+                    <FolderPlus className="size-4 mr-2" /> New Collection
                   </Button>
                 ) : (
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button size="sm" className="gap-1.5 opacity-50 cursor-not-allowed" disabled>
-                        <FolderPlus className="size-3.5" /> New Collection <Lock size={11} />
+                      <Button variant="outline" size="sm" className="opacity-50 cursor-not-allowed" disabled>
+                        <FolderPlus className="size-4 mr-2" /> New Collection <Lock size={11} className="ml-1.5" />
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>Collections are available on Velocity and above</TooltipContent>
@@ -347,22 +347,26 @@ export default function DocumentsTab({ clientId }) {
         <TabsContent value="ungrouped" className="mt-4">
           {ungroupedDocs.length === 0 ? (
             isFilterActive ? (
-              <Empty className="border">
+              <Empty className="py-20 border border-dashed rounded-2xl bg-muted/5">
                 <EmptyHeader>
                   <EmptyMedia variant="icon"><Search /></EmptyMedia>
-                  <EmptyTitle>No ungrouped documents match your search</EmptyTitle>
-                  <EmptyDescription>Try adjusting your filters or search terms.</EmptyDescription>
+                  <EmptyTitle className="font-normal text-xl">No ungrouped documents match your search</EmptyTitle>
+                  <EmptyDescription className="font-light">Try adjusting your filters or search terms.</EmptyDescription>
                 </EmptyHeader>
                 <EmptyContent className="mt-4">
-                  <Button variant="ghost" size="sm" onClick={clearFilters} className="gap-1.5">
-                    <X className="size-3.5" /> Clear filters
+                  <Button variant="link" onClick={clearFilters} className="text-primary font-medium">
+                    Clear filters
                   </Button>
                 </EmptyContent>
               </Empty>
             ) : (
-              <p className="text-xs text-muted-foreground text-center py-4 italic">
-                No ungrouped documents.
-              </p>
+              <Empty className="py-12 border border-dashed rounded-2xl bg-muted/5">
+                <EmptyHeader>
+                  <EmptyMedia variant="icon"><FolderOpen /></EmptyMedia>
+                  <EmptyTitle className="font-normal text-xl">No ungrouped documents</EmptyTitle>
+                  <EmptyDescription className="font-light">All your documents are organised into collections.</EmptyDescription>
+                </EmptyHeader>
+              </Empty>
             )
           ) : (
             <div className="space-y-2">

@@ -10,6 +10,7 @@ import {
   Building2,
   Search,
   Edit2,
+  Receipt,
 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -31,6 +32,14 @@ import { cn } from '@/lib/utils'
 import { AddTransactionDialog } from './AddTransactionDialog'
 import { CreateInvoiceDialog } from './CreateInvoiceDialog'
 import { CustomTable } from '@/components/CustomTable'
+import {
+  Empty,
+  EmptyContent,
+  EmptyHeader,
+  EmptyTitle,
+  EmptyDescription,
+  EmptyMedia,
+} from '@/components/ui/empty'
 
 export default function LedgerTab({ clientId, subTabs }) {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -261,11 +270,50 @@ export default function LedgerTab({ clientId, subTabs }) {
         </div>
       </div>
 
-      <CustomTable
-        columns={columns}
-        data={filteredData}
-        isLoading={isLoading}
-      />
+      {isLoading ? (
+        <CustomTable columns={columns} data={[]} isLoading={true} />
+      ) : filteredData.length === 0 ? (
+        <Empty className="py-20 border border-dashed rounded-2xl bg-muted/5">
+          <EmptyContent>
+            <EmptyMedia variant="icon">
+              {(searchTerm || filterMode !== 'ALL')
+                ? <Search className="size-6 text-muted-foreground/60" />
+                : <Receipt className="size-6 text-muted-foreground/60" />}
+            </EmptyMedia>
+            <EmptyHeader>
+              <EmptyTitle className="font-normal text-xl">
+                {(searchTerm || filterMode !== 'ALL')
+                  ? 'No transactions found'
+                  : 'No transactions yet'}
+              </EmptyTitle>
+              <EmptyDescription className="font-light">
+                {(searchTerm || filterMode !== 'ALL')
+                  ? 'No transactions match your current filters. Try adjusting your search.'
+                  : 'Record your first transaction to start tracking agency income and expenses.'}
+              </EmptyDescription>
+            </EmptyHeader>
+            {(searchTerm || filterMode !== 'ALL') ? (
+              <Button
+                variant="link"
+                onClick={() => {
+                  setSearchTerm('')
+                  setFilterMode('ALL')
+                }}
+                className="text-primary font-medium"
+              >
+                Clear filters
+              </Button>
+            ) : (
+              <Button variant="outline" size="sm" onClick={() => setIsDialogOpen(true)}>
+                <Plus className="size-4 mr-2" />
+                Record Transaction
+              </Button>
+            )}
+          </EmptyContent>
+        </Empty>
+      ) : (
+        <CustomTable columns={columns} data={filteredData} isLoading={false} />
+      )}
 
       <AddTransactionDialog
         open={isDialogOpen}
