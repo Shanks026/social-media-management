@@ -8,6 +8,9 @@ import {
   Trash2,
   Archive,
   MoreHorizontal,
+  Upload,
+  ChevronDown,
+  PenLine,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -16,6 +19,7 @@ import { useSubscription } from '@/api/useSubscription'
 import { useProposals, useDeleteProposal } from '@/api/proposals'
 import { useClients } from '@/api/clients'
 import { ProposalDialog } from '@/components/proposals/ProposalDialog'
+import { UploadProposalDialog } from '@/components/proposals/UploadProposalDialog'
 import { ProposalsUpgradePrompt } from '@/components/proposals/ProposalsUpgradePrompt'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -140,6 +144,7 @@ export default function ProposalsPage() {
   const [search, setSearch] = useState('')
   const [clientFilter, setClientFilter] = useState('all')
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [uploadDialogOpen, setUploadDialogOpen] = useState(false)
   const [editingProposal, setEditingProposal] = useState(null)
   const [deletingProposal, setDeletingProposal] = useState(null)
   const [upgradeOpen, setUpgradeOpen] = useState(false)
@@ -195,7 +200,7 @@ export default function ProposalsPage() {
   async function handleDelete() {
     if (!deletingProposal) return
     try {
-      await deleteProposal.mutateAsync({ id: deletingProposal.id, status: deletingProposal.status })
+      await deleteProposal.mutateAsync({ id: deletingProposal.id, status: deletingProposal.status, file_url: deletingProposal.file_url })
       toast.success(
         deletingProposal.status === 'draft' ? 'Proposal deleted' : 'Proposal archived',
       )
@@ -235,10 +240,33 @@ export default function ProposalsPage() {
                 {activeCount} of {proposalsLimit} used
               </span>
             )}
-            <Button onClick={openNewDialog} className="gap-2 h-9">
-              <Plus size={16} />
-              New Proposal
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button className="gap-2 h-9">
+                  <Plus size={16} />
+                  New Proposal
+                  <ChevronDown size={14} className="opacity-70" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-52">
+                <DropdownMenuItem
+                  onClick={() => {
+                    if (atLimit) { setUpgradeOpen(true) } else { setEditingProposal(null); setDialogOpen(true) }
+                  }}
+                >
+                  <PenLine className="size-4 mr-2" />
+                  Build in Tercero
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => {
+                    if (atLimit) { setUpgradeOpen(true) } else { setUploadDialogOpen(true) }
+                  }}
+                >
+                  <Upload className="size-4 mr-2" />
+                  Upload Existing File
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
 
@@ -433,7 +461,7 @@ export default function ProposalsPage() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        {proposal.status !== 'archived' && (
+                        {proposal.status !== 'archived' && proposal.proposal_type !== 'uploaded' && (
                           <>
                             <DropdownMenuItem onClick={() => openEditDialog(proposal)}>
                               <Pencil className="size-4 mr-2" />
@@ -475,6 +503,12 @@ export default function ProposalsPage() {
         proposalId={editingProposal?.id}
         onSuccess={() => setEditingProposal(null)}
         onUpgradeNeeded={() => { setDialogOpen(false); setUpgradeOpen(true) }}
+      />
+
+      <UploadProposalDialog
+        open={uploadDialogOpen}
+        onOpenChange={setUploadDialogOpen}
+        onUpgradeNeeded={() => { setUploadDialogOpen(false); setUpgradeOpen(true) }}
       />
 
       <ProposalsUpgradePrompt

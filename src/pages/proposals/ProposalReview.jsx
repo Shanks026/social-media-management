@@ -310,7 +310,30 @@ export default function ProposalReview() {
 
       <div className="max-w-3xl mx-auto px-4 py-10">
         {/* ── Proposal document ── */}
-        <ProposalPreview proposal={previewProposal} agency={agencyForPreview} />
+        {proposal.proposal_type === 'uploaded' && proposal.file_url ? (
+          <div className="space-y-2">
+            <iframe
+              src={proposal.file_url}
+              className="w-full rounded-xl border border-border/50"
+              style={{ minHeight: '75vh' }}
+              title="Proposal PDF"
+            />
+            <p className="text-center text-xs text-muted-foreground">
+              Can&apos;t see the PDF?{' '}
+              <a
+                href={proposal.file_url}
+                download
+                target="_blank"
+                rel="noreferrer"
+                className="underline underline-offset-2 hover:text-foreground"
+              >
+                Download it
+              </a>
+            </p>
+          </div>
+        ) : (
+          <ProposalPreview proposal={previewProposal} agency={agencyForPreview} />
+        )}
 
         {/* ── Action area ── */}
         <div className="mt-8 mb-4">

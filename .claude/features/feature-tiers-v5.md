@@ -167,8 +167,9 @@
 | ---------------------------------------------------- | :----: | :------: | :-----: |
 | Global Proposals page (`/proposals`)                 |   ✓    |    ✓     |    ✓    |
 | Proposal detail page (`/proposals/:id`)              |   ✓    |    ✓     |    ✓    |
-| Create / edit proposals (title, scope, pricing)      |   ✓    |    ✓     |    ✓    |
-| Proposal PDF export                                  |   ✓    |    ✓     |    ✓    |
+| Build proposal in Tercero (form + live preview)      |   ✓    |    ✓     |    ✓    |
+| Upload existing PDF proposal                         |   ✓    |    ✓     |    ✓    |
+| Proposal PDF export (built proposals only)           |   ✓    |    ✓     |    ✓    |
 | Share proposal link (public review page)             |   ✓    |    ✓     |    ✓    |
 | Client accept / decline flow                         |   ✓    |    ✓     |    ✓    |
 | Per-client Proposals tab in Client Detail            |   ✓    |    ✓     |    ✓    |
@@ -177,6 +178,8 @@
 | Unlimited proposals                                  |   ✗    |    ✓     |    ✓    |
 
 > Proposals use a **hybrid gating pattern**: the nav item, page, and per-client tab are always visible on all tiers. Gating triggers only at the point of creation — Trial/Ignite show a live counter ("3 of 5 used") and open `ProposalsUpgradePrompt` when the limit is reached. Velocity+ has no counter and no limit. Controlled by `proposals_limit` integer column (`5` for Trial/Ignite, `null` for Velocity/Quantum).
+>
+> Two proposal types exist: **built** (created in Tercero with full inline editing, live preview, and PDF export) and **uploaded** (pre-written PDF attached to metadata — title, client, valid_until, deal value; shows embedded PDF viewer with Download + Replace File buttons; PDF export not available). Both types share the same status lifecycle (draft → sent → viewed → accepted/declined/expired/archived), share link flow, and limit counting. Uploaded files are stored in the `proposal-files` bucket (public) scoped to `${workspaceUserId}/${proposalId}/${timestamp}.pdf`. Storage usage tracked via `increment_storage_used` RPC. Hard-deleting a draft proposal also removes its uploaded file from storage.
 
 ### Teams
 
@@ -235,6 +238,7 @@
 | `trial_ends_at`              | timestamptz | —           |   YES    | Trial expiry — null after conversion                           |
 | `extra_client_price_inr`     | integer     | `500`       |   YES    | Add-on client price in INR                                     |
 | `finance_subscriptions`      | boolean     | `false`     |   YES    | Expense subscriptions route gate (Velocity+)                   |
+| `finance_accrual`            | boolean     | `false`     |   YES    | Cash vs Accrual accounting mode toggle in Finance overview — available on all tiers (flag exists but set true on all plans) |
 | `calendar_export`            | boolean     | `false`     |   YES    | Calendar PDF export gate (Velocity+)                           |
 | `finance_recurring_invoices` | boolean     | `false`     |   YES    | Recurring invoice templates gate (Velocity+)                   |
 | `documents_collections`      | boolean     | `false`     |   YES    | Document collections create/manage/move gate (Velocity+)       |
@@ -253,6 +257,7 @@
 | `branding_powered_by`        | TRUE  |  TRUE  |   TRUE   |  FALSE  |
 | `finance_recurring_invoices` | FALSE | FALSE  |   TRUE   |  TRUE   |
 | `finance_subscriptions`      | FALSE | FALSE  |   TRUE   |  TRUE   |
+| `finance_accrual`            | TRUE  |  TRUE  |   TRUE   |  TRUE   |
 | `calendar_export`            | FALSE | FALSE  |   TRUE   |  TRUE   |
 | `documents_collections`      | FALSE | FALSE  |   TRUE   |  TRUE   |
 | `campaigns`                  | FALSE | FALSE  |   TRUE   |  TRUE   |
@@ -364,6 +369,7 @@ sub?.branding_agency_sidebar    // Agency logo+name in sidebar (Velocity+)
 sub?.branding_powered_by        // "Tercero YYYY" footer + "Powered by Tercero" on public pages (Ignite + Velocity)
 sub?.finance_recurring_invoices // Recurring invoice templates tab (Velocity+)
 sub?.finance_subscriptions      // Expense subscriptions route (Velocity+)
+sub?.finance_accrual            // Cash vs Accrual accounting toggle (all tiers — flag exists, true on all plans)
 sub?.calendar_export            // Calendar PDF export button (Velocity+)
 sub?.documents_collections      // Document collections grouping (Velocity+)
 sub?.campaigns                  // Campaigns feature (Velocity+)
@@ -506,9 +512,15 @@ Both `PublicReview.jsx` and `CampaignReview.jsx` receive branding flags from the
 
 ### Proposals
 
-`/proposals`, `/proposals/:proposalId`, and per-client Proposals tab are all visible on all tiers. Gating triggers only at creation time — `useCreateProposal` counts non-archived proposals workspace-wide before inserting; if `proposals_limit` is not null and `count >= limit`, throws a typed `ProposalLimitError`. UI-side: `ProposalsPage` and `ProposalTab` compute `atLimit` from live `useProposals()` data and open `ProposalsUpgradePrompt` instead of the create form. `ProposalTab` uses a second `useProposals()` call (without `clientId`) for the workspace-wide count so the counter is accurate even when scoped to a single client.
+`/proposals`, `/proposals/:proposalId`, and per-client Proposals tab are all visible on all tiers. Gating triggers only at creation time — `useCreateProposal` counts non-archived proposals workspace-wide before inserting; if `proposals_limit` is not null and `count >= limit`, throws a typed `ProposalLimitError`. UI-side: `ProposalsPage` and `ProposalTab` compute `atLimit` from live `useProposals()` data and open `ProposalsUpgradePrompt` instead of the create form. `ProposalTab` uses a second `useProposals()` call (without `clientId`) for the workspace-wide count so the counter is accurate even when scoped to a single client. Both the "Build in Tercero" and "Upload Existing File" options in the "New Proposal" dropdown check `atLimit` before opening their respective dialogs.
 
-Public review page (`/proposal/:token`) is fully unauthenticated. Branding logic (header logo chain + "Powered by Tercero" footer) mirrors the per-post and campaign review pages — `branding_agency_sidebar` controls the logo, `branding_powered_by` controls the footer. PDF export uses `@react-pdf/renderer` + `downloadProposalPDF.jsx` (same canvas-rasterization pattern as invoices for the Tercero SVG logo).
+**Two proposal types** are supported:
+- **Built** (`proposal_type = 'built'`): Created in-app with inline editing, live preview (`ProposalPreview`), and PDF export (`downloadProposalPDF`). Detail page is a two-panel layout (form left, preview right). Auto-saves on blur.
+- **Uploaded** (`proposal_type = 'uploaded'`): PDF file attached via `UploadProposalDialog`. Detail page shows a metadata grid (title, client, valid_until, deal value) + embedded `<iframe>` PDF viewer with Download + Replace File buttons. Export PDF button hidden. Auto-saves metadata on blur.
+
+Public review page (`/proposal/:token`) is fully unauthenticated. For built proposals it renders `ProposalPreview`; for uploaded proposals it renders an embedded `<iframe>` PDF viewer. Branding logic (header logo chain + "Powered by Tercero" footer) mirrors the per-post and campaign review pages. PDF export via `@react-pdf/renderer` + `downloadProposalPDF.jsx` only for built proposals.
+
+**Uploaded proposal file storage**: `proposal-files` bucket (public), path `${workspaceUserId}/${proposalId}/${timestamp}.pdf`. `uploadProposalFile()` helper uploads and calls `increment_storage_used` RPC. Hard delete of draft proposals calls `deleteProposalFile()` to clean up storage. Replace File flow uploads a new file without removing the old one.
 
 ### Documents Collections
 
@@ -543,3 +555,4 @@ Expired trials redirect to `/billing` with banner: "Your trial has ended. Your d
 | v5.2    | March 2026 | Campaigns Phase 1 complete — `campaigns` flag (Velocity+). Campaign review page with whitelabeling. |
 | v5.3    | March 2026 | Teams Phase 1 complete — ungated (all plans). `logo_horizontal_url` column added. `useSubscription` flat object pattern documented. Gating patterns and whitelabeling architecture added. Seed SQL updated with `campaigns` flag. |
 | v5.4    | March 2026 | Proposals Phase 1 complete — `proposals_limit` column (integer, default 5, null = unlimited). Hybrid gating pattern: always visible, limit enforced at creation. Counter shown on Trial/Ignite, hidden on Velocity+. Seed SQL updated. |
+| v5.5    | March 2026 | Proposals Phase 2 — Upload Existing File workflow (`UploadProposalDialog`, `proposal_type: built/uploaded`, `file_url`, `proposal-files` bucket, Deal Value field, Replace File, embedded PDF iframe in detail + public review). `finance_accrual` flag added to DB reference (available all tiers). Status timeline component on detail page. Auto-save on blur for both proposal types. |

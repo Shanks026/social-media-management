@@ -17,6 +17,9 @@ import {
   Clock,
   ThumbsUp,
   ThumbsDown,
+  Upload,
+  FileText,
+  Download,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useForm, useFieldArray, Controller } from 'react-hook-form'
@@ -30,7 +33,9 @@ import {
   useDeleteProposal,
   useGenerateProposalToken,
   useMarkProposalSent,
+  uploadProposalFile,
 } from '@/api/proposals'
+import { resolveWorkspace } from '@/lib/workspace'
 import ProposalPreview from '@/components/proposals/ProposalPreview'
 import { downloadProposalPDF } from '@/utils/downloadProposalPDF.jsx'
 import { Button } from '@/components/ui/button'
@@ -193,7 +198,9 @@ export default function ProposalDetailPage() {
   const [archiveDialogOpen, setArchiveDialogOpen] = useState(false)
   const [isPdfExporting, setIsPdfExporting] = useState(false)
   const [saveState, setSaveState] = useState('idle') // 'idle' | 'saving' | 'saved' | 'error'
+  const [isReplacing, setIsReplacing] = useState(false)
   const saveTimerRef = useRef(null)
+  const replaceFileRef = useRef(null)
 
   const clients = useMemo(() => clientsData?.realClients ?? [], [clientsData])
 
@@ -218,6 +225,7 @@ export default function ProposalDetailPage() {
       prospect_name: '',
       prospect_email: '',
       valid_until: null,
+      total_value: '',
       introduction: '',
       scope_notes: '',
       payment_terms: '',
@@ -250,6 +258,7 @@ export default function ProposalDetailPage() {
         payment_terms: proposal.payment_terms || '',
         contract_duration: proposal.contract_duration || '',
         notes: proposal.notes || '',
+        total_value: proposal.total_value ?? '',
         line_items:
           proposal.line_items?.length > 0
             ? proposal.line_items.map((li) => ({
@@ -327,7 +336,9 @@ export default function ProposalDetailPage() {
         payment_terms: values.payment_terms || null,
         contract_duration: values.contract_duration || null,
         notes: values.notes || null,
-        line_items: (values.line_items || []).filter((li) => li.description?.trim()),
+        ...(proposal.proposal_type === 'uploaded'
+          ? { total_value: values.total_value !== '' ? parseFloat(values.total_value) || null : null }
+          : { line_items: (values.line_items || []).filter((li) => li.description?.trim()) }),
       })
       setSaveState('saved')
       saveTimerRef.current = setTimeout(() => setSaveState('idle'), 2000)
@@ -371,6 +382,27 @@ export default function ProposalDetailPage() {
     }
   }
 
+  // ── Replace file (uploaded proposals) ──
+  async function handleReplaceFile(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (file.type !== 'application/pdf') { toast.error('Only PDF files are accepted'); return }
+    if (file.size > 20 * 1024 * 1024) { toast.error('File must be 20 MB or smaller'); return }
+
+    setIsReplacing(true)
+    try {
+      const { workspaceUserId } = await resolveWorkspace()
+      const publicUrl = await uploadProposalFile(proposalId, workspaceUserId, file)
+      await updateProposal.mutateAsync({ id: proposalId, file_url: publicUrl })
+      toast.success('File replaced')
+    } catch (err) {
+      toast.error(err.message || 'Failed to replace file')
+    } finally {
+      setIsReplacing(false)
+      if (replaceFileRef.current) replaceFileRef.current.value = ''
+    }
+  }
+
   // ── Archive ──
   async function handleArchive() {
     try {
@@ -387,7 +419,7 @@ export default function ProposalDetailPage() {
   // ── Delete ──
   async function handleDelete() {
     try {
-      await deleteProposal.mutateAsync({ id: proposalId, status: 'draft' })
+      await deleteProposal.mutateAsync({ id: proposalId, status: 'draft', file_url: proposal.file_url })
       toast.success('Proposal deleted')
       navigate('/proposals')
     } catch (err) {
@@ -503,20 +535,22 @@ export default function ProposalDetailPage() {
               {isCopyingLink ? 'Generating…' : 'Copy Link'}
             </Button>
 
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleExportPDF}
-              disabled={isPdfExporting}
-              className="gap-2 h-8"
-            >
-              {isPdfExporting ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : (
-                <FileDown className="size-4" />
-              )}
-              {isPdfExporting ? 'Exporting…' : 'Export PDF'}
-            </Button>
+            {proposal.proposal_type !== 'uploaded' && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleExportPDF}
+                disabled={isPdfExporting}
+                className="gap-2 h-8"
+              >
+                {isPdfExporting ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <FileDown className="size-4" />
+                )}
+                {isPdfExporting ? 'Exporting…' : 'Export PDF'}
+              </Button>
+            )}
 
             {status !== 'archived' && (
               <Button
@@ -559,7 +593,175 @@ export default function ProposalDetailPage() {
         )}
       </div>
 
-      {/* ── Two-panel content ── */}
+      {/* ── Content — uploaded layout ── */}
+      {proposal.proposal_type === 'uploaded' && (
+        <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6 custom-scrollbar">
+          {/* Metadata row */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium text-muted-foreground">Title</Label>
+              <Input
+                {...register('title')}
+                disabled={isReadOnly}
+                placeholder="Proposal title"
+                className="bg-muted/20 border-border/40"
+                onBlur={autoSave}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium text-muted-foreground">Client / Prospect</Label>
+              <Select
+                value={watch('client_type') === 'prospect' ? '__prospect__' : watch('client_id') || ''}
+                disabled={isReadOnly}
+                onValueChange={(v) => {
+                  if (v === '__prospect__') {
+                    setValue('client_type', 'prospect')
+                    setValue('client_id', null)
+                  } else {
+                    setValue('client_type', 'client')
+                    setValue('client_id', v)
+                  }
+                  setTimeout(autoSave, 0)
+                }}
+              >
+                <SelectTrigger className="bg-muted/20 border-border/40" disabled={isReadOnly}>
+                  <SelectValue placeholder="Select…" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__prospect__">— New Prospect —</SelectItem>
+                  {clients.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {watch('client_type') === 'prospect' && (
+                <Input
+                  {...register('prospect_name')}
+                  disabled={isReadOnly}
+                  placeholder="Prospect name"
+                  className="bg-muted/20 border-border/40 mt-2"
+                  onBlur={autoSave}
+                />
+              )}
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium text-muted-foreground">Valid Until</Label>
+              <Controller
+                control={control}
+                name="valid_until"
+                render={({ field }) => (
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        disabled={isReadOnly}
+                        className={cn(
+                          'w-full justify-start text-left font-normal bg-muted/20 border-border/40',
+                          !field.value && 'text-muted-foreground',
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 size-4" />
+                        {field.value ? format(field.value, 'MMM d, yyyy') : 'Pick a date'}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={field.value}
+                        onSelect={(d) => { field.onChange(d); setTimeout(autoSave, 0) }}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                )}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium text-muted-foreground">
+                Deal Value <span className="opacity-50 font-normal">(optional)</span>
+              </Label>
+              <Input
+                {...register('total_value')}
+                disabled={isReadOnly}
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="0.00"
+                className="bg-muted/20 border-border/40"
+                onBlur={autoSave}
+              />
+            </div>
+          </div>
+
+          <Separator className="opacity-50" />
+
+          {/* File section */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <FileText className="size-4 text-muted-foreground" />
+                <span className="text-sm font-medium">Proposal File</span>
+              </div>
+              <div className="flex items-center gap-2">
+                {proposal.file_url && (
+                  <Button variant="outline" size="sm" className="gap-2 h-8" asChild>
+                    <a href={proposal.file_url} download target="_blank" rel="noreferrer">
+                      <Download className="size-4" />
+                      Download
+                    </a>
+                  </Button>
+                )}
+                {isEditable && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-2 h-8"
+                    disabled={isReplacing}
+                    onClick={() => replaceFileRef.current?.click()}
+                  >
+                    {isReplacing ? (
+                      <Loader2 className="size-4 animate-spin" />
+                    ) : (
+                      <Upload className="size-4" />
+                    )}
+                    {isReplacing ? 'Uploading…' : 'Replace File'}
+                  </Button>
+                )}
+                <input
+                  ref={replaceFileRef}
+                  type="file"
+                  accept="application/pdf"
+                  className="hidden"
+                  onChange={handleReplaceFile}
+                />
+              </div>
+            </div>
+
+            {proposal.file_url ? (
+              <iframe
+                src={proposal.file_url}
+                className="w-full rounded-lg border border-border/50"
+                style={{ minHeight: '70vh' }}
+                title="Proposal PDF"
+              />
+            ) : (
+              <div
+                className="flex flex-col items-center gap-3 py-16 rounded-lg border-2 border-dashed border-border/40 cursor-pointer hover:border-primary/40 hover:bg-muted/10 transition-colors"
+                onClick={() => isEditable && replaceFileRef.current?.click()}
+              >
+                <Upload className="size-8 text-muted-foreground/40" />
+                <p className="text-sm text-muted-foreground">No file uploaded yet. Click to upload a PDF.</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Two-panel content — built layout ── */}
+      {proposal.proposal_type !== 'uploaded' && (
       <div className="flex flex-col lg:flex-row flex-1 min-h-0">
         {/* ── Left — Form ── */}
         <div className="lg:w-[45%] shrink-0 flex flex-col min-h-0 border-r border-border/50">
@@ -852,6 +1054,7 @@ export default function ProposalDetailPage() {
           </div>
         </div>
       </div>
+      )}
 
       {/* ── Dialogs ── */}
       <AlertDialog open={archiveDialogOpen} onOpenChange={setArchiveDialogOpen}>
