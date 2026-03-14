@@ -56,7 +56,9 @@
       "mcp__supabase__deploy_edge_function",
       "Bash(find c:Userschris_austinDesktopsocial-media-management.claude -type f -name *.md)",
       "Bash(grep -E \"\\\\.\\(jsx|js\\)$\")",
-      "Bash(node -e \":*)"
+      "Bash(node -e \":*)",
+      "Bash(find /c/Users/chris_austin/Desktop/social-media-management -type f -name *proposal*)",
+      "Bash(xargs grep:*)"
     ]
   }
 }
