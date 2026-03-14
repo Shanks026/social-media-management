@@ -1,7 +1,7 @@
 # Tercero — Full Application Research Document
 
 > **Purpose**: Comprehensive product/feature reference for building a landing page for Tercero.
-> **Status**: Updated March 10, 2026 — reflects live codebase including corrected post status values (PENDING_APPROVAL/NEEDS_REVISION/PUBLISHED), horizontal logo branding, derived whitelabel flags, campaigns full implementation, accurate share token architecture, Teams Phase 1 (agency_members, agency_invites, workspaceUserId, /join/:token), and Proposals Phase 1 (proposals, proposal_line_items, public review, PDF export, per-client tab, subscription enforcement).
+> **Status**: Updated March 13, 2026 — reflects live codebase including corrected post status values (PENDING_APPROVAL/NEEDS_REVISION/PUBLISHED), horizontal logo branding, derived whitelabel flags, campaigns full implementation, accurate share token architecture, Teams Phase 1 (agency_members, agency_invites, workspaceUserId, /join/:token), and Proposals Phase 2 (proposals, proposal_line_items, public review, PDF export, per-client tab, subscription enforcement, Upload Existing File via proposal-files bucket, proposal_type built/uploaded, auto-save on blur, status timeline, Replace File, Deal Value for uploaded proposals).
 
 ---
 
@@ -495,7 +495,14 @@ Fully unauthenticated. The single link lets the client review and action all `PE
 
 ### 3.12 PROPOSALS
 
-**What it is**: The structured document an agency sends to a prospective or existing client before work begins or before a retainer renews. It captures the formal moment of agreement — scope, pricing, and terms — and gives the client a clean mechanism to accept or decline without needing a Tercero account.
+**What it is**: The structured document an agency sends to a prospective or existing client before work begins or before a retainer renews. It captures the formal moment of agreement — scope, pricing, and terms — and gives the client a clean mechanism to accept or decline without needing a Tercero account. Proposals can be built entirely within Tercero or uploaded as pre-written PDF files.
+
+**Proposal Types**:
+```
+built    → Created and edited inside Tercero (form + live preview). Full inline editing, PDF export, line items.
+uploaded → An existing PDF uploaded directly. Editable metadata only (title, client, valid_until, deal value).
+           Shows embedded PDF viewer + Download/Replace File buttons. Export PDF button hidden.
+```
 
 **Proposal Statuses**:
 ```
@@ -509,54 +516,81 @@ ARCHIVED → Manually archived by owner.
 ```
 
 **Three entry points**:
-1. **Global Proposals page** (`/proposals`) — all proposals across all clients/prospects; client filter dropdown (includes "Prospects" option); status tab strip (All / Draft / Sent / Viewed / Accepted / Declined / Expired / Archived)
-2. **Proposal Detail page** (`/proposals/:proposalId`) — full two-panel inline-edit layout; auto-saves on blur; action bar with Copy Link, Export PDF, Archive, Delete
-3. **Per-client Proposals tab** — `ProposalTab` component reused inside Client Detail; scoped to that client via `clientId` prop; same table/status tabs, same limit counter
+1. **Global Proposals page** (`/proposals`) — all proposals across all clients/prospects; client filter dropdown (includes "Prospects" option); status tab strip (All / Draft / Sent / Viewed / Accepted / Declined / Expired / Archived); "New Proposal" is a dropdown with two options: "Build in Tercero" (opens `ProposalDialog`) and "Upload Existing File" (opens `UploadProposalDialog`)
+2. **Proposal Detail page** (`/proposals/:proposalId`) — separate layouts for `built` vs `uploaded` proposals; auto-saves on blur; action bar with Copy Link, Export PDF (built only), Archive, Delete
+3. **Per-client Proposals tab** — `ProposalTab` component reused inside Client Detail; scoped to that client via `clientId` prop; same table/status tabs, same limit counter; same "New Proposal" dropdown
 
-**Create / Edit Dialog** (`ProposalDialog`):
+**Create / Edit Dialog for Built Proposals** (`ProposalDialog`):
 - Two-panel: left = form, right = live preview (`ProposalPreview`)
 - Fields: Title, Client (existing client UUID or "New Prospect" sentinel `__prospect__`), Prospect Name + Email (shown when Prospect selected), Valid Until, Introduction, Scope of Work, Pricing (unlimited line items, each with Description + Amount), Payment Terms (Due on Receipt / Net 15 / Net 30 / Net 60), Contract Duration, Additional Notes
 - Zod-validated on submit; line items require at least 1 row with description and amount
 - Creates proposal + line items atomically; checks workspace proposal limit before inserting
 
+**Upload Dialog for Uploaded Proposals** (`UploadProposalDialog`):
+- Single-panel form — no live preview
+- Fields: Title (required), Client type toggle (Existing Client / New Prospect), Client selector or Prospect Name + Email, Valid Until (optional), Deal Value (optional numeric override for total)
+- File selection: drag-and-drop or click; PDF only; max 20 MB; shows file name + size preview with remove button
+- Three-step submit: (1) create proposal record with `proposal_type: 'uploaded'`, (2) upload PDF to `proposal-files` bucket, (3) update proposal with `file_url`
+- Navigates to `/proposals/:id` on success
+- Upgrade prompt triggered if at proposal limit
+
 **Detail Page** (`ProposalDetailPage`):
-- Same two-panel layout as the dialog, as a full page
-- Auto-saves all fields on blur (no Zod, uses `getValues()` directly)
-- Save indicator in header: "Saving…" / "Saved ✓" / "Error"
-- Status timeline shows milestone pills (Sent, Viewed, Accepted/Declined) with dates
-- Read-only mode when status is accepted or declined
-- Copy Link button: generates `review_token` via `generate_proposal_token` RPC + copies `{VITE_APP_URL}/proposal/{token}` to clipboard; first copy advances draft → sent
+- **Built proposals**: Two-panel layout — left (45%) = inline form with auto-save on blur, right (55%) = live `ProposalPreview`. All fields editable (Title, Client/Prospect, Valid Until, Introduction, Scope of Work, Line Items, Payment Terms, Contract Duration, Additional Notes). Read-only lock for accepted/declined proposals.
+- **Uploaded proposals**: Single-column metadata grid (Title, Client/Prospect, Valid Until, Deal Value) all auto-save on blur. Below the grid: PDF file section with Download + Replace File buttons and embedded `<iframe>` PDF viewer (min-height 70vh). No Export PDF button; no live preview.
+- Save indicator in header: "Saving…" spinner → "Saved ✓" (auto-clears after 2s) → "Error" toast on failure
+- Status timeline pills show milestone progression: Created → Sent → Viewed → Accepted/Declined, with dates. Hidden if only "Created" exists.
+- Decline reason alert box shown when status is `declined` and `decline_reason` is set
+- Copy Link button: generates token via `generate_proposal_token` RPC, copies `{VITE_APP_URL}/proposal/{token}` to clipboard; if status is `draft`, auto-calls `useMarkProposalSent()` and shows toast "Link copied — proposal marked as Sent"
+- Export PDF button: only shown for `proposal_type !== 'uploaded'`; generates PDF via `downloadProposalPDF()`
+- Replace File button: only shown for uploaded proposals + editable status; uploads new PDF to same `proposal-files` bucket, updates `file_url`
+- Archive button: shown for all non-archived statuses; triggers `AlertDialog` confirmation → navigates to `/proposals`
+- Delete button: only shown when status is `draft`; triggers `AlertDialog` confirmation → cleans up `file_url` from storage if present → navigates to `/proposals`
 
 **Public Proposal Review** (`/proposal/:token`):
 - Fully unauthenticated. 6 states: Loading → Invalid → Expired → Accepted (pre-existing) → Declined (pre-existing) → Active
 - On first load when status = sent: fires `mark_proposal_viewed` RPC (once, via `viewedRef` guard)
+- **Built proposals**: renders `ProposalPreview` HTML component
+- **Uploaded proposals**: renders embedded `<iframe>` PDF viewer
 - Accept: confirm dialog → `accept_proposal(token)` → inline green success card
 - Decline: optional reason dialog → `decline_proposal(token, reason)` → inline grey card
 - Branding: identical tier-controlled logic to post/campaign review pages — `branding_agency_sidebar` controls header logo chain (`logo_horizontal_url` → `logo_url` → agency name text → Tercero SVG mask), `branding_powered_by` controls "Powered by Tercero" footer
 
-**PDF Export**:
+**PDF Export** (built proposals only):
 - `downloadProposalPDF.jsx` + `ProposalPDF.jsx` — mirrors invoice PDF pattern exactly
 - Inter font from Google Fonts; sections: header (title + logo) → Prepared For + Valid Until → Introduction → Scope of Work → Pricing table → Payment Terms + Duration → Additional Notes → footer
 - Tercero SVG rasterized to PNG canvas (3×) when `!branding_agency_sidebar` — `@react-pdf/renderer` cannot render SVG natively
 - Filename: `Proposal-{ClientName}-{YYYY-MM-DD}.pdf`
+- Not available for `proposal_type === 'uploaded'` — clients download the original PDF directly
+
+**File Storage** (`proposal-files` bucket):
+- Public Supabase bucket (not signed URLs; public access)
+- Path: `${workspaceUserId}/${proposalId}/${Date.now()}.pdf`
+- `uploadProposalFile(proposalId, workspaceUserId, file)` — uploads + tracks via `increment_storage_used` RPC + returns public URL
+- `deleteProposalFile(fileUrl)` — removes from storage (silently ignores errors; no size decrement since size metadata unavailable)
+- Hard delete on draft deletion also cleans up `file_url` from storage
+- Replace File uploads a new file to the same bucket path (new timestamp) without deleting the old one
 
 **Subscription enforcement** (hybrid gating):
 - All surfaces (nav, page, per-client tab) always visible — no upgrade wall
 - `useCreateProposal` counts non-archived proposals workspace-wide before inserting; throws typed `ProposalLimitError` at limit
 - UI pre-checks: `atLimit = proposalsLimit !== null && activeCount >= proposalsLimit`; `ProposalTab` uses a second `useProposals()` (no clientId) so the counter reflects workspace total, not just the current client
+- Both "Build in Tercero" and "Upload Existing File" options check the limit before opening their respective dialogs
 - `ProposalsUpgradePrompt` dialog shown when at limit; CTA navigates to `/billing`
 - Counter (`X of N used`) shown only when `proposalsLimit !== null` (i.e., hidden on Velocity/Quantum)
 
-**Proposals mutations** (`src/api/proposals.js`):
-- `useProposals({ clientId? })` — React Query hook; scoped by `workspaceUserId`; optional `clientId` filter
-- `useProposal(proposalId)` — fetches proposal + line items
-- `useCreateProposal()` — limit check + atomically inserts proposal + line items
-- `useUpdateProposal()` — updates fields; replaces line items (delete all, re-insert)
-- `useDeleteProposal()` — hard delete if DRAFT; soft archive otherwise
-- `useGenerateProposalToken()` — calls `generate_proposal_token` RPC; returns `{ token, url }`
-- `useMarkProposalSent()` — sets status = sent, sent_at = now() (only from draft)
-- `fetchProposalByToken(token)` — public, calls `get_proposal_by_token` RPC
+**Proposals API** (`src/api/proposals.js`):
+- `useProposals({ clientId? })` — React Query hook; query key `['proposals', 'list', { clientId }]`; scoped by `workspaceUserId`; optional `clientId` filter; calls RPC `get_proposals_with_totals`
+- `useProposal(proposalId)` — query key `['proposals', 'detail', proposalId]`; fetches proposal row + line_items ordered by `sort_order`
+- `useCreateProposal()` — limit check → insert proposal → insert line_items atomically; throws `ProposalLimitError` if exceeded; invalidates `['proposals', 'list']`
+- `useUpdateProposal()` — updates proposal fields; if `line_items` included: deletes all then re-inserts with `sort_order`; invalidates list + detail
+- `useDeleteProposal({ id, status, file_url })` — hard delete if `status === 'draft'` (calls `deleteProposalFile` if `file_url`); soft archive otherwise; invalidates list
+- `useGenerateProposalToken()` — calls `generate_proposal_token` RPC; returns `{ token, url }`; invalidates detail + list
+- `useMarkProposalSent()` — updates `status = 'sent'`, `sent_at = now()` but only when `.eq('status', 'draft')` guard passes; invalidates detail + list
+- `uploadProposalFile(proposalId, workspaceUserId, file)` — plain async; uploads to `proposal-files` bucket; calls `increment_storage_used` RPC; returns public URL
+- `deleteProposalFile(fileUrl)` — plain async; removes from storage; silently ignores errors
+- `fetchProposalByToken(token)` — public, calls `get_proposal_by_token` RPC; returns first row
 - `markProposalViewed(token)` / `acceptProposal(token)` / `declineProposal(token, reason)` — public, unauthenticated
+- `ProposalLimitError` — custom Error class with `code: 'PROPOSAL_LIMIT_REACHED'`
 
 ---
 
@@ -615,8 +649,9 @@ Agency (user_id / workspaceUserId)
     ├── Campaigns (Velocity+)
     │   ├── Posts (campaign_id FK on posts — nullable)
     │   └── Invoices (campaign_id FK on invoices — nullable)
-    ├── Proposals
-    │   └── Proposal Line Items (proposal_line_items)
+    ├── Proposals (proposal_type: built | uploaded)
+    │   ├── Proposal Line Items (proposal_line_items) — for built proposals
+    │   └── Proposal File (file_url → proposal-files bucket) — for uploaded proposals
     ├── Documents
     │   └── Collections (optional grouping — Velocity+)
     ├── Meetings
@@ -652,6 +687,8 @@ Agency (user_id / workspaceUserId)
 | `mark_proposal_viewed(p_token)` | Public (SECURITY DEFINER) | Sets first_viewed_at, advances status SENT → VIEWED |
 | `accept_proposal(p_token)` | Public (SECURITY DEFINER) | Sets status = accepted, accepted_at = now() |
 | `decline_proposal(p_token, p_reason?)` | Public (SECURITY DEFINER) | Sets status = declined, decline_reason, declined_at = now() |
+| `increment_storage_used(p_user_id, p_bytes)` | Authenticated | Adds bytes to `agency_subscriptions.current_storage_used` — called on document + proposal file upload |
+| `decrement_storage_used(p_user_id, p_bytes)` | Authenticated | Subtracts bytes from `agency_subscriptions.current_storage_used` — called on document delete |
 
 ### Database Views (read-only aggregations)
 | View | Purpose |
@@ -856,7 +893,8 @@ src/pages/proposals/ProposalReview.jsx       — Public /proposal/:token review 
 src/components/proposals/ProposalDialog.jsx  — Create/edit proposal form with live preview (Zod validated)
 src/components/proposals/ProposalPreview.jsx — Live HTML preview of a proposal (mirrors PDF layout)
 src/components/proposals/ProposalPDF.jsx     — @react-pdf/renderer document component for proposal PDF export
-src/components/proposals/ProposalTab.jsx     — Reusable proposals tab (clientId prop = scoped; no prop = global)
+src/components/proposals/ProposalTab.jsx     — Reusable proposals tab (clientId prop = scoped; no prop = global); same "Build/Upload" dropdown as ProposalsPage
+src/components/proposals/UploadProposalDialog.jsx   — NEW: Upload Existing File modal (Zod-validated, PDF-only, 20 MB, three-step create→upload→update, navigates to detail page on success)
 src/components/proposals/ProposalsUpgradePrompt.jsx — Upgrade dialog shown when proposal limit is reached
 supabase/functions/send-campaign-review-email/index.ts — Campaign review email edge function
 ```
