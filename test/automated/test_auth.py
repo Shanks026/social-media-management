@@ -18,14 +18,14 @@ class TestLogin:
         login(page)
         expect(page).to_have_url(f"{BASE_URL}/dashboard")
         # Sidebar should be visible
-        expect(page.get_by_role("navigation")).to_be_visible()
+        expect(page.locator('[data-sidebar="sidebar"]').first).to_be_visible()
 
     def test_invalid_credentials(self, page: Page):
         """AUTH-002: Wrong password shows error, stays on /login."""
         page.goto(f"{BASE_URL}/login")
         page.get_by_label("Email").fill(TEST_EMAIL)
         page.get_by_label("Password").fill("wrong-password-xyz")
-        page.get_by_role("button", name="Sign In").click()
+        page.get_by_role("button", name="Login").click()
 
         # Should NOT navigate away
         expect(page).to_have_url(f"{BASE_URL}/login")
@@ -35,21 +35,21 @@ class TestLogin:
     def test_empty_fields_validation(self, page: Page):
         """AUTH-003: Submitting empty form shows validation errors."""
         page.goto(f"{BASE_URL}/login")
-        page.get_by_role("button", name="Sign In").click()
+        page.get_by_role("button", name="Login").click()
 
+        # Native HTML5 required validation prevents submission — URL stays at /login
         expect(page).to_have_url(f"{BASE_URL}/login")
-        # At least one validation error visible
-        expect(page.locator("[data-slot='form-message']").first).to_be_visible(timeout=3_000)
 
     def test_non_existent_email(self, page: Page):
         """Variation of AUTH-002: Completely unknown email."""
         page.goto(f"{BASE_URL}/login")
         page.get_by_label("Email").fill("nobody@doesnotexist.invalid")
         page.get_by_label("Password").fill("somepassword")
-        page.get_by_role("button", name="Sign In").click()
+        page.get_by_role("button", name="Login").click()
 
         expect(page).to_have_url(f"{BASE_URL}/login")
-        expect(page.get_by_role("alert").or_(page.locator("[data-sonner-toast]"))).to_be_visible(timeout=5_000)
+        # Inline error div shown on bad credentials
+        expect(page.locator(".text-destructive").first).to_be_visible(timeout=5_000)
 
 
 class TestLogout:
@@ -89,8 +89,8 @@ class TestPublicPagesNoAuth:
     def test_login_page_accessible(self, page: Page):
         page.goto(f"{BASE_URL}/login")
         expect(page).to_have_url(f"{BASE_URL}/login")
-        expect(page.get_by_role("button", name="Sign In")).to_be_visible()
+        expect(page.get_by_role("button", name="Login")).to_be_visible()
 
     def test_signup_page_accessible(self, page: Page):
         page.goto(f"{BASE_URL}/signup")
-        expect(page.get_by_role("button", name="Create Account")).to_be_visible()
+        expect(page.get_by_role("button", name="Create account")).to_be_visible()

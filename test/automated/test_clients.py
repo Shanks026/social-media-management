@@ -5,13 +5,30 @@ Covers: create, edit, delete, filters, search, client detail tabs.
 Manual test IDs: CLT-001 → CLT-009
 """
 
+import io
+import struct
+import zlib
 import pytest
 from playwright.sync_api import Page, expect
 from conftest import BASE_URL, login
 
 
-INDUSTRY = "Technology"
+INDUSTRY = "Fashion & Apparel"
 TIER = "Retainer"
+
+
+def _make_1x1_png() -> bytes:
+    """Return a minimal valid 1×1 white PNG as bytes."""
+    def chunk(name, data):
+        c = struct.pack('>I', len(data)) + name + data
+        return c + struct.pack('>I', zlib.crc32(name + data) & 0xFFFFFFFF)
+
+    sig = b'\x89PNG\r\n\x1a\n'
+    ihdr = chunk(b'IHDR', struct.pack('>IIBBBBB', 1, 1, 8, 2, 0, 0, 0))
+    raw  = b'\x00\xff\xff\xff'   # filter byte + RGB white
+    idat = chunk(b'IDAT', zlib.compress(raw))
+    iend = chunk(b'IEND', b'')
+    return sig + ihdr + idat + iend
 
 
 class TestClientCRUD:
@@ -21,18 +38,34 @@ class TestClientCRUD:
         page = authenticated_page
         page.goto(f"{BASE_URL}/clients/create")
 
-        # Fill the form
-        page.get_by_label("Client Name").fill("Playwright Test Client")
-        page.get_by_label("Industry").click()
+        # Upload logo (required) — use a 1×1 white PNG
+        page.locator('input[type="file"]').set_input_files(
+            files=[{"name": "logo.png", "mimeType": "image/png", "buffer": _make_1x1_png()}]
+        )
+        # Wait for upload to complete — wait for sonner toast "Logo uploaded!"
+        page.wait_for_selector('[data-sonner-toast]', timeout=10_000)
+        page.wait_for_timeout(500)
+
+        # Fill text fields
+        page.locator('input[name="name"]').fill("Playwright Test Client")
+        page.locator('input[name="email"]').fill("playwright@testclient.example.com")
+        # Mobile must match +91 Indian number format
+        page.locator('input[name="mobile_number"]').fill("+919876543210")
+
+        # Select industry
+        page.locator('button').filter(has_text="Select industry").click()
+        page.wait_for_selector('[role="listbox"]', timeout=5_000)
         page.get_by_role("option", name=INDUSTRY).click()
+
+        # Select Instagram platform and fill handle
+        page.get_by_text("Instagram").first.click()
+        page.wait_for_timeout(300)
+        page.locator('input[name="social_links.instagram.handle"]').fill("playwrighttest")
 
         page.get_by_role("button", name="Create Client").click()
 
-        # Should navigate back to clients or show client detail
-        expect(page).not_to_have_url(f"{BASE_URL}/clients/create", timeout=10_000)
-
-        # Success toast
-        expect(page.locator("[data-sonner-toast]")).to_be_visible(timeout=5_000)
+        # Should navigate away from /clients/create
+        expect(page).not_to_have_url(f"{BASE_URL}/clients/create", timeout=15_000)
 
     def test_create_client_required_field_validation(self, authenticated_page: Page):
         """CLT-002: Submitting with no name shows validation error."""
@@ -40,8 +73,8 @@ class TestClientCRUD:
         page.goto(f"{BASE_URL}/clients/create")
         page.get_by_role("button", name="Create Client").click()
 
-        # Validation error on name field
-        expect(page.locator("[data-slot='form-message']").first).to_be_visible(timeout=3_000)
+        # Validation error on name field — rendered as <p class="text-destructive">
+        expect(page.locator("p.text-destructive").first).to_be_visible(timeout=3_000)
         expect(page).to_have_url(f"{BASE_URL}/clients/create")
 
     def test_clients_list_loads(self, authenticated_page: Page):

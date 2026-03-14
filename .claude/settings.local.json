@@ -58,7 +58,25 @@
       "Bash(grep -E \"\\\\.\\(jsx|js\\)$\")",
       "Bash(node -e \":*)",
       "Bash(find /c/Users/chris_austin/Desktop/social-media-management -type f -name *proposal*)",
-      "Bash(xargs grep:*)"
+      "Bash(xargs grep:*)",
+      "Bash(pip --version)",
+      "Bash(pip show playwright pytest pytest-playwright)",
+      "Bash(pip install -r requirements.txt)",
+      "Bash(python -m playwright install chromium)",
+      "Bash(curl -s http://localhost:5173)",
+      "Bash(python -m pytest test_auth.py -v --headed)",
+      "Bash(python -m pytest test_auth.py::TestLogout -v --headed)",
+      "Bash(python -m pytest test_navigation.py -v --headed)",
+      "Bash(python -m pytest test_clients.py -v --headed)",
+      "Bash(python -m pytest test_clients.py::TestClientCRUD::test_create_client -v --headed)",
+      "Bash(python -m pytest test_posts.py -v --headed)",
+      "Bash(python -m pytest test_campaigns.py -v --headed)",
+      "Bash(python -m pytest test_proposals.py -v --headed)",
+      "Bash(python -m pytest test_finance.py -v --headed)",
+      "Bash(python -m pytest test_documents.py -v)",
+      "Bash(python -m pytest test_operations.py -v)",
+      "Bash(python -m pytest test_settings.py -v)",
+      "Bash(python -m pytest test_settings.py::TestBillingPage::test_billing_shows_plan_name -v)"
     ]
   }
 }

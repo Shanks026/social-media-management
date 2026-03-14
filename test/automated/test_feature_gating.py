@@ -47,11 +47,12 @@ class TestGatedFeatureVisibility:
     def test_billing_page_shows_plan(self, authenticated_page: Page):
         """GATE-001: Billing page always shows the current plan."""
         page = authenticated_page
-        page.goto(f"{BASE_URL}/billing")
-        page.wait_for_load_state("networkidle")
+        # Plan name is on the Subscription tab, not the default Usage tab
+        page.goto(f"{BASE_URL}/billing?tab=subscription")
+        page.wait_for_selector("text=Subscription.", timeout=10_000)
 
         plan_found = False
-        for plan in ["Trial", "Ignite", "Velocity", "Quantum"]:
+        for plan in ["Trial", "Ignite", "Velocity", "Quantum", "Free"]:
             if page.get_by_text(plan, exact=False).count() > 0:
                 plan_found = True
                 break

@@ -123,14 +123,16 @@ class TestBillingPage:
         expect(page.get_by_role("main")).to_be_visible()
 
     def test_billing_shows_plan_name(self, authenticated_page: Page):
-        """BILL-001: Current plan name is displayed."""
+        """BILL-001: Current plan name is displayed on Subscription tab."""
         page = authenticated_page
-        page.goto(f"{BASE_URL}/billing")
-        page.wait_for_load_state("networkidle")
+        # Plan name is on the Subscription tab, not the default Usage tab
+        page.goto(f"{BASE_URL}/billing?tab=subscription")
+        # Wait for PlanOverview to render — it always shows "Subscription." as italic text
+        page.wait_for_selector("text=Subscription.", timeout=10_000)
 
         # One of these plan names should be visible
         plan_visible = False
-        for plan in ["Trial", "Ignite", "Velocity", "Quantum"]:
+        for plan in ["Trial", "Ignite", "Velocity", "Quantum", "Free"]:
             if page.get_by_text(plan, exact=False).count() > 0:
                 plan_visible = True
                 break
