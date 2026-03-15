@@ -27,6 +27,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { Building2 } from 'lucide-react'
@@ -52,7 +53,7 @@ export const DOCUMENT_CATEGORIES = [
  *   open               — boolean
  *   onOpenChange       — setter
  *   file               — File object
- *   onConfirm          — async ({ displayName, category, clientId }) => void
+ *   onConfirm          — async ({ displayName, category, clientId, notes }) => void
  *   uploadProgress     — 0–100 or null (null = idle)
  *   showClientSelector — when true, shows a client dropdown (global page)
  *   defaultClientId    — pre-selected client ID
@@ -75,6 +76,7 @@ export default function UploadMetaDialog({
   const schema = z.object({
     displayName: z.string().min(1, 'Name is required').max(200),
     category: z.string().min(1, 'Category is required'),
+    notes: z.string().max(500).optional(),
     ...(showClientSelector
       ? { clientId: z.string().min(1, 'Client is required') }
       : {}),
@@ -85,6 +87,7 @@ export default function UploadMetaDialog({
     defaultValues: {
       displayName: '',
       category: 'Other',
+      notes: '',
       ...(showClientSelector ? { clientId: defaultClientId ?? '' } : {}),
     },
   })
@@ -96,6 +99,7 @@ export default function UploadMetaDialog({
       form.reset({
         displayName: nameWithoutExt,
         category: 'Other',
+        notes: '',
         ...(showClientSelector ? { clientId: defaultClientId ?? '' } : {}),
       })
     }
@@ -229,6 +233,29 @@ export default function UploadMetaDialog({
                       ))}
                     </SelectContent>
                   </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="notes"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>
+                    Notes{' '}
+                    <span className="text-muted-foreground font-normal">(Optional)</span>
+                  </FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder="Add any context or notes about this document…"
+                      className="resize-none text-sm"
+                      rows={3}
+                      disabled={isUploading}
+                      {...field}
+                    />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}

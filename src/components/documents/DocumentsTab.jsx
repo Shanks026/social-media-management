@@ -93,8 +93,8 @@ export default function DocumentsTab({ clientId }) {
   const [createCollectionOpen, setCreateCollectionOpen] = useState(false)
 
   const uploadMutation = useMutation({
-    mutationFn: ({ file, displayName, category }) =>
-      uploadDocument({ clientId, file, displayName, category }),
+    mutationFn: ({ file, displayName, category, notes }) =>
+      uploadDocument({ clientId, file, displayName, category, notes }),
     onMutate: () => setUploadProgress(10),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['documents', 'list'] })
@@ -117,10 +117,10 @@ export default function DocumentsTab({ clientId }) {
     setDialogOpen(true)
   }
 
-  function handleConfirmUpload({ displayName, category }) {
+  function handleConfirmUpload({ displayName, category, notes }) {
     if (!pendingFile) return
     setUploadProgress(30)
-    uploadMutation.mutate({ file: pendingFile, displayName, category })
+    uploadMutation.mutate({ file: pendingFile, displayName, category, notes })
   }
 
   function handleDialogClose(open) {

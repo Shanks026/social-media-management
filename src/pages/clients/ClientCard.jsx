@@ -8,7 +8,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog'
-import { CalendarDays, Globe, LayoutGrid, Megaphone } from 'lucide-react'
+import { CalendarDays, Globe, Megaphone } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { getUrgencyStatus } from '@/lib/client-helpers'
@@ -21,22 +21,14 @@ const StatItem = ({ count, label, colorClass }) => {
   return (
     <div className="flex items-center gap-2 shrink-0">
       <div className={`size-2 rounded-full ${colorClass}`} />
-      <div className="flex items-baseline gap-1.5">
-        <span className="text-sm font-bold dark:text-white leading-none">
-          {count}
-        </span>
-        <span className="text-xs text-muted-foreground font-medium">
-          {label}
-        </span>
-      </div>
+      <span className="text-sm font-semibold text-foreground leading-none">{count}</span>
+      <span className="text-xs text-muted-foreground">{label}</span>
     </div>
   )
 }
 
 function ClientCard({ client, onOpen, onDelete }) {
   const [deleteOpen, setDeleteOpen] = useState(false)
-
-  const tier = client.tier?.toUpperCase() || 'BASIC'
 
   const platforms = client.platforms || []
   const pipeline = client.pipeline || {
@@ -82,121 +74,87 @@ function ClientCard({ client, onOpen, onDelete }) {
       <Card
         onClick={() => onOpen(client)}
         className={cn(
-          'group relative cursor-pointer shadow-none transition-all duration-300 py-2 border hover:bg-gray-100/50 dark:hover:bg-card h-full flex flex-col overflow-hidden',
+          'group cursor-pointer shadow-none transition-all duration-200 border hover:bg-accent/30 dark:hover:bg-card flex flex-col py-2 overflow-hidden',
           client.is_internal
-            ? ' bg-gray-50 dark:bg-card dark:border-border border-dashed'
+            ? 'bg-muted/30 dark:bg-card dark:border-border border-dashed'
             : 'dark:bg-card/70 dark:border-none',
         )}
       >
-        <CardContent className="p-6 flex flex-col flex-1 min-w-0">
-          {/* Header */}
-          <div className="flex justify-between gap-2 items-start mb-6">
-            <div className="absolute top-4 right-4">{/* Badge removed */}</div>
-            <div className="flex gap-4 items-center min-w-0">
-              <div className="h-14 w-14 shrink-0 rounded-2xl bg-transparent flex items-center justify-center overflow-hidden transition-transform">
-                {client.logo_url ? (
-                  <img
-                    src={client.logo_url}
-                    alt=""
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  <div className="h-full w-full flex items-center justify-center bg-gray-100 dark:bg-zinc-800 text-gray-500 dark:text-gray-400 font-bold text-lg">
-                    {initials}
-                  </div>
-                )}
+        <CardContent className="p-6 flex flex-col gap-5">
+          {/* Header: logo + name + tier + industry */}
+          <div className="flex items-center gap-4">
+            <div className="h-12 w-12 shrink-0 rounded-xl overflow-hidden bg-muted">
+              {client.logo_url ? (
+                <img src={client.logo_url} alt="" className="h-full w-full object-cover" />
+              ) : (
+                <div className="h-full w-full flex items-center justify-center text-muted-foreground font-semibold text-sm">
+                  {initials}
+                </div>
+              )}
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2 min-w-0">
+                <h3 className="text-base font-semibold text-foreground tracking-tight truncate">
+                  {client.name}
+                </h3>
+                <TierBadge tier={client.tier} />
               </div>
-              <div className="space-y-3 min-w-0">
-                <div className="flex items-center gap-1">
-                  <h3 className="text-lg font-medium text-foreground tracking-tight leading-none truncate]">
-                    {client.name}
-                  </h3>
-                  <TierBadge tier={client.tier} />
-                </div>
-                {/* Industry Display using the Badge for Label Lookup */}
-                <div className="flex">
-                  <IndustryBadge industryValue={client.industry} />
-                </div>
+              <div className="mt-1.5">
+                <IndustryBadge industryValue={client.industry} />
               </div>
             </div>
           </div>
 
-          {/* Pipeline Stats */}
-          <div className="flex-1 min-w-0">
+          {/* Pipeline stats — fixed min-height keeps cards vertically aligned */}
+          <div className="min-h-[22px]">
             {hasPipelineData ? (
-              <div className="flex flex-wrap items-center gap-x-6 gap-y-3 mb-4">
-                <StatItem
-                  count={pipeline.drafts}
-                  label="Drafts"
-                  colorClass="bg-blue-600"
-                />
-                <StatItem
-                  count={pipeline.revisions}
-                  label="Rev."
-                  colorClass="bg-pink-600"
-                />
-                <StatItem
-                  count={pipeline.pending}
-                  label="Pend."
-                  colorClass="bg-orange-600"
-                />
-                <StatItem
-                  count={pipeline.scheduled}
-                  label="Sched."
-                  colorClass="bg-purple-600"
-                />
+              <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+                <StatItem count={pipeline.drafts} label="Drafts" colorClass="bg-blue-500" />
+                <StatItem count={pipeline.revisions} label="Revisions" colorClass="bg-pink-500" />
+                <StatItem count={pipeline.pending} label="Pending" colorClass="bg-orange-500" />
+                <StatItem count={pipeline.scheduled} label="Scheduled" colorClass="bg-purple-500" />
               </div>
             ) : (
-              <div className="mb-4 flex items-center gap-2">
-                <div className="size-1.5 rounded-full bg-muted-foreground/20" />
-                <span className="text-xs italic text-muted-foreground/50 tracking-wide">
-                  No active workflow
-                </span>
-              </div>
+              <span className="text-xs italic text-muted-foreground/40">No active workflow</span>
             )}
           </div>
 
           {/* Footer */}
-          <div className="flex items-center justify-between pt-5 border-t border-dashed border-gray-100 dark:border-white/5 mt-auto min-w-0">
-            <div className="flex items-center gap-2 px-3 py-1 bg-gray-100 dark:bg-white/5 rounded-full border border-gray-100 dark:border-white/5 shrink-0">
-              <Globe className="size-3 text-muted-foreground" />
-              <span className="text-xs font-semibold text-foreground/80">{platforms.length}</span>
-              {/* <span className="text-xs text-muted-foreground/50 font-medium">platforms</span>
-              <span className="text-muted-foreground/30 text-[10px]">·</span> */}
-              <Megaphone className="size-3 text-muted-foreground" />
-              <span className="text-xs font-semibold text-foreground/80">{client.active_campaigns ?? 0}</span>
-              {/* <span className="text-xs text-muted-foreground/50 font-medium">campaigns</span> */}
+          <div className="flex items-center justify-between pt-4 border-t border-dashed border-border/50">
+            {/* Left: platform + campaign counts — AVG MRR slots in here for external clients */}
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-1.5">
+                <Globe className="size-3.5 text-muted-foreground" />
+                <span className="text-xs font-medium text-foreground">{platforms.length}</span>
+                <span className="text-xs text-muted-foreground/60">platforms</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <Megaphone className="size-3.5 text-muted-foreground" />
+                <span className="text-xs font-medium text-foreground">{client.active_campaigns ?? 0}</span>
+                <span className="text-xs text-muted-foreground/60">campaigns</span>
+              </div>
             </div>
 
-            <div className="flex items-center min-w-0">
-              {health && nextPostFormatted ? (
-                <div className="flex items-center gap-2.5 px-3 py-1 bg-gray-100 dark:bg-white/5 rounded-full border border-gray-100 dark:border-white/5 shrink-0">
-                  <div
-                    className={`size-2 rounded-full ${health.color} ${health.pulse ? 'animate-pulse shadow-[0_0_8px_rgba(0,0,0,0.1)]' : ''}`}
-                  />
-                  <div className="flex items-center text-[11px] gap-1 whitespace-nowrap">
-                    <span className="text-muted-foreground font-semibold">
-                      Next
-                    </span>
-                    <span className="font-medium text-gray-900 dark:text-gray-100">
-                      {nextPostFormatted}
-                    </span>
-                    {health.label && (
-                      <span
-                        className={`ml-1 mt-0.5 leading-none font-medium ${health.color.replace('bg-', 'text-')}`}
-                      >
-                        {health.label.toUpperCase()}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              ) : (
-                <div className="flex items-center text-xs gap-2 font-medium text-muted-foreground/60">
-                  <CalendarDays size={14} className="opacity-50" />
-                  <span>Joined {formatDate(client.created_at)}</span>
-                </div>
-              )}
-            </div>
+            {/* Right: next scheduled post with urgency indicator, or joined date */}
+            {health && nextPostFormatted ? (
+              <div className="flex items-center gap-2 shrink-0">
+                <div
+                  className={`size-2 rounded-full ${health.color} ${health.pulse ? 'animate-pulse' : ''}`}
+                />
+                <span className="text-xs text-muted-foreground">Next</span>
+                <span className="text-xs font-medium text-foreground">{nextPostFormatted}</span>
+                {health.label && (
+                  <span className={`text-xs font-semibold ${health.color.replace('bg-', 'text-')}`}>
+                    {health.label}
+                  </span>
+                )}
+              </div>
+            ) : (
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground/60">
+                <CalendarDays size={13} />
+                <span>{joinedDateFormatted}</span>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>

@@ -16,7 +16,6 @@ import {
   Calendar as CalendarIcon,
   Building2,
   Users,
-  Filter,
   FolderOpen,
   Newspaper,
 } from 'lucide-react'
@@ -403,8 +402,7 @@ export default function Posts() {
               setSelectedClient('all')
             }}
           >
-            <SelectTrigger className="w-[170px] h-9 text-xs font-semibold shadow-none">
-              <Filter size={14} className="mr-1.5 shrink-0 opacity-50" />
+            <SelectTrigger className="w-[150px] h-9 text-xs font-semibold shadow-none">
               <SelectValue placeholder="Scope" />
             </SelectTrigger>
             <SelectContent>
@@ -482,8 +480,7 @@ export default function Posts() {
               value={selectedCampaign}
               onValueChange={setSelectedCampaign}
             >
-              <SelectTrigger className="w-[160px] h-9 text-xs font-semibold shadow-none">
-                <FolderOpen size={14} className="mr-1.5 shrink-0 opacity-50" />
+              <SelectTrigger className="w-[150px] h-9 text-xs font-semibold shadow-none">
                 <SelectValue placeholder="Campaign" />
               </SelectTrigger>
               <SelectContent>

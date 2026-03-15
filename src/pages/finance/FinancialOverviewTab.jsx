@@ -451,70 +451,97 @@ export default function OverviewPage({ clientId, client, subTabs }) {
           </CardHeader>
           <CardContent className="flex-1 overflow-auto px-6 custom-scrollbar">
             <div className="space-y-0 pb-4">
-              {dashboardData.filteredTransactions.filter(
-                (t) => t.status === 'PENDING' && t.type === 'INCOME',
-              ).length === 0 ? (
-                <div className="flex-1 flex flex-col items-center justify-center text-center py-12 gap-2">
-                  <div className="h-10 w-10 border border-dashed rounded-full flex items-center justify-center text-muted-foreground mb-1">
-                    <TrendingUp className="h-4 w-4" />
-                  </div>
-                  <p className="text-sm font-medium text-foreground">
-                    All clear
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    No pending payments found.
-                  </p>
-                </div>
-              ) : (
-                dashboardData.filteredTransactions
-                  .filter((t) => t.status === 'PENDING' && t.type === 'INCOME')
-                  .sort((a, b) => new Date(b.date) - new Date(a.date))
-                  .slice(0, 6)
-                  .map((t) => (
+              {(() => {
+                // Outstanding invoices (SENT or OVERDUE)
+                const outstandingInvoices = invoices.filter(
+                  (inv) => inv.status === 'SENT' || inv.status === 'OVERDUE',
+                )
+                // IDs of invoices already covered above
+                const coveredInvoiceIds = new Set(outstandingInvoices.map((inv) => inv.id))
+                // Pending income transactions not linked to an outstanding invoice
+                const pendingTxs = dashboardData.filteredTransactions.filter(
+                  (t) =>
+                    t.status === 'PENDING' &&
+                    t.type === 'INCOME' &&
+                    !coveredInvoiceIds.has(t.invoice_id),
+                )
+
+                const hasItems = outstandingInvoices.length > 0 || pendingTxs.length > 0
+
+                if (!hasItems) {
+                  return (
+                    <div className="flex-1 flex flex-col items-center justify-center text-center py-12 gap-2">
+                      <div className="h-10 w-10 border border-dashed rounded-full flex items-center justify-center text-muted-foreground mb-1">
+                        <TrendingUp className="h-4 w-4" />
+                      </div>
+                      <p className="text-sm font-medium text-foreground">All clear</p>
+                      <p className="text-xs text-muted-foreground">No pending payments found.</p>
+                    </div>
+                  )
+                }
+
+                // Combine: invoices first (sorted by due_date desc), then standalone transactions
+                const invoiceItems = [...outstandingInvoices].sort(
+                  (a, b) => new Date(b.due_date ?? b.issue_date) - new Date(a.due_date ?? a.issue_date),
+                )
+                const txItems = [...pendingTxs].sort(
+                  (a, b) => new Date(b.date) - new Date(a.date),
+                )
+
+                return [...invoiceItems, ...txItems].slice(0, 8).map((item) => {
+                  const isInvoice = 'invoice_number' in item
+                  const client = item.client
+                  const amount = isInvoice ? item.total : item.amount
+                  const dateVal = isInvoice ? (item.due_date ?? item.issue_date) : item.date
+                  const label = isInvoice
+                    ? `Invoice #${item.invoice_number}`
+                    : item.description
+                  const isOverdue = isInvoice && item.status === 'OVERDUE'
+
+                  return (
                     <div
-                      key={t.id}
-                      className="group flex items-center justify-between py-4 px-2 border-b transition-all duration-200"
+                      key={item.id}
+                      className="flex items-center justify-between py-3 px-1 border-b last:border-0"
                     >
-                      <div className="flex items-center gap-4 min-w-0">
+                      <div className="flex items-center gap-3 min-w-0">
                         <div className="shrink-0">
-                          {t.client?.is_internal || !t.client_id ? (
-                            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center border border-primary/5">
-                              <Building2 className="h-5 w-5 text-primary" />
+                          {client?.is_internal || !item.client_id ? (
+                            <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center border border-primary/5">
+                              <Building2 className="h-3.5 w-3.5 text-primary" />
                             </div>
-                          ) : t.client?.logo_url ? (
+                          ) : client?.logo_url ? (
                             <img
-                              src={t.client.logo_url}
-                              className="w-10 h-10 rounded-full object-cover border border-slate-200 dark:border-slate-700"
+                              src={client.logo_url}
+                              className="w-7 h-7 rounded-full object-cover border border-border"
                               alt=""
                             />
                           ) : (
-                            <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-sm font-semibold text-slate-600 dark:text-slate-300">
-                              {t.client?.name?.charAt(0) || 'C'}
+                            <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center text-xs font-medium text-muted-foreground">
+                              {client?.name?.charAt(0) || 'C'}
                             </div>
                           )}
                         </div>
                         <div className="min-w-0">
-                          <h4 className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate mb-0.5">
-                            {t.client?.is_internal || !t.client_id
-                              ? 'My Agency'
-                              : t.client?.name}
-                          </h4>
-                          <p className="text-sm text-muted-foreground truncate leading-tight mt-1">
-                            {t.description}
+                          <p className="text-sm font-medium text-foreground truncate">
+                            {client?.is_internal || !item.client_id ? 'My Agency' : client?.name}
+                          </p>
+                          <p className="text-sm text-muted-foreground truncate">
+                            {label}
                           </p>
                         </div>
                       </div>
-                      <div className="text-right pl-4">
-                        <span className="text-xs font-medium text-muted-foreground">
-                          Due {format(new Date(t.date), 'MMM d')}
-                        </span>
-                        <span className="text-lg font-bold block tracking-tight">
-                          {formatCurrency(t.amount)}
-                        </span>
+                      <div className="text-right pl-3 shrink-0">
+                        <p className="text-base font-semibold text-foreground">
+                          {formatCurrency(amount)}
+                        </p>
+                        <p className={`text-[10px] ${isOverdue ? 'text-rose-500 font-medium' : 'text-muted-foreground'}`}>
+                          {isOverdue ? 'Overdue' : `Due ${format(new Date(dateVal), 'MMM d')}`}
+                        </p>
                       </div>
                     </div>
-                  ))
-              )}
+                  )
+                })
+              })()}
             </div>
           </CardContent>
         </Card>

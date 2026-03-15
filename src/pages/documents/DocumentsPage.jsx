@@ -177,8 +177,8 @@ export default function DocumentsPage() {
   const [createCollectionOpen, setCreateCollectionOpen] = useState(false)
 
   const uploadMutation = useMutation({
-    mutationFn: ({ file, displayName, category, clientId }) =>
-      uploadDocument({ clientId, file, displayName, category }),
+    mutationFn: ({ file, displayName, category, clientId, notes }) =>
+      uploadDocument({ clientId, file, displayName, category, notes }),
     onMutate: () => setUploadProgress(10),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['documents', 'list'] })
@@ -201,7 +201,7 @@ export default function DocumentsPage() {
     setDialogOpen(true)
   }
 
-  function handleConfirmUpload({ displayName, category, clientId }) {
+  function handleConfirmUpload({ displayName, category, clientId, notes }) {
     if (!pendingFile) return
     setUploadProgress(30)
     uploadMutation.mutate({
@@ -209,6 +209,7 @@ export default function DocumentsPage() {
       displayName,
       category,
       clientId,
+      notes,
     })
   }
 
