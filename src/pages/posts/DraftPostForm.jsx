@@ -1013,7 +1013,7 @@ export default function DraftPostForm({
                 )}
 
                 {/* Per-platform toggle */}
-                {watchedPlatforms.length > 0 && (
+                {watchedPlatforms.length >= 2 && (
                   <div className="flex items-center gap-2">
                     <Checkbox
                       id="per-platform-mode"

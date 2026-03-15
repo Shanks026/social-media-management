@@ -86,7 +86,7 @@ const PlatformIcon = ({ name }) => {
   const imgSrc = `/platformIcons/${fileName}.png`
 
   return (
-    <div className="flex size-5 items-center justify-center rounded-full border border-white dark:border-[#1c1c1f] bg-white dark:bg-zinc-900 shadow-sm overflow-hidden shrink-0">
+    <div className="flex size-5 items-center justify-center rounded-full border border-border bg-background shadow-sm overflow-hidden shrink-0">
       <img
         src={imgSrc}
         alt={name}
@@ -121,9 +121,8 @@ const platformChartConfig = {
 }
 
 const STATUS_STYLES = {
-  Active:
-    'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-400',
-  Completed: 'bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-400',
+  Active: 'bg-emerald-500/15 text-emerald-700',
+  Completed: 'bg-blue-500/15 text-blue-700',
   Archived: 'bg-muted text-muted-foreground',
 }
 
@@ -137,7 +136,7 @@ function formatDateRange(start, end) {
 
 function KpiCard({ label, value, sub, icon: Icon, color = 'text-primary' }) {
   return (
-    <Card className="rounded-2xl border-none bg-card/50 shadow-sm ring-1 ring-border/50 dark:bg-card/20">
+    <Card className="rounded-2xl border-none bg-card/50 shadow-sm ring-1 ring-border/50">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
           {label}
@@ -533,7 +532,7 @@ export default function CampaignDetailPage() {
           <TabsContent value="posts" className="mt-0">
             <div className="grid grid-cols-1 gap-4">
               {/* Post list */}
-              <Card className="border-none shadow-sm ring-1 ring-border/50 bg-card/50 dark:bg-card/30 flex flex-col h-full gap-4">
+              <Card className="border-none shadow-sm ring-1 ring-border/50 bg-card/50 flex flex-col h-full gap-4">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 shrink-0">
                   <div>
                     <CardTitle className="text-lg font-medium">Posts</CardTitle>
@@ -704,7 +703,7 @@ export default function CampaignDetailPage() {
           <TabsContent value="finance" className="mt-0">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               {/* Budget card */}
-              <Card className="rounded-2xl border-none bg-card/50 shadow-sm ring-1 ring-border/50 dark:bg-card/20">
+              <Card className="rounded-2xl border-none bg-card/50 shadow-sm ring-1 ring-border/50">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-lg font-medium">Budget</CardTitle>
                   <CardDescription>Campaign spend tracking</CardDescription>
@@ -746,7 +745,7 @@ export default function CampaignDetailPage() {
                               'tabular-nums',
                               remaining != null && remaining < 0
                                 ? 'text-destructive'
-                                : 'text-emerald-600 dark:text-emerald-400',
+                                : 'text-emerald-600',
                             )}
                           >
                             {formatCurrency(remaining)}
@@ -789,7 +788,7 @@ export default function CampaignDetailPage() {
               </Card>
 
               {/* Linked invoices */}
-              <Card className="border-none bg-card/50 shadow-sm ring-1 ring-border/50 dark:bg-card/20 flex flex-col">
+              <Card className="border-none bg-card/50 shadow-sm ring-1 ring-border/50 flex flex-col">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 shrink-0">
                   <div>
                     <CardTitle className="text-lg font-medium">

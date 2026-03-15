@@ -70,6 +70,7 @@ export default function NoteRow({
   clientMap = {},
   showClient = false,
   variant = 'row',
+  alwaysShowActions = false,
 }) {
   const queryClient = useQueryClient()
   const [editOpen, setEditOpen] = useState(false)
@@ -258,14 +259,15 @@ export default function NoteRow({
             </div>
           </div>
 
-          {/* Hover action bar — only for dashboard-card */}
+          {/* Action bar — only for dashboard-card */}
           {variant === 'dashboard-card' && (
             <div
-              className="
-                grid transition-all duration-200 ease-in-out
-                delay-400 group-hover:delay-[400ms]
-                grid-rows-[0fr] group-hover:grid-rows-[1fr]
-              "
+              className={cn(
+                'grid transition-all duration-200 ease-in-out',
+                alwaysShowActions
+                  ? 'grid-rows-[1fr]'
+                  : 'grid-rows-[0fr] group-hover:grid-rows-[1fr]',
+              )}
             >
               <div className="overflow-hidden">
                 <div className="flex items-center gap-1 px-4 py-2 border-t border-border/40 bg-muted/30">

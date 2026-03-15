@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   useSearchParams,
@@ -82,7 +82,7 @@ export default function Clients() {
     search !== '' || urgency !== 'all' || industry !== 'all' || tier !== 'all'
   const resetFilters = () => setSearchParams({})
 
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: ['clients', user.id, { search, industry, tier }],
     queryFn: () => fetchClients({ search, industry, tier, urgency: 'all' }), // Always fetch all for local counts
     enabled: !!user?.id,
@@ -182,7 +182,7 @@ export default function Clients() {
 
   return (
     <div className="min-h-full bg-background selection:bg-primary/10">
-      <div className="px-8 pt-8 pb-20 space-y-8 max-w-[1400px] mx-auto">
+      <div className="px-8 pt-8 pb-20 space-y-8 max-w-[1400px] mx-auto animate-page-fade-in">
         {/* --- SECTION 1: HEADER & PRIMARY ACTION --- */}
         <div className="flex items-end justify-between">
           <div className="space-y-1">
@@ -288,7 +288,7 @@ export default function Clients() {
             </EmptyContent>
           </Empty>
         ) : (
-          <div className="grid gap-6 grid-cols-[repeat(auto-fill,minmax(420px,1fr))] animate-in fade-in duration-500">
+          <div className="grid gap-6 grid-cols-[repeat(auto-fill,minmax(420px,1fr))]">
             {sortedClients.map((client) => (
               <ClientCard
                 key={client.id}

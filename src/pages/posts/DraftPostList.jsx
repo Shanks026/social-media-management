@@ -51,7 +51,7 @@ import { toast } from 'sonner'
 import { useNavigate } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 import { getUrgencyStatus } from '@/lib/client-helpers'
-import { getPublishState } from '@/lib/helper'
+import { getPublishState, renderCaption } from '@/lib/helper'
 
 const isVideoSource = (url) => {
   if (!url) return false
@@ -390,7 +390,7 @@ export default function DraftPostList({ clientId, onCreatePost }) {
 
               {/* Description */}
               <p className="text-sm text-muted-foreground leading-relaxed line-clamp-2 mb-6">
-                {post.content || 'No description provided.'}
+                {renderCaption(post.content)}
               </p>
 
               {/* Dotted Divider & Footer */}

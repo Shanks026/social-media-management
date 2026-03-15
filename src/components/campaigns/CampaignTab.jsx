@@ -134,12 +134,12 @@ function CampaignTabContent({ clientId, isCreateOpen, setIsCreateOpen }) {
               placeholder="Search campaigns..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-9 bg-muted/20 border-border/40 focus:bg-background transition-all"
+              className="pl-9 h-9 text-sm"
             />
           </div>
 
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[160px] bg-muted/20 border-border/40">
+            <SelectTrigger className="w-[160px] h-9 text-sm">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>

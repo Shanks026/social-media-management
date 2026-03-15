@@ -28,7 +28,7 @@ function isVideo(url = '') {
 function PlatformIcon({ name }) {
   const fileName = name === 'google_business' ? 'google_busines' : name
   return (
-    <div className="flex h-6 w-6 items-center justify-center rounded-full border border-border bg-white dark:bg-zinc-900 shadow-sm overflow-hidden">
+    <div className="flex h-6 w-6 items-center justify-center rounded-full border border-border bg-background shadow-sm overflow-hidden">
       <img
         src={`/platformIcons/${fileName}.png`}
         alt={name}

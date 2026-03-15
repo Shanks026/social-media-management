@@ -9,7 +9,6 @@ import {
   Plus,
   Pencil,
   AlertCircle,
-  MessageSquareText,
   ChevronLeft,
   ChevronRight,
   Eye,
@@ -18,11 +17,6 @@ import {
   History,
   Play,
   ChevronDownIcon,
-  Instagram,
-  Linkedin,
-  Facebook,
-  Youtube,
-  Globe,
   RefreshCw,
 } from 'lucide-react'
 
@@ -47,9 +41,8 @@ import {
 
 // Custom Components & API
 import { deleteIndividualMedia } from '@/api/posts'
-import { getPublishState } from '@/lib/helper'
+import { getPublishState, renderCaption } from '@/lib/helper'
 import StatusBadge from '@/components/StatusBadge'
-import PlatformBadge from '@/components/PlatformBadge'
 import ClientNotes from './ClientNotes'
 import { cn } from '@/lib/utils'
 import SocialMediaPreview from '../socialMediaPreview/SocialMediaPreview'
@@ -67,13 +60,31 @@ const isVideoSource = (url) => {
   )
 }
 
-const PLATFORM_CONFIG = {
-  instagram: { label: 'Instagram', icon: Instagram },
-  linkedin: { label: 'LinkedIn', icon: Linkedin },
-  facebook: { label: 'Facebook', icon: Facebook },
-  google_business: { label: 'Google Business', icon: Globe },
-  youtube: { label: 'YouTube', icon: Youtube },
-  twitter: { label: 'Twitter/X', icon: Globe },
+const PLATFORM_LABELS = {
+  instagram: 'Instagram',
+  linkedin: 'LinkedIn',
+  facebook: 'Facebook',
+  google_business: 'Google Business',
+  youtube: 'YouTube',
+  twitter: 'Twitter/X',
+}
+
+const PlatformIcon = ({ name, size = 'md' }) => {
+  const fileName = name === 'google_business' ? 'google_busines' : name
+  const sizeClass = size === 'sm' ? 'size-5' : 'size-6'
+  const containerClass = size === 'sm'
+    ? 'flex h-6 w-6 items-center justify-center rounded-full border border-border bg-white dark:bg-zinc-900 shadow-sm overflow-hidden shrink-0'
+    : 'flex h-8 w-8 items-center justify-center rounded-full border border-border bg-white dark:bg-zinc-900 shadow-sm overflow-hidden shrink-0'
+  return (
+    <div className={containerClass}>
+      <img
+        src={`/platformIcons/${fileName}.png`}
+        alt={name}
+        className={cn(sizeClass, 'object-contain')}
+        onError={(e) => (e.target.style.display = 'none')}
+      />
+    </div>
+  )
 }
 
 /**
@@ -220,9 +231,9 @@ export default function PostContent({
         <div className="space-y-6 flex-1">
           <div className="flex flex-wrap items-center gap-3">
             <StatusBadge status={getPublishState(post)} />
-            <div className="flex flex-wrap gap-2">
+            <div className="flex items-center gap-1.5">
               {[].concat(post.platform || []).map((p) => (
-                <PlatformBadge key={p} platform={p} />
+                <PlatformIcon key={p} name={p} size="sm" />
               ))}
             </div>
           </div>
@@ -298,50 +309,41 @@ export default function PostContent({
             {post.platform_schedules && post.status !== 'PUBLISHED' && (
               <div className="space-y-2 pt-1">
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                  Platform Schedule
+                  Publish Plan
                 </p>
                 {Object.entries(post.platform_schedules).map(
-                  ([platformId, { scheduled_at, published_at }]) => {
-                    const config = PLATFORM_CONFIG[platformId]
-                    const Icon = config?.icon ?? Globe
-                    return (
-                      <div key={platformId} className="flex items-center gap-3">
-                        <div className="flex items-center gap-1.5 min-w-[120px]">
-                          <Icon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                          <span className="text-sm font-medium">
-                            {config?.label ?? platformId}
-                          </span>
-                        </div>
-                        <span className="text-sm text-muted-foreground">
-                          {format(new Date(scheduled_at), 'dd MMM, p')}
-                        </span>
-                        {published_at ? (
-                          <Badge
-                            variant="outline"
-                            className="gap-1 text-xs text-emerald-700 bg-emerald-50 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20"
-                          >
-                            <CheckCircle2 size={11} />
-                            Published
-                          </Badge>
-                        ) : post.status === 'SCHEDULED' ? (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="h-7 px-3 text-xs gap-1"
-                            disabled={!!publishingPlatformId}
-                            onClick={() => onPublishPlatform?.(platformId)}
-                          >
-                            {publishingPlatformId === platformId ? (
-                              <Loader2 size={11} className="animate-spin" />
-                            ) : (
-                              <Play size={11} />
-                            )}
-                            Publish
-                          </Button>
-                        ) : null}
-                      </div>
-                    )
-                  },
+                  ([platformId, { scheduled_at, published_at }]) => (
+                    <div
+                      key={platformId}
+                      className="flex items-center gap-3 py-1"
+                    >
+                      <PlatformIcon name={platformId} size="sm" />
+                      <span className="text-sm font-medium w-[110px] shrink-0">
+                        {PLATFORM_LABELS[platformId] ?? platformId}
+                      </span>
+                      <span className="text-sm text-muted-foreground flex-1">
+                        {format(new Date(scheduled_at), 'dd MMM yyyy, p')}
+                      </span>
+                      {published_at ? (
+                        <CheckCircle2 size={14} className="text-emerald-500 shrink-0" />
+                      ) : post.status === 'SCHEDULED' ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 px-3 text-xs gap-1 shrink-0"
+                          disabled={!!publishingPlatformId}
+                          onClick={() => onPublishPlatform?.(platformId)}
+                        >
+                          {publishingPlatformId === platformId ? (
+                            <Loader2 size={11} className="animate-spin" />
+                          ) : (
+                            <Play size={11} />
+                          )}
+                          Publish
+                        </Button>
+                      ) : null}
+                    </div>
+                  ),
                 )}
               </div>
             )}
@@ -578,7 +580,7 @@ export default function PostContent({
       </div>
 
       <p className="text-base text-muted-foreground leading-relaxed max-w-4xl whitespace-pre-wrap">
-        {post.content}
+        {renderCaption(post.content)}
       </p>
 
       {/* Media Dialogs (Preview & Delete) */}

@@ -8,13 +8,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { Card, CardContent } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 import { format, parseISO } from 'date-fns'
 
 const STATUS_STYLES = {
-  Active:
-    'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
-  Completed: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+  Active: 'bg-emerald-500/15 text-emerald-700',
+  Completed: 'bg-blue-500/15 text-blue-700',
   Archived: 'bg-muted text-muted-foreground',
 }
 
@@ -32,7 +32,7 @@ const StatItem = ({ count, label, colorClass }) => {
     <div className="flex items-center gap-2 shrink-0">
       <div className={`size-2 rounded-full ${colorClass}`} />
       <div className="flex items-baseline gap-1.5">
-        <span className="text-sm font-bold dark:text-white leading-none">
+        <span className="text-sm font-bold text-foreground leading-none">
           {count}
         </span>
         <span className="text-xs text-muted-foreground font-medium">
@@ -49,7 +49,10 @@ const CircularProgress = ({ progress, size = 32, strokeWidth = 3 }) => {
   const offset = circumference - (progress / 100) * circumference
 
   return (
-    <div className="relative flex items-center justify-center shrink-0" style={{ width: size, height: size }}>
+    <div
+      className="relative flex items-center justify-center shrink-0"
+      style={{ width: size, height: size }}
+    >
       <svg className="-rotate-90" width={size} height={size}>
         {/* Background circle */}
         <circle
@@ -63,7 +66,7 @@ const CircularProgress = ({ progress, size = 32, strokeWidth = 3 }) => {
         />
         {/* Progress circle */}
         <circle
-          className="text-primary transition-all duration-500 ease-in-out"
+          className="text-emerald-500 transition-all duration-500 ease-in-out"
           stroke="currentColor"
           strokeWidth={strokeWidth}
           strokeDasharray={circumference}
@@ -75,7 +78,6 @@ const CircularProgress = ({ progress, size = 32, strokeWidth = 3 }) => {
           cy={size / 2}
         />
       </svg>
-      <span className="absolute text-[10px] font-bold">{progress}%</span>
     </div>
   )
 }
@@ -129,26 +131,17 @@ export function CampaignCard({
   const hasPipelineData = pipelineCounts.length > 0 || published_count > 0
 
   return (
-    <div
-      className="rounded-2xl border border-border/60 bg-card/50 p-6 flex flex-col h-full hover:border-border transition-colors cursor-pointer shadow-sm"
+    <Card
+      className="rounded-2xl border border-border/60 py-0 bg-card/50 h-full hover:border-border cursor-pointer shadow-sm flex flex-col"
       onClick={() => navigate(`/campaigns/${id}`)}
     >
-      {/* Header */}
-      <div className="flex items-start justify-between gap-3 mb-6">
-        <div className="flex flex-col gap-2 min-w-0">
-          <h3 className="text-lg font-semibold truncate">{name}</h3>
-          {description && (
-            <p className="text-sm text-muted-foreground line-clamp-2">
-              {description}
-            </p>
-          )}
-        </div>
-
-        <div
-          className="flex items-center gap-3 shrink-0"
-          onClick={(e) => e.stopPropagation()}
-        >
-          {total_posts > 0 && <CircularProgress progress={progress} />}
+    <CardContent className="p-6 flex flex-col flex-1 min-w-0">
+      {/* Row 1: Status + Progress (left) | Menu (right) */}
+      <div
+        className="flex items-center justify-between mb-4"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center gap-2.5">
           <span
             className={cn(
               'px-2.5 py-0.5 rounded-full text-xs font-medium',
@@ -157,73 +150,68 @@ export function CampaignCard({
           >
             {status}
           </span>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7 text-muted-foreground hover:text-foreground -mr-2"
-              >
-                <MoreHorizontal className="size-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onEdit(campaign)
-                }}
-              >
-                Edit
-              </DropdownMenuItem>
-              {status === 'Active' && (
-                <DropdownMenuItem
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    onStatusChange(campaign, 'Completed')
-                  }}
-                >
-                  Mark Complete
-                </DropdownMenuItem>
-              )}
-              {(status === 'Active' || status === 'Completed') && (
-                <DropdownMenuItem
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    onStatusChange(campaign, 'Archived')
-                  }}
-                >
-                  Archive
-                </DropdownMenuItem>
-              )}
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                className="text-destructive focus:text-destructive"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onDelete(campaign)
-                }}
-              >
-                Delete
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {total_posts > 0 && (
+            <CircularProgress progress={progress} size={22} strokeWidth={2.5} />
+          )}
         </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 text-muted-foreground hover:text-foreground -mr-2"
+            >
+              <MoreHorizontal className="size-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem
+              onClick={(e) => {
+                e.stopPropagation()
+                onEdit(campaign)
+              }}
+            >
+              Edit
+            </DropdownMenuItem>
+            {status === 'Active' && (
+              <DropdownMenuItem
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onStatusChange(campaign, 'Completed')
+                }}
+              >
+                Mark Complete
+              </DropdownMenuItem>
+            )}
+            {(status === 'Active' || status === 'Completed') && (
+              <DropdownMenuItem
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onStatusChange(campaign, 'Archived')
+                }}
+              >
+                Archive
+              </DropdownMenuItem>
+            )}
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              className="text-destructive focus:text-destructive"
+              onClick={(e) => {
+                e.stopPropagation()
+                onDelete(campaign)
+              }}
+            >
+              Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
-      <div className="flex-1" />
 
-      {/* Goal */}
-      {goal && (
-        <div className="flex items-center gap-2 text-foreground/80 mb-6">
-          <Target className="size-4 shrink-0" />
-          <span className="text-xs line-clamp-1" title={goal}>
-            {goal}
-          </span>
-        </div>
-      )}
+      {/* Row 2: Title */}
+      <h3 className="text-lg font-semibold line-clamp-2 mb-5">{name}</h3>
 
       {/* Pipeline Stats */}
-      <div className="min-w-0 mb-6">
+      <div className="min-w-0 mb-5">
         {hasPipelineData ? (
           <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
             {pipelineCounts.map((c) => (
@@ -236,33 +224,33 @@ export function CampaignCard({
             ))}
           </div>
         ) : (
-          <div className="flex items-center gap-2">
-            <div className="size-1.5 rounded-full bg-muted-foreground/20" />
-            <span className="text-xs italic text-muted-foreground/50 tracking-wide">
-              No active pipeline workflow
-            </span>
-          </div>
-        )}
-
-        {/* Progress bar */}
-        {total_posts > 0 && (
-          <div className="space-y-2 mt-6" data-testid="progress-bar">
-            <div className="flex justify-between text-xs text-muted-foreground">
-              <span>Progress</span>
-              <span>{progress}%</span>
-            </div>
-            <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-              <div
-                className="h-full bg-primary rounded-full transition-all"
-                style={{ width: `${progress}%` }}
-              />
-            </div>
-          </div>
+          <span className="text-xs italic text-muted-foreground/50 tracking-wide">
+            No active pipeline workflow
+          </span>
         )}
       </div>
 
+      {/* Goal */}
+      {goal && (
+        <div className="flex items-center gap-2 text-foreground/80 mb-4">
+          <Target className="size-4 shrink-0" />
+          <span className="text-xs line-clamp-1" title={goal}>
+            {goal}
+          </span>
+        </div>
+      )}
+
+      {/* Description */}
+      {description && (
+        <p className="text-sm text-muted-foreground line-clamp-2 mb-4">
+          {description}
+        </p>
+      )}
+
+      <div className="flex-1" />
+
       {/* Footer */}
-      <div className="flex items-center justify-between pt-6 border-t border-dashed border-gray-100 dark:border-white/5 mt-auto min-w-0">
+      <div className="flex items-center justify-between pt-5 border-t border-dashed border-border/50 mt-auto min-w-0">
         {/* Client Info */}
         <div className="flex items-center min-w-0">
           {showClient && client_name && (
@@ -291,6 +279,7 @@ export function CampaignCard({
           <span>{formatDateRange(start_date, end_date)}</span>
         </div>
       </div>
-    </div>
+    </CardContent>
+    </Card>
   )
 }

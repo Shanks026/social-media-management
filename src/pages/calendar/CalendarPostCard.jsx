@@ -28,7 +28,7 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import { getUrgencyStatus } from '@/lib/client-helpers'
-import { getPublishState } from '@/lib/helper'
+import { getPublishState, renderCaption } from '@/lib/helper'
 import StatusBadge from '@/components/StatusBadge'
 import {
   Dialog,
@@ -456,7 +456,7 @@ export function CalendarPostCard({ post, onEdit }) {
 
         {/* Description */}
         <p className="text-sm text-muted-foreground leading-relaxed line-clamp-2 mb-6">
-          {post.content || 'No description provided.'}
+          {renderCaption(post.content)}
         </p>
 
         {/* Dotted Divider & Footer */}

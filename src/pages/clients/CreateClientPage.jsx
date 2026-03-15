@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createClient, updateClient, fetchClientById } from '@/api/clients'
 import { supabase } from '@/lib/supabase'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useOutletContext } from 'react-router-dom'
 
 // UI Components
 import { Button } from '@/components/ui/button'
@@ -87,6 +87,7 @@ export default function CreateClientPage({
   const { setHeader } = useHeader()
   const queryClient = useQueryClient()
   const { user } = useAuth()
+  const { refreshAgency } = useOutletContext() || {}
   const fileInputRef = useRef(null)
 
   const [isUploading, setIsUploading] = useState(false)
@@ -207,7 +208,7 @@ export default function CreateClientPage({
         ? updateClient(clientId, cleanValues) // Uses clientId from useParams
         : createClient({ ...cleanValues, user_id: user?.id })
     },
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       if (onSuccess) {
         onSuccess(data)
         return
@@ -216,6 +217,23 @@ export default function CreateClientPage({
       queryClient.invalidateQueries({ queryKey: ['subscription'] })
       if (clientId)
         queryClient.invalidateQueries({ queryKey: ['client', clientId] })
+
+      // When editing the internal (agency) client, keep agency_subscriptions in sync
+      // so the sidebar name/logo and settings page reflect the changes immediately.
+      if (data?.is_internal) {
+        queryClient.invalidateQueries({ queryKey: ['internal-client'] })
+        const { error: syncError } = await supabase
+          .from('agency_subscriptions')
+          .update({
+            agency_name: data.name,
+            logo_url: data.logo_url ?? null,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('user_id', user?.id)
+        if (syncError) console.error('Failed to sync agency branding:', syncError)
+        if (refreshAgency) await refreshAgency()
+      }
+
       toast.success(isEditMode ? 'Client updated' : 'Client onboarded')
       navigate(isEditMode ? `/clients/${clientId}` : '/clients')
     },
