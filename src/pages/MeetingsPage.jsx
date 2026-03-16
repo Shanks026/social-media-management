@@ -10,6 +10,8 @@ import {
   Trash2,
   Search,
   Link as LinkIcon,
+  CheckCircle2,
+  RotateCcw,
 } from 'lucide-react'
 import { format, isPast } from 'date-fns'
 import { toast } from 'sonner'
@@ -38,7 +40,7 @@ import {
 
 import { useHeader } from '@/components/misc/header-context'
 import { useClients } from '@/api/clients'
-import { fetchMeetings, deleteMeeting } from '@/api/meetings'
+import { fetchMeetings, deleteMeeting, markMeetingCompleted, unmarkMeetingCompleted } from '@/api/meetings'
 import CreateMeetingDialog from '@/components/CreateMeetingDialog'
 import { ClientAvatar } from '@/components/NoteRow'
 import {
@@ -62,6 +64,7 @@ const STATUS_TABS = [
   { key: 'ALL', label: 'All' },
   { key: 'UPCOMING', label: 'Upcoming' },
   { key: 'PAST', label: 'Past' },
+  { key: 'COMPLETED', label: 'Completed' },
 ]
 
 // ─── Meeting Card ──────────────────────────────────────────────────────────────
@@ -73,9 +76,7 @@ function MeetingCard({ meeting, clientMap }) {
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ['global-meetings'] })
-    queryClient.invalidateQueries({
-      queryKey: ['meetings'],
-    })
+    queryClient.invalidateQueries({ queryKey: ['meetings'] })
   }
 
   const { mutate: remove, isPending: isDeleting } = useMutation({
@@ -87,7 +88,26 @@ function MeetingCard({ meeting, clientMap }) {
     onError: (err) => toast.error('Failed to delete meeting: ' + err.message),
   })
 
-  const isBusy = isDeleting
+  const { mutate: markDone, isPending: isMarkingDone } = useMutation({
+    mutationFn: () => markMeetingCompleted(meeting.id),
+    onSuccess: () => {
+      invalidate()
+      toast.success('Meeting marked as completed')
+    },
+    onError: (err) => toast.error('Failed to update meeting: ' + err.message),
+  })
+
+  const { mutate: unmarkDone, isPending: isUnmarkingDone } = useMutation({
+    mutationFn: () => unmarkMeetingCompleted(meeting.id),
+    onSuccess: () => {
+      invalidate()
+      toast.success('Meeting restored')
+    },
+    onError: (err) => toast.error('Failed to update meeting: ' + err.message),
+  })
+
+  const isBusy = isDeleting || isMarkingDone || isUnmarkingDone
+  const isCompleted = Boolean(meeting.completed_at)
   const isMeetingPast = isPast(new Date(meeting.datetime))
   const client = clientMap[meeting.client_id]
 
@@ -100,7 +120,8 @@ function MeetingCard({ meeting, clientMap }) {
       <div
         className={cn(
           'group flex flex-col bg-card/50 rounded-xl shadow-sm ring-1 ring-border/50 overflow-hidden transition-all hover:shadow-md',
-          isMeetingPast && 'opacity-60',
+          (isMeetingPast && !isCompleted) && 'opacity-60',
+          isCompleted && 'opacity-50',
         )}
       >
         <div className="px-5 pt-5 pb-4 flex flex-col flex-1">
@@ -120,7 +141,8 @@ function MeetingCard({ meeting, clientMap }) {
                 <p
                   className={cn(
                     'text-sm font-semibold leading-snug line-clamp-2',
-                    isMeetingPast && 'text-muted-foreground',
+                    (isMeetingPast || isCompleted) && 'text-muted-foreground',
+                    isCompleted && 'line-through',
                   )}
                 >
                   {meeting.title}
@@ -129,12 +151,14 @@ function MeetingCard({ meeting, clientMap }) {
                   variant="outline"
                   className={cn(
                     'text-[10px] px-2 py-0.5 shrink-0 font-medium border-transparent mt-0.5',
-                    isMeetingPast
-                      ? 'bg-muted text-muted-foreground'
-                      : 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
+                    isCompleted
+                      ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400'
+                      : isMeetingPast
+                        ? 'bg-muted text-muted-foreground'
+                        : 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
                   )}
                 >
-                  {isMeetingPast ? 'Past' : 'Upcoming'}
+                  {isCompleted ? 'Completed' : isMeetingPast ? 'Past' : 'Upcoming'}
                 </Badge>
               </div>
 
@@ -209,6 +233,29 @@ function MeetingCard({ meeting, clientMap }) {
 
         {/* ── Actions ── */}
         <div className="flex items-center gap-1 px-4 py-2.5 border-t border-border/40 bg-muted/20">
+          {isCompleted ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2 text-xs text-muted-foreground hover:text-primary gap-1.5"
+              onClick={() => unmarkDone()}
+              disabled={isBusy}
+            >
+              <RotateCcw className="size-3.5" /> Restore
+            </Button>
+          ) : (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2 text-xs text-muted-foreground hover:text-emerald-600 gap-1.5"
+              onClick={() => markDone()}
+              disabled={isBusy}
+              title="Mark as done"
+            >
+              <CheckCircle2 className="size-3.5" /> Mark as Done
+            </Button>
+          )}
+
           <div className="flex-1" />
 
           <Button
@@ -216,7 +263,7 @@ function MeetingCard({ meeting, clientMap }) {
             size="icon"
             className="size-7 text-muted-foreground hover:text-primary"
             onClick={() => setEditOpen(true)}
-            disabled={isBusy}
+            disabled={isBusy || isCompleted}
             title="Edit"
           >
             <Pencil className="size-3.5" />
@@ -334,9 +381,12 @@ export default function MeetingsPage() {
 
   const filteredMeetings = useMemo(() => {
     return allMeetings.filter((meeting) => {
+      const isCompleted = Boolean(meeting.completed_at)
       const isMeetingPast = isPast(new Date(meeting.datetime))
-      if (statusTab === 'UPCOMING' && isMeetingPast) return false
-      if (statusTab === 'PAST' && !isMeetingPast) return false
+
+      if (statusTab === 'COMPLETED' && !isCompleted) return false
+      if (statusTab === 'UPCOMING' && (isCompleted || isMeetingPast)) return false
+      if (statusTab === 'PAST' && (isCompleted || !isMeetingPast)) return false
 
       if (search.trim()) {
         const query = search.toLowerCase()
@@ -349,12 +399,15 @@ export default function MeetingsPage() {
     })
   }, [allMeetings, statusTab, search])
 
-  const { upcomingMeetings, pastMeetings } = useMemo(() => {
+  const { upcomingMeetings, pastMeetings, completedMeetings } = useMemo(() => {
     const upcoming = []
     const past = []
+    const completed = []
 
     filteredMeetings.forEach((meeting) => {
-      if (isPast(new Date(meeting.datetime))) {
+      if (meeting.completed_at) {
+        completed.push(meeting)
+      } else if (isPast(new Date(meeting.datetime))) {
         past.push(meeting)
       } else {
         upcoming.push(meeting)
@@ -369,21 +422,28 @@ export default function MeetingsPage() {
     past.sort(
       (a, b) => new Date(b.datetime).getTime() - new Date(a.datetime).getTime(),
     )
+    // Sort completed descending (most recently completed first)
+    completed.sort(
+      (a, b) => new Date(b.completed_at).getTime() - new Date(a.completed_at).getTime(),
+    )
 
-    return { upcomingMeetings: upcoming, pastMeetings: past }
+    return { upcomingMeetings: upcoming, pastMeetings: past, completedMeetings: completed }
   }, [filteredMeetings])
 
   const counts = useMemo(() => {
     let upcoming = 0
     let past = 0
+    let completed = 0
     allMeetings.forEach((meeting) => {
-      if (isPast(new Date(meeting.datetime))) past++
+      if (meeting.completed_at) completed++
+      else if (isPast(new Date(meeting.datetime))) past++
       else upcoming++
     })
     return {
       ALL: allMeetings.length,
       UPCOMING: upcoming,
       PAST: past,
+      COMPLETED: completed,
     }
   }, [allMeetings])
 
@@ -585,6 +645,14 @@ export default function MeetingsPage() {
               <MeetingsGroup
                 title={`Past · ${pastMeetings.length}`}
                 meetings={pastMeetings}
+                clientMap={clientMap}
+              />
+            )}
+          {(statusTab === 'ALL' || statusTab === 'COMPLETED') &&
+            completedMeetings.length > 0 && (
+              <MeetingsGroup
+                title={`Completed · ${completedMeetings.length}`}
+                meetings={completedMeetings}
                 clientMap={clientMap}
               />
             )}

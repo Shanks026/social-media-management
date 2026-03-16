@@ -94,7 +94,7 @@ export default function DocumentsPage() {
   // ── Filters ───────────────────────────────────────────────────────────────────
   const [selectedClientId, setSelectedClientId] = useState('all')
   const [selectedCategory, setSelectedCategory] = useState('all')
-  const [selectedStatus, setSelectedStatus] = useState('Active')
+  const [selectedStatus, setSelectedStatus] = useState('all')
   const [searchRaw, setSearchRaw] = useState('')
   const [search, setSearch] = useState('')
 
@@ -109,13 +109,13 @@ export default function DocumentsPage() {
   const isFilterActive =
     selectedClientId !== 'all' ||
     selectedCategory !== 'all' ||
-    selectedStatus !== 'Active' ||
+    selectedStatus !== 'all' ||
     search !== ''
 
   function clearFilters() {
     setSelectedClientId('all')
     setSelectedCategory('all')
-    setSelectedStatus('Active')
+    setSelectedStatus('all')
     setSearchRaw('')
     setSearch('')
   }
@@ -148,6 +148,8 @@ export default function DocumentsPage() {
       return false
     return true
   })
+
+  const archivedCount = (documents ?? []).filter((d) => d.status === 'Archived').length
 
   const ungroupedDocs = filteredDocs.filter((d) => !d.collection_id)
 
@@ -432,22 +434,38 @@ export default function DocumentsPage() {
                         <EmptyHeader>
                           <EmptyTitle className="font-normal text-xl">
                             {isFilterActive
-                              ? 'No documents match your filters'
-                              : 'No documents yet'}
+                              ? selectedStatus === 'Active' || selectedStatus === 'all'
+                                ? 'No documents match your filters'
+                                : 'No archived documents'
+                              : 'No active documents'}
                           </EmptyTitle>
                           <EmptyDescription className="font-light">
                             {isFilterActive
-                              ? "Adjust your filters to find what you're looking for."
-                              : 'Upload a contract, brief, or brand asset to keep everything in one place.'}
+                              ? selectedStatus === 'Archived'
+                                ? 'No documents have been archived yet.'
+                                : "Adjust your filters to find what you're looking for."
+                              : archivedCount > 0
+                                ? `You have ${archivedCount} archived document${archivedCount !== 1 ? 's' : ''}.`
+                                : 'Upload a contract, brief, or brand asset to keep everything in one place.'}
                           </EmptyDescription>
                         </EmptyHeader>
-                        {isFilterActive && (
+                        {isFilterActive && selectedStatus !== 'Archived' && (
                           <Button
                             variant="link"
                             onClick={clearFilters}
                             className="text-primary font-medium"
                           >
                             Clear all filters
+                          </Button>
+                        )}
+                        {!isFilterActive && archivedCount > 0 && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setSelectedStatus('Archived')}
+                            className="mt-2"
+                          >
+                            View archived ({archivedCount})
                           </Button>
                         )}
                       </EmptyContent>

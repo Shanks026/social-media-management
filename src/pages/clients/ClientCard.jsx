@@ -137,7 +137,7 @@ function ClientCard({ client, onOpen, onDelete }) {
                 </h3>
                 <TierBadge tier={client.tier} />
               </div>
-              <div className="mt-2">
+              <div className="mt-1">
                 <IndustryBadge industryValue={client.industry} />
               </div>
             </div>

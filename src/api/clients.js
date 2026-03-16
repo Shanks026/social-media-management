@@ -132,11 +132,18 @@ export const updateClient = async (id, data) => {
   return result
 }
 /**
- * Delete a client, their history, and all associated media
+ * Delete a client and all associated data and storage files.
+ * DB cascade handles: posts, post_versions, campaigns, meetings, notes,
+ *   invoices, recurring_invoices, client_documents, document_collections,
+ *   proposals, approvals, schedules, client_users.
+ * Transactions/expenses keep their rows but client_id is set to NULL.
+ * This function additionally cleans up storage files before deletion.
  */
 export async function deleteClient(clientId) {
   try {
-    // 1. Fetch the Client's logo_url directly
+    const { workspaceUserId } = await resolveWorkspace()
+
+    // 1. Fetch the client logo URL
     const { data: client, error: clientError } = await supabase
       .from('clients')
       .select('logo_url')
@@ -145,51 +152,68 @@ export async function deleteClient(clientId) {
 
     if (clientError) throw clientError
 
-    // 2. Fetch all media URLs from all post versions for this client
+    // 2. Fetch all post-media URLs from every post version for this client
     const { data: versions, error: fetchError } = await supabase
       .from('post_versions')
-      .select(
-        `
-        media_urls, 
-        posts!post_versions_post_id_fkey!inner(client_id)
-      `,
-      )
+      .select('media_urls, posts!post_versions_post_id_fkey!inner(client_id)')
       .eq('posts.client_id', clientId)
 
     if (fetchError) throw fetchError
 
-    // 3. Collect ALL URLs into a single array
-    const allUrls = versions?.flatMap((v) => v.media_urls || []) || []
+    // 3. Fetch all document storage paths and sizes for this client
+    const { data: docs, error: docsError } = await supabase
+      .from('client_documents')
+      .select('storage_path, file_size_bytes')
+      .eq('client_id', clientId)
 
-    // Add the logo_url to the deletion queue if it exists
-    if (client.logo_url) {
-      allUrls.push(client.logo_url)
-    }
+    if (docsError) throw docsError
 
-    // 4. Convert URLs to unique storage paths
-    const uniquePaths = [...new Set(allUrls.map(getPathFromUrl))].filter(
-      Boolean,
-    )
+    // 4. Build post-media storage paths
+    const postMediaUrls = versions?.flatMap((v) => v.media_urls || []) || []
+    if (client.logo_url) postMediaUrls.push(client.logo_url)
 
-    // 5. Cleanup Storage Bucket (branding/ folder and post assets)
-    if (uniquePaths.length > 0) {
+    const postMediaPaths = [...new Set(postMediaUrls.map(getPathFromUrl))].filter(Boolean)
+
+    // 5. Build document storage paths and total size
+    const documentPaths = (docs || []).map((d) => d.storage_path).filter(Boolean)
+    const totalDocBytes = (docs || []).reduce((sum, d) => sum + (d.file_size_bytes || 0), 0)
+
+    // 6. Delete post-media files
+    if (postMediaPaths.length > 0) {
       const { error: storageError } = await supabase.storage
         .from('post-media')
-        .remove(uniquePaths)
+        .remove(postMediaPaths)
 
       if (storageError) {
-        console.error(
-          'Storage cleanup failed during client deletion:',
-          storageError,
-        )
+        console.error('post-media cleanup failed during client deletion:', storageError)
       } else {
-        console.log(
-          `Successfully removed ${uniquePaths.length} assets from storage.`,
-        )
+        console.log(`Removed ${postMediaPaths.length} post-media files.`)
       }
     }
 
-    // 6. Delete Client row (Cascade handles posts and versions)
+    // 7. Delete document files and decrement storage counter
+    if (documentPaths.length > 0) {
+      const { error: docStorageError } = await supabase.storage
+        .from('client-documents')
+        .remove(documentPaths)
+
+      if (docStorageError) {
+        console.error('client-documents cleanup failed during client deletion:', docStorageError)
+      } else {
+        console.log(`Removed ${documentPaths.length} document files.`)
+      }
+    }
+
+    // Decrement storage counter for all deleted documents (even if storage removal errored,
+    // the DB rows will be cascade-deleted so the bytes are gone from the user's perspective)
+    if (totalDocBytes > 0) {
+      await supabase.rpc('decrement_storage_used', {
+        p_user_id: workspaceUserId,
+        p_bytes: totalDocBytes,
+      }).throwOnError()
+    }
+
+    // 8. Delete the client row — DB cascade handles all child records
     const { error: dbError } = await supabase
       .from('clients')
       .delete()
