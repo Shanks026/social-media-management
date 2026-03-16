@@ -245,6 +245,28 @@ export default function PostDetails() {
     },
   })
 
+  const resendApprovalLinkMutation = useMutation({
+    mutationFn: async () => {
+      if (!post?.clients?.email) throw new Error('Client email not found')
+      // Deactivate all existing tokens so old email links become invalid
+      await supabase
+        .from('share_tokens')
+        .update({ is_active: false })
+        .eq('post_version_id', post.id)
+      // Edge function calls generate_version_token internally → creates fresh active token
+      const { error } = await supabase.functions.invoke('send-approval-email', {
+        body: { record: { ...post, status: 'PENDING_APPROVAL' } },
+      })
+      if (error) throw error
+    },
+    onSuccess: () => {
+      toast.success(`Approval link resent to ${post.clients.email}`)
+    },
+    onError: (err) => {
+      toast.error(err.message || 'Failed to resend approval link')
+    },
+  })
+
   const handleRefresh = () => {
     queryClient.invalidateQueries({ queryKey: ['post-version', postId] })
     toast.success('Status refreshed')
@@ -296,6 +318,8 @@ export default function PostDetails() {
         onCreateRevision={() => setIsRevisionConfirmOpen(true)}
         onEdit={() => setIsEditOpen(true)}
         onDelete={() => setIsDeleteConfirmOpen(true)}
+        onResendLink={() => resendApprovalLinkMutation.mutate()}
+        isResendingLink={resendApprovalLinkMutation.isPending}
         onRefresh={handleRefresh}
         isRevisionPending={createRevisionMutation.isPending}
         isApprovalPending={sendForApprovalMutation.isPending}

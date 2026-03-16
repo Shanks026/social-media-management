@@ -18,6 +18,7 @@ import {
   AlertTriangle,
   FolderOpen,
   Megaphone,
+  Plus,
 } from 'lucide-react'
 import {
   Tooltip,
@@ -47,7 +48,8 @@ import {
 import { useAuth } from '@/context/AuthContext'
 import { useQueryClient, useMutation } from '@tanstack/react-query'
 import { deleteMeeting } from '@/api/meetings'
-import { deletePost } from '@/api/posts'
+import { deletePost, createRevision } from '@/api/posts'
+import DraftPostForm from '@/pages/posts/DraftPostForm'
 import { toast } from 'sonner'
 import { AssignCampaignDialog } from '@/components/campaigns/AssignCampaignDialog'
 import { useSubscription } from '@/api/useSubscription'
@@ -137,15 +139,31 @@ const PlatformIcon = ({ name }) => {
   )
 }
 
-export function CalendarPostCard({ post, onEdit }) {
+export function CalendarPostCard({ post }) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const { user } = useAuth()
   const [isPreviewOpen, setIsPreviewOpen] = useState(false)
   const [activeImageIndex, setActiveImageIndex] = useState(0)
   const [postToDelete, setPostToDelete] = useState(null)
+  const [editingPost, setEditingPost] = useState(null)
   const [assignCampaignOpen, setAssignCampaignOpen] = useState(false)
 
   const { data: sub } = useSubscription()
+
+  const createRevisionMutation = useMutation({
+    mutationFn: () => createRevision(post.version_id, user?.id),
+    onSuccess: (newVersionId) => {
+      queryClient.invalidateQueries({ queryKey: ['draft-posts', post.client_id] })
+      queryClient.invalidateQueries({ queryKey: ['global-posts'] })
+      queryClient.invalidateQueries({ queryKey: ['global-calendar'] })
+      toast.success('New version created')
+      navigate(`/clients/${post.client_id}/posts/${newVersionId}`)
+    },
+    onError: (err) => {
+      toast.error(err.message || 'Failed to create new version')
+    },
+  })
 
   const { mutate: handleDeleteMeeting, isPending: isDeletingMeeting } =
     useMutation({
@@ -321,9 +339,10 @@ export function CalendarPostCard({ post, onEdit }) {
 
   // Status mapping
   const postStatus = post.status || 'DRAFT'
-  // Determine action visibility
-  // Edit is allowed for: DRAFT, PENDING_APPROVAL, NEEDS_REVISION, SCHEDULED
-  const canEdit = ['DRAFT', 'PENDING_APPROVAL', 'NEEDS_REVISION', 'SCHEDULED'].includes(postStatus)
+  // Only DRAFT and PENDING_APPROVAL are directly editable
+  const canEdit = ['DRAFT', 'PENDING_APPROVAL'].includes(postStatus)
+  // NEEDS_REVISION creates a new version
+  const canCreateNewVersion = postStatus === 'NEEDS_REVISION'
   // Delete is allowed for EVERYTHING EXCEPT PUBLISHED
   const canDelete = postStatus !== 'PUBLISHED'
 
@@ -376,60 +395,62 @@ export function CalendarPostCard({ post, onEdit }) {
             </div>
 
             {/* Dropdown Menu for Actions */}
-            {(canEdit || canDelete) && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 text-muted-foreground hover:bg-muted"
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-muted-foreground hover:bg-muted"
+                >
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48 rounded-xl">
+                <DropdownMenuItem
+                  disabled={!canEdit}
+                  className="cursor-pointer font-medium text-foreground py-2"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setEditingPost(post)
+                  }}
+                >
+                  <Edit2 className="h-4 w-4 mr-2" /> Edit Post
+                </DropdownMenuItem>
+                {canCreateNewVersion && (
+                  <DropdownMenuItem
+                    disabled={createRevisionMutation.isPending}
+                    className="cursor-pointer font-medium text-foreground py-2"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      createRevisionMutation.mutate()
+                    }}
                   >
-                    <MoreVertical className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-40 rounded-xl">
-                  {canEdit && (
-                    <DropdownMenuItem
-                      className="cursor-pointer font-medium text-foreground py-2"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        if (onEdit) {
-                          onEdit(post)
-                        } else {
-                          navigate(
-                            `/clients/${post.client_id}/posts/${post.version_id}`
-                          )
-                        }
-                      }}
-                    >
-                      <Edit2 className="h-4 w-4 mr-2" /> Edit Post
-                    </DropdownMenuItem>
-                  )}
-                  {sub?.campaigns && (
-                    <DropdownMenuItem
-                      className="cursor-pointer font-medium text-foreground py-2"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        setAssignCampaignOpen(true)
-                      }}
-                    >
-                      <FolderOpen className="h-4 w-4 mr-2 text-muted-foreground" /> Assign to Campaign
-                    </DropdownMenuItem>
-                  )}
-                  {canDelete && (
-                    <DropdownMenuItem
-                      className="cursor-pointer font-medium text-destructive focus:bg-destructive/10 focus:text-destructive py-2"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        setPostToDelete(post)
-                      }}
-                    >
-                      <Trash2 className="h-4 w-4 mr-2" /> Delete Post
-                    </DropdownMenuItem>
-                  )}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
+                    <Plus className="h-4 w-4 mr-2" /> Create New Version
+                  </DropdownMenuItem>
+                )}
+                {sub?.campaigns && (
+                  <DropdownMenuItem
+                    className="cursor-pointer font-medium text-foreground py-2"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setAssignCampaignOpen(true)
+                    }}
+                  >
+                    <FolderOpen className="h-4 w-4 mr-2 text-muted-foreground" /> Assign to Campaign
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem
+                  disabled={!canDelete}
+                  className="cursor-pointer font-medium text-destructive focus:bg-destructive/10 focus:text-destructive py-2"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setPostToDelete(post)
+                  }}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" /> Delete Post
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
 
@@ -524,7 +545,15 @@ export function CalendarPostCard({ post, onEdit }) {
         </div>
       </div>
 
-      {/* 2. The Dialog: Sibling to the Card, NOT a child */}
+      {/* 2. Edit Post Dialog */}
+      <DraftPostForm
+        clientId={editingPost?.client_id}
+        open={!!editingPost}
+        onOpenChange={(open) => !open && setEditingPost(null)}
+        initialData={editingPost ? { ...editingPost, platform: editingPost.platforms } : null}
+      />
+
+      {/* 3. Media Preview Dialog */}
       <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
         <DialogContent
           className="max-w-[85vw] sm:max-w-[85vw] md:max-w-[85vw] w-[85vw] h-[85vh] p-0 bg-transparent border-none shadow-none focus:outline-none flex items-center justify-center"
@@ -567,7 +596,7 @@ export function CalendarPostCard({ post, onEdit }) {
         </DialogContent>
       </Dialog>
 
-      {/* 3. Delete Confirmation Dialog */}
+      {/* 4. Delete Confirmation Dialog */}
       <Dialog
         open={!!postToDelete}
         onOpenChange={(open) => !open && setPostToDelete(null)}

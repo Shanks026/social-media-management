@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { fetchAllPostsByClient, deletePost } from '@/api/posts'
+import { fetchAllPostsByClient, deletePost, createRevision } from '@/api/posts'
 import StatusBadge from '@/components/StatusBadge'
 import {
   MoreVertical,
@@ -11,7 +11,6 @@ import {
   ChevronRight,
   AlertTriangle,
   Play,
-  Clock,
   FolderOpen,
   Megaphone,
   LayoutGrid,
@@ -49,6 +48,7 @@ import {
 } from '@/components/ui/empty'
 import { toast } from 'sonner'
 import { useNavigate } from 'react-router-dom'
+import { useAuth } from '@/context/AuthContext'
 import { cn } from '@/lib/utils'
 import { getUrgencyStatus } from '@/lib/client-helpers'
 import { getPublishState, renderCaption } from '@/lib/helper'
@@ -130,6 +130,7 @@ const PlatformIcon = ({ name }) => {
 export default function DraftPostList({ clientId, onCreatePost }) {
   const queryClient = useQueryClient()
   const navigate = useNavigate()
+  const { user } = useAuth()
 
   const [previewPost, setPreviewPost] = useState(null)
   const [postToDelete, setPostToDelete] = useState(null)
@@ -138,12 +139,25 @@ export default function DraftPostList({ clientId, onCreatePost }) {
   const [assignCampaignOpen, setAssignCampaignOpen] = useState(false)
   const [postToAssign, setPostToAssign] = useState(null)
 
-  // Status mapping rules
-  // DraftPostList actually only sees 'draft-posts' typically, but in case it sees others:
-  // Edit logic
-  const canEdit = (postStatus) => ['DRAFT', 'PENDING_APPROVAL', 'NEEDS_REVISION', 'SCHEDULED'].includes(postStatus)
-  // Delete logic
+  // Only DRAFT and PENDING_APPROVAL are directly editable
+  const canEdit = (postStatus) => ['DRAFT', 'PENDING_APPROVAL'].includes(postStatus)
+  // NEEDS_REVISION creates a new version
+  const canCreateNewVersion = (postStatus) => postStatus === 'NEEDS_REVISION'
+  // Delete is allowed for everything except PUBLISHED
   const canDelete = (postStatus) => postStatus !== 'PUBLISHED'
+
+  const createRevisionMutation = useMutation({
+    mutationFn: (post) => createRevision(post.version_id, user?.id),
+    onSuccess: (newVersionId, post) => {
+      queryClient.invalidateQueries({ queryKey: ['draft-posts', clientId] })
+      queryClient.invalidateQueries({ queryKey: ['global-posts'] })
+      toast.success('New version created')
+      navigate(`/clients/${clientId}/posts/${newVersionId}`)
+    },
+    onError: (err) => {
+      toast.error(err.message || 'Failed to create new version')
+    },
+  })
 
   const { data: sub } = useSubscription()
 
@@ -320,19 +334,27 @@ export default function DraftPostList({ clientId, onCreatePost }) {
                         <MoreVertical className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-40 rounded-xl">
-                      {/* Edit logic */}
-                      {canEdit(post.status || 'DRAFT') && (
+                    <DropdownMenuContent align="end" className="w-48 rounded-xl">
+                      <DropdownMenuItem
+                        disabled={!canEdit(post.status || 'DRAFT')}
+                        className="cursor-pointer font-medium text-foreground py-2"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setPostToEdit(post)
+                        }}
+                      >
+                        <Edit2 className="h-4 w-4 mr-2" /> Edit Post
+                      </DropdownMenuItem>
+                      {canCreateNewVersion(post.status) && (
                         <DropdownMenuItem
+                          disabled={createRevisionMutation.isPending}
                           className="cursor-pointer font-medium text-foreground py-2"
                           onClick={(e) => {
                             e.stopPropagation()
-                            navigate(
-                              `/clients/${clientId}/posts/${post.version_id}`,
-                            )
+                            createRevisionMutation.mutate(post)
                           }}
                         >
-                          <Edit2 className="h-4 w-4 mr-2" /> Edit Post
+                          <Plus className="h-4 w-4 mr-2" /> Create New Version
                         </DropdownMenuItem>
                       )}
                       
@@ -350,18 +372,16 @@ export default function DraftPostList({ clientId, onCreatePost }) {
                         </DropdownMenuItem>
                       )}
                       
-                      {/* Delete logic */}
-                      {canDelete(post.status || 'DRAFT') && (
-                        <DropdownMenuItem
-                          className="cursor-pointer font-medium text-destructive focus:bg-destructive/10 focus:text-destructive py-2"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            setPostToDelete(post)
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" /> Delete Post
-                        </DropdownMenuItem>
-                      )}
+                      <DropdownMenuItem
+                        disabled={!canDelete(post.status || 'DRAFT')}
+                        className="cursor-pointer font-medium text-destructive focus:bg-destructive/10 focus:text-destructive py-2"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setPostToDelete(post)
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" /> Delete Post
+                      </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>

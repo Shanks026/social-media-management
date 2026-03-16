@@ -221,13 +221,13 @@ export async function updatePost(
       platform_schedules: platformSchedules ?? null,
     })
     .eq('id', versionId)
-    .eq('status', 'DRAFT')
+    .in('status', ['DRAFT', 'PENDING_APPROVAL'])
     .select()
 
   if (error) throw error
 
   if (data?.length === 0) {
-    throw new Error('Update failed: Only drafts can be modified.')
+    throw new Error('Update failed: Only drafts and pending approval posts can be modified.')
   }
 
   // Update campaign_id on the posts row when postId is provided

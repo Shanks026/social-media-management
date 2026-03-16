@@ -64,6 +64,19 @@ import { useClients } from '@/api/clients'
 import { useCampaigns } from '@/api/campaigns'
 import { useSubscription } from '@/api/useSubscription'
 import { ClientAvatar } from '@/components/NoteRow'
+import { UrgencyFilter } from '@/pages/clients/ClientFilters'
+
+// ─── Post health ────────────────────────────────────────
+const TERMINAL_STATUSES = ['PUBLISHED', 'ARCHIVED']
+
+function getPostHealth(post) {
+  if (TERMINAL_STATUSES.includes(post.status)) return 'idle'
+  if (!post.target_date) return 'idle'
+  const diffHours = (new Date(post.target_date) - new Date()) / (1000 * 60 * 60)
+  if (diffHours < 24) return 'urgent'   // overdue or due within 24h
+  if (diffHours < 72) return 'upcoming' // due within 3 days
+  return 'idle'
+}
 
 // ─── Constants ──────────────────────────────────────────
 const PLATFORMS = [
@@ -121,9 +134,8 @@ export default function Posts() {
   // View mode
   const [viewMode, setViewMode] = useState('card') // 'card' | 'table'
 
-  // Create / edit post modal state
+  // Create post modal state
   const [isCreatePostOpen, setIsCreatePostOpen] = useState(false)
-  const [editingPost, setEditingPost] = useState(null)
 
   // Filter states
   const [search, setSearch] = useState('')
@@ -133,6 +145,7 @@ export default function Posts() {
   const [platform, setPlatform] = useState('all')
   const [dateRange, setDateRange] = useState({ from: undefined, to: undefined })
   const [selectedCampaign, setSelectedCampaign] = useState('all')
+  const [healthFilter, setHealthFilter] = useState('all')
 
   // Debounce search
   useEffect(() => {
@@ -176,12 +189,26 @@ export default function Posts() {
     })
   }, [setHeader])
 
+  // Health counts derived from the current fetched posts (respects all other filters)
+  const healthCounts = useMemo(() => {
+    const c = { all: posts.length, urgent: 0, upcoming: 0, idle: 0 }
+    posts.forEach((p) => { c[getPostHealth(p)]++ })
+    return c
+  }, [posts])
+
+  // Apply health filter client-side on top of server-side filters
+  const filteredPosts = useMemo(() => {
+    if (healthFilter === 'all') return posts
+    return posts.filter((p) => getPostHealth(p) === healthFilter)
+  }, [posts, healthFilter])
+
   const hasActiveFilters =
     search ||
     selectedClient !== 'all' ||
     platform !== 'all' ||
     dateRange.from ||
-    selectedCampaign !== 'all'
+    selectedCampaign !== 'all' ||
+    healthFilter !== 'all'
 
   const resetFilters = () => {
     setSearch('')
@@ -190,6 +217,7 @@ export default function Posts() {
     setPlatform('all')
     setDateRange({ from: undefined, to: undefined })
     setSelectedCampaign('all')
+    setHealthFilter('all')
   }
 
   // ─── Table columns ───────────────────────────
@@ -306,9 +334,9 @@ export default function Posts() {
         <div className="space-y-1">
           <h1 className="text-3xl font-normal tracking-tight text-foreground">
             Posts{' '}
-            {posts.length > 0 && (
+            {filteredPosts.length > 0 && (
               <span className="text-muted-foreground/50 ml-2 font-extralight">
-                {posts.length}
+                {filteredPosts.length}
               </span>
             )}
           </h1>
@@ -317,10 +345,17 @@ export default function Posts() {
           </p>
         </div>
 
-        <Button onClick={() => setIsCreatePostOpen(true)} className="gap-2 h-9">
-          <Plus size={16} />
-          New Post
-        </Button>
+        <div className="flex items-center gap-3">
+          <UrgencyFilter
+            activeValue={healthFilter}
+            onSelect={setHealthFilter}
+            counts={healthCounts}
+          />
+          <Button onClick={() => setIsCreatePostOpen(true)} className="gap-2 h-9">
+            <Plus size={16} />
+            New Post
+          </Button>
+        </div>
       </div>
 
       {/* ── Tabs ──────────────────────── */}
@@ -509,7 +544,7 @@ export default function Posts() {
       {viewMode === 'table' ? (
         <CustomTable
           columns={tableColumns}
-          data={posts}
+          data={filteredPosts}
           isLoading={isLoading}
           onRowClick={handleRowClick}
         />
@@ -531,7 +566,7 @@ export default function Posts() {
                 </div>
               ))}
             </div>
-          ) : posts.length === 0 ? (
+          ) : filteredPosts.length === 0 ? (
             <Empty className="py-20 border border-dashed rounded-2xl bg-muted/5">
               <EmptyContent>
                 <EmptyMedia variant="icon">
@@ -563,12 +598,9 @@ export default function Posts() {
             </Empty>
           ) : (
             <div className="grid gap-6 grid-cols-[repeat(auto-fill,minmax(350px,1fr))]">
-              {posts.map((post) => (
+              {filteredPosts.map((post) => (
                 <div key={post.id} className="relative">
-                  <CalendarPostCard
-                    post={post}
-                    onEdit={(p) => setEditingPost(p)}
-                  />
+                  <CalendarPostCard post={post} />
                 </div>
               ))}
             </div>
@@ -580,17 +612,6 @@ export default function Posts() {
         open={isCreatePostOpen}
         onOpenChange={setIsCreatePostOpen}
         availableClients={clientOptions}
-      />
-
-      <DraftPostForm
-        open={!!editingPost}
-        onOpenChange={(open) => !open && setEditingPost(null)}
-        clientId={editingPost?.client_id}
-        initialData={
-          editingPost
-            ? { ...editingPost, platform: editingPost.platforms }
-            : null
-        }
       />
     </div>
   )
