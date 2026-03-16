@@ -131,9 +131,10 @@ export default function DashboardMeetingsNotes() {
             ) : (
               <CreateNoteDialog
                 lockClient={false}
-                onSuccess={() =>
-                  queryClient.refetchQueries({ queryKey: ['global-notes'] })
-                }
+                onSuccess={() => {
+                  queryClient.invalidateQueries({ queryKey: ['global-notes'] })
+                  queryClient.invalidateQueries({ queryKey: ['notes', 'week-timeline'] })
+                }}
               >
                 <Button variant="ghost" size="icon" className="h-8 w-8">
                   <Plus className="h-4 w-4" />

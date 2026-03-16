@@ -8,27 +8,44 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog'
-import { CalendarDays, Globe, Megaphone } from 'lucide-react'
+import { CalendarDays, TrendingUp, Percent, Megaphone } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { getUrgencyStatus } from '@/lib/client-helpers'
 import IndustryBadge from './IndustryBadge'
 import TierBadge from '@/components/TierBadge'
+import { PlatformStack } from '@/components/PlatformIcon'
+import { useSubscription } from '@/api/useSubscription'
 
 
 const StatItem = ({ count, label, colorClass }) => {
   if (!count || count < 1) return null
   return (
-    <div className="flex items-center gap-2 shrink-0">
+    <div className="flex items-center gap-1.5 shrink-0">
       <div className={`size-2 rounded-full ${colorClass}`} />
-      <span className="text-sm font-semibold text-foreground leading-none">{count}</span>
-      <span className="text-xs text-muted-foreground">{label}</span>
+      <span className="text-xs font-semibold text-foreground leading-none">{count}</span>
+      <span className="text-xs text-muted-foreground/60">{label}</span>
     </div>
   )
 }
 
+const MetricItem = ({ label, icon: Icon, value, valueClass }) => (
+  <div className="flex flex-col gap-1.5">
+    <div className="flex items-center gap-1 leading-none">
+      {Icon && <Icon className="size-3 text-muted-foreground/60" />}
+      <span className="text-[10px] font-medium text-muted-foreground/60 capitalize leading-none">
+        {label}
+      </span>
+    </div>
+    <span className={`text-sm font-semibold leading-none ${valueClass ?? 'text-foreground'}`}>
+      {value}
+    </span>
+  </div>
+)
+
 function ClientCard({ client, onOpen, onDelete }) {
   const [deleteOpen, setDeleteOpen] = useState(false)
+  const { data: sub } = useSubscription()
 
   const platforms = client.platforms || []
   const pipeline = client.pipeline || {
@@ -54,6 +71,13 @@ function ClientCard({ client, onOpen, onDelete }) {
     : null
   const joinedDateFormatted = formatDate(client.created_at)
 
+  const formatMRR = (val) =>
+    new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      maximumFractionDigits: 0,
+    }).format(val)
+
   const initials = client.name
     ? client.name
         .split(' ')
@@ -69,18 +93,32 @@ function ClientCard({ client, onOpen, onDelete }) {
     pipeline.revisions > 0 ||
     pipeline.scheduled > 0
 
+  const showFinancials = !client.is_internal
+  const showCampaigns = !!sub?.campaigns && (client.active_campaigns ?? 0) > 0
+  const hasMetrics = showFinancials || showCampaigns
+
+  const margin = client.profit_margin ?? 0
+  const marginColorClass =
+    margin === 0
+      ? 'text-foreground'
+      : margin >= 70
+        ? 'text-emerald-500'
+        : margin >= 40
+          ? 'text-amber-500'
+          : 'text-red-500'
+
   return (
     <>
       <Card
         onClick={() => onOpen(client)}
         className={cn(
-          'group cursor-pointer shadow-none transition-all duration-200 border hover:bg-accent/30 dark:hover:bg-card flex flex-col py-2 overflow-hidden',
+          'group cursor-pointer shadow-none transition-all duration-200 border hover:bg-accent/30 dark:hover:bg-card flex flex-col overflow-hidden py-2',
           client.is_internal
             ? 'bg-muted/30 dark:bg-card dark:border-border border-dashed'
             : 'dark:bg-card/70 dark:border-none',
         )}
       >
-        <CardContent className="p-6 flex flex-col gap-5">
+        <CardContent className="p-7 flex flex-col gap-5 h-full">
           {/* Header: logo + name + tier + industry */}
           <div className="flex items-center gap-4">
             <div className="h-12 w-12 shrink-0 rounded-xl overflow-hidden bg-muted">
@@ -99,14 +137,14 @@ function ClientCard({ client, onOpen, onDelete }) {
                 </h3>
                 <TierBadge tier={client.tier} />
               </div>
-              <div className="mt-1.5">
+              <div className="mt-2">
                 <IndustryBadge industryValue={client.industry} />
               </div>
             </div>
           </div>
 
-          {/* Pipeline stats — fixed min-height keeps cards vertically aligned */}
-          <div className="min-h-[22px]">
+          {/* Pipeline stats */}
+          <div className="pt-5 border-t border-dashed border-border/50 min-h-9.5">
             {hasPipelineData ? (
               <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
                 <StatItem count={pipeline.drafts} label="Drafts" colorClass="bg-blue-500" />
@@ -119,21 +157,29 @@ function ClientCard({ client, onOpen, onDelete }) {
             )}
           </div>
 
-          {/* Footer */}
-          <div className="flex items-center justify-between pt-4 border-t border-dashed border-border/50">
-            {/* Left: platform + campaign counts — AVG MRR slots in here for external clients */}
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-1.5">
-                <Globe className="size-3.5 text-muted-foreground" />
-                <span className="text-xs font-medium text-foreground">{platforms.length}</span>
-                <span className="text-xs text-muted-foreground/60">platforms</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <Megaphone className="size-3.5 text-muted-foreground" />
-                <span className="text-xs font-medium text-foreground">{client.active_campaigns ?? 0}</span>
-                <span className="text-xs text-muted-foreground/60">campaigns</span>
-              </div>
+          {/* Metrics row: MRR + Margin + Campaigns */}
+          {hasMetrics && (
+            <div className="pt-5 border-t border-dashed border-border/50 grid grid-cols-3">
+              {showFinancials ? (
+                <MetricItem icon={TrendingUp} label="MRR" value={formatMRR(client.avg_monthly_retainer ?? 0)} />
+              ) : <div />}
+              {showFinancials ? (
+                <MetricItem
+                  icon={Percent}
+                  label="Margin"
+                  value={`${margin}%`}
+                  valueClass={marginColorClass}
+                />
+              ) : <div />}
+              {showCampaigns ? (
+                <MetricItem icon={Megaphone} label="Campaigns" value={client.active_campaigns} />
+              ) : <div />}
             </div>
+          )}
+
+          {/* Footer: platform icons | next post / joined date */}
+          <div className="mt-auto flex items-center justify-between pt-5 border-t border-dashed border-border/50">
+            <PlatformStack platforms={platforms} max={3} size={22} />
 
             {/* Right: next scheduled post with urgency indicator, or joined date */}
             {health && nextPostFormatted ? (
@@ -141,7 +187,7 @@ function ClientCard({ client, onOpen, onDelete }) {
                 <div
                   className={`size-2 rounded-full ${health.color} ${health.pulse ? 'animate-pulse' : ''}`}
                 />
-                <span className="text-xs text-muted-foreground">Next</span>
+                <span className="text-xs text-muted-foreground/60">Next</span>
                 <span className="text-xs font-medium text-foreground">{nextPostFormatted}</span>
                 {health.label && (
                   <span className={`text-xs font-semibold ${health.color.replace('bg-', 'text-')}`}>

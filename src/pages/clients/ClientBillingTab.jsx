@@ -65,7 +65,7 @@ const STATUS_OPTIONS = [
   { value: 'OVERDUE', label: 'Overdue' },
 ]
 
-export function ClientBillingTab({ clientId }) {
+export function ClientBillingTab({ clientId, client }) {
   const [activeTab, setActiveTab] = useState('one-off')
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editInvoiceId, setEditInvoiceId] = useState(null)
@@ -422,14 +422,42 @@ export function ClientBillingTab({ clientId }) {
     >
       {/* --- Toolbar --- */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-        <TabsList className="bg-muted/50 p-1">
-          <TabsTrigger value="one-off" className="text-xs">
-            One-off Invoices
-          </TabsTrigger>
-          <TabsTrigger value="recurring" className="text-xs">
-            Recurring Templates
-          </TabsTrigger>
-        </TabsList>
+        <div className="flex items-center gap-3">
+          <TabsList className="bg-muted/50 p-1">
+            <TabsTrigger value="one-off" className="text-xs">
+              One-off Invoices
+            </TabsTrigger>
+            <TabsTrigger value="recurring" className="text-xs">
+              Recurring Templates
+            </TabsTrigger>
+          </TabsList>
+
+          {client && (
+            <div className="flex items-center gap-4 px-4 py-2 rounded-lg bg-muted/40 border border-dashed border-border/50">
+              <div className="flex items-center gap-1.5">
+                <span className="text-[11px] text-muted-foreground">Avg MRR</span>
+                <span className="text-[11px] font-semibold text-foreground">
+                  {formatCurrency(client.avg_monthly_retainer ?? 0)}
+                </span>
+              </div>
+              <div className="w-px h-3 bg-border/60" />
+              <div className="flex items-center gap-1.5">
+                <span className="text-[11px] text-muted-foreground">Margin</span>
+                <span className={`text-[11px] font-semibold ${
+                  (client.profit_margin ?? 0) === 0
+                    ? 'text-foreground'
+                    : (client.profit_margin ?? 0) >= 70
+                      ? 'text-emerald-500'
+                      : (client.profit_margin ?? 0) >= 40
+                        ? 'text-amber-500'
+                        : 'text-red-500'
+                }`}>
+                  {client.profit_margin ?? 0}%
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
 
         <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
           <div className="relative flex-1 sm:flex-none sm:w-[240px]">
@@ -494,9 +522,7 @@ export function ClientBillingTab({ clientId }) {
               <div className="text-2xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400">
                 {formatCurrency(stats.totalCollected)}
               </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                Paid invoices
-              </p>
+              <p className="text-xs text-muted-foreground mt-1">Paid invoices</p>
             </CardContent>
           </Card>
 

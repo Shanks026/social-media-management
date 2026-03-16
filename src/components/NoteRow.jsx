@@ -10,6 +10,7 @@ import {
   Trash2,
   Building2,
 } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -81,6 +82,7 @@ export default function NoteRow({
     queryClient.invalidateQueries({
       queryKey: ['client-notes', note.client_id],
     })
+    queryClient.invalidateQueries({ queryKey: ['notes', 'week-timeline'] })
   }
 
   const { mutate: setStatus, isPending: isSettingStatus } = useMutation({

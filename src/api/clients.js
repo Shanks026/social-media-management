@@ -69,6 +69,8 @@ export async function fetchClients(filters = {}) {
     is_internal: c.is_internal,
     platforms: c.platforms || [],
     active_campaigns: Number(c.active_campaigns ?? 0),
+    avg_monthly_retainer: Number(c.avg_monthly_retainer ?? 0),
+    profit_margin: c.profit_margin != null ? Number(c.profit_margin) : null,
     created_at: c.created_at,
     pipeline: {
       drafts: Number(c.drafts),
@@ -201,17 +203,45 @@ export async function deleteClient(clientId) {
 }
 
 /**
- * Fetch single client by ID
+ * Fetch single client by ID, including computed financial metrics
  */
 export async function fetchClientById(id) {
-  const { data, error } = await supabase
-    .from('clients')
-    .select('*')
-    .eq('id', id)
-    .single()
+  const [{ data, error }, { data: txData, error: txError }] = await Promise.all([
+    supabase.from('clients').select('*').eq('id', id).single(),
+    supabase
+      .from('transactions')
+      .select('type, status, category, amount')
+      .eq('client_id', id)
+      .eq('status', 'PAID'),
+  ])
 
   if (error) throw error
-  return data
+  if (txError) throw txError
+
+  const paidIncome = (txData || [])
+    .filter((t) => t.type === 'INCOME')
+    .reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0)
+
+  const paidExpenses = (txData || [])
+    .filter((t) => t.type === 'EXPENSE')
+    .reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0)
+
+  const retainerIncome = (txData || [])
+    .filter((t) => t.type === 'INCOME' && t.category?.toLowerCase().includes('retainer'))
+    .reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0)
+
+  const monthsActive = Math.max(
+    (Date.now() - new Date(data.created_at).getTime()) / (30.44 * 24 * 60 * 60 * 1000),
+    1,
+  )
+
+  const avg_monthly_retainer = Math.round((retainerIncome / monthsActive) * 100) / 100
+  const profit_margin =
+    paidIncome > 0
+      ? Math.round(((paidIncome - paidExpenses) / paidIncome) * 1000) / 10
+      : null
+
+  return { ...data, avg_monthly_retainer, profit_margin }
 }
 
 export async function fetchInternalClient() {

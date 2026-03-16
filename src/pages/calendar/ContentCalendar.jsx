@@ -43,6 +43,7 @@ import { useHeader } from '@/components/misc/header-context'
 import { cn } from '@/lib/utils'
 import { fetchMeetings } from '@/api/meetings'
 import { useClients } from '@/api/clients'
+import { ClientAvatar } from '@/components/NoteRow'
 import CreateMeetingDialog from '@/components/CreateMeetingDialog'
 import { useSubscription } from '@/api/useSubscription'
 import CalendarReportPDF from './CalendarReportPDF'
@@ -147,6 +148,15 @@ export default function ContentCalendar({
     const clients = posts.map((p) => p.client_name)
     return [...new Set(clients)].sort()
   }, [posts])
+
+  const clientsByName = useMemo(() => {
+    if (!clientsData) return {}
+    const all = [
+      ...(clientsData.internalAccount ? [clientsData.internalAccount] : []),
+      ...clientsData.realClients,
+    ]
+    return Object.fromEntries(all.map((c) => [c.name, c]))
+  }, [clientsData])
 
   const filteredPosts = useMemo(() => {
     const regularPosts = posts.filter((post) => {
@@ -354,7 +364,10 @@ export default function ContentCalendar({
                 <SelectItem value="all">All Clients</SelectItem>
                 {uniqueClients.map((name) => (
                   <SelectItem key={name} value={name}>
-                    {name}
+                    <div className="flex items-center gap-2">
+                      <ClientAvatar client={clientsByName[name]} size="sm" />
+                      <span className="truncate">{name}</span>
+                    </div>
                   </SelectItem>
                 ))}
               </SelectContent>

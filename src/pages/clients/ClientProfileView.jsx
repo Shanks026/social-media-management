@@ -156,7 +156,7 @@ export default function ClientProfileView({ client }) {
               value="billing"
               className="mt-2 focus-visible:outline-none data-[state=active]:animate-in data-[state=active]:fade-in data-[state=active]:duration-300"
             >
-              <ClientBillingTab clientId={client.id} />
+              <ClientBillingTab clientId={client.id} client={client} />
             </TabsContent>
           )}
 

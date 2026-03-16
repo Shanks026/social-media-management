@@ -29,7 +29,7 @@ export default function ProposalPreview({ proposal = {}, agency = {} }) {
   const showAgencyBranding = agency?.branding_agency_sidebar ?? false
 
   return (
-    <div className="w-full bg-white text-[#111827] p-8 md:p-10 font-sans text-sm relative min-h-[842px] shadow-sm ring-1 ring-border/50">
+    <div className="w-full bg-white text-[#111827] p-10 md:p-14 font-sans text-sm relative min-h-210.5 shadow-sm ring-1 ring-border/50">
 
       {/* ── Header ── */}
       <div className="flex justify-between items-start mb-2">
@@ -82,7 +82,7 @@ export default function ProposalPreview({ proposal = {}, agency = {} }) {
           <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wider mb-1">
             Prepared for
           </p>
-          <p className="font-semibold text-[15px] text-[#111827]">
+          <p className="font-semibold text-base text-[#111827]">
             {recipientName || <span className="text-gray-300 italic font-normal">Client name</span>}
           </p>
         </div>
@@ -92,7 +92,7 @@ export default function ProposalPreview({ proposal = {}, agency = {} }) {
             <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wider mb-1">
               Valid until
             </p>
-            <p className="text-[13px] text-[#374151]">{fmtDate(proposal.valid_until)}</p>
+            <p className="text-sm text-[#374151]">{fmtDate(proposal.valid_until)}</p>
           </div>
         )}
       </div>
@@ -103,7 +103,7 @@ export default function ProposalPreview({ proposal = {}, agency = {} }) {
           <h2 className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">
             Introduction
           </h2>
-          <p className="text-[13px] text-[#374151] whitespace-pre-wrap leading-relaxed">
+          <p className="text-sm text-[#374151] whitespace-pre-wrap leading-relaxed">
             {proposal.introduction}
           </p>
         </div>
@@ -115,7 +115,7 @@ export default function ProposalPreview({ proposal = {}, agency = {} }) {
           <h2 className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">
             Scope of Work
           </h2>
-          <p className="text-[13px] text-[#374151] whitespace-pre-wrap leading-relaxed">
+          <p className="text-sm text-[#374151] whitespace-pre-wrap leading-relaxed">
             {proposal.scope_notes}
           </p>
         </div>
@@ -127,7 +127,7 @@ export default function ProposalPreview({ proposal = {}, agency = {} }) {
           <h2 className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-3">
             Pricing
           </h2>
-          <table className="w-full text-[13px]">
+          <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-200">
                 <th className="text-left py-2 text-gray-500 font-medium">Description</th>
@@ -160,7 +160,7 @@ export default function ProposalPreview({ proposal = {}, agency = {} }) {
               <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wider mb-1">
                 Payment Terms
               </p>
-              <p className="text-[13px] text-[#374151]">{proposal.payment_terms}</p>
+              <p className="text-sm text-[#374151]">{proposal.payment_terms}</p>
             </div>
           )}
           {proposal.contract_duration && (
@@ -168,7 +168,7 @@ export default function ProposalPreview({ proposal = {}, agency = {} }) {
               <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wider mb-1">
                 Duration
               </p>
-              <p className="text-[13px] text-[#374151]">{proposal.contract_duration}</p>
+              <p className="text-sm text-[#374151]">{proposal.contract_duration}</p>
             </div>
           )}
         </div>
@@ -180,7 +180,7 @@ export default function ProposalPreview({ proposal = {}, agency = {} }) {
           <h2 className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">
             Additional Notes
           </h2>
-          <p className="text-[13px] text-[#374151] whitespace-pre-wrap leading-relaxed">
+          <p className="text-sm text-[#374151] whitespace-pre-wrap leading-relaxed">
             {proposal.notes}
           </p>
         </div>

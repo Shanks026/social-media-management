@@ -17,8 +17,9 @@ function getHealthStatus(client) {
   if (scheduled > 0) return 'healthy'
 
   const nextPostPast =
-    !next_post_at || isBefore(new Date(next_post_at), new Date())
+    next_post_at && isBefore(new Date(next_post_at), new Date())
   if (inPipeline === 0 && nextPostPast) return 'at-risk'
+  if (inPipeline === 0 && !next_post_at) return 'idle'
 
   return 'attention'
 }
@@ -38,6 +39,11 @@ const HEALTH_CONFIG = {
     label: 'At Risk',
     dotClass: 'bg-destructive',
     labelClass: 'text-destructive',
+  },
+  idle: {
+    label: 'Idle',
+    dotClass: 'bg-muted-foreground/40',
+    labelClass: 'text-muted-foreground/60',
   },
 }
 

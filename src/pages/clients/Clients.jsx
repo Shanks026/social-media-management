@@ -6,7 +6,7 @@ import {
   useOutletContext,
 } from 'react-router-dom'
 import { toast } from 'sonner'
-import { UserStar, Lock, Plus, Search } from 'lucide-react'
+import { UserStar, Lock, Plus, Search, FilterX } from 'lucide-react'
 
 import { fetchClients, deleteClient } from '@/api/clients'
 import { getUrgencyStatus } from '@/lib/client-helpers'
@@ -234,6 +234,16 @@ export default function Clients() {
               value={tier}
               onValueChange={(v) => updateParams('tier', v)}
             />
+            {isFilterActive && (
+              <button
+                type="button"
+                onClick={resetFilters}
+                aria-label="Clear all filters"
+                className="h-9 w-9 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+              >
+                <FilterX className="size-4" />
+              </button>
+            )}
           </div>
 
           <div className="lg:ml-auto flex items-center gap-4">

@@ -12,11 +12,9 @@ import {
   Facebook,
   Youtube,
   Globe,
-  X,
+  FilterX,
   Calendar as CalendarIcon,
   Building2,
-  Users,
-  FolderOpen,
   Newspaper,
 } from 'lucide-react'
 
@@ -65,6 +63,7 @@ import { useGlobalPosts, usePostCounts } from '@/api/useGlobalPosts'
 import { useClients } from '@/api/clients'
 import { useCampaigns } from '@/api/campaigns'
 import { useSubscription } from '@/api/useSubscription'
+import { ClientAvatar } from '@/components/NoteRow'
 
 // ─── Constants ──────────────────────────────────────────
 const PLATFORMS = [
@@ -130,7 +129,6 @@ export default function Posts() {
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [statusTab, setStatusTab] = useState('ALL')
-  const [scope, setScope] = useState('all') // 'all' | 'INTERNAL' | 'CLIENTS'
   const [selectedClient, setSelectedClient] = useState('all')
   const [platform, setPlatform] = useState('all')
   const [dateRange, setDateRange] = useState({ from: undefined, to: undefined })
@@ -142,19 +140,11 @@ export default function Posts() {
     return () => clearTimeout(timer)
   }, [search])
 
-  // Determine effective clientId for the API
-  const effectiveClientId = useMemo(() => {
-    if (selectedClient !== 'all') return selectedClient
-    if (scope === 'INTERNAL') return 'INTERNAL'
-    if (scope === 'CLIENTS') return 'CLIENTS'
-    return 'all'
-  }, [scope, selectedClient])
-
   // Queries
   const filters = {
     search: debouncedSearch,
     status: statusTab,
-    clientId: effectiveClientId,
+    clientId: selectedClient,
     platform: platform !== 'all' ? platform : undefined,
     dateRange: dateRange.from ? dateRange : undefined,
     campaignId: selectedCampaign !== 'all' ? selectedCampaign : undefined,
@@ -169,15 +159,11 @@ export default function Posts() {
   // Client options for dropdown
   const clientOptions = useMemo(() => {
     if (!clientsData) return []
-    const clients = [
+    return [
       ...(clientsData.internalAccount ? [clientsData.internalAccount] : []),
       ...clientsData.realClients,
     ]
-    // Filter based on scope
-    if (scope === 'INTERNAL') return clients.filter((c) => c.is_internal)
-    if (scope === 'CLIENTS') return clients.filter((c) => !c.is_internal)
-    return clients
-  }, [clientsData, scope])
+  }, [clientsData])
 
   // Set header
   useEffect(() => {
@@ -192,7 +178,6 @@ export default function Posts() {
 
   const hasActiveFilters =
     search ||
-    scope !== 'all' ||
     selectedClient !== 'all' ||
     platform !== 'all' ||
     dateRange.from ||
@@ -201,7 +186,6 @@ export default function Posts() {
   const resetFilters = () => {
     setSearch('')
     setDebouncedSearch('')
-    setScope('all')
     setSelectedClient('all')
     setPlatform('all')
     setDateRange({ from: undefined, to: undefined })
@@ -394,37 +378,9 @@ export default function Posts() {
 
         {/* Filters and Actions */}
         <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto sm:justify-end">
-          {/* Scope */}
-          <Select
-            value={scope}
-            onValueChange={(v) => {
-              setScope(v)
-              setSelectedClient('all')
-            }}
-          >
-            <SelectTrigger className="w-[150px] h-9 text-xs font-semibold shadow-none">
-              <SelectValue placeholder="Scope" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Posts</SelectItem>
-              <SelectItem value="INTERNAL">
-                <div className="flex items-center gap-2">
-                  <Building2 size={12} />
-                  My Agency Only
-                </div>
-              </SelectItem>
-              <SelectItem value="CLIENTS">
-                <div className="flex items-center gap-2">
-                  <Users size={12} />
-                  Client Work Only
-                </div>
-              </SelectItem>
-            </SelectContent>
-          </Select>
-
           {/* Client Select */}
           <Select value={selectedClient} onValueChange={setSelectedClient}>
-            <SelectTrigger className="w-[170px] h-9 text-xs font-semibold shadow-none">
+            <SelectTrigger className="w-[170px] h-9 text-xs">
               <SelectValue placeholder="Client" />
             </SelectTrigger>
             <SelectContent>
@@ -432,24 +388,8 @@ export default function Posts() {
               {clientOptions.map((c) => (
                 <SelectItem key={c.id} value={c.id}>
                   <div className="flex items-center gap-2">
-                    {c.logo_url ? (
-                      <img
-                        src={c.logo_url}
-                        alt=""
-                        className="size-4 rounded object-cover"
-                      />
-                    ) : (
-                      <div className="size-4 rounded bg-muted" />
-                    )}
+                    <ClientAvatar client={c} size="sm" />
                     <span className="truncate">{c.name}</span>
-                    {c.is_internal && (
-                      <Badge
-                        variant="secondary"
-                        className="text-[9px] px-1 py-0 ml-1"
-                      >
-                        INT
-                      </Badge>
-                    )}
                   </div>
                 </SelectItem>
               ))}
@@ -458,7 +398,7 @@ export default function Posts() {
 
           {/* Platform */}
           <Select value={platform} onValueChange={setPlatform}>
-            <SelectTrigger className="w-[145px] h-9 text-xs font-semibold shadow-none">
+            <SelectTrigger className="w-[145px] h-9 text-xs">
               <SelectValue placeholder="Platform" />
             </SelectTrigger>
             <SelectContent>
@@ -480,7 +420,7 @@ export default function Posts() {
               value={selectedCampaign}
               onValueChange={setSelectedCampaign}
             >
-              <SelectTrigger className="w-[150px] h-9 text-xs font-semibold shadow-none">
+              <SelectTrigger className="w-[150px] h-9 text-xs">
                 <SelectValue placeholder="Campaign" />
               </SelectTrigger>
               <SelectContent>
@@ -501,7 +441,7 @@ export default function Posts() {
                 variant="outline"
                 size="sm"
                 className={cn(
-                  'h-9 gap-2 text-xs font-semibold shadow-none',
+                  'h-9 gap-2 text-xs',
                   dateRange.from && 'text-primary border-primary/30',
                 )}
               >
@@ -525,17 +465,16 @@ export default function Posts() {
             </PopoverContent>
           </Popover>
 
-          {/* Reset */}
+          {/* Clear filters */}
           {hasActiveFilters && (
-            <Button
-              variant="ghost"
-              size="sm"
+            <button
+              type="button"
               onClick={resetFilters}
-              className="h-9 px-3 text-xs font-bold text-destructive hover:bg-destructive/5"
+              aria-label="Clear all filters"
+              className="h-9 w-9 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
             >
-              <X size={14} className="mr-1.5" />
-              Reset
-            </Button>
+              <FilterX className="size-4" />
+            </button>
           )}
 
           {/* View Mode Toggle */}

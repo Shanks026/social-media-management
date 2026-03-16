@@ -30,13 +30,12 @@ import { Input } from '@/components/ui/input'
 import {
   Select,
   SelectContent,
-  SelectGroup,
   SelectItem,
-  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { ClientAvatar } from '@/components/NoteRow'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
   Empty,
@@ -320,23 +319,21 @@ export default function DocumentsPage() {
               <SelectContent>
                 <SelectItem value="all">All clients</SelectItem>
                 {internalAccount && (
-                  <SelectGroup>
-                    <SelectLabel>Workspace</SelectLabel>
-                    <SelectItem value={internalAccount.id}>
-                      {internalAccount.name}
-                    </SelectItem>
-                  </SelectGroup>
+                  <SelectItem value={internalAccount.id}>
+                    <div className="flex items-center gap-2">
+                      <ClientAvatar client={internalAccount} size="sm" />
+                      <span className="truncate">{internalAccount.name}</span>
+                    </div>
+                  </SelectItem>
                 )}
-                {realClients.length > 0 && (
-                  <SelectGroup>
-                    <SelectLabel>Clients</SelectLabel>
-                    {realClients.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>
-                        {c.name}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                )}
+                {realClients.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    <div className="flex items-center gap-2">
+                      <ClientAvatar client={c} size="sm" />
+                      <span className="truncate">{c.name}</span>
+                    </div>
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
 
