@@ -534,7 +534,7 @@ export function CalendarPostCard({ post }) {
                 </div>
               )}
               <span className="text-[13px] font-medium tracking-tight whitespace-nowrap">
-                {postStatus === 'PUBLISHED'
+                {postStatus === 'PUBLISHED' && (post.published_at || post.updated_at)
                   ? `Published on ${format(new Date(post.published_at || post.updated_at), 'd MMM, yyyy')}`
                   : post.target_date
                     ? format(new Date(post.target_date), "d MMMM yyyy '•' h:mm a")
@@ -632,7 +632,7 @@ export function CalendarPostCard({ post }) {
             </Button>
             <Button
               variant="destructive"
-              onClick={() => handleDeletePost(postToDelete?.actual_post_id || postToDelete?.id)}
+              onClick={() => handleDeletePost(postToDelete?.actual_post_id || postToDelete?.post_id || postToDelete?.id)}
               disabled={isDeletingPost}
               
             >

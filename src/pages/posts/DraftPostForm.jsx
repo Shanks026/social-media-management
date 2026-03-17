@@ -454,6 +454,7 @@ export default function DraftPostForm({
       })
       queryClient.invalidateQueries({ queryKey: ['posts', effectiveClientId] })
       queryClient.invalidateQueries({ queryKey: ['global-posts'] })
+      queryClient.invalidateQueries({ queryKey: ['calendar'] })
       queryClient.invalidateQueries({ queryKey: ['subscription', user?.id] })
       if (isEditMode)
         queryClient.invalidateQueries({
