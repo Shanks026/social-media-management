@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   useSearchParams,
@@ -6,7 +6,7 @@ import {
   useOutletContext,
 } from 'react-router-dom'
 import { toast } from 'sonner'
-import { UserStar, Lock, Plus, Search } from 'lucide-react'
+import { UserStar, Lock, Plus, Search, FilterX } from 'lucide-react'
 
 import { fetchClients, deleteClient } from '@/api/clients'
 import { getUrgencyStatus } from '@/lib/client-helpers'
@@ -82,7 +82,7 @@ export default function Clients() {
     search !== '' || urgency !== 'all' || industry !== 'all' || tier !== 'all'
   const resetFilters = () => setSearchParams({})
 
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: ['clients', user.id, { search, industry, tier }],
     queryFn: () => fetchClients({ search, industry, tier, urgency: 'all' }), // Always fetch all for local counts
     enabled: !!user?.id,
@@ -182,7 +182,7 @@ export default function Clients() {
 
   return (
     <div className="min-h-full bg-background selection:bg-primary/10">
-      <div className="px-8 pt-8 pb-20 space-y-8 max-w-[1400px] mx-auto">
+      <div className="px-8 pt-8 pb-20 space-y-8 max-w-[1400px] mx-auto animate-page-fade-in">
         {/* --- SECTION 1: HEADER & PRIMARY ACTION --- */}
         <div className="flex items-end justify-between">
           <div className="space-y-1">
@@ -234,6 +234,16 @@ export default function Clients() {
               value={tier}
               onValueChange={(v) => updateParams('tier', v)}
             />
+            {isFilterActive && (
+              <button
+                type="button"
+                onClick={resetFilters}
+                aria-label="Clear all filters"
+                className="h-9 w-9 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+              >
+                <FilterX className="size-4" />
+              </button>
+            )}
           </div>
 
           <div className="lg:ml-auto flex items-center gap-4">
@@ -288,7 +298,7 @@ export default function Clients() {
             </EmptyContent>
           </Empty>
         ) : (
-          <div className="grid gap-6 grid-cols-[repeat(auto-fill,minmax(420px,1fr))] animate-in fade-in duration-500">
+          <div className="grid gap-6 grid-cols-[repeat(auto-fill,minmax(420px,1fr))]">
             {sortedClients.map((client) => (
               <ClientCard
                 key={client.id}

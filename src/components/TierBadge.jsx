@@ -1,41 +1,45 @@
 // components/TierBadge.jsx
 import { Crown, Zap } from 'lucide-react'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 
 const TierBadge = ({ tier }) => {
   if (!tier) return null
 
   const normalizedTier = tier.toUpperCase()
-  const baseStyles =
-    'inline-flex items-center justify-center py-0.5 px-1.5 rounded-md shrink-0 shadow-md font-bold tracking-wider uppercase ms-2'
 
   if (normalizedTier === 'INTERNAL') {
     return (
-      <div>
-        {/* Replacing Crown with verify.svg from public folder */}
-        <img 
-          src="/verify.png" 
-          alt="Verified" 
-          className="size-4.5 ms-1" 
-        />
-      </div>
+      <img
+        src="/verify.png"
+        alt="Verified"
+        className="size-4.5 ms-1 shrink-0"
+      />
     )
   }
 
   if (normalizedTier === 'VIP') {
     return (
-      <div className={`${baseStyles} bg-purple-600 text-white`}>
-        <Crown className="size-3 fill-current mr-1" />
-        <span className="text-[10px]">VIP</span>
-      </div>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Crown className="size-4 fill-current text-purple-500 shrink-0 ms-1" />
+        </TooltipTrigger>
+        <TooltipContent>VIP</TooltipContent>
+      </Tooltip>
     )
   }
 
   if (normalizedTier === 'PRO') {
     return (
-      <div className={`${baseStyles} bg-amber-400 text-amber-950`}>
-        <Zap className="size-3 fill-current mr-1" />
-        <span className="text-[10px]">PRO</span>
-      </div>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Zap className="size-4 fill-current text-amber-400 shrink-0 ms-1" />
+        </TooltipTrigger>
+        <TooltipContent>PRO</TooltipContent>
+      </Tooltip>
     )
   }
 

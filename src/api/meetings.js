@@ -7,7 +7,7 @@ import { startOfDay, endOfDay } from 'date-fns'
 export async function fetchMeetings({ startDate, endDate, clientId }) {
   let query = supabase
     .from('meetings')
-    .select('id, client_id, title, datetime, notes, meeting_link, created_at, clients!inner(name)')
+    .select('id, client_id, title, datetime, notes, meeting_link, completed_at, created_at, clients!inner(name)')
 
   if (startDate && endDate) {
     query = query.gte('datetime', startDate).lte('datetime', endDate)
@@ -150,4 +150,28 @@ export async function updateMeeting(id, payload) {
 
   if (error) throw error
   return data
+}
+
+/**
+ * Mark a meeting as completed.
+ */
+export async function markMeetingCompleted(id) {
+  const { error } = await supabase
+    .from('meetings')
+    .update({ completed_at: new Date().toISOString() })
+    .eq('id', id)
+
+  if (error) throw error
+}
+
+/**
+ * Unmark a meeting as completed.
+ */
+export async function unmarkMeetingCompleted(id) {
+  const { error } = await supabase
+    .from('meetings')
+    .update({ completed_at: null })
+    .eq('id', id)
+
+  if (error) throw error
 }

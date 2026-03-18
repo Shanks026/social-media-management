@@ -63,12 +63,13 @@ export default function CollectionCard({ collection, documents = [], locked = fa
   const [uploadProgress, setUploadProgress] = useState(null)
 
   const uploadMutation = useUploadMutation({
-    mutationFn: ({ file, displayName, category }) =>
+    mutationFn: ({ file, displayName, category, notes }) =>
       uploadDocument({
         clientId: collection.client_id,
         file,
         displayName,
         category,
+        notes,
         collectionId: collection.id,
       }),
     onMutate: () => setUploadProgress(10),
@@ -93,10 +94,10 @@ export default function CollectionCard({ collection, documents = [], locked = fa
     setUploadDialogOpen(true)
   }
 
-  function handleConfirmUpload({ displayName, category }) {
+  function handleConfirmUpload({ displayName, category, notes }) {
     if (!pendingFile) return
     setUploadProgress(30)
-    uploadMutation.mutate({ file: pendingFile, displayName, category })
+    uploadMutation.mutate({ file: pendingFile, displayName, category, notes })
   }
 
   function handleUploadDialogClose(open) {

@@ -25,7 +25,7 @@ class TestPostsList:
         page.goto(f"{BASE_URL}/posts")
         page.wait_for_load_state("networkidle")
 
-        for status in ["All", "Draft", "Pending", "Revisions", "Scheduled", "Archived"]:
+        for status in ["All", "Drafts", "Pending Approval", "Needs Revision", "Scheduled", "Archived"]:
             # Case-insensitive check
             tab = page.get_by_role("tab", name=status, exact=False)
             if tab.count() == 0:
@@ -79,7 +79,8 @@ class TestCreatePost:
         """POST-001: Clicking New Post opens the draft form dialog."""
         page = authenticated_page
         page.goto(f"{BASE_URL}/posts")
-        page.wait_for_load_state("networkidle")
+        # networkidle never fires with Supabase realtime — wait for button instead
+        page.wait_for_selector('[role="tab"]', timeout=10_000)
 
         new_post_btn = page.get_by_role("button", name="New Post").or_(
             page.get_by_role("button", name="Create Post")

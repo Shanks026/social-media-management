@@ -539,14 +539,6 @@ export default function NotesAndReminders() {
                   <div className="flex items-center gap-2">
                     <ClientAvatar client={c} size="sm" />
                     <span className="truncate">{c.name}</span>
-                    {c.is_internal && (
-                      <Badge
-                        variant="secondary"
-                        className="text-[9px] px-1 py-0 ml-1"
-                      >
-                        INT
-                      </Badge>
-                    )}
                   </div>
                 </SelectItem>
               ))}

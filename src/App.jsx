@@ -11,7 +11,6 @@ import PublicReview from './pages/PublicReview'
 import Settings from './pages/Settings'
 import SocialCalendar from './pages/calendar/ContentCalendar'
 import MyOrganization from './pages/MyOrganization'
-import Expenses from './pages/finance/FinanceLayout'
 import FinanceLayout from './pages/finance/FinanceLayout'
 import OverviewTab from './pages/finance/FinancialOverviewTab'
 import SubscriptionsTab from './pages/finance/SubscriptionsTab'
@@ -31,7 +30,22 @@ import JoinTeam from './pages/JoinTeam'
 import ProposalsPage from './pages/proposals/ProposalsPage'
 import ProposalDetailPage from './pages/proposals/ProposalDetailPage'
 import ProposalReview from './pages/proposals/ProposalReview'
+import TrialExpired from './pages/TrialExpired'
+import NotFound from './pages/NotFound'
 
+function PublicOnlyRoute({ children }) {
+  const { session } = useAuth()
+  if (session) return <Navigate to="/dashboard" replace />
+  return children
+}
+
+function TrialGuardedShell({ user }) {
+  const { workspaceUserId } = useAuth()
+  const { data: sub, isLoading } = useSubscription()
+  if (!workspaceUserId || isLoading) return null
+  if (sub?.is_trial_locked) return <Navigate to="/trial-expired" replace />
+  return <AppShell user={user} />
+}
 
 function SubscriptionsRoute() {
   const { data: sub } = useSubscription()
@@ -49,11 +63,14 @@ function AppRoutes() {
       <Route path="/campaign-review/:token" element={<CampaignReview />} />
       <Route path="/proposal/:token" element={<ProposalReview />} />
       <Route path="/join/:token" element={<JoinTeam />} />
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/signup" element={<SignupPage />} />
+      <Route path="/login" element={<PublicOnlyRoute><LoginPage /></PublicOnlyRoute>} />
+      <Route path="/signup" element={<PublicOnlyRoute><SignupPage /></PublicOnlyRoute>} />
 
       {session ? (
-        <Route element={<AppShell user={user} />}>
+        <>
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/trial-expired" element={<TrialExpired />} />
+          <Route element={<TrialGuardedShell user={user} />}>
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/clients" element={<Clients />} />
           <Route path="/myorganization" element={<MyOrganization />} />
@@ -87,8 +104,9 @@ function AppRoutes() {
           </Route>
           <Route path="/billing" element={<BillingUsage />} />
           <Route path="/settings" element={<Settings />} />
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Route>
+        <Route path="*" element={<NotFound />} />
+        </>
       ) : (
         <Route path="*" element={<Navigate to="/login" replace />} />
       )}

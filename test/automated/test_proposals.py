@@ -57,14 +57,16 @@ class TestProposalDetail:
         page.goto(f"{BASE_URL}/proposals")
         page.wait_for_load_state("networkidle")
 
-        link = page.locator("a[href^='/proposals/']").first
-        if link.count() == 0:
-            link = page.locator("[data-testid='proposal-card']").first
-        if link.count() == 0:
+        # Proposals render as div rows with cursor-pointer (useNavigate, not <a> tags)
+        page.wait_for_timeout(2_000)
+        row = page.locator("div.cursor-pointer.group").first
+        if row.count() == 0:
+            row = page.locator("div.cursor-pointer").first
+        if row.count() == 0:
             return False
 
-        link.click()
-        page.wait_for_load_state("networkidle")
+        row.click()
+        page.wait_for_timeout(1_500)
         return True
 
     def test_proposal_detail_loads(self, authenticated_page: Page):

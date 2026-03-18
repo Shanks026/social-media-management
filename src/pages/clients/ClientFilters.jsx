@@ -1,5 +1,6 @@
 import { Input } from '@/components/ui/input'
 import { Search, AlertCircle, Moon, AlertTriangle, X } from 'lucide-react'
+// X kept for SearchBar clear button
 import {
   Select,
   SelectContent,
@@ -10,6 +11,7 @@ import {
 import { INDUSTRY_OPTIONS } from '@/lib/industries'
 import { cn } from '@/lib/utils'
 import { useState, useEffect, useRef } from 'react'
+import IndustryBadge from './IndustryBadge'
 
 /* ----------------------------------------------------
    1. Search Bar
@@ -181,41 +183,17 @@ export const UrgencyFilter = ({
    3. Industry Filter (normalized size)
 ---------------------------------------------------- */
 export const IndustryFilter = ({ value, onValueChange }) => {
-  const showClear = value && value !== 'all'
-  const triggerRef = useRef(null)
-
   return (
     <Select value={value} onValueChange={onValueChange}>
-      <SelectTrigger ref={triggerRef} className="w-[150px] h-9 text-sm">
-        <div className="flex items-center gap-2 flex-1 overflow-hidden">
-          <SelectValue placeholder="Industry" />
-
-          {showClear && (
-            <button
-              type="button"
-              onPointerDown={(e) => {
-                e.preventDefault()
-                e.stopPropagation()
-              }}
-              onClick={(e) => {
-                e.preventDefault()
-                e.stopPropagation()
-                onValueChange('all')
-                triggerRef.current?.blur()
-              }}
-              className="text-muted-foreground"
-            >
-              <X className="size-4" />
-            </button>
-          )}
-        </div>
+      <SelectTrigger className="w-40 h-9 text-sm">
+        <SelectValue placeholder="Industry" />
       </SelectTrigger>
 
       <SelectContent>
         <SelectItem value="all">All Industries</SelectItem>
         {INDUSTRY_OPTIONS.map((opt) => (
           <SelectItem key={opt.value} value={opt.value}>
-            {opt.label}
+            <IndustryBadge industryValue={opt.value} colorLabel={false} />
           </SelectItem>
         ))}
       </SelectContent>
@@ -227,34 +205,10 @@ export const IndustryFilter = ({ value, onValueChange }) => {
    4. Tier Filter (normalized size)
 ---------------------------------------------------- */
 export const TierFilter = ({ value, onValueChange }) => {
-  const showClear = value && value !== 'all'
-  const triggerRef = useRef(null)
-
   return (
     <Select value={value} onValueChange={onValueChange}>
-      <SelectTrigger ref={triggerRef} className="w-[110px] h-9 text-sm">
-        <div className="flex items-center gap-2 flex-1 overflow-hidden">
-          <SelectValue placeholder="Tier" />
-
-          {showClear && (
-            <button
-              type="button"
-              onPointerDown={(e) => {
-                e.preventDefault()
-                e.stopPropagation()
-              }}
-              onClick={(e) => {
-                e.preventDefault()
-                e.stopPropagation()
-                onValueChange('all')
-                triggerRef.current?.blur()
-              }}
-              className="text-muted-foreground"
-            >
-              <X className="size-4" />
-            </button>
-          )}
-        </div>
+      <SelectTrigger className="w-28 h-9 text-sm">
+        <SelectValue placeholder="Tier" />
       </SelectTrigger>
 
       <SelectContent>

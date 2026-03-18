@@ -1041,7 +1041,7 @@ export default function ProposalDetailPage() {
         </div>
 
         {/* ── Right — Live Preview ── */}
-        <div className="lg:w-[55%] min-h-[400px] lg:min-h-0 bg-gray-50 dark:bg-zinc-950/50 flex flex-col min-w-0">
+        <div className="lg:w-[55%] min-h-[400px] lg:min-h-0 bg-muted/40 flex flex-col min-w-0">
           <div className="px-4 py-2.5 border-b border-border/50 bg-background/50 shrink-0">
             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
               Live Preview

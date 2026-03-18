@@ -1,3 +1,5 @@
+import { createElement } from 'react'
+
 /**
  * Maximum file size allowed for document uploads (50 MB).
  * Change this constant to update the limit across the entire app.
@@ -37,6 +39,19 @@ export function getPublishState(version) {
  */
 export function effectivePlatformDate(version, platform) {
   return version?.platform_schedules?.[platform]?.scheduled_at ?? version?.target_date
+}
+
+/**
+ * Renders a post caption with hashtags highlighted in blue.
+ * Returns an array of strings and React elements suitable for rendering.
+ */
+export function renderCaption(text) {
+  if (!text) return 'No description provided.'
+  return text.split(/(#\w+)/g).map((part, i) =>
+    part.startsWith('#')
+      ? createElement('span', { key: i, className: 'text-blue-500' }, part)
+      : part
+  )
 }
 
 /**

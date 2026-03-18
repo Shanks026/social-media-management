@@ -30,13 +30,12 @@ import { Input } from '@/components/ui/input'
 import {
   Select,
   SelectContent,
-  SelectGroup,
   SelectItem,
-  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { ClientAvatar } from '@/components/NoteRow'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
   Empty,
@@ -95,7 +94,7 @@ export default function DocumentsPage() {
   // ── Filters ───────────────────────────────────────────────────────────────────
   const [selectedClientId, setSelectedClientId] = useState('all')
   const [selectedCategory, setSelectedCategory] = useState('all')
-  const [selectedStatus, setSelectedStatus] = useState('Active')
+  const [selectedStatus, setSelectedStatus] = useState('all')
   const [searchRaw, setSearchRaw] = useState('')
   const [search, setSearch] = useState('')
 
@@ -110,13 +109,13 @@ export default function DocumentsPage() {
   const isFilterActive =
     selectedClientId !== 'all' ||
     selectedCategory !== 'all' ||
-    selectedStatus !== 'Active' ||
+    selectedStatus !== 'all' ||
     search !== ''
 
   function clearFilters() {
     setSelectedClientId('all')
     setSelectedCategory('all')
-    setSelectedStatus('Active')
+    setSelectedStatus('all')
     setSearchRaw('')
     setSearch('')
   }
@@ -150,6 +149,8 @@ export default function DocumentsPage() {
     return true
   })
 
+  const archivedCount = (documents ?? []).filter((d) => d.status === 'Archived').length
+
   const ungroupedDocs = filteredDocs.filter((d) => !d.collection_id)
 
   // Group collections by client for the "all clients" view
@@ -177,8 +178,8 @@ export default function DocumentsPage() {
   const [createCollectionOpen, setCreateCollectionOpen] = useState(false)
 
   const uploadMutation = useMutation({
-    mutationFn: ({ file, displayName, category, clientId }) =>
-      uploadDocument({ clientId, file, displayName, category }),
+    mutationFn: ({ file, displayName, category, clientId, notes }) =>
+      uploadDocument({ clientId, file, displayName, category, notes }),
     onMutate: () => setUploadProgress(10),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['documents', 'list'] })
@@ -201,7 +202,7 @@ export default function DocumentsPage() {
     setDialogOpen(true)
   }
 
-  function handleConfirmUpload({ displayName, category, clientId }) {
+  function handleConfirmUpload({ displayName, category, clientId, notes }) {
     if (!pendingFile) return
     setUploadProgress(30)
     uploadMutation.mutate({
@@ -209,6 +210,7 @@ export default function DocumentsPage() {
       displayName,
       category,
       clientId,
+      notes,
     })
   }
 
@@ -319,23 +321,21 @@ export default function DocumentsPage() {
               <SelectContent>
                 <SelectItem value="all">All clients</SelectItem>
                 {internalAccount && (
-                  <SelectGroup>
-                    <SelectLabel>Workspace</SelectLabel>
-                    <SelectItem value={internalAccount.id}>
-                      {internalAccount.name}
-                    </SelectItem>
-                  </SelectGroup>
+                  <SelectItem value={internalAccount.id}>
+                    <div className="flex items-center gap-2">
+                      <ClientAvatar client={internalAccount} size="sm" />
+                      <span className="truncate">{internalAccount.name}</span>
+                    </div>
+                  </SelectItem>
                 )}
-                {realClients.length > 0 && (
-                  <SelectGroup>
-                    <SelectLabel>Clients</SelectLabel>
-                    {realClients.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>
-                        {c.name}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                )}
+                {realClients.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    <div className="flex items-center gap-2">
+                      <ClientAvatar client={c} size="sm" />
+                      <span className="truncate">{c.name}</span>
+                    </div>
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
 
@@ -434,22 +434,38 @@ export default function DocumentsPage() {
                         <EmptyHeader>
                           <EmptyTitle className="font-normal text-xl">
                             {isFilterActive
-                              ? 'No documents match your filters'
-                              : 'No documents yet'}
+                              ? selectedStatus === 'Active' || selectedStatus === 'all'
+                                ? 'No documents match your filters'
+                                : 'No archived documents'
+                              : 'No active documents'}
                           </EmptyTitle>
                           <EmptyDescription className="font-light">
                             {isFilterActive
-                              ? "Adjust your filters to find what you're looking for."
-                              : 'Upload a contract, brief, or brand asset to keep everything in one place.'}
+                              ? selectedStatus === 'Archived'
+                                ? 'No documents have been archived yet.'
+                                : "Adjust your filters to find what you're looking for."
+                              : archivedCount > 0
+                                ? `You have ${archivedCount} archived document${archivedCount !== 1 ? 's' : ''}.`
+                                : 'Upload a contract, brief, or brand asset to keep everything in one place.'}
                           </EmptyDescription>
                         </EmptyHeader>
-                        {isFilterActive && (
+                        {isFilterActive && selectedStatus !== 'Archived' && (
                           <Button
                             variant="link"
                             onClick={clearFilters}
                             className="text-primary font-medium"
                           >
                             Clear all filters
+                          </Button>
+                        )}
+                        {!isFilterActive && archivedCount > 0 && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setSelectedStatus('Archived')}
+                            className="mt-2"
+                          >
+                            View archived ({archivedCount})
                           </Button>
                         )}
                       </EmptyContent>

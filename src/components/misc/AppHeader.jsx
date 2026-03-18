@@ -10,6 +10,54 @@ import { ModeToggle } from './mode-toggle'
 import { useHeader } from './header-context'
 import { SidebarTrigger } from '@/components/ui/sidebar'
 import { useSubscription } from '@/api/useSubscription'
+import { useNavigate } from 'react-router-dom'
+import { cn } from '@/lib/utils'
+import { formatDate } from '@/lib/helper'
+
+function TrialStatusPill({ phase, daysRemaining, endsAt }) {
+  const navigate = useNavigate()
+
+  const colorClass = {
+    active:   'bg-muted text-muted-foreground hover:bg-muted/80',
+    warning:  'bg-amber-100 text-amber-700 hover:bg-amber-200 dark:bg-amber-950 dark:text-amber-400 dark:hover:bg-amber-900',
+    critical: 'bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-950 dark:text-red-400 dark:hover:bg-red-900',
+    grace:    'bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-950 dark:text-red-400 dark:hover:bg-red-900',
+  }[phase] ?? 'bg-muted text-muted-foreground'
+
+  const endDateStr = endsAt ? formatDate(endsAt) : null
+
+  let desktopText
+  let mobileText
+  if (phase === 'grace') {
+    desktopText = 'Trial expired · Grace Period'
+    mobileText = 'Trial exp.'
+  } else if (phase === 'critical' && daysRemaining === 0) {
+    desktopText = 'Trial · expires today'
+    mobileText = 'Exp. today'
+  } else if (phase === 'critical' && daysRemaining === 1) {
+    desktopText = 'Trial · expires tomorrow'
+    mobileText = 'Exp. tmrw'
+  } else {
+    desktopText = `Trial · ${daysRemaining} day${daysRemaining !== 1 ? 's' : ''} left`
+    mobileText = `${daysRemaining}d left`
+  }
+
+  return (
+    <button
+      onClick={() => navigate('/billing')}
+      className={cn(
+        'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition-colors cursor-pointer border-0 outline-none focus-visible:ring-2 focus-visible:ring-ring',
+        colorClass,
+      )}
+    >
+      <span className="hidden sm:inline">{desktopText}</span>
+      <span className="sm:hidden">{mobileText}</span>
+      {endDateStr && (
+        <span className="hidden sm:inline opacity-60">· {endDateStr}</span>
+      )}
+    </button>
+  )
+}
 
 const APP_NAME = 'Tercero'
 const DEFAULT_ICON = '/TerceroIcon.svg'
@@ -120,6 +168,9 @@ export function AppHeader({ agencySettings }) {
 
       {/* --- RIGHT ACTIONS SECTION --- */}
       <div className="ml-auto flex items-center gap-2">
+        {sub?.trial_phase && (
+          <TrialStatusPill phase={sub.trial_phase} daysRemaining={sub.trial_days_remaining} endsAt={sub.trial_ends_at} />
+        )}
         {header.actions}
         <ModeToggle />
 
