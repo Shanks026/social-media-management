@@ -5,7 +5,7 @@ import { useAuth } from '@/context/AuthContext'
 // ── TESTING ONLY: set to a number (1–16+) to simulate a trial day.
 // Day 1 = first day of trial, Day 15 = grace period, Day 16 = locked.
 // Set to null for production.
-const TRIAL_DAY_OVERRIDE = 13 // e.g. TRIAL_DAY_OVERRIDE = 8
+const TRIAL_DAY_OVERRIDE = null // e.g. TRIAL_DAY_OVERRIDE = 8
 
 export function useSubscription() {
   const { user, workspaceUserId } = useAuth()
