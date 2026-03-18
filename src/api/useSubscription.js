@@ -2,6 +2,11 @@ import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/context/AuthContext'
 
+// ── TESTING ONLY: set to a number (1–16+) to simulate a trial day.
+// Day 1 = first day of trial, Day 15 = grace period, Day 16 = locked.
+// Set to null for production.
+const TRIAL_DAY_OVERRIDE = null // e.g. TRIAL_DAY_OVERRIDE = 8
+
 export function useSubscription() {
   const { user, workspaceUserId } = useAuth()
 
@@ -58,6 +63,31 @@ export function useSubscription() {
       const brandingAgencySidebar = sub.branding_agency_sidebar ?? false
       const brandingPoweredBy = sub.branding_powered_by ?? true
 
+      // ── Trial state ────────────────────────────────────────────────────────
+      const isTrial = sub.plan_name === 'trial'
+      let trialPhase = null
+      let trialDaysRemaining = null
+
+      if (isTrial && sub.trial_ends_at) {
+        let daysUntilExpiry
+
+        if (TRIAL_DAY_OVERRIDE !== null) {
+          // Testing: Day 1 = 13 days remaining, Day 14 = 0, Day 15 = -1, Day 16 = -2
+          daysUntilExpiry = 14 - TRIAL_DAY_OVERRIDE
+        } else {
+          const msUntilExpiry = new Date(sub.trial_ends_at) - new Date()
+          daysUntilExpiry = Math.ceil(msUntilExpiry / (1000 * 60 * 60 * 24))
+        }
+
+        trialDaysRemaining = Math.max(daysUntilExpiry, 0)
+
+        if (daysUntilExpiry >= 6)          trialPhase = 'active'
+        else if (daysUntilExpiry >= 2)     trialPhase = 'warning'
+        else if (daysUntilExpiry >= 0)     trialPhase = 'critical'
+        else if (daysUntilExpiry === -1)   trialPhase = 'grace'
+        else                               trialPhase = 'expired'
+      }
+
       return {
         agency_name: sub.agency_name || 'Tercero',
         logo_url: sub.logo_url,
@@ -79,6 +109,11 @@ export function useSubscription() {
         proposals_limit: sub.proposals_limit ?? null,
         client_count: count || 0,
         max_clients: sub.max_clients,
+        is_trial: isTrial,
+        trial_phase: trialPhase,
+        trial_days_remaining: trialDaysRemaining,
+        trial_ends_at: sub.trial_ends_at ?? null,
+        is_trial_locked: trialPhase === 'expired',
 
         storage_display: {
           usage_value: usageVal,

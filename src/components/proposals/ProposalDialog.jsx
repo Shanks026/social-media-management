@@ -595,7 +595,7 @@ export function ProposalDialog({
             </div>
 
             {/* ── Right — Live Preview ── */}
-            <div className="lg:w-[55%] min-h-100 lg:min-h-0 bg-[#f3f4f6] dark:bg-zinc-950/50 border-t lg:border-t-0 lg:border-l border-border/50 flex flex-col min-w-0">
+            <div className="lg:w-[55%] min-h-100 lg:min-h-0 bg-muted/40 border-t lg:border-t-0 lg:border-l border-border/50 flex flex-col min-w-0">
               <div className="px-4 py-2.5 border-b border-border/50 bg-background/50 shrink-0">
                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   Live Preview

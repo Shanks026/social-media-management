@@ -1,4 +1,7 @@
 import { useState } from 'react'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
 import { cn } from '@/lib/utils'
 import {
   FileText,
@@ -43,7 +46,16 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog'
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import {
   Select,
   SelectContent,
@@ -51,7 +63,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Label } from '@/components/ui/label'
 import {
   deleteDocument,
   updateDocument,
@@ -79,18 +90,31 @@ function getFileIcon(mimeType) {
   return FileText
 }
 
+const editSchema = z.object({
+  displayName: z.string().min(1, 'Name is required').max(200),
+  category: z.string().min(1, 'Category is required'),
+  notes: z.string().max(500).optional(),
+})
+
 export default function DocumentCard({ doc }) {
   const { user } = useAuth()
   const queryClient = useQueryClient()
   const { data: sub } = useSubscription()
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
-  const [editName, setEditName] = useState(doc.display_name)
-  const [editCategory, setEditCategory] = useState(doc.category)
   const [previewOpen, setPreviewOpen] = useState(false)
   const [moveDialogOpen, setMoveDialogOpen] = useState(false)
 
   const Icon = getFileIcon(doc.mime_type)
+
+  const form = useForm({
+    resolver: zodResolver(editSchema),
+    defaultValues: {
+      displayName: doc.display_name,
+      category: doc.category,
+      notes: doc.notes ?? '',
+    },
+  })
 
   // ── Delete ──
   const deleteMutation = useMutation({
@@ -110,10 +134,11 @@ export default function DocumentCard({ doc }) {
 
   // ── Update ──
   const updateMutation = useMutation({
-    mutationFn: () =>
+    mutationFn: (values) =>
       updateDocument(doc.id, {
-        displayName: editName,
-        category: editCategory,
+        displayName: values.displayName,
+        category: values.category,
+        notes: values.notes,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['documents', 'list'] })
@@ -151,6 +176,15 @@ export default function DocumentCard({ doc }) {
     } catch (err) {
       toast.error(err.message || 'Failed to generate download link')
     }
+  }
+
+  function openEditDialog() {
+    form.reset({
+      displayName: doc.display_name,
+      category: doc.category,
+      notes: doc.notes ?? '',
+    })
+    setEditOpen(true)
   }
 
   const isArchived = doc.status === 'Archived'
@@ -203,6 +237,11 @@ export default function DocumentCard({ doc }) {
               {formatDate(doc.created_at)}
             </span>
           </div>
+          {doc.notes && (
+            <p className="text-xs text-muted-foreground/70 truncate max-w-sm">
+              {doc.notes}
+            </p>
+          )}
         </div>
 
         {/* Client — avatar + name, far right */}
@@ -245,13 +284,7 @@ export default function DocumentCard({ doc }) {
               <Download className="size-4" />
               Download
             </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => {
-                setEditName(doc.display_name)
-                setEditCategory(doc.category)
-                setEditOpen(true)
-              }}
-            >
+            <DropdownMenuItem onClick={openEditDialog}>
               <Pencil className="size-4" />
               Rename / Recategorise
             </DropdownMenuItem>
@@ -331,45 +364,101 @@ export default function DocumentCard({ doc }) {
 
       {/* Edit dialog */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className="sm:max-w-sm">
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Edit document</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-1.5">
-              <Label>Document name</Label>
-              <Input
-                value={editName}
-                onChange={(e) => setEditName(e.target.value)}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Category</Label>
-              <Select value={editCategory} onValueChange={setEditCategory}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {DOCUMENT_CATEGORIES.map((cat) => (
-                    <SelectItem key={cat} value={cat}>
-                      {cat}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              onClick={() => updateMutation.mutate()}
-              disabled={!editName.trim() || updateMutation.isPending}
+
+          <Form {...form}>
+            <form
+              onSubmit={form.handleSubmit((values) => updateMutation.mutate(values))}
+              className="space-y-4"
             >
-              Save
-            </Button>
-          </DialogFooter>
+              <FormField
+                control={form.control}
+                name="displayName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Document name</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="e.g. Q1 Contract"
+                        disabled={updateMutation.isPending}
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="category"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Category</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      value={field.value}
+                      disabled={updateMutation.isPending}
+                    >
+                      <FormControl>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select category" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {DOCUMENT_CATEGORIES.map((cat) => (
+                          <SelectItem key={cat} value={cat}>
+                            {cat}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="notes"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      Notes{' '}
+                      <span className="text-muted-foreground font-normal">(Optional)</span>
+                    </FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="Add any context or notes about this document…"
+                        className="resize-none text-sm"
+                        rows={3}
+                        disabled={updateMutation.isPending}
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setEditOpen(false)}
+                  disabled={updateMutation.isPending}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={updateMutation.isPending}>
+                  {updateMutation.isPending ? 'Saving…' : 'Save'}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
         </DialogContent>
       </Dialog>
     </>

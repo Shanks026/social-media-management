@@ -31,7 +31,7 @@ export default function CampaignsPage() {
 
   return (
     <div className="min-h-full bg-background selection:bg-primary/10">
-      <div className="px-8 pt-8 pb-20 space-y-8 max-w-[1400px] mx-auto animate-in fade-in duration-700">
+      <div className="px-8 pt-8 pb-20 space-y-8 max-w-[1400px] mx-auto animate-page-fade-in">
         {/* --- SECTION 1: HEADER --- */}
         <div className="flex items-end justify-between">
           <div className="space-y-1">

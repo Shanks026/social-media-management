@@ -65,7 +65,7 @@ export default function DocumentsTab({ clientId }) {
   // ── Filters ────────────────────────────────────────────────────────────────
   const [searchRaw, setSearchRaw] = useState('')
   const [search, setSearch] = useState('')
-  const [selectedStatus, setSelectedStatus] = useState('Active')
+  const [selectedStatus, setSelectedStatus] = useState('all')
   const [selectedCategory, setSelectedCategory] = useState('all')
 
   // Debounce search 300ms
@@ -76,13 +76,13 @@ export default function DocumentsTab({ clientId }) {
 
   const isFilterActive =
     search !== '' ||
-    selectedStatus !== 'Active' ||
+    selectedStatus !== 'all' ||
     selectedCategory !== 'all'
 
   function clearFilters() {
     setSearchRaw('')
     setSearch('')
-    setSelectedStatus('Active')
+    setSelectedStatus('all')
     setSelectedCategory('all')
   }
 
@@ -93,8 +93,8 @@ export default function DocumentsTab({ clientId }) {
   const [createCollectionOpen, setCreateCollectionOpen] = useState(false)
 
   const uploadMutation = useMutation({
-    mutationFn: ({ file, displayName, category }) =>
-      uploadDocument({ clientId, file, displayName, category }),
+    mutationFn: ({ file, displayName, category, notes }) =>
+      uploadDocument({ clientId, file, displayName, category, notes }),
     onMutate: () => setUploadProgress(10),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['documents', 'list'] })
@@ -117,10 +117,10 @@ export default function DocumentsTab({ clientId }) {
     setDialogOpen(true)
   }
 
-  function handleConfirmUpload({ displayName, category }) {
+  function handleConfirmUpload({ displayName, category, notes }) {
     if (!pendingFile) return
     setUploadProgress(30)
-    uploadMutation.mutate({ file: pendingFile, displayName, category })
+    uploadMutation.mutate({ file: pendingFile, displayName, category, notes })
   }
 
   function handleDialogClose(open) {
@@ -165,6 +165,7 @@ export default function DocumentsTab({ clientId }) {
     allDocs.filter((d) => !d.collection_id || !collectionIds.has(d.collection_id)),
   )
   const filteredCollections = collections ?? []
+  const archivedCount = allDocs.filter((d) => d.status === 'Archived').length
 
   return (
     <>
@@ -257,23 +258,44 @@ export default function DocumentsTab({ clientId }) {
             isFilterActive ? (
               <Empty className="py-20 border border-dashed rounded-2xl bg-muted/5">
                 <EmptyHeader>
-                  <EmptyMedia variant="icon"><Search /></EmptyMedia>
-                  <EmptyTitle className="font-normal text-xl">No documents match your search</EmptyTitle>
-                  <EmptyDescription className="font-light">Try adjusting your filters or search terms.</EmptyDescription>
+                  <EmptyMedia variant="icon">
+                    {selectedStatus === 'Archived' ? <FolderOpen /> : <Search />}
+                  </EmptyMedia>
+                  <EmptyTitle className="font-normal text-xl">
+                    {selectedStatus === 'Archived' ? 'No archived documents' : 'No documents match your search'}
+                  </EmptyTitle>
+                  <EmptyDescription className="font-light">
+                    {selectedStatus === 'Archived'
+                      ? 'No documents have been archived yet.'
+                      : 'Try adjusting your filters or search terms.'}
+                  </EmptyDescription>
                 </EmptyHeader>
-                <EmptyContent className="mt-4">
-                  <Button variant="link" onClick={clearFilters} className="text-primary font-medium">
-                    Clear filters
-                  </Button>
-                </EmptyContent>
+                {selectedStatus !== 'Archived' && (
+                  <EmptyContent className="mt-4">
+                    <Button variant="link" onClick={clearFilters} className="text-primary font-medium">
+                      Clear filters
+                    </Button>
+                  </EmptyContent>
+                )}
               </Empty>
             ) : (
               <Empty className="py-20 border border-dashed rounded-2xl bg-muted/5">
                 <EmptyHeader>
                   <EmptyMedia variant="icon"><FolderOpen /></EmptyMedia>
-                  <EmptyTitle className="font-normal text-xl">No documents yet</EmptyTitle>
-                  <EmptyDescription className="font-light">Upload a contract, brief, or brand asset to get started.</EmptyDescription>
+                  <EmptyTitle className="font-normal text-xl">No active documents</EmptyTitle>
+                  <EmptyDescription className="font-light">
+                    {archivedCount > 0
+                      ? `You have ${archivedCount} archived document${archivedCount !== 1 ? 's' : ''}.`
+                      : 'Upload a contract, brief, or brand asset to get started.'}
+                  </EmptyDescription>
                 </EmptyHeader>
+                {archivedCount > 0 && (
+                  <EmptyContent className="mt-4">
+                    <Button variant="outline" size="sm" onClick={() => setSelectedStatus('Archived')}>
+                      View archived ({archivedCount})
+                    </Button>
+                  </EmptyContent>
+                )}
               </Empty>
             )
           ) : (

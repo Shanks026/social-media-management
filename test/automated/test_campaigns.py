@@ -51,11 +51,13 @@ class TestCampaignDetail:
     def _get_first_campaign_url(self, page: Page) -> str | None:
         """Navigate to first campaign and return its URL."""
         page.goto(f"{BASE_URL}/campaigns")
-        page.wait_for_load_state("networkidle")
-        link = page.locator("a[href^='/campaigns/']").first
-        if link.count() > 0:
-            link.click()
-            page.wait_for_load_state("networkidle")
+        # Wait for campaign cards to render (networkidle unreliable with Supabase realtime)
+        page.wait_for_timeout(2_000)
+        # Campaign cards are divs with cursor-pointer containing an h3
+        card = page.locator("div.cursor-pointer").filter(has=page.locator("h3")).first
+        if card.count() > 0:
+            card.click()
+            page.wait_for_timeout(1_500)
             return page.url
         return None
 

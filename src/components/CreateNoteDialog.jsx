@@ -102,6 +102,7 @@ export default function CreateNoteDialog({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['global-notes'] })
       queryClient.invalidateQueries({ queryKey: ['client-notes', selectedClientId] })
+      queryClient.invalidateQueries({ queryKey: ['notes', 'week-timeline'] })
       if (effectiveCampaignId) {
         queryClient.invalidateQueries({ queryKey: ['campaign-notes', effectiveCampaignId] })
       }

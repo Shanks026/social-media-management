@@ -83,7 +83,7 @@ export const plans = [
 
 // ── Upgrade Request Dialog ──
 
-const UpgradeRequestDialog = ({
+export const UpgradeRequestDialog = ({
   open,
   onOpenChange,
   targetPlan,
@@ -229,7 +229,7 @@ const FeatureValue = ({ feature, accentClass, isPopular }) => {
   )
 }
 
-const PlanCard = ({ plan, isCurrentPlan, onContactTeam }) => {
+export const PlanCard = ({ plan, isCurrentPlan, onContactTeam }) => {
   const isPopular = plan.popular
 
   // Invert colors for the "Popular" card to match the dark/light contrast inspiration

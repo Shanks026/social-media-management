@@ -67,7 +67,7 @@ export default function LifetimeRevenue() {
                 value: Math.min(totalExpenses, totalRevenue),
                 fill: COLORS.expenses,
               },
-            ]
+            ].filter((d) => d.value > 0)
           : [
               {
                 name: 'expenses',
@@ -128,7 +128,7 @@ export default function LifetimeRevenue() {
                 paddingAngle={isEmpty || isSingleSegment ? 0 : 2}
                 innerRadius={72}
                 outerRadius={110}
-                strokeWidth={isEmpty ? 0 : 4}
+                strokeWidth={isEmpty || isSingleSegment ? 0 : 4}
                 stroke="hsl(var(--background))"
               >
                 <Label

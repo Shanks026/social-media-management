@@ -201,7 +201,7 @@ export default function PostActionDialogs({
             </div>
           </DialogHeader>
 
-          {post.platform_schedules ? (
+          {post.platform_schedules && Object.keys(post.platform_schedules).length >= 2 ? (
             /* Per-platform: show read-only schedule summary */
             <div className="space-y-2 py-2">
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">

@@ -79,8 +79,13 @@ export default function CreateMeetingDialog({
   campaignName = null,  // display name for the locked campaign pill
   editMeeting,
   onSuccess,
+  open: controlledOpen,
+  onOpenChange: controlledOnOpenChange,
 }) {
-  const [open, setOpen] = useState(false)
+  const [internalOpen, setInternalOpen] = useState(false)
+  const isControlled = controlledOpen !== undefined
+  const open = isControlled ? controlledOpen : internalOpen
+  const setOpen = isControlled ? controlledOnOpenChange : setInternalOpen
   const queryClient = useQueryClient()
 
   const { data: clientsData, isLoading: loadingClients } = useClients()
@@ -202,7 +207,7 @@ export default function CreateMeetingDialog({
         }
       }}
     >
-      <DialogTrigger asChild>{children}</DialogTrigger>
+      {children && <DialogTrigger asChild>{children}</DialogTrigger>}
       <DialogContent className="sm:max-w-[480px]">
         <DialogHeader className="pb-2">
           <DialogTitle className="text-xl">
@@ -221,26 +226,6 @@ export default function CreateMeetingDialog({
             className="grid gap-6 py-4"
           >
             <div className="grid gap-5">
-              <FormField
-                control={form.control}
-                name="title"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-semibold">
-                      Meeting Title
-                    </FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="e.g., Q3 Strategy Review"
-                        className="bg-muted/30 focus-visible:ring-primary"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {/* Client */}
                 <FormField
@@ -381,11 +366,32 @@ export default function CreateMeetingDialog({
 
               <FormField
                 control={form.control}
+                name="title"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-sm font-semibold">
+                      Meeting Title
+                    </FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="e.g., Q3 Strategy Review"
+                        className="bg-muted/30 focus-visible:ring-primary"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
                 name="notes"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-sm font-semibold">
-                      Notes (Optional)
+                      Notes{' '}
+                      <span className="text-muted-foreground font-normal">(Optional)</span>
                     </FormLabel>
                     <FormControl>
                       <Textarea

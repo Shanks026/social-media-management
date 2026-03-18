@@ -33,6 +33,15 @@ export default function PostDetails() {
   const [approveDate, setApproveDate] = useState(null)
   const [publishingPlatformId, setPublishingPlatformId] = useState(null)
 
+  // Invalidate all caches that depend on post status/counts
+  const invalidatePostRelated = () => {
+    queryClient.invalidateQueries({ queryKey: ['campaigns'] })
+    queryClient.invalidateQueries({ queryKey: ['clients'] })
+    queryClient.invalidateQueries({ queryKey: ['clients-list'] })
+    queryClient.invalidateQueries({ queryKey: ['postCounts', clientId] })
+    queryClient.invalidateQueries({ queryKey: ['global-post-counts'] })
+  }
+
   // --- Queries ---
 
   const {
@@ -82,6 +91,7 @@ export default function PostDetails() {
       queryClient.invalidateQueries({
         queryKey: ['post-version', post.id],
       })
+      invalidatePostRelated()
       queryClient.setQueryData(['post-version', post.id], (oldData) => {
         if (!oldData) return oldData
         return { ...oldData, status: 'ARCHIVED' }
@@ -109,6 +119,7 @@ export default function PostDetails() {
     },
     onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ['post-version', postId] })
+      invalidatePostRelated()
       if (!res.silent) {
         toast.success('Post sent for approval')
         setIsConfirmOpen(false)
@@ -141,6 +152,9 @@ export default function PostDetails() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['post-version', postId] })
+      invalidatePostRelated()
+      queryClient.invalidateQueries({ queryKey: ['calendar'] })
+      queryClient.invalidateQueries({ queryKey: ['global-calendar'] })
       toast.success('Post scheduled successfully')
       setIsApproveScheduleOpen(false)
       setApproveDate(null)
@@ -173,6 +187,9 @@ export default function PostDetails() {
     onSuccess: async ({ platform, allPublished, versionId }) => {
       setPublishingPlatformId(null)
       queryClient.invalidateQueries({ queryKey: ['post-version', postId] })
+      invalidatePostRelated()
+      queryClient.invalidateQueries({ queryKey: ['calendar'] })
+      queryClient.invalidateQueries({ queryKey: ['global-calendar'] })
       if (allPublished) {
         toast.success('All platforms published — post marked as Published')
       } else {
@@ -203,6 +220,9 @@ export default function PostDetails() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['post-version', postId] })
+      invalidatePostRelated()
+      queryClient.invalidateQueries({ queryKey: ['calendar'] })
+      queryClient.invalidateQueries({ queryKey: ['global-calendar'] })
       toast.success('Post marked as published')
       setIsPublishConfirmOpen(false)
     },
@@ -222,6 +242,28 @@ export default function PostDetails() {
     onError: (err) => {
       console.error('Delete Mutation Failed:', err)
       toast.error(err.message)
+    },
+  })
+
+  const resendApprovalLinkMutation = useMutation({
+    mutationFn: async () => {
+      if (!post?.clients?.email) throw new Error('Client email not found')
+      // Deactivate all existing tokens so old email links become invalid
+      await supabase
+        .from('share_tokens')
+        .update({ is_active: false })
+        .eq('post_version_id', post.id)
+      // Edge function calls generate_version_token internally → creates fresh active token
+      const { error } = await supabase.functions.invoke('send-approval-email', {
+        body: { record: { ...post, status: 'PENDING_APPROVAL' } },
+      })
+      if (error) throw error
+    },
+    onSuccess: () => {
+      toast.success(`Approval link resent to ${post.clients.email}`)
+    },
+    onError: (err) => {
+      toast.error(err.message || 'Failed to resend approval link')
     },
   })
 
@@ -276,6 +318,8 @@ export default function PostDetails() {
         onCreateRevision={() => setIsRevisionConfirmOpen(true)}
         onEdit={() => setIsEditOpen(true)}
         onDelete={() => setIsDeleteConfirmOpen(true)}
+        onResendLink={() => resendApprovalLinkMutation.mutate()}
+        isResendingLink={resendApprovalLinkMutation.isPending}
         onRefresh={handleRefresh}
         isRevisionPending={createRevisionMutation.isPending}
         isApprovalPending={sendForApprovalMutation.isPending}

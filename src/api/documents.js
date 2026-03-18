@@ -93,7 +93,7 @@ function sanitizeFilename(name) {
     || 'file'                          // fallback if everything was stripped
 }
 
-export async function uploadDocument({ clientId, file, displayName, category, collectionId }) {
+export async function uploadDocument({ clientId, file, displayName, category, collectionId, notes }) {
   const { workspaceUserId } = await resolveWorkspace()
   const documentId = crypto.randomUUID()
   const safeFilename = sanitizeFilename(file.name)
@@ -117,6 +117,7 @@ export async function uploadDocument({ clientId, file, displayName, category, co
       file_size_bytes: file.size,
       mime_type: file.type || 'application/octet-stream',
       category: category || 'Other',
+      ...(notes ? { notes } : {}),
       ...(collectionId ? { collection_id: collectionId } : {}),
     })
     .select()
@@ -141,11 +142,12 @@ export async function uploadDocument({ clientId, file, displayName, category, co
  * Update document display name, category, and/or collection.
  * Pass collectionId = null to remove from collection (ungrouped).
  */
-export async function updateDocument(id, { displayName, category, collectionId }) {
+export async function updateDocument(id, { displayName, category, collectionId, notes }) {
   const payload = {}
   if (displayName !== undefined) payload.display_name = displayName
   if (category !== undefined) payload.category = category
   if (collectionId !== undefined) payload.collection_id = collectionId ?? null
+  if (notes !== undefined) payload.notes = notes || null
   payload.updated_at = new Date().toISOString()
 
   const { data, error } = await supabase

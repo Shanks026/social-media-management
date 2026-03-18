@@ -49,18 +49,34 @@ def browser_context_args(browser_context_args):
 # ---------------------------------------------------------------------------
 
 def login(page: Page, email: str = TEST_EMAIL, password: str = TEST_PASSWORD):
-    """Log in and wait for dashboard."""
+    """Log in, wait for dashboard, and suppress the WelcomeCarousel."""
     page.goto(f"{BASE_URL}/login")
     page.get_by_label("Email").fill(email)
     page.get_by_label("Password").fill(password)
-    page.get_by_role("button", name="Sign In").click()
+    page.get_by_role("button", name="Login").click()
     page.wait_for_url(f"{BASE_URL}/dashboard", timeout=10_000)
+    # Suppress the WelcomeCarousel by marking it as seen in localStorage
+    page.evaluate("""
+        const keys = Object.keys(localStorage).filter(k => k.startsWith('sb-') && k.endsWith('-auth-token'));
+        if (keys.length) {
+            try {
+                const session = JSON.parse(localStorage.getItem(keys[0]));
+                const userId = session?.user?.id;
+                if (userId) localStorage.setItem('has_seen_welcome_' + userId, 'true');
+            } catch(e) {}
+        }
+    """)
+    # Close the carousel if it already opened before we set the flag
+    overlay = page.locator('[data-slot="dialog-overlay"][data-state="open"]')
+    if overlay.count() > 0:
+        page.keyboard.press("Escape")
+        page.wait_for_timeout(500)
 
 
 def logout(page: Page):
-    """Click the user menu and log out."""
-    page.get_by_role("button", name="User menu").click()
-    page.get_by_role("menuitem", name="Logout").click()
+    """Click the nav-user dropdown and log out."""
+    page.locator('[data-sidebar="menu-button"]').last.click()
+    page.get_by_role("menuitem", name="Log out").click()
     page.wait_for_url(f"{BASE_URL}/login", timeout=8_000)
 
 
@@ -75,6 +91,6 @@ def authenticated_page(page: Page):
     yield page
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def base_url() -> str:
     return BASE_URL

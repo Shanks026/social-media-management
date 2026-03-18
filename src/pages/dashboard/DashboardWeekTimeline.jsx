@@ -157,6 +157,7 @@ export default function DashboardWeekTimeline() {
 
   const totalPosts = scheduledPosts.length
   const totalMeetings = meetings.length
+  const totalNotes = dueNotes.length
 
   return (
     <Card className="border-none shadow-sm ring-1 ring-border/50 bg-card/50 dark:bg-card/30 flex flex-col gap-2 group">
@@ -166,7 +167,7 @@ export default function DashboardWeekTimeline() {
           {!isLoading && (
             <p className="text-xs text-muted-foreground mt-0.5">
               {totalPosts} post{totalPosts !== 1 && 's'} · {totalMeetings}{' '}
-              meeting{totalMeetings !== 1 && 's'}
+              meeting{totalMeetings !== 1 && 's'} · {totalNotes} reminder{totalNotes !== 1 && 's'}
             </p>
           )}
         </div>

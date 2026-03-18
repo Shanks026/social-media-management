@@ -1,7 +1,7 @@
 # Tercero — Full Application Research Document
 
-> **Purpose**: Comprehensive product/feature reference for building a landing page for Tercero.
-> **Status**: Updated March 13, 2026 — reflects live codebase including corrected post status values (PENDING_APPROVAL/NEEDS_REVISION/PUBLISHED), horizontal logo branding, derived whitelabel flags, campaigns full implementation, accurate share token architecture, Teams Phase 1 (agency_members, agency_invites, workspaceUserId, /join/:token), and Proposals Phase 2 (proposals, proposal_line_items, public review, PDF export, per-client tab, subscription enforcement, Upload Existing File via proposal-files bucket, proposal_type built/uploaded, auto-save on blur, status timeline, Replace File, Deal Value for uploaded proposals).
+> **Purpose**: Comprehensive product/feature reference for building a client-facing application document for Tercero.
+> **Status**: Updated March 16, 2026 — reflects live codebase including: PlatformIcon/PlatformStack SVG brand icons, updated TierBadge (INTERNAL/VIP/PRO), IndustryBadge SVG paths from industries.js (14 industries), ClientCard redesign with PlatformStack + financial metrics in INR, ClientProfileView 8-tab layout with URL-persisted tab state, ClientHealthGrid health statuses (Healthy/Needs Attention/At Risk/Idle), LifetimeRevenue donut chart with INR compact formatting, Posts page "Partially Published" status tab, Empty component for consistent empty states, MyOrganization 3-state flow, ProposalReview full branding header chain.
 
 ---
 
@@ -39,6 +39,7 @@ Tercero is a **social media agency management SaaS** — an all-in-one operation
 | Notes | `/operations/notes` | Tasks and reminders |
 | Settings | `/settings` | Profile and agency branding |
 | Billing | `/billing` | Agency's own subscription plan |
+| My Organization | `/myorganization` | Agency internal workspace setup and management |
 | Public Review | `/review/:token` | Per-post client content approval (no login required) |
 | Campaign Review | `/campaign-review/:token` | Bulk campaign approval for clients (no login required) |
 | Proposal Review | `/proposal/:token` | Proposal accept/decline for prospects (no login required) |
@@ -67,13 +68,13 @@ Tercero is a **social media agency management SaaS** — an all-in-one operation
 | **Welcome Message** | Personalized greeting with agency logo |
 | **Agency Health Bar** | KPI cards: total clients, posts due this week, upcoming meetings, monthly revenue |
 | **Content Pipeline Bar** | Count of posts by status (Drafts, Pending Approval, Needs Revision, Scheduled) |
-| **Week Timeline** | Posts scheduled for each day this week |
-| **Client Health Grid** | Per-client urgency: Overdue, Urgent (<24h), Warning (<48h), Healthy |
-| **Financial Snapshot** | Income vs expenses summary |
-| **Lifetime Revenue** | Cumulative revenue chart |
+| **Week Timeline** | 7-day horizontal view with posts scheduled per day; shows client avatars and platform icons per day |
+| **Meetings & Notes** | Tabbed widget — next 2 meetings and next 2 open notes, with "+N more" links and quick-create buttons |
+| **Client Health Grid** | Per-client content health cards — Healthy (has scheduled posts), Needs Attention (has pipeline but no scheduled), At Risk (no pipeline + next post date passed), Idle (no pipeline + no post date); shows pipeline count and "next drop" in relative time; clickable to client detail |
+| **Financial Snapshot** | Income vs expenses summary with trend indicators |
+| **Lifetime Revenue** | Donut pie chart (Profit vs Expenses segments, INR compact format ₹K/₹L/₹Cr in center label); profit margin % + breakdown in footer; "↗" button navigates to `/finance/overview` |
 | **Social Media Usage** | Platform distribution across all posts |
-| **Recent Invoices** | Quick table of latest invoices with status |
-| **Meetings & Notes** | Next upcoming meeting + recent open tasks |
+| **Recent Invoices** | Quick table of latest invoices with status, amount, due date; actions: View/Edit, Download PDF, Mark as Paid |
 
 **Key UX insight**: The dashboard is read-only. Every widget is a summary that links to the full feature. No actions happen here — it's a navigation hub.
 
@@ -85,15 +86,17 @@ Tercero is a **social media agency management SaaS** — an all-in-one operation
 
 #### Client List (`/clients`)
 - Searchable, filterable grid of client cards
-- **Filters**: Search by name, Industry dropdown, Tier dropdown, Urgency filter (All / Urgent / Upcoming / Idle)
+- **Filters**: Search by name, Industry dropdown, Tier dropdown, Urgency tabs (All / Urgent / Upcoming / Idle) with live counts
+- Sorting: internal account first, then all real clients by creation date descending
+- Internal client navigates to `/myorganization`; regular clients navigate to `/clients/:id`
 - **Client Card** shows:
-  - Logo/avatar with fallback initials
-  - Status badge (Active / Inactive)
-  - Tier badge (Bronze / Silver / Gold / Platinum / Custom)
-  - Industry tag
-  - Post pipeline mini-bar (Drafts · Pending · Revisions · Scheduled)
-  - Urgency indicator dot (color-coded by next post deadline)
-  - Next scheduled post date
+  - Logo/avatar (12×12 rounded square) with fallback initials
+  - Client name + **TierBadge**: INTERNAL = blue checkmark (`/verify.png`), VIP = purple Crown icon (with tooltip), PRO = amber Zap icon (with tooltip); returns null for untiered clients
+  - **IndustryBadge**: Material Design SVG path icon + colored label text (14 industries: SaaS, Fintech, Agency, E-Commerce, Fashion, Beauty, Real Estate, Health, Food, Education, Other, Internal, Travel, Creator); each industry has a distinct color (blue, indigo, slate, emerald, pink, rose, amber, teal, orange, cyan, violet, fuchsia, gray)
+  - Post pipeline stats row (Drafts = blue dot, Revisions = pink dot, Pending = orange dot, Scheduled = purple dot); hidden rows only show stats where count > 0; if empty shows "No active workflow" italic text
+  - Financial metrics grid (3 columns): MRR formatted in INR (₹), Profit Margin % with color coding (green ≥70%, amber ≥40%, red <40%), Active Campaigns count (shown only if Velocity+ and `active_campaigns > 0`); entire row hidden for internal accounts
+  - **PlatformStack**: overlapping branded SVG icons for active platforms (shows up to 3, then +N overflow bubble with −6px negative margin for overlap)
+  - Next scheduled post date with urgency dot (animated pulse when overdue); falls back to "joined date" if no upcoming post
 - Clicking a card → Client Detail page
 
 #### Create / Edit Client (`/clients/create`, `/clients/:id/edit`)
@@ -101,23 +104,31 @@ Full form with:
 - Name, email, mobile
 - Logo upload (stored in Supabase `post-media` bucket under `branding/`)
 - Status (Active / Inactive)
-- Industry (16 options: SaaS, Fintech, Agency, E-Commerce, Fashion, Beauty, Real Estate, Health, Food, Travel, Education, Creator, Other, Internal)
-- Tier selection
-- Platform checkboxes (Instagram, LinkedIn, Facebook, Twitter/X, YouTube)
+- Industry (14 options: SaaS, Fintech, Agency, E-Commerce, Fashion, Beauty, Real Estate, Health, Food, Travel, Education, Creator, Other, Internal)
+- Tier selection (VIP, PRO, or none)
+- Platform checkboxes (Instagram, LinkedIn, Facebook, Twitter/X, YouTube, Google Business)
 - Social media links per platform
 - Description/notes field
 
 #### Client Detail (`/clients/:clientId`)
-Three-tab layout:
+Eight-tab layout with active tab persisted in URL search param (`?tab=`):
 1. **Overview** — Profile card, contact info, social links, profitability metrics, upcoming meeting widget, recent posts summary, per-client invoice list, per-client transaction history, platform usage chart, month-over-month revenue bar chart, quick-add buttons (new post, new invoice, new meeting, new note, add transaction)
-2. **Management** — Edit all client details inline
-3. **Workflow** — The client's full post list + notes + meeting history
+2. **Workflow** — The client's full post list + notes + meeting history
+3. **Campaigns** — Campaign list scoped to this client (Velocity+ gated)
+4. **Billing** — Invoices + recurring templates for this client (hidden for internal account)
+5. **Proposals** — Proposals tab scoped to this client
+6. **Documents** — Documents tab scoped to this client
+7. **Calendar** — Full content calendar embedded and scoped to this client (`hideHeader=true` hides the page-level header)
+8. **Settings** — Edit all client details inline (tab label "Settings", internal value "management")
 
 **Special concept: Internal Account**
-- Every agency has one "Internal Account" client marked `is_internal = true`
+- Every agency can have one "Internal Account" client marked `is_internal = true`
 - This represents the agency itself (e.g., posting on the agency's own Instagram)
-- Created during onboarding; cannot be deleted
-- Used for agency-level posts and content
+- Created during onboarding or via "My Organization" setup; excluded from max client count
+- Used for agency-level posts, campaigns, documents, notes, and meetings
+- Shows TierBadge with the blue checkmark (INTERNAL tier)
+- On the Clients page, clicking the internal account card navigates to `/myorganization` instead of `/clients/:id`
+- In the My Organization page, if it exists, renders the full ClientProfileView directly
 
 ---
 
@@ -146,13 +157,13 @@ ARCHIVED         → No longer active; preserved for history
 - All posts across all clients in one view
 - **View modes**: Card grid or data table
 - **Filter options**:
-  - Search (title or content)
-  - Status tabs: All / Drafts / Pending Approval / Scheduled / Needs Revision / Published / Archived
-  - Scope: All Posts / My Agency Only / Client Work Only
+  - Search (title or content, 300ms debounce)
+  - Status tabs: All / Drafts / Pending Approval / Scheduled / Needs Revision / Partially Published / Published / Archived
   - Client selector
   - Platform filter
-  - Date range picker
-- Each post shows: client name/logo, title, platform badges, status badge, target date
+  - Date range picker (popover calendar)
+  - Campaign filter (only visible when `sub?.campaigns` is true and campaigns exist)
+- Each post shows: client name/logo, title, platform icons (PlatformStack), status badge, target date
 
 #### Post Details (`/clients/:clientId/posts/:postId`)
 The richest view in the app. A full-screen editing and review interface:
@@ -312,12 +323,13 @@ Lightweight task manager for the agency team.
 - Client assignment (optional — can be "Internal" for agency-level tasks)
 
 **Notes List view**:
-- Status tabs: All / To Do / Done / Archived
+- Status tabs: All / To Do / Done / Archived (with live counts per tab)
 - Search by title or description
-- Filter by client
-- Cards show title, truncated description, due date, client badge, status badge
-- Click status badge to cycle: TODO → DONE → ARCHIVED inline
-- Edit and Delete per note
+- Filter by client dropdown
+- Notes auto-grouped by section: Overdue → Upcoming → Done → Archived
+- Each note row shows: title, due date (red when overdue), client avatar (with "INT" badge for internal account), status badge, toggle-done circle icon, Edit and Delete actions
+- Inline status transitions: click circle icon to toggle TODO ↔ DONE; separate Archive action
+- Empty states use the `Empty` component (`src/components/ui/empty`) with contextual messaging for no-data vs. filtered-no-results states
 
 ---
 
@@ -632,6 +644,16 @@ ARCHIVED → Manually archived by owner.
 - Respects system preference on first load
 - All components use CSS variable tokens (never hard-coded colors)
 
+### Empty States
+- `Empty` component (`src/components/ui/empty`) provides a consistent empty state UI used across all list pages and tabs when no data exists
+- Sub-components: `Empty`, `EmptyContent`, `EmptyHeader`, `EmptyTitle`, `EmptyDescription`, `EmptyMedia`
+- Context-aware messaging: different copy for "no data at all" vs. "no results for current filters"
+- Used in: Notes & Reminders, Proposals page, and other list surfaces
+
+### Platform Icons
+- `PlatformStack` is the standard way to display which platforms a post or client targets
+- Overlapping icons with ring borders provide immediate visual context for multi-platform content without taking up space
+
 ---
 
 ## 5. DATA ARCHITECTURE SUMMARY
@@ -753,14 +775,35 @@ Defaults are defensive (most-restricted) except `branding_powered_by` which defa
 
 ---
 
-## 7. ONBOARDING FLOW
+## 7. ONBOARDING & MY ORGANIZATION
 
+### Initial Signup Flow
 When a new user signs up:
 1. `/signup` → creates Supabase auth account
 2. Redirects to `/onboarding` (the `Onboarding.jsx` page)
 3. User sets up agency: name, logo, industry, platforms
 4. Creates the agency's "Internal Account" client
 5. Redirected to `/dashboard`
+
+### My Organization (`/myorganization`)
+The agency workspace management hub. Three states based on data:
+
+**State 1 — Loading**: Full-screen spinner while internal client data fetches.
+
+**State 2 — Workspace Exists**: If an internal client is found (`is_internal = true`), renders `ClientProfileView` directly — same full 8-tab experience as any client detail page, giving the agency a complete workspace for managing their own social media.
+
+**State 3 — Not Yet Set Up**: If no internal client exists, renders a setup UI with two paths:
+
+- **Path A — Agency Name Already Set** ("Ready to Deploy" card): Shows agency identity is confirmed and offers one-click workspace activation via "Create Workspace" button. On click opens a confirmation modal ("Activate Agency Hub") listing two benefits (Workflow Management, Full Creative Suite). Confirms → calls `activateInternalWorkspace()` → invalidates queries → workspace live. A "Reset & reconfigure →" link lets the user redo the full form.
+
+- **Path B — Zero Data** ("Get Started" choice screen): Two choice cards side by side:
+  - **Identity Branding** (Palette icon): Sets agency name and logo only — for white-labeling reports and portals without creating a full workspace. Calls `setupBrandingOnly()`.
+  - **Operational Workspace** (Rocket icon, highlighted): Full identity setup plus a dedicated internal account. Calls `completeFullAgencySetup()`. Both options open `CreateClientPage` in a full-screen modal.
+
+**Benefits of Internal Workspace**:
+- Subscription-exempt (does not count against max client slots)
+- Shared storage pool (unified media storage)
+- Full creative suite (scheduling, approvals, campaigns, documents for agency's own content)
 
 ---
 
@@ -779,16 +822,20 @@ Four Supabase Edge Functions handle transactional email (all use Resend, sent fr
 
 ## 9. SUPPORTED SOCIAL PLATFORMS
 
-| Platform | Preview Available | Icon |
-|----------|------------------|------|
-| Instagram | Yes (feed post style) | ✓ |
-| LinkedIn | Yes (feed post style) | ✓ |
-| Twitter / X | Yes (tweet card) | ✓ |
-| YouTube | Yes (video thumbnail + title) | ✓ |
-| Facebook | No dedicated preview | ✓ |
-| Google Business | No dedicated preview | ✓ |
+| Platform | Preview Available | Brand Icon |
+|----------|------------------|-----------|
+| Instagram | Yes (feed post style) | Gradient radial (yellow→red→purple→blue) rounded square |
+| LinkedIn | Yes (feed post style) | Blue (#0A66C2) rounded square with "in" text |
+| Twitter / X | Yes (tweet card) | (standard icon) |
+| YouTube | Yes (video thumbnail + title) | Red rounded square with white play button |
+| Facebook | No dedicated preview | Blue (#1877F2) rounded square with white "f" |
+| Google Business | No dedicated preview | Light grey rounded square with 4-color Google "G" |
 
-Platform icons are served from `/platformIcons/{name}.png`. The `google_business` icon maps to `google_busines.png` (filename inconsistency handled in code).
+**Platform Icon System** (`src/components/PlatformIcon.jsx`):
+- `PlatformIcon({ platform, size })` — renders a single branded inline SVG icon. Normalises platform string to lowercase with underscores. Falls back to a grey rounded square with the first letter if the platform is unknown.
+- `PlatformStack({ platforms, max, size })` — renders an overlapping stack of `PlatformIcon` instances (−6px negative margin for overlap). Shows up to `max` icons (default 3), then a "+N" overflow bubble. Used in ClientCard footer and post list rows.
+- **Ring colors**: Instagram = `ring-pink-300`, LinkedIn = `ring-blue-300`, Facebook = `ring-blue-300`, YouTube = `ring-red-300`, Google Business = `ring-gray-200`
+- Previously platform icons were PNG files from `/platformIcons/{name}.png`; those files may still exist but the UI now uses inline SVGs throughout.
 
 ---
 
@@ -879,9 +926,13 @@ src/components/sidebar/app-sidebar.jsx — Sidebar composition + "Tercero YYYY" 
 src/components/HorizontalLogoCropDialog.jsx — React Image Crop dialog for landscape logo management
 src/pages/settings/AgencySettings.jsx  — Agency settings including logo_horizontal_url upload + HorizontalLogoCropDialog
 src/lib/helper.js                   — formatDate(), formatFileSize(), MAX_DOCUMENT_SIZE_BYTES
-src/lib/client-helpers.js           — getUrgencyStatus()
-src/lib/industries.js               — Industry constants
+src/lib/client-helpers.js           — getUrgencyStatus(nextPostAt) → { color, label, pulse } urgency object
+src/lib/industries.js               — INDUSTRY_OPTIONS array (value, label, color) — 14 industries
 src/lib/platforms.js                — SUPPORTED_PLATFORMS constant (id, label, color per platform)
+src/components/PlatformIcon.jsx     — PlatformIcon (single SVG brand icon) + PlatformStack (overlapping icon row with +N overflow); platforms: instagram, linkedin, facebook, youtube, google_business
+src/components/TierBadge.jsx        — TierBadge({ tier }): INTERNAL = /verify.png image, VIP = purple Crown icon, PRO = amber Zap icon, else null
+src/pages/clients/IndustryBadge.jsx — IndustryBadge({ industryValue }): Material Design SVG path + colored label text; imports INDUSTRY_OPTIONS from industries.js
+src/components/ui/empty.jsx         — Empty, EmptyContent, EmptyHeader, EmptyTitle, EmptyDescription, EmptyMedia — consistent empty state UI components
 src/components/misc/header-context.jsx — useHeader() hook
 src/utils/finance.js                — formatCurrency()
 src/utils/downloadInvoicePDF.jsx    — Invoice PDF download utility

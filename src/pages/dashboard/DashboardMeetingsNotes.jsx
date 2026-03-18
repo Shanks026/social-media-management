@@ -32,16 +32,16 @@ export default function DashboardMeetingsNotes() {
   const [activeTab, setActiveTab] = useState('meetings')
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const { user } = useAuth()
+  const { user, workspaceUserId } = useAuth()
 
   const { data: clientsMap = {} } = useQuery({
-    queryKey: ['clients-map-for-dashboard', user?.id],
+    queryKey: ['clients-map-for-dashboard', workspaceUserId],
     queryFn: async () => {
-      if (!user) return {}
+      if (!workspaceUserId) return {}
       const { data } = await supabase
         .from('clients')
         .select('id, name, logo_url, is_internal')
-        .eq('user_id', user.id)
+        .eq('user_id', workspaceUserId)
       const map = (data || []).reduce((acc, c) => ({ ...acc, [c.id]: c }), {})
       const internalClient = (data || []).find((c) => c.is_internal)
       map['null'] = internalClient || {
@@ -51,7 +51,7 @@ export default function DashboardMeetingsNotes() {
       }
       return map
     },
-    enabled: !!user?.id,
+    enabled: !!workspaceUserId,
   })
 
   const { data: upcomingMeetings = [], isLoading: loadingMeetings } = useQuery({
@@ -118,13 +118,24 @@ export default function DashboardMeetingsNotes() {
 
           <div className="flex items-center gap-1">
             {activeTab === 'meetings' ? (
-              <CreateMeetingDialog lockClient={false}>
+              <CreateMeetingDialog
+                lockClient={false}
+                onSuccess={() =>
+                  queryClient.refetchQueries({ queryKey: ['meetings', 'dashboard-upcoming'] })
+                }
+              >
                 <Button variant="ghost" size="icon" className="h-8 w-8">
                   <Plus className="h-4 w-4" />
                 </Button>
               </CreateMeetingDialog>
             ) : (
-              <CreateNoteDialog lockClient={false}>
+              <CreateNoteDialog
+                lockClient={false}
+                onSuccess={() => {
+                  queryClient.invalidateQueries({ queryKey: ['global-notes'] })
+                  queryClient.invalidateQueries({ queryKey: ['notes', 'week-timeline'] })
+                }}
+              >
                 <Button variant="ghost" size="icon" className="h-8 w-8">
                   <Plus className="h-4 w-4" />
                 </Button>
@@ -175,6 +186,7 @@ export default function DashboardMeetingsNotes() {
                     markMeetingDone={markMeetingDone}
                     isCompletingMeeting={isCompletingMeeting}
                     variant="dashboard-card"
+                    alwaysShowActions
                   />
                 ))}
                 {extraMeetings > 0 && (
@@ -223,6 +235,7 @@ export default function DashboardMeetingsNotes() {
                     clientMap={clientsMap}
                     showClient={true}
                     variant="dashboard-card"
+                    alwaysShowActions
                   />
                 ))}
                 {extraNotes > 0 && (

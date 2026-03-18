@@ -9,7 +9,6 @@ import {
   Plus,
   Pencil,
   AlertCircle,
-  MessageSquareText,
   ChevronLeft,
   ChevronRight,
   Eye,
@@ -18,12 +17,8 @@ import {
   History,
   Play,
   ChevronDownIcon,
-  Instagram,
-  Linkedin,
-  Facebook,
-  Youtube,
-  Globe,
   RefreshCw,
+  Send,
 } from 'lucide-react'
 
 // UI Components
@@ -47,9 +42,8 @@ import {
 
 // Custom Components & API
 import { deleteIndividualMedia } from '@/api/posts'
-import { getPublishState } from '@/lib/helper'
+import { getPublishState, renderCaption } from '@/lib/helper'
 import StatusBadge from '@/components/StatusBadge'
-import PlatformBadge from '@/components/PlatformBadge'
 import ClientNotes from './ClientNotes'
 import { cn } from '@/lib/utils'
 import SocialMediaPreview from '../socialMediaPreview/SocialMediaPreview'
@@ -67,13 +61,31 @@ const isVideoSource = (url) => {
   )
 }
 
-const PLATFORM_CONFIG = {
-  instagram: { label: 'Instagram', icon: Instagram },
-  linkedin: { label: 'LinkedIn', icon: Linkedin },
-  facebook: { label: 'Facebook', icon: Facebook },
-  google_business: { label: 'Google Business', icon: Globe },
-  youtube: { label: 'YouTube', icon: Youtube },
-  twitter: { label: 'Twitter/X', icon: Globe },
+const PLATFORM_LABELS = {
+  instagram: 'Instagram',
+  linkedin: 'LinkedIn',
+  facebook: 'Facebook',
+  google_business: 'Google Business',
+  youtube: 'YouTube',
+  twitter: 'Twitter/X',
+}
+
+const PlatformIcon = ({ name, size = 'md' }) => {
+  const fileName = name === 'google_business' ? 'google_busines' : name
+  const sizeClass = size === 'sm' ? 'size-5' : 'size-6'
+  const containerClass = size === 'sm'
+    ? 'flex h-6 w-6 items-center justify-center rounded-full border border-border bg-white dark:bg-zinc-900 shadow-sm overflow-hidden shrink-0'
+    : 'flex h-8 w-8 items-center justify-center rounded-full border border-border bg-white dark:bg-zinc-900 shadow-sm overflow-hidden shrink-0'
+  return (
+    <div className={containerClass}>
+      <img
+        src={`/platformIcons/${fileName}.png`}
+        alt={name}
+        className={cn(sizeClass, 'object-contain')}
+        onError={(e) => (e.target.style.display = 'none')}
+      />
+    </div>
+  )
 }
 
 /**
@@ -143,6 +155,8 @@ export default function PostContent({
   isApproveSchedulePending,
   onEdit,
   onDelete,
+  onResendLink,
+  isResendingLink,
   onRefresh,
 }) {
   const notesRef = useRef(null)
@@ -220,9 +234,9 @@ export default function PostContent({
         <div className="space-y-6 flex-1">
           <div className="flex flex-wrap items-center gap-3">
             <StatusBadge status={getPublishState(post)} />
-            <div className="flex flex-wrap gap-2">
+            <div className="flex items-center gap-1.5">
               {[].concat(post.platform || []).map((p) => (
-                <PlatformBadge key={p} platform={p} />
+                <PlatformIcon key={p} name={p} size="sm" />
               ))}
             </div>
           </div>
@@ -298,50 +312,41 @@ export default function PostContent({
             {post.platform_schedules && post.status !== 'PUBLISHED' && (
               <div className="space-y-2 pt-1">
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                  Platform Schedule
+                  Publish Plan
                 </p>
                 {Object.entries(post.platform_schedules).map(
-                  ([platformId, { scheduled_at, published_at }]) => {
-                    const config = PLATFORM_CONFIG[platformId]
-                    const Icon = config?.icon ?? Globe
-                    return (
-                      <div key={platformId} className="flex items-center gap-3">
-                        <div className="flex items-center gap-1.5 min-w-[120px]">
-                          <Icon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                          <span className="text-sm font-medium">
-                            {config?.label ?? platformId}
-                          </span>
-                        </div>
-                        <span className="text-sm text-muted-foreground">
-                          {format(new Date(scheduled_at), 'dd MMM, p')}
-                        </span>
-                        {published_at ? (
-                          <Badge
-                            variant="outline"
-                            className="gap-1 text-xs text-emerald-700 bg-emerald-50 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20"
-                          >
-                            <CheckCircle2 size={11} />
-                            Published
-                          </Badge>
-                        ) : post.status === 'SCHEDULED' ? (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="h-7 px-3 text-xs gap-1"
-                            disabled={!!publishingPlatformId}
-                            onClick={() => onPublishPlatform?.(platformId)}
-                          >
-                            {publishingPlatformId === platformId ? (
-                              <Loader2 size={11} className="animate-spin" />
-                            ) : (
-                              <Play size={11} />
-                            )}
-                            Publish
-                          </Button>
-                        ) : null}
-                      </div>
-                    )
-                  },
+                  ([platformId, { scheduled_at, published_at }]) => (
+                    <div
+                      key={platformId}
+                      className="flex items-center gap-3 py-1"
+                    >
+                      <PlatformIcon name={platformId} size="sm" />
+                      <span className="text-sm font-medium w-[110px] shrink-0">
+                        {PLATFORM_LABELS[platformId] ?? platformId}
+                      </span>
+                      <span className="text-sm text-muted-foreground flex-1">
+                        {format(new Date(scheduled_at), 'dd MMM yyyy, p')}
+                      </span>
+                      {published_at ? (
+                        <CheckCircle2 size={14} className="text-emerald-500 shrink-0" />
+                      ) : post.status === 'SCHEDULED' ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 px-3 text-xs gap-1 shrink-0"
+                          disabled={!!publishingPlatformId}
+                          onClick={() => onPublishPlatform?.(platformId)}
+                        >
+                          {publishingPlatformId === platformId ? (
+                            <Loader2 size={11} className="animate-spin" />
+                          ) : (
+                            <Play size={11} />
+                          )}
+                          Publish
+                        </Button>
+                      ) : null}
+                    </div>
+                  ),
                 )}
               </div>
             )}
@@ -349,130 +354,143 @@ export default function PostContent({
         </div>
 
         {/* 🛠️ Consolidated Button Group */}
-        <div className="flex items-center gap-3 shrink-0">
+        <div className="flex items-center gap-2 shrink-0">
+          {/* Resend Link + Refresh — PENDING_APPROVAL only */}
           {post.status === 'PENDING_APPROVAL' && (
+            <>
+              <Button
+                size="sm"
+                onClick={onResendLink}
+                disabled={isResendingLink}
+                className="gap-1.5"
+                title="Resend approval link to client"
+              >
+                <Send size={13} className={isResendingLink ? 'animate-pulse' : ''} />
+                {isResendingLink ? 'Resending...' : 'Resend Link'}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onRefresh}
+                className="gap-1.5 text-muted-foreground hover:text-foreground"
+                title="Refresh Status"
+              >
+                <RefreshCw size={13} />
+              </Button>
+            </>
+          )}
+
+          {/* DRAFT — internal: Approve & Schedule | external: Send for Approval */}
+          {post.status === 'DRAFT' &&
+            (isInternal ? (
+              <Button
+                size="sm"
+                disabled={!canApproveAndSchedule || isApproveSchedulePending}
+                onClick={onApproveAndSchedule}
+                className="hidden sm:inline-flex gap-1.5 font-semibold"
+              >
+                {isApproveSchedulePending ? (
+                  <Loader2 size={13} className="animate-spin" />
+                ) : (
+                  <CheckCircle2 size={13} />
+                )}
+                Approve & Schedule
+              </Button>
+            ) : (
+              <Button
+                size="sm"
+                disabled={!canSendForApproval || isApprovalPending}
+                onClick={onSendForApproval}
+                className="hidden sm:inline-flex gap-1.5 font-semibold"
+              >
+                {isApprovalPending ? (
+                  <Loader2 size={13} className="animate-spin" />
+                ) : (
+                  <CheckCircle2 size={13} />
+                )}
+                Send for Approval
+              </Button>
+            ))}
+
+          {/* SCHEDULED — Publish Now + optional New Version for internal */}
+          {post.status === 'SCHEDULED' && isInternal && (
             <Button
               variant="outline"
-              size="icon"
-              onClick={onRefresh}
-              className="h-10 w-10 text-muted-foreground hover:text-foreground transition-colors"
-              title="Refresh Status"
+              size="sm"
+              onClick={onCreateRevision}
+              disabled={isRevisionPending}
+              className="hidden sm:inline-flex gap-1.5 font-semibold"
             >
-              <RefreshCw size={18} />
+              {isRevisionPending ? (
+                <Loader2 size={13} className="animate-spin" />
+              ) : (
+                <Plus size={13} />
+              )}
+              New Version
+            </Button>
+          )}
+          {post.status === 'SCHEDULED' && !post.platform_schedules && (
+            <Button
+              size="sm"
+              disabled={isPublishPending}
+              onClick={onPublish}
+              className="hidden sm:inline-flex gap-1.5 font-semibold"
+            >
+              {isPublishPending ? (
+                <Loader2 size={13} className="animate-spin" />
+              ) : (
+                <Play size={13} />
+              )}
+              Publish Now
             </Button>
           )}
 
-          {/* 1. PRIMARY ACTION (Stand-alone for maximum focus) */}
-          <div className="hidden sm:flex items-center gap-2">
-            {/* DRAFT — internal: Approve & Schedule | external: Send for Approval */}
-            {post.status === 'DRAFT' &&
-              (isInternal ? (
-                <Button
-                  disabled={!canApproveAndSchedule || isApproveSchedulePending}
-                  onClick={onApproveAndSchedule}
-                  className="gap-2 px-6 font-semibold shadow-sm transition-all hover:-translate-y-px"
-                >
-                  {isApproveSchedulePending ? (
-                    <Loader2 size={16} className="animate-spin" />
-                  ) : (
-                    <CheckCircle2 size={16} />
-                  )}
-                  Approve & Schedule
-                </Button>
+          {/* NEEDS_REVISION — external only */}
+          {post.status === 'NEEDS_REVISION' && (
+            <Button
+              size="sm"
+              onClick={onCreateRevision}
+              disabled={isRevisionPending}
+              className="hidden sm:inline-flex gap-1.5 font-semibold"
+            >
+              {isRevisionPending ? (
+                <Loader2 size={13} className="animate-spin" />
               ) : (
-                <Button
-                  disabled={!canSendForApproval || isApprovalPending}
-                  onClick={onSendForApproval}
-                  className="gap-2 px-6 font-semibold shadow-sm transition-all hover:-translate-y-px"
-                >
-                  {isApprovalPending ? (
-                    <Loader2 size={16} className="animate-spin" />
-                  ) : (
-                    <CheckCircle2 size={16} />
-                  )}
-                  Send for Approval
-                </Button>
-              ))}
+                <Plus size={13} />
+              )}
+              Create New Version
+            </Button>
+          )}
 
-            {/* SCHEDULED — both get Publish Now (unless per-platform); internal also gets Create New Version */}
-            {post.status === 'SCHEDULED' && (
-              <>
-                {isInternal && (
-                  <Button
-                    variant="outline"
-                    onClick={onCreateRevision}
-                    disabled={isRevisionPending}
-                    className="gap-2 px-5 font-semibold"
-                  >
-                    {isRevisionPending ? (
-                      <Loader2 size={16} className="animate-spin" />
-                    ) : (
-                      <Plus size={16} />
-                    )}
-                    New Version
-                  </Button>
-                )}
-                {!post.platform_schedules && (
-                  <Button
-                    disabled={isPublishPending}
-                    onClick={onPublish}
-                    className="gap-2 px-6 font-semibold shadow-sm transition-all hover:-translate-y-px"
-                  >
-                    {isPublishPending ? (
-                      <Loader2 size={16} className="animate-spin" />
-                    ) : (
-                      <Play size={16} />
-                    )}
-                    Publish Now
-                  </Button>
-                )}
-              </>
-            )}
+          {/* PUBLISHED — internal can start a new version */}
+          {post.status === 'PUBLISHED' && isInternal && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onCreateRevision}
+              disabled={isRevisionPending}
+              className="hidden sm:inline-flex gap-1.5 font-semibold"
+            >
+              {isRevisionPending ? (
+                <Loader2 size={13} className="animate-spin" />
+              ) : (
+                <Plus size={13} />
+              )}
+              New Version
+            </Button>
+          )}
 
-            {/* NEEDS_REVISION — external only (internal never reaches this) */}
-            {post.status === 'NEEDS_REVISION' && (
-              <Button
-                onClick={onCreateRevision}
-                disabled={isRevisionPending}
-                className="gap-2 px-6 font-semibold shadow-sm transition-all hover:-translate-y-px"
-              >
-                {isRevisionPending ? (
-                  <Loader2 size={16} className="animate-spin" />
-                ) : (
-                  <Plus size={16} />
-                )}
-                Create New Version
-              </Button>
-            )}
-
-            {/* PUBLISHED — internal can start a new version */}
-            {post.status === 'PUBLISHED' && isInternal && (
-              <Button
-                variant="outline"
-                onClick={onCreateRevision}
-                disabled={isRevisionPending}
-                className="gap-2 px-5 font-semibold"
-              >
-                {isRevisionPending ? (
-                  <Loader2 size={16} className="animate-spin" />
-                ) : (
-                  <Plus size={16} />
-                )}
-                New Version
-              </Button>
-            )}
-          </div>
-
-          {/* 2. SECONDARY ACTIONS (Grouped Dropdown) */}
+          {/* More Actions dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
                 variant="outline"
-                className="gap-2 px-4 border-zinc-200 dark:border-zinc-800"
+                size="sm"
+                className="gap-1.5"
               >
                 <span className="hidden sm:inline">More Actions</span>
                 <span className="sm:hidden">Actions</span>
-                <ChevronDownIcon size={14} className="opacity-50" />
+                <ChevronDownIcon size={13} className="opacity-50" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
@@ -533,6 +551,7 @@ export default function PostContent({
               )}
 
               <DropdownMenuItem
+                disabled={post.status === 'PUBLISHED'}
                 className="text-destructive focus:text-destructive"
                 onClick={onDelete}
               >
@@ -578,7 +597,7 @@ export default function PostContent({
       </div>
 
       <p className="text-base text-muted-foreground leading-relaxed max-w-4xl whitespace-pre-wrap">
-        {post.content}
+        {renderCaption(post.content)}
       </p>
 
       {/* Media Dialogs (Preview & Delete) */}

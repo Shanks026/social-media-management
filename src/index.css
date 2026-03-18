@@ -132,6 +132,15 @@ body {
   color: var(--muted-foreground) !important;
 }
 
+@keyframes page-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@utility animate-page-fade-in {
+  animation: page-fade-in 500ms ease forwards;
+}
+
 @keyframes spotlight-sweep {
   0%   { background-position: 200% center; }
   100% { background-position: -200% center; }

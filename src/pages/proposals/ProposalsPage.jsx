@@ -18,6 +18,7 @@ import { useHeader } from '@/components/misc/header-context'
 import { useSubscription } from '@/api/useSubscription'
 import { useProposals, useDeleteProposal } from '@/api/proposals'
 import { useClients } from '@/api/clients'
+import { ClientAvatar } from '@/components/NoteRow'
 import { ProposalDialog } from '@/components/proposals/ProposalDialog'
 import { UploadProposalDialog } from '@/components/proposals/UploadProposalDialog'
 import { ProposalsUpgradePrompt } from '@/components/proposals/ProposalsUpgradePrompt'
@@ -291,7 +292,10 @@ export default function ProposalsPage() {
               <SelectItem value="__prospect__">Prospects</SelectItem>
               {realClients.map((c) => (
                 <SelectItem key={c.id} value={c.id}>
-                  {c.name}
+                  <div className="flex items-center gap-2">
+                    <ClientAvatar client={c} size="sm" />
+                    <span className="truncate">{c.name}</span>
+                  </div>
                 </SelectItem>
               ))}
             </SelectContent>
@@ -393,13 +397,13 @@ export default function ProposalsPage() {
               <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider w-24 text-right">
                 Total
               </span>
-              <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider w-24 text-center">
+              <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider w-24">
                 Status
               </span>
-              <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider w-28 text-right">
+              <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider w-28">
                 Valid Until
               </span>
-              <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider w-28 text-right">
+              <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider w-28">
                 Created
               </span>
               <span className="w-8" />
@@ -434,17 +438,17 @@ export default function ProposalsPage() {
                   </span>
 
                   {/* Status */}
-                  <div className="w-24 flex justify-center">
+                  <div className="w-24">
                     <StatusBadge status={proposal.status} />
                   </div>
 
                   {/* Valid Until */}
-                  <span className="text-xs text-muted-foreground w-28 text-right tabular-nums">
+                  <span className="text-xs text-muted-foreground w-28">
                     {proposal.valid_until ? formatDate(proposal.valid_until) : '—'}
                   </span>
 
                   {/* Created */}
-                  <span className="text-xs text-muted-foreground w-28 text-right tabular-nums">
+                  <span className="text-xs text-muted-foreground w-28">
                     {formatDate(proposal.created_at)}
                   </span>
 

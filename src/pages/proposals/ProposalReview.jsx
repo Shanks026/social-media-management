@@ -199,7 +199,7 @@ export default function ProposalReview() {
         <div className="sticky top-0 z-10 px-6 py-4 border-b border-border bg-background/95">
           <Skeleton className="h-6 w-28" />
         </div>
-        <div className="max-w-3xl mx-auto px-4 py-12 space-y-4">
+        <div className="max-w-5xl mx-auto px-6 lg:px-16 py-12 space-y-4">
           <Skeleton className="h-8 w-64" />
           <Skeleton className="h-4 w-48" />
           <Skeleton className="h-[600px] w-full rounded-xl" />
@@ -308,7 +308,7 @@ export default function ProposalReview() {
     <div className="min-h-screen w-full">
       <BrandingHeader data={proposal} />
 
-      <div className="max-w-3xl mx-auto px-4 py-10">
+      <div className="max-w-5xl mx-auto px-6 lg:px-16 py-10">
         {/* ── Proposal document ── */}
         {proposal.proposal_type === 'uploaded' && proposal.file_url ? (
           <div className="space-y-2">
@@ -336,42 +336,37 @@ export default function ProposalReview() {
         )}
 
         {/* ── Action area ── */}
-        <div className="mt-8 mb-4">
+        <div className="mt-10 pt-8 border-t border-border/50">
           {actionState === 'accepted' ? (
-            /* Post-accept success */
-            <div className="flex flex-col items-center gap-3 py-8 px-6 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-900 rounded-2xl text-center animate-in fade-in zoom-in-95 duration-300">
-              <CheckCircle2 className="size-10 text-green-500" />
-              <h3 className="text-lg font-semibold text-green-800 dark:text-green-200">
-                Proposal Accepted!
-              </h3>
-              <p className="text-sm text-green-700 dark:text-green-300 max-w-sm">
-                {recipientName
-                  ? `Thank you, ${recipientName}. `
-                  : 'Thank you. '}
-                {agencyName} will be in touch shortly.
-              </p>
+            <div className="flex items-start gap-4 rounded-2xl bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-900 px-6 py-5 animate-in fade-in zoom-in-95 duration-300">
+              <CheckCircle2 className="size-6 text-green-500 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-semibold text-green-800 dark:text-green-200">Proposal Accepted</p>
+                <p className="text-sm text-green-700 dark:text-green-300 mt-0.5">
+                  {recipientName ? `Thank you, ${recipientName}. ` : 'Thank you. '}
+                  {agencyName} will be in touch shortly.
+                </p>
+              </div>
             </div>
           ) : actionState === 'declined' ? (
-            /* Post-decline confirmation */
-            <div className="flex flex-col items-center gap-3 py-8 px-6 bg-muted/40 border border-border rounded-2xl text-center animate-in fade-in zoom-in-95 duration-300">
-              <XCircle className="size-10 text-muted-foreground/50" />
-              <h3 className="text-lg font-semibold text-foreground">Proposal Declined</h3>
-              <p className="text-sm text-muted-foreground max-w-sm">
-                You've declined this proposal. If you'd like to discuss further, please reach
-                out to {agencyName} directly.
-              </p>
+            <div className="flex items-start gap-4 rounded-2xl bg-muted/40 border border-border px-6 py-5 animate-in fade-in zoom-in-95 duration-300">
+              <XCircle className="size-6 text-muted-foreground/50 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-semibold text-foreground">Proposal Declined</p>
+                <p className="text-sm text-muted-foreground mt-0.5">
+                  If you'd like to discuss further, please reach out to {agencyName} directly.
+                </p>
+              </div>
             </div>
           ) : (
-            /* Action buttons */
-            <div className="flex flex-col items-center gap-4 py-8">
-              <p className="text-xs text-muted-foreground text-center max-w-sm">
-                By accepting, you confirm your agreement to the terms and scope outlined in
-                this proposal.
+            <div className="space-y-4 flex flex-col items-center text-center">
+              <p className="text-sm text-muted-foreground max-w-sm">
+                By accepting, you confirm your agreement to the terms and scope outlined in this proposal.
               </p>
-              <div className="flex items-center gap-3">
+              <div className="flex flex-col sm:flex-row items-center gap-3">
                 <Button
                   size="lg"
-                  className="gap-2 bg-green-600 hover:bg-green-700 text-white px-8"
+                  className="gap-2 bg-green-600 hover:bg-green-700 text-white w-full sm:w-auto"
                   onClick={() => setAcceptDialogOpen(true)}
                 >
                   <CheckCircle2 className="size-4" />
@@ -379,8 +374,8 @@ export default function ProposalReview() {
                 </Button>
                 <Button
                   size="lg"
-                  variant="ghost"
-                  className="gap-2 text-muted-foreground"
+                  variant="outline"
+                  className="gap-2 w-full sm:w-auto"
                   onClick={() => setDeclineDialogOpen(true)}
                 >
                   Decline

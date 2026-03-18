@@ -23,6 +23,10 @@ import {
   Plus,
   FileDown,
   Lock,
+  FileText,
+  CalendarDays,
+  StickyNote,
+  ChevronDown,
 } from 'lucide-react'
 import { pdf } from '@react-pdf/renderer'
 
@@ -43,8 +47,17 @@ import { useHeader } from '@/components/misc/header-context'
 import { cn } from '@/lib/utils'
 import { fetchMeetings } from '@/api/meetings'
 import { useClients } from '@/api/clients'
+import { ClientAvatar } from '@/components/NoteRow'
 import CreateMeetingDialog from '@/components/CreateMeetingDialog'
+import CreateNoteDialog from '@/components/CreateNoteDialog'
 import { useSubscription } from '@/api/useSubscription'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import DraftPostForm from '@/pages/posts/DraftPostForm'
 import CalendarReportPDF from './CalendarReportPDF'
 import {
   buildCalendarReport,
@@ -111,6 +124,9 @@ export default function ContentCalendar({
 
   const { data: subscription } = useSubscription()
   const [isGenerating, setIsGenerating] = useState(false)
+  const [postOpen, setPostOpen] = useState(false)
+  const [meetingOpen, setMeetingOpen] = useState(false)
+  const [noteOpen, setNoteOpen] = useState(false)
 
   const { data: clientsData } = useClients()
   const isInternalClient =
@@ -147,6 +163,15 @@ export default function ContentCalendar({
     const clients = posts.map((p) => p.client_name)
     return [...new Set(clients)].sort()
   }, [posts])
+
+  const clientsByName = useMemo(() => {
+    if (!clientsData) return {}
+    const all = [
+      ...(clientsData.internalAccount ? [clientsData.internalAccount] : []),
+      ...clientsData.realClients,
+    ]
+    return Object.fromEntries(all.map((c) => [c.name, c]))
+  }, [clientsData])
 
   const filteredPosts = useMemo(() => {
     const regularPosts = posts.filter((post) => {
@@ -354,7 +379,10 @@ export default function ContentCalendar({
                 <SelectItem value="all">All Clients</SelectItem>
                 {uniqueClients.map((name) => (
                   <SelectItem key={name} value={name}>
-                    {name}
+                    <div className="flex items-center gap-2">
+                      <ClientAvatar client={clientsByName[name]} size="sm" />
+                      <span className="truncate">{name}</span>
+                    </div>
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -392,19 +420,62 @@ export default function ContentCalendar({
             </SelectContent>
           </Select>
 
-          {!isInternalClient && (
-            <CreateMeetingDialog
-              defaultClientId={clientId}
-              lockClient={!!clientId}
-            >
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
               <Button
                 size="sm"
                 className="h-9 px-3 text-xs font-semibold gap-2 hidden md:flex"
               >
-                <Plus size={14} /> Schedule Meeting
+                <Plus size={14} /> New Event <ChevronDown size={12} />
               </Button>
-            </CreateMeetingDialog>
-          )}
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-44">
+              <DropdownMenuItem
+                className="gap-2 text-xs cursor-pointer"
+                onSelect={() => setPostOpen(true)}
+              >
+                <FileText size={14} /> New Post
+              </DropdownMenuItem>
+              {!isInternalClient && (
+                <DropdownMenuItem
+                  className="gap-2 text-xs cursor-pointer"
+                  onSelect={() => setMeetingOpen(true)}
+                >
+                  <CalendarDays size={14} /> Schedule Meeting
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuItem
+                className="gap-2 text-xs cursor-pointer"
+                onSelect={() => setNoteOpen(true)}
+              >
+                <StickyNote size={14} /> New Note
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <DraftPostForm
+            open={postOpen}
+            onOpenChange={setPostOpen}
+            clientId={clientId}
+            availableClients={[
+              ...(clientsData?.internalAccount
+                ? [clientsData.internalAccount]
+                : []),
+              ...(clientsData?.realClients ?? []),
+            ]}
+          />
+          <CreateMeetingDialog
+            open={meetingOpen}
+            onOpenChange={setMeetingOpen}
+            defaultClientId={clientId}
+            lockClient={!!clientId}
+          />
+          <CreateNoteDialog
+            open={noteOpen}
+            onOpenChange={setNoteOpen}
+            clientId={clientId}
+            lockClient={!!clientId}
+          />
 
           {subscription?.calendar_export ? (
             <Button
