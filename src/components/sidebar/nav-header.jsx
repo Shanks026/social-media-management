@@ -31,7 +31,14 @@ export function AppSidebarHeader({ agencySettings }) {
     APP_NAME
   const logo = agencySettings?.logo_url || sub?.logo_url
   const horizontalLogo = agencySettings?.logo_horizontal_url || sub?.logo_horizontal_url
-  const plan = agencySettings?.tier || sub?.plan_name || APP_TAGLINE
+  const basePlan = agencySettings?.tier || sub?.plan_name || APP_TAGLINE
+  const plan = sub?.is_trial
+    ? sub.trial_phase === 'grace'
+      ? 'Trial · Grace Period'
+      : sub.trial_phase === 'expired'
+        ? 'Trial · expired'
+        : `Trial · ${sub.trial_days_remaining}d left`
+    : basePlan
 
   // Use the feature flag — not the name — to decide if agency branding is shown
   const showAgencyBranding = sub?.branding_agency_sidebar ?? false
