@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git add src/api/posts.js src/pages/Posts.jsx src/pages/calendar/CalendarPostCard.jsx src/pages/posts/DraftPostList.jsx src/pages/posts/postDetails/PostContent.jsx src/pages/posts/postDetails/PostDetails.jsx phase2/)",
+      "Bash(git push origin bug-fix)",
+      "Bash(ls /d/Tertiary/src/pages/clients/*.jsx)",
+      "Bash(grep -E \"\\\\.jsx$\")",
+      "Bash(ls /d/Tertiary/src/components/ui/*.jsx)",
+      "Read(//c/Users/Hai/.claude/plugins/**)",
+      "Read(//c/Users/Hai/.claude/**)",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(json.dumps\\(d.get\\(''plugins'', d.get\\(''skills'', {}\\)\\), indent=2\\)\\)\")",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(json.dumps\\(d, indent=2\\)\\)\")",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); plugins=d.get\\(''plugins'',{}\\); [print\\(k,''->'',v[0].get\\(''installPath'',''?''\\) if v else ''?''\\) for k,v in plugins.items\\(\\)]\")"
+    ],
+    "additionalDirectories": [
+      "d:\\Tertiary\\.claude\\skills\\tercero-design-system"
+    ]
+  }
+}
