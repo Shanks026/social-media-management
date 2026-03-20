@@ -67,6 +67,27 @@ import { Checkbox } from '@/components/ui/checkbox'
 
 const MAX_FILES = 10
 
+const DELIVERABLE_TYPE_OPTIONS = [
+  { value: 'reel_short_video', label: 'Reel / Short-form Video' },
+  { value: 'long_form_video', label: 'Long-form Video' },
+  { value: 'video_editing', label: 'Video Edit / Post-Production' },
+  { value: 'ad_creative', label: 'Ad Creative' },
+  { value: 'motion_graphic', label: 'Motion Graphic / Animation' },
+  { value: 'static_graphic', label: 'Static Graphic' },
+  { value: 'carousel', label: 'Carousel' },
+  { value: 'story', label: 'Story / Ephemeral' },
+  { value: 'photography', label: 'Photography' },
+  { value: 'ugc', label: 'UGC Content' },
+  { value: 'brand_identity', label: 'Brand Identity' },
+  { value: 'infographic', label: 'Infographic' },
+  { value: 'presentation', label: 'Presentation / Deck' },
+  { value: 'website_design', label: 'Website / UI Design' },
+  { value: 'blog_copy', label: 'Blog Post / Copy' },
+  { value: 'email_campaign', label: 'Email Campaign' },
+  { value: 'podcast', label: 'Podcast Production' },
+  { value: 'other', label: 'Other' },
+]
+
 // Improved helper for remote URLs
 const isRemoteVideo = (url) => {
   if (!url) return false
@@ -134,7 +155,7 @@ const formSchema = z
   .object({
     title: z.string().min(1, 'Title is required'),
     content: z.string().min(1, 'Post content is required'),
-    platforms: z.array(z.string()).min(1, 'Select at least one platform'),
+    platforms: z.array(z.string()).optional().default([]),
     images: z.array(z.any()).max(MAX_FILES).default([]),
     target_date: z.date({
       required_error: 'Schedule date and time are required',
@@ -142,6 +163,10 @@ const formSchema = z
     }),
     client_id: z.string().optional(),
     campaign_id: z.string().optional(),
+    deliverable_type: z.preprocess(
+      (v) => (v === '' || v === null ? undefined : v),
+      z.string().optional(),
+    ),
   })
   .superRefine((data) => {
     if (data.platforms.includes('youtube')) {
@@ -197,6 +222,7 @@ export default function DraftPostForm({
       target_date: undefined,
       client_id: '',
       campaign_id: '',
+      deliverable_type: undefined,
     },
   })
 
@@ -261,6 +287,7 @@ export default function DraftPostForm({
           : undefined,
         client_id: initialData.client_id || '',
         campaign_id: initialData.campaign_id || '',
+        deliverable_type: initialData.deliverable_type || undefined,
       })
 
       // Initialize with correct types for remote URLs
@@ -439,6 +466,7 @@ export default function DraftPostForm({
           ? buildPlatformSchedulesPayload(platformSchedulesState)
           : null,
         campaignId: values.campaign_id || null,
+        deliverableType: values.deliverable_type || null,
       }
 
       if (isEditMode)
@@ -805,6 +833,39 @@ export default function DraftPostForm({
                   />
                 )}
 
+                {/* Deliverable Type */}
+                <FormField
+                  control={form.control}
+                  name="deliverable_type"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>
+                        Deliverable Type{' '}
+                        <span className="text-muted-foreground font-normal">(optional)</span>
+                      </FormLabel>
+                      <Select
+                        onValueChange={(val) => field.onChange(val === 'none' ? undefined : val)}
+                        value={field.value || 'none'}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select type" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="none">Not specified</SelectItem>
+                          {DELIVERABLE_TYPE_OPTIONS.map((opt) => (
+                            <SelectItem key={opt.value} value={opt.value}>
+                              {opt.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
                 {/* Platform Select */}
                 <FormField
                   control={form.control}
@@ -813,7 +874,7 @@ export default function DraftPostForm({
                     <FormItem>
                       <FormLabel>
                         Target Platforms{' '}
-                        <span className="text-destructive">*</span>
+                        <span className="text-muted-foreground font-normal">(optional — skip for non-social deliverables)</span>
                       </FormLabel>
                       <div className="flex flex-wrap gap-2 pt-1">
                         {!effectiveClientId ? (

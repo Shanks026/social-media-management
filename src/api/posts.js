@@ -26,7 +26,8 @@ export async function fetchAllPostsByClient(clientId) {
         published_at,
         target_date,
         admin_notes,
-        platform_schedules
+        platform_schedules,
+        deliverable_type
       )
     `,
     )
@@ -137,6 +138,7 @@ export async function createDraftPost({
   userId,
   platformSchedules,
   campaignId,
+  deliverableType,
 }) {
   const { error } = await supabase.rpc('create_post_draft_v3', {
     p_client_id: clientId,
@@ -149,6 +151,7 @@ export async function createDraftPost({
     p_admin_notes: adminNotes || null,
     p_platform_schedules: platformSchedules ?? null,
     p_campaign_id: campaignId ?? null,
+    p_deliverable_type: deliverableType ?? null,
   })
 
   if (error) throw error
@@ -207,7 +210,7 @@ export const deletePost = async (postId) => {
 
 export async function updatePost(
   versionId,
-  { title, content, mediaUrls, platforms, target_date, admin_notes, platformSchedules, campaignId, postId },
+  { title, content, mediaUrls, platforms, target_date, admin_notes, platformSchedules, campaignId, postId, deliverableType },
 ) {
   const { data, error } = await supabase
     .from('post_versions')
@@ -219,6 +222,7 @@ export async function updatePost(
       target_date: target_date ?? null,
       admin_notes: admin_notes,
       platform_schedules: platformSchedules ?? null,
+      deliverable_type: deliverableType ?? null,
     })
     .eq('id', versionId)
     .in('status', ['DRAFT', 'PENDING_APPROVAL'])

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { deleteClient } from '@/api/clients'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { deleteClient, updateClientStatus } from '@/api/clients'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
 
@@ -28,7 +28,18 @@ import {
   Pencil,
   ExternalLink,
   CalendarDays,
+  Handshake,
+  Archive,
+  ArchiveRestore,
 } from 'lucide-react'
+
+const CLIENT_TYPE_LABELS = {
+  monthly_retainer: 'Monthly Retainer',
+  project_based: 'Project-Based',
+  campaign_based: 'Campaign-Based',
+  one_off: 'One-Off / Ad-hoc',
+  advisory: 'Advisory / Consulting',
+}
 
 
 export default function ManagementTab({ client }) {
@@ -36,6 +47,18 @@ export default function ManagementTab({ client }) {
   const queryClient = useQueryClient()
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [archiveDialogOpen, setArchiveDialogOpen] = useState(false)
+
+  const archiveMutation = useMutation({
+    mutationFn: (newStatus) => updateClientStatus(client.id, newStatus),
+    onSuccess: (_, newStatus) => {
+      queryClient.invalidateQueries({ queryKey: ['clients'] })
+      queryClient.invalidateQueries({ queryKey: ['client', client.id] })
+      toast.success(newStatus === 'ARCHIVED' ? 'Client archived' : 'Client restored')
+      if (newStatus === 'ARCHIVED') navigate('/clients')
+    },
+    onError: () => toast.error('Failed to update client status'),
+  })
 
   const deleteMutation = useMutation({
     mutationFn: deleteClient,
@@ -115,8 +138,14 @@ export default function ManagementTab({ client }) {
               icon={<ShieldCheck size={16} />}
               label="Account Status"
               value={
-                <span className={client.status === 'ACTIVE' ? 'text-green-600 font-medium' : 'text-amber-600 font-medium'}>
-                  {client.status === 'ACTIVE' ? 'Active' : 'Paused'}
+                <span className={
+                  client.status === 'ACTIVE'
+                    ? 'text-green-600 font-medium'
+                    : client.status === 'ARCHIVED'
+                      ? 'text-slate-500 font-medium'
+                      : 'text-amber-600 font-medium'
+                }>
+                  {client.status === 'ACTIVE' ? 'Active' : client.status === 'ARCHIVED' ? 'Archived' : 'Paused'}
                 </span>
               }
             />
@@ -125,6 +154,13 @@ export default function ManagementTab({ client }) {
               label="Account Tier"
               value={<span className="font-medium text-primary">{tier}</span>}
             />
+            {client.client_type && (
+              <InfoRow
+                icon={<Handshake size={16} />}
+                label="Engagement Type"
+                value={CLIENT_TYPE_LABELS[client.client_type] ?? client.client_type}
+              />
+            )}
             <InfoRow
               icon={<Mail size={16} />}
               label="Primary Email"
@@ -216,6 +252,47 @@ export default function ManagementTab({ client }) {
           </p>
         </div>
 
+        {/* Archive / Restore */}
+        {client.status !== 'ARCHIVED' ? (
+          <div className="flex items-center justify-between rounded-xl border border-border px-5 py-4">
+            <div className="space-y-0.5">
+              <p className="text-sm font-semibold text-foreground">Archive Client</p>
+              <p className="text-xs text-muted-foreground">
+                Hide {client.name} from the active clients list. All data is preserved and can be restored.
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2 shrink-0"
+              onClick={() => setArchiveDialogOpen(true)}
+              disabled={archiveMutation.isPending}
+            >
+              <Archive size={14} />
+              Archive
+            </Button>
+          </div>
+        ) : (
+          <div className="flex items-center justify-between rounded-xl border border-border px-5 py-4">
+            <div className="space-y-0.5">
+              <p className="text-sm font-semibold text-foreground">Restore Client</p>
+              <p className="text-xs text-muted-foreground">
+                Move {client.name} back to the active clients list.
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2 shrink-0"
+              onClick={() => archiveMutation.mutate('ACTIVE')}
+              disabled={archiveMutation.isPending}
+            >
+              <ArchiveRestore size={14} />
+              Restore
+            </Button>
+          </div>
+        )}
+
         <div className="flex items-center justify-between rounded-xl border border-destructive/20 bg-destructive/5 px-5 py-4">
           <div className="space-y-0.5">
             <p className="text-sm font-semibold text-foreground">
@@ -236,6 +313,35 @@ export default function ManagementTab({ client }) {
           </Button>
         </div>
       </section>
+
+      {/* Archive Confirmation */}
+      <Dialog open={archiveDialogOpen} onOpenChange={setArchiveDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Archive {client.name}?</DialogTitle>
+            <DialogDescription>
+              This client will be hidden from your active clients list. All data, posts, and history are preserved. You can restore them at any time.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="mt-4 gap-2 flex-col sm:flex-row">
+            <Button variant="ghost" onClick={() => setArchiveDialogOpen(false)} className="w-full sm:w-auto">
+              Cancel
+            </Button>
+            <Button
+              variant="outline"
+              className="w-full sm:w-auto gap-2"
+              onClick={() => {
+                archiveMutation.mutate('ARCHIVED')
+                setArchiveDialogOpen(false)
+              }}
+              disabled={archiveMutation.isPending}
+            >
+              <Archive size={14} />
+              Archive Client
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Delete Confirmation */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

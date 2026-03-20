@@ -45,6 +45,7 @@ export async function fetchClients(filters = {}) {
     industry = 'all',
     tier = 'all',
     urgency = 'all',
+    status = 'ACTIVE',
   } = filters
 
   const { workspaceUserId } = await resolveWorkspace()
@@ -55,6 +56,7 @@ export async function fetchClients(filters = {}) {
     p_industry: industry,
     p_tier: tier,
     p_urgency: urgency,
+    p_status: status,
   })
 
   if (error) throw error
@@ -63,6 +65,7 @@ export async function fetchClients(filters = {}) {
     id: c.id,
     name: c.name,
     status: c.status,
+    client_type: c.client_type ?? null,
     logo_url: c.logo_url,
     tier: c.tier,
     industry: c.industry,
@@ -131,6 +134,17 @@ export const updateClient = async (id, data) => {
   if (error) throw error
   return result
 }
+/**
+ * Update a client's status (ACTIVE, PAUSED, ARCHIVED)
+ */
+export async function updateClientStatus(clientId, status) {
+  const { error } = await supabase
+    .from('clients')
+    .update({ status })
+    .eq('id', clientId)
+  if (error) throw error
+}
+
 /**
  * Delete a client and all associated data and storage files.
  * DB cascade handles: posts, post_versions, campaigns, meetings, notes,
