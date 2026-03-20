@@ -20,6 +20,7 @@ import {
   Upload,
   FileText,
   Download,
+  Send,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useForm, useFieldArray, Controller } from 'react-hook-form'
@@ -34,6 +35,7 @@ import {
   useGenerateProposalToken,
   useMarkProposalSent,
   uploadProposalFile,
+  deleteProposalFile,
 } from '@/api/proposals'
 import { resolveWorkspace } from '@/lib/workspace'
 import ProposalPreview from '@/components/proposals/ProposalPreview'
@@ -200,6 +202,7 @@ export default function ProposalDetailPage() {
   const [saveState, setSaveState] = useState('idle') // 'idle' | 'saving' | 'saved' | 'error'
   const [isReplacing, setIsReplacing] = useState(false)
   const saveTimerRef = useRef(null)
+  const autoSaveTimerRef = useRef(null)
   const replaceFileRef = useRef(null)
 
   const clients = useMemo(() => clientsData?.realClients ?? [], [clientsData])
@@ -311,41 +314,43 @@ export default function ProposalDetailPage() {
     [watchedLineItems],
   )
 
-  // ── Auto-save on blur ──
-  const autoSave = useCallback(async () => {
+  // ── Auto-save on blur (debounced — 300 ms) ──
+  // Rapid field blurs (e.g. tabbing) are collapsed into a single save.
+  const autoSave = useCallback(() => {
     if (!proposal || !isEditable) return
-
-    const values = getValues()
-    setSaveState('saving')
-    clearTimeout(saveTimerRef.current)
-
-    try {
-      await updateProposal.mutateAsync({
-        id: proposalId,
-        title: values.title || proposal.title,
-        client_id: values.client_type === 'client' ? values.client_id || null : null,
-        prospect_name:
-          values.client_type === 'prospect' ? values.prospect_name || null : null,
-        prospect_email:
-          values.client_type === 'prospect' ? values.prospect_email || null : null,
-        valid_until: values.valid_until
-          ? format(values.valid_until, 'yyyy-MM-dd')
-          : null,
-        introduction: values.introduction || null,
-        scope_notes: values.scope_notes || null,
-        payment_terms: values.payment_terms || null,
-        contract_duration: values.contract_duration || null,
-        notes: values.notes || null,
-        ...(proposal.proposal_type === 'uploaded'
-          ? { total_value: values.total_value !== '' ? parseFloat(values.total_value) || null : null }
-          : { line_items: (values.line_items || []).filter((li) => li.description?.trim()) }),
-      })
-      setSaveState('saved')
-      saveTimerRef.current = setTimeout(() => setSaveState('idle'), 2000)
-    } catch (err) {
-      setSaveState('error')
-      toast.error('Auto-save failed: ' + (err.message || 'Unknown error'))
-    }
+    clearTimeout(autoSaveTimerRef.current)
+    autoSaveTimerRef.current = setTimeout(async () => {
+      const values = getValues()
+      setSaveState('saving')
+      clearTimeout(saveTimerRef.current)
+      try {
+        await updateProposal.mutateAsync({
+          id: proposalId,
+          title: values.title || proposal.title,
+          client_id: values.client_type === 'client' ? values.client_id || null : null,
+          prospect_name:
+            values.client_type === 'prospect' ? values.prospect_name || null : null,
+          prospect_email:
+            values.client_type === 'prospect' ? values.prospect_email || null : null,
+          valid_until: values.valid_until
+            ? format(values.valid_until, 'yyyy-MM-dd')
+            : null,
+          introduction: values.introduction || null,
+          scope_notes: values.scope_notes || null,
+          payment_terms: values.payment_terms || null,
+          contract_duration: values.contract_duration || null,
+          notes: values.notes || null,
+          ...(proposal.proposal_type === 'uploaded'
+            ? { total_value: values.total_value !== '' ? parseFloat(values.total_value) || null : null }
+            : { line_items: (values.line_items || []).filter((li) => li.description?.trim()) }),
+        })
+        setSaveState('saved')
+        saveTimerRef.current = setTimeout(() => setSaveState('idle'), 2000)
+      } catch (err) {
+        setSaveState('error')
+        toast.error('Auto-save failed: ' + (err.message || 'Unknown error'))
+      }
+    }, 300)
   }, [proposal, isEditable, proposalId, getValues, updateProposal])
 
   // ── Copy Link ──
@@ -389,11 +394,16 @@ export default function ProposalDetailPage() {
     if (file.type !== 'application/pdf') { toast.error('Only PDF files are accepted'); return }
     if (file.size > 20 * 1024 * 1024) { toast.error('File must be 20 MB or smaller'); return }
 
+    const oldFileUrl = proposal.file_url // capture before upload
     setIsReplacing(true)
     try {
       const { workspaceUserId } = await resolveWorkspace()
       const publicUrl = await uploadProposalFile(proposalId, workspaceUserId, file)
       await updateProposal.mutateAsync({ id: proposalId, file_url: publicUrl })
+      // Delete old file from storage after the DB record is updated
+      if (oldFileUrl) {
+        await deleteProposalFile(oldFileUrl)
+      }
       toast.success('File replaced')
     } catch (err) {
       toast.error(err.message || 'Failed to replace file')
@@ -461,7 +471,10 @@ export default function ProposalDetailPage() {
 
   const status = proposal.status
   const statusConfig = STATUS_CONFIG[status] ?? { label: status, className: '' }
-  const displayName = proposal.client_name || proposal.prospect_name || null
+  const displayName =
+    clients.find((c) => c.id === proposal.client_id)?.name ||
+    proposal.prospect_name ||
+    null
   const isCopyingLink = generateToken.isPending || markSent.isPending
 
   return (
@@ -534,6 +547,30 @@ export default function ProposalDetailPage() {
               )}
               {isCopyingLink ? 'Generating…' : 'Copy Link'}
             </Button>
+
+            {status === 'draft' && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={async () => {
+                  try {
+                    await markSent.mutateAsync(proposalId)
+                    toast.success('Proposal marked as Sent')
+                  } catch (err) {
+                    toast.error(err.message || 'Something went wrong')
+                  }
+                }}
+                disabled={markSent.isPending}
+                className="gap-2 h-8 text-muted-foreground hover:text-foreground"
+              >
+                {markSent.isPending ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <Send className="size-4" />
+                )}
+                Mark as Sent
+              </Button>
+            )}
 
             {proposal.proposal_type !== 'uploaded' && (
               <Button
@@ -622,7 +659,7 @@ export default function ProposalDetailPage() {
                     setValue('client_type', 'client')
                     setValue('client_id', v)
                   }
-                  setTimeout(autoSave, 0)
+                  autoSave()
                 }}
               >
                 <SelectTrigger className="bg-muted/20 border-border/40" disabled={isReadOnly}>
@@ -670,7 +707,7 @@ export default function ProposalDetailPage() {
                       <Calendar
                         mode="single"
                         selected={field.value}
-                        onSelect={(d) => { field.onChange(d); setTimeout(autoSave, 0) }}
+                        onSelect={(d) => { field.onChange(d); autoSave() }}
                         initialFocus
                       />
                     </PopoverContent>
@@ -800,7 +837,7 @@ export default function ProposalDetailPage() {
                     setValue('client_type', 'client')
                     setValue('client_id', v)
                   }
-                  setTimeout(autoSave, 0)
+                  autoSave()
                 }}
               >
                 <SelectTrigger className="bg-muted/20 border-border/40" disabled={isReadOnly}>
@@ -870,7 +907,7 @@ export default function ProposalDetailPage() {
                         selected={field.value}
                         onSelect={(d) => {
                           field.onChange(d)
-                          setTimeout(autoSave, 0)
+                          autoSave()
                         }}
                         initialFocus
                       />
@@ -991,7 +1028,7 @@ export default function ProposalDetailPage() {
                     disabled={isReadOnly}
                     onValueChange={(v) => {
                       field.onChange(v)
-                      setTimeout(autoSave, 0)
+                      autoSave()
                     }}
                   >
                     <SelectTrigger className="bg-muted/20 border-border/40" disabled={isReadOnly}>

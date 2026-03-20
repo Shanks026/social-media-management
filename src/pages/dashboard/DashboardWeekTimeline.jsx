@@ -82,7 +82,7 @@ export default function DashboardWeekTimeline() {
     () =>
       allPosts.filter(
         (p) =>
-          p.status === 'SCHEDULED' &&
+          (p.status === 'SCHEDULED' || p.status === 'APPROVED') &&
           p.target_date &&
           new Date(p.target_date) >= today &&
           new Date(p.target_date) <= weekEnd,
@@ -166,7 +166,7 @@ export default function DashboardWeekTimeline() {
           <CardTitle className="text-lg font-medium">Week Ahead</CardTitle>
           {!isLoading && (
             <p className="text-xs text-muted-foreground mt-0.5">
-              {totalPosts} post{totalPosts !== 1 && 's'} · {totalMeetings}{' '}
+              {totalPosts} deliverable{totalPosts !== 1 && 's'} · {totalMeetings}{' '}
               meeting{totalMeetings !== 1 && 's'} · {totalNotes} reminder{totalNotes !== 1 && 's'}
             </p>
           )}
@@ -199,7 +199,7 @@ export default function DashboardWeekTimeline() {
           </div>
         ) : (
           /* Scrollable timeline container */
-          <div className="relative overflow-y-auto max-h-[420px] pr-1 timeline-scrollbar">
+          <div className="relative overflow-y-auto max-h-[550px] pr-1 timeline-scrollbar">
             {/* Vertical timeline line — positioned relative to scroll container */}
             <div className="absolute left-[10px] top-2 bottom-2 w-px bg-border" />
 
@@ -286,7 +286,7 @@ export default function DashboardWeekTimeline() {
                                   variant="secondary"
                                   className="text-[10px] px-1.5 py-0 h-5 shrink-0"
                                 >
-                                  {dayPosts.length} post
+                                  {dayPosts.length} deliverable
                                   {dayPosts.length !== 1 && 's'}
                                 </Badge>
                               </div>

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useHeader } from '../../../components/misc/header-context'
 import { toast } from 'sonner'
-import { createRevision, fetchPostDetails, deletePost } from '@/api/posts'
+import { createRevision, fetchPostDetails, deletePost, markPostDelivered } from '@/api/posts'
 
 // Sub-components
 import PostContent from './PostContent'
@@ -12,6 +12,17 @@ import VersionSidebar from './VersionSidebar'
 import PostActionDialogs from './PostActionDialogs'
 import DraftPostForm from '../DraftPostForm'
 import { useAuth } from '@/context/AuthContext'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
+import { Textarea } from '@/components/ui/textarea'
+import { Loader2 } from 'lucide-react'
 
 export default function PostDetails() {
   const { clientId, postId } = useParams()
@@ -30,6 +41,8 @@ export default function PostDetails() {
 
   // Internal lifecycle: Approve & Schedule dialog state
   const [isApproveScheduleOpen, setIsApproveScheduleOpen] = useState(false)
+  const [isMarkDeliveredOpen, setIsMarkDeliveredOpen] = useState(false)
+  const [deliveryNote, setDeliveryNote] = useState('')
   const [approveDate, setApproveDate] = useState(null)
   const [publishingPlatformId, setPublishingPlatformId] = useState(null)
 
@@ -124,6 +137,23 @@ export default function PostDetails() {
         toast.success('Post sent for approval')
         setIsConfirmOpen(false)
       }
+    },
+    onError: (err) => toast.error(err.message),
+  })
+
+  // Internal only: directly approve a non-social deliverable (no platform, no date picker)
+  const approveDeliverableMutation = useMutation({
+    mutationFn: async (versionId) => {
+      const { error: upError } = await supabase
+        .from('post_versions')
+        .update({ status: 'APPROVED' })
+        .eq('id', versionId)
+      if (upError) throw upError
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['post-version', postId] })
+      invalidatePostRelated()
+      toast.success('Deliverable approved')
     },
     onError: (err) => toast.error(err.message),
   })
@@ -229,6 +259,18 @@ export default function PostDetails() {
     onError: (err) => toast.error(err.message),
   })
   
+  const markAsDeliveredMutation = useMutation({
+    mutationFn: () => markPostDelivered(post.id, deliveryNote),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['post-version', postId] })
+      invalidatePostRelated()
+      toast.success('Deliverable marked as delivered')
+      setIsMarkDeliveredOpen(false)
+      setDeliveryNote('')
+    },
+    onError: (err) => toast.error(err.message),
+  })
+
   const deletePostMutation = useMutation({
     mutationFn: (actualId) => {
         if(!actualId) throw new Error("Post ID missing")
@@ -307,8 +349,14 @@ export default function PostDetails() {
         setShowHistory={setShowHistory}
         onSendForApproval={() => setIsConfirmOpen(true)}
         onApproveAndSchedule={() => {
-          if (!post.platform_schedules && post.target_date) setApproveDate(new Date(post.target_date))
-          setIsApproveScheduleOpen(true)
+          const hasPlatforms = (post.platforms?.length ?? 0) > 0
+          if (!hasPlatforms) {
+            // Non-social deliverable: approve directly, no schedule dialog
+            approveDeliverableMutation.mutate(post.id)
+          } else {
+            if (!post.platform_schedules && post.target_date) setApproveDate(new Date(post.target_date))
+            setIsApproveScheduleOpen(true)
+          }
         }}
         onPublish={() => setIsPublishConfirmOpen(true)}
         onPublishPlatform={(platform) => {
@@ -325,7 +373,9 @@ export default function PostDetails() {
         isApprovalPending={sendForApprovalMutation.isPending}
         isPublishPending={markAsPublishedMutation.isPending}
         publishingPlatformId={publishingPlatformId}
-        isApproveSchedulePending={approveAndScheduleMutation.isPending}
+        isApproveSchedulePending={approveAndScheduleMutation.isPending || approveDeliverableMutation.isPending}
+        onMarkDelivered={() => setIsMarkDeliveredOpen(true)}
+        isMarkDeliveredPending={markAsDeliveredMutation.isPending}
       />
 
       <DraftPostForm
@@ -372,6 +422,34 @@ export default function PostDetails() {
         onConfirmDelete={() => deletePostMutation.mutate(post.actual_post_id)}
         isDeletePending={deletePostMutation.isPending}
       />
+
+      {/* Mark as Delivered Dialog */}
+      <Dialog open={isMarkDeliveredOpen} onOpenChange={setIsMarkDeliveredOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Mark as Delivered</DialogTitle>
+            <DialogDescription>
+              Confirm that this deliverable has been sent to the client. Optionally add a delivery note.
+            </DialogDescription>
+          </DialogHeader>
+          <Textarea
+            placeholder="e.g. Sent via Google Drive, link in Documents tab"
+            value={deliveryNote}
+            onChange={(e) => setDeliveryNote(e.target.value)}
+            rows={3}
+            className="resize-none"
+          />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsMarkDeliveredOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={() => markAsDeliveredMutation.mutate()} disabled={markAsDeliveredMutation.isPending}>
+              {markAsDeliveredMutation.isPending && <Loader2 size={13} className="animate-spin mr-1.5" />}
+              Confirm Delivery
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

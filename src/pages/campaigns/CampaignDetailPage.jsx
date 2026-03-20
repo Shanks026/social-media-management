@@ -110,7 +110,7 @@ const CustomPlatformTick = ({ x, y, payload }) => {
 }
 
 const platformChartConfig = {
-  posts: { label: 'Posts' },
+  posts: { label: 'Deliverables' },
   ...SUPPORTED_PLATFORMS.reduce((acc, p) => {
     acc[p.id] =
       p.id === 'twitter'
@@ -485,7 +485,7 @@ export default function CampaignDetailPage() {
         {/* KPI bar — always visible */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <KpiCard
-            label="Total Posts"
+            label="Total Deliverables"
             value={analytics?.total_posts ?? 0}
             icon={Activity}
           />
@@ -498,7 +498,7 @@ export default function CampaignDetailPage() {
           <KpiCard
             label="On-Time Rate"
             value={onTimeRate}
-            sub="of published posts"
+            sub="of published deliverables"
             icon={Timer}
             color="text-blue-500"
           />
@@ -516,7 +516,7 @@ export default function CampaignDetailPage() {
           <TabsList className="h-10 mb-4">
             <TabsTrigger value="posts" className="gap-1.5 text-sm px-5">
               <Activity className="size-3.5" />
-              Posts
+              Deliverables
             </TabsTrigger>
             <TabsTrigger value="finance" className="gap-1.5 text-sm px-5">
               <Receipt className="size-3.5" />
@@ -535,9 +535,9 @@ export default function CampaignDetailPage() {
               <Card className="border-none shadow-sm ring-1 ring-border/50 bg-card/50 flex flex-col h-full gap-4">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 shrink-0">
                   <div>
-                    <CardTitle className="text-lg font-medium">Posts</CardTitle>
+                    <CardTitle className="text-lg font-medium">Deliverables</CardTitle>
                     <CardDescription>
-                      Manage and track campaign posts
+                      Manage and track campaign deliverables
                     </CardDescription>
                   </div>
                   {campaign?.status === 'Active' && (
@@ -549,7 +549,7 @@ export default function CampaignDetailPage() {
                         onClick={() => setLinkPostsOpen(true)}
                       >
                         <Link2 className="size-3.5" />
-                        Link Posts
+                        Link Deliverables
                       </Button>
                       <Button
                         size="sm"
@@ -557,7 +557,7 @@ export default function CampaignDetailPage() {
                         onClick={() => setCreatePostOpen(true)}
                       >
                         <Plus className="size-3.5" />
-                        New Post
+                        New Deliverable
                       </Button>
                     </div>
                   )}
@@ -587,10 +587,10 @@ export default function CampaignDetailPage() {
                         <Activity className="h-4 w-4 opacity-50" />
                       </div>
                       <p className="text-sm text-muted-foreground">
-                        No posts linked yet
+                        No deliverables linked yet
                       </p>
                       <p className="text-xs text-muted-foreground/70">
-                        Use Link Posts or New Post to get started
+                        Use Link Deliverables or New Deliverable to get started
                       </p>
                     </div>
                   ) : (

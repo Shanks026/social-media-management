@@ -108,7 +108,7 @@ export function LinkPostsToCampaignDialog({
       { postIds: Array.from(selectedIds), campaignId },
       {
         onSuccess: () => {
-          toast.success(`${selectedIds.size} post(s) linked to campaign`)
+          toast.success(`${selectedIds.size} deliverable(s) linked to campaign`)
           onOpenChange(false)
         },
         onError: (err) => {
@@ -127,9 +127,9 @@ export function LinkPostsToCampaignDialog({
               <Link2 className="h-5 w-5 text-primary" />
             </div> */}
             <div>
-              <DialogTitle className="text-xl">Link Posts</DialogTitle>
+              <DialogTitle className="text-xl">Link Deliverables</DialogTitle>
               <DialogDescription className="mt-1">
-                Select unlinked posts for{' '}
+                Select unlinked deliverables for{' '}
                 <span className="font-semibold text-foreground">
                   {campaignName}
                 </span>

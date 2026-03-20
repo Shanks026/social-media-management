@@ -73,7 +73,9 @@ const STATUS_LEGEND = [
   { id: 'DRAFT', label: 'Draft', color: 'bg-blue-600' },
   { id: 'PENDING_APPROVAL', label: 'Pending Approval', color: 'bg-orange-600' },
   { id: 'NEEDS_REVISION', label: 'Needs Revision', color: 'bg-pink-600' },
+  { id: 'APPROVED', label: 'Approved', color: 'bg-green-600' },
   { id: 'SCHEDULED', label: 'Scheduled', color: 'bg-purple-600' },
+  { id: 'DELIVERED', label: 'Delivered', color: 'bg-teal-600' },
   { id: 'PUBLISHED', label: 'Published', color: 'bg-emerald-600' },
   {
     id: 'PARTIALLY_PUBLISHED',

@@ -246,7 +246,18 @@ export async function updatePost(
   return data
 }
 
-// api/posts.js
+export async function markPostDelivered(versionId, deliveryNote) {
+  const patch = { status: 'DELIVERED' }
+  if (deliveryNote?.trim()) patch.admin_notes = deliveryNote.trim()
+
+  const { error } = await supabase
+    .from('post_versions')
+    .update(patch)
+    .eq('id', versionId)
+    .eq('status', 'APPROVED')
+
+  if (error) throw error
+}
 
 export async function createRevision(versionId, userId, adminNotes) {
   // Ensure we are passing exactly what the Postgres function expects

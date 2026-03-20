@@ -9,6 +9,7 @@ import {
   PauseCircle,
   Pencil,
   CircleDashed,
+  PackageCheck,
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
@@ -37,6 +38,18 @@ const STATUS_CONFIG = {
     icon: CircleDashed,
     className:
       'bg-pink-100 text-pink-800 dark:bg-pink-500/10 dark:text-pink-400',
+  },
+  APPROVED: {
+    label: 'Approved',
+    icon: CheckCircle2,
+    className:
+      'bg-green-100 text-green-800 dark:bg-green-500/10 dark:text-green-400',
+  },
+  DELIVERED: {
+    label: 'Delivered',
+    icon: PackageCheck,
+    className:
+      'bg-teal-100 text-teal-800 dark:bg-teal-500/10 dark:text-teal-400',
   },
 
   ARCHIVED: {

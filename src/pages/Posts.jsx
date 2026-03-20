@@ -67,7 +67,7 @@ import { ClientAvatar } from '@/components/NoteRow'
 import { UrgencyFilter } from '@/pages/clients/ClientFilters'
 
 // ─── Post health ────────────────────────────────────────
-const TERMINAL_STATUSES = ['PUBLISHED', 'ARCHIVED']
+const TERMINAL_STATUSES = ['PUBLISHED', 'ARCHIVED', 'DELIVERED']
 
 function getPostHealth(post) {
   if (TERMINAL_STATUSES.includes(post.status)) return 'idle'
@@ -91,9 +91,11 @@ const STATUS_TABS = [
   { key: 'ALL', label: 'All' },
   { key: 'DRAFT', label: 'Drafts' },
   { key: 'PENDING_APPROVAL', label: 'Pending Approval' },
+  { key: 'APPROVED', label: 'Approved' },
   { key: 'SCHEDULED', label: 'Scheduled' },
   { key: 'NEEDS_REVISION', label: 'Needs Revision' },
   { key: 'PARTIALLY_PUBLISHED', label: 'Partially Published' },
+  { key: 'DELIVERED', label: 'Delivered' },
   { key: 'PUBLISHED', label: 'Published' },
   { key: 'ARCHIVED', label: 'Archived' },
 ]
@@ -181,10 +183,10 @@ export default function Posts() {
   // Set header
   useEffect(() => {
     setHeader({
-      title: 'Posts',
+      title: 'Deliverables',
       breadcrumbs: [
         { label: 'Operations', href: '/posts' },
-        { label: 'Posts', href: '/posts' },
+        { label: 'Deliverables', href: '/posts' },
       ],
     })
   }, [setHeader])
@@ -333,7 +335,7 @@ export default function Posts() {
       <div className="flex items-center justify-between">
         <div className="space-y-1">
           <h1 className="text-3xl font-normal tracking-tight text-foreground">
-            Posts{' '}
+            Deliverables{' '}
             {filteredPosts.length > 0 && (
               <span className="text-muted-foreground/50 ml-2 font-extralight">
                 {filteredPosts.length}
@@ -341,7 +343,7 @@ export default function Posts() {
             )}
           </h1>
           <p className="text-sm text-muted-foreground">
-            Manage all posts across your organization
+            Manage all deliverables across your organization
           </p>
         </div>
 
@@ -353,7 +355,7 @@ export default function Posts() {
           />
           <Button onClick={() => setIsCreatePostOpen(true)} className="gap-2 h-9">
             <Plus size={16} />
-            New Post
+            New Deliverable
           </Button>
         </div>
       </div>
@@ -576,11 +578,11 @@ export default function Posts() {
                 </EmptyMedia>
                 <EmptyHeader>
                   <EmptyTitle className="font-normal text-xl">
-                    {hasActiveFilters ? 'No posts found' : 'No posts yet'}
+                    {hasActiveFilters ? 'No deliverables found' : 'No deliverables yet'}
                   </EmptyTitle>
                   <EmptyDescription className="font-light">
                     {hasActiveFilters
-                      ? 'No posts match your current filters. Try adjusting your search or filter criteria.'
+                      ? 'No deliverables match your current filters. Try adjusting your search or filter criteria.'
                       : 'Create your first draft to start building content for your clients.'}
                   </EmptyDescription>
                 </EmptyHeader>
@@ -591,7 +593,7 @@ export default function Posts() {
                 ) : (
                   <Button variant="outline" size="sm" onClick={() => setIsCreatePostOpen(true)}>
                     <Plus className="size-4 mr-2" />
-                    New Post
+                    New Deliverable
                   </Button>
                 )}
               </EmptyContent>

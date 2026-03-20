@@ -131,7 +131,14 @@ export function useUpdateProposal() {
       if (updateError) throw updateError
 
       // Replace line items: delete all then re-insert
+      // Fetch existing items first so we can roll back if re-insert fails
       if (line_items !== undefined) {
+        const { data: existingItems } = await supabase
+          .from('proposal_line_items')
+          .select('description, amount, sort_order')
+          .eq('proposal_id', id)
+          .order('sort_order')
+
         const { error: deleteError } = await supabase
           .from('proposal_line_items')
           .delete()
@@ -149,7 +156,20 @@ export function useUpdateProposal() {
                 sort_order: item.sort_order ?? idx,
               })),
             )
-          if (insertError) throw insertError
+          if (insertError) {
+            // Attempt to restore original items to avoid data loss
+            if (existingItems?.length > 0) {
+              await supabase.from('proposal_line_items').insert(
+                existingItems.map((item, idx) => ({
+                  proposal_id: id,
+                  description: item.description,
+                  amount: item.amount,
+                  sort_order: item.sort_order ?? idx,
+                })),
+              )
+            }
+            throw insertError
+          }
         }
       }
 
