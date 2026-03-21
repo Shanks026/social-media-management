@@ -65,6 +65,8 @@ export default function DashboardMeetingsNotes() {
       if (error) throw error
       return data
     },
+    staleTime: 0,
+    refetchOnWindowFocus: true,
   })
 
   const { mutate: markMeetingDone, isPending: isCompletingMeeting } =
@@ -92,6 +94,8 @@ export default function DashboardMeetingsNotes() {
       if (error) throw error
       return data
     },
+    staleTime: 0,
+    refetchOnWindowFocus: true,
   })
 
   const visibleMeetings = upcomingMeetings.slice(0, 2)
