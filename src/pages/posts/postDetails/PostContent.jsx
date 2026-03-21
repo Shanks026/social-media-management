@@ -214,7 +214,7 @@ export default function PostContent({
           <div className="flex flex-wrap items-center gap-3">
             <StatusBadge status={getPublishState(post)} />
             <div className="flex items-center gap-1.5">
-              {[].concat(post.platform || []).map((p) => (
+              {[].concat(post.platforms || []).map((p) => (
                 <PlatformIcon key={p} name={p} size="sm" />
               ))}
             </div>

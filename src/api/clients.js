@@ -2,6 +2,7 @@ import { supabase } from '@/lib/supabase'
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '@/context/AuthContext'
 import { resolveWorkspace } from '@/lib/workspace'
+import { getUrgencyStatus } from '@/lib/client-helpers'
 
 export function useClients() {
   const { workspaceUserId } = useAuth()
@@ -34,6 +35,26 @@ const getPathFromUrl = (url) => {
   // Pattern: .../public/post-media/FOLDER/FILE
   const bucketSegment = '/public/post-media/'
   return url.includes(bucketSegment) ? url.split(bucketSegment)[1] : null
+}
+
+/**
+ * Returns clients whose next_post_at is overdue or urgent (< 24h).
+ * Shares the same query cache as ClientHealthGrid.
+ */
+export function useUrgentClients() {
+  return useQuery({
+    queryKey: ['clients-pipeline-dashboard'],
+    queryFn: () => fetchClients(),
+    staleTime: 30000,
+    select: (data) =>
+      (data?.clients ?? [])
+        .filter((c) => !c.is_internal)
+        .filter((c) => {
+          const urgency = getUrgencyStatus(c.pipeline?.next_post_at)
+          return urgency?.label === 'Overdue' || urgency?.label === 'Urgent'
+        })
+        .map((c) => ({ id: c.id, name: c.name, logo_url: c.logo_url, next_post_at: c.pipeline.next_post_at })),
+  })
 }
 
 /**

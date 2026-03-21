@@ -41,6 +41,7 @@ export async function fetchAllPostsByClient(clientId) {
     const latest = post.post_versions || {}
     return {
       ...latest,
+      platforms: latest.platform || [],
       id: post.id,
       version_id: latest.id,
       actual_post_id: post.id,
@@ -92,6 +93,7 @@ export async function fetchPostDetails(id) {
   if (parentData?.post_versions) {
     return {
       ...parentData.post_versions,
+      platforms: parentData.post_versions.platform || [],
       actual_post_id: parentData.id,
       clients: parentData.clients,
     }
@@ -119,6 +121,7 @@ export async function fetchPostDetails(id) {
   if (versionData) {
     return {
       ...versionData,
+      platforms: versionData.platform || [],
       actual_post_id: versionData.posts.id,
       clients: versionData.posts.clients,
     }
