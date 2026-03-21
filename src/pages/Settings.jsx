@@ -1,20 +1,34 @@
 import { useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useHeader } from '../components/misc/header-context'
-import { User, Building2, Users } from 'lucide-react'
+import { User, Building2, Users, LifeBuoy } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 import ProfileSettings from './settings/ProfileSettings'
 import AgencySettings from './settings/AgencySettings'
 import TeamSettings from './settings/TeamSettings'
+import SupportSettings from './settings/SupportSettings'
+
+const VALID_TABS = ['profile', 'agency', 'team', 'support']
 
 export default function Settings() {
   const { setHeader } = useHeader()
+  const [searchParams, setSearchParams] = useSearchParams()
+
+  const tab = VALID_TABS.includes(searchParams.get('tab'))
+    ? searchParams.get('tab')
+    : 'profile'
+
   useEffect(() => {
     setHeader({
       title: 'Settings',
       breadcrumbs: [{ label: 'Settings' }],
     })
   }, [setHeader])
+
+  function handleTabChange(value) {
+    setSearchParams({ tab: value }, { replace: true })
+  }
 
   return (
     <div className="h-full bg-background overflow-y-auto overflow-x-hidden selection:bg-primary/10 [scrollbar-gutter:stable]">
@@ -30,12 +44,13 @@ export default function Settings() {
             </p>
           </div>
 
-          <Tabs defaultValue="profile" className="space-y-10">
+          <Tabs value={tab} onValueChange={handleTabChange} className="space-y-10">
             <TabsList className="bg-transparent border-b border-white/5 rounded-none p-0 h-auto gap-8 w-full justify-start">
               {[
                 { value: 'profile', icon: User, label: 'Profile' },
                 { value: 'agency', icon: Building2, label: 'Agency' },
                 { value: 'team', icon: Users, label: 'Team' },
+                { value: 'support', icon: LifeBuoy, label: 'Support' },
               ].map((tab) => (
                 <TabsTrigger
                   key={tab.value}
@@ -81,6 +96,13 @@ export default function Settings() {
               className="pt-4 focus-visible:outline-none"
             >
               <TeamSettings />
+            </TabsContent>
+
+            <TabsContent
+              value="support"
+              className="pt-4 focus-visible:outline-none"
+            >
+              <SupportSettings />
             </TabsContent>
           </Tabs>
         </div>

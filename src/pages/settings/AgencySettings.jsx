@@ -321,7 +321,7 @@ export default function AgencySettings() {
     const platforms = internalClient.platforms || []
 
     return (
-      <div className="max-w-4xl space-y-14 mx-auto">
+      <div className="w-full space-y-14">
         {/* Section: Branding & Identity */}
         <section className="space-y-8">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
