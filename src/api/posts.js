@@ -26,7 +26,8 @@ export async function fetchAllPostsByClient(clientId) {
         published_at,
         target_date,
         admin_notes,
-        platform_schedules
+        platform_schedules,
+        deliverable_type
       )
     `,
     )
@@ -40,6 +41,7 @@ export async function fetchAllPostsByClient(clientId) {
     const latest = post.post_versions || {}
     return {
       ...latest,
+      platforms: latest.platform || [],
       id: post.id,
       version_id: latest.id,
       actual_post_id: post.id,
@@ -91,6 +93,7 @@ export async function fetchPostDetails(id) {
   if (parentData?.post_versions) {
     return {
       ...parentData.post_versions,
+      platforms: parentData.post_versions.platform || [],
       actual_post_id: parentData.id,
       clients: parentData.clients,
     }
@@ -118,6 +121,7 @@ export async function fetchPostDetails(id) {
   if (versionData) {
     return {
       ...versionData,
+      platforms: versionData.platform || [],
       actual_post_id: versionData.posts.id,
       clients: versionData.posts.clients,
     }
@@ -137,6 +141,7 @@ export async function createDraftPost({
   userId,
   platformSchedules,
   campaignId,
+  deliverableType,
 }) {
   const { error } = await supabase.rpc('create_post_draft_v3', {
     p_client_id: clientId,
@@ -149,6 +154,7 @@ export async function createDraftPost({
     p_admin_notes: adminNotes || null,
     p_platform_schedules: platformSchedules ?? null,
     p_campaign_id: campaignId ?? null,
+    p_deliverable_type: deliverableType ?? null,
   })
 
   if (error) throw error
@@ -207,7 +213,7 @@ export const deletePost = async (postId) => {
 
 export async function updatePost(
   versionId,
-  { title, content, mediaUrls, platforms, target_date, admin_notes, platformSchedules, campaignId, postId },
+  { title, content, mediaUrls, platforms, target_date, admin_notes, platformSchedules, campaignId, postId, deliverableType },
 ) {
   const { data, error } = await supabase
     .from('post_versions')
@@ -219,6 +225,7 @@ export async function updatePost(
       target_date: target_date ?? null,
       admin_notes: admin_notes,
       platform_schedules: platformSchedules ?? null,
+      deliverable_type: deliverableType ?? null,
     })
     .eq('id', versionId)
     .in('status', ['DRAFT', 'PENDING_APPROVAL'])
@@ -242,7 +249,18 @@ export async function updatePost(
   return data
 }
 
-// api/posts.js
+export async function markPostDelivered(versionId, deliveryNote) {
+  const patch = { status: 'DELIVERED' }
+  if (deliveryNote?.trim()) patch.admin_notes = deliveryNote.trim()
+
+  const { error } = await supabase
+    .from('post_versions')
+    .update(patch)
+    .eq('id', versionId)
+    .eq('status', 'APPROVED')
+
+  if (error) throw error
+}
 
 export async function createRevision(versionId, userId, adminNotes) {
   // Ensure we are passing exactly what the Postgres function expects

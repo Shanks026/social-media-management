@@ -82,7 +82,7 @@ export default function DashboardWeekTimeline() {
     () =>
       allPosts.filter(
         (p) =>
-          p.status === 'SCHEDULED' &&
+          (p.status === 'SCHEDULED' || p.status === 'APPROVED') &&
           p.target_date &&
           new Date(p.target_date) >= today &&
           new Date(p.target_date) <= weekEnd,
@@ -103,6 +103,8 @@ export default function DashboardWeekTimeline() {
       if (error) throw error
       return data || []
     },
+    staleTime: 0,
+    refetchOnWindowFocus: true,
   })
 
   // ── Notes with due_at ──
@@ -119,6 +121,8 @@ export default function DashboardWeekTimeline() {
       if (error) throw error
       return data || []
     },
+    staleTime: 0,
+    refetchOnWindowFocus: true,
   })
 
   // ── Group by day ──
@@ -160,13 +164,13 @@ export default function DashboardWeekTimeline() {
   const totalNotes = dueNotes.length
 
   return (
-    <Card className="border-none shadow-sm ring-1 ring-border/50 bg-card/50 dark:bg-card/30 flex flex-col gap-2 group">
+    <Card className="border-none shadow-sm ring-1 ring-border/50 bg-card/50 dark:bg-card/30 flex flex-col gap-2 group h-full">
       <CardHeader className="pb-3 flex flex-row items-center justify-between space-y-0">
         <div>
           <CardTitle className="text-lg font-medium">Week Ahead</CardTitle>
           {!isLoading && (
             <p className="text-xs text-muted-foreground mt-0.5">
-              {totalPosts} post{totalPosts !== 1 && 's'} · {totalMeetings}{' '}
+              {totalPosts} deliverable{totalPosts !== 1 && 's'} · {totalMeetings}{' '}
               meeting{totalMeetings !== 1 && 's'} · {totalNotes} reminder{totalNotes !== 1 && 's'}
             </p>
           )}
@@ -181,7 +185,7 @@ export default function DashboardWeekTimeline() {
         </Button>
       </CardHeader>
 
-      <CardContent className="pb-4 pt-2 pr-3">
+      <CardContent className="pb-4 pt-2 pr-3 flex-1 flex flex-col min-h-0">
         {isLoading ? (
           <div className="flex flex-col gap-7 py-1 pl-1">
             {[...Array(4)].map((_, i) => (
@@ -199,7 +203,7 @@ export default function DashboardWeekTimeline() {
           </div>
         ) : (
           /* Scrollable timeline container */
-          <div className="relative overflow-y-auto max-h-[420px] pr-1 timeline-scrollbar">
+          <div className="relative overflow-y-auto flex-1 min-h-0 pr-1 timeline-scrollbar">
             {/* Vertical timeline line — positioned relative to scroll container */}
             <div className="absolute left-[10px] top-2 bottom-2 w-px bg-border" />
 
@@ -286,7 +290,7 @@ export default function DashboardWeekTimeline() {
                                   variant="secondary"
                                   className="text-[10px] px-1.5 py-0 h-5 shrink-0"
                                 >
-                                  {dayPosts.length} post
+                                  {dayPosts.length} deliverable
                                   {dayPosts.length !== 1 && 's'}
                                 </Badge>
                               </div>

@@ -57,7 +57,7 @@ const BASE_NAV_ITEMS = [
     url: '/operations',
     icon: Layers,
     items: [
-      { title: 'Posts', url: '/posts', icon: Newspaper },
+      { title: 'Deliverables', url: '/posts', icon: Newspaper },
       {
         title: 'Notes & Reminders',
         url: '/operations/notes',

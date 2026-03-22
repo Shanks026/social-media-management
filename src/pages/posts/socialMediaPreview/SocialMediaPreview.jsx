@@ -9,7 +9,8 @@ import {
 } from '@/components/ui/select'
 import InstagramPreview from './InstagramPreview'
 import TwitterPreview from './TwitterPreview'
-import LinkedInPreview from './LinkedInPreview' // <--- IMPORT
+import LinkedInPreview from './LinkedInPreview'
+import FacebookPreview from './FacebookPreview'
 import { Label } from '@/components/ui/label'
 import YouTubePreview from './YouTubePreview'
 
@@ -19,7 +20,7 @@ export default function SocialMediaPreview({
   post,
   client,
 }) {
-  const availablePlatforms = [].concat(post?.platform || [])
+  const availablePlatforms = [].concat(post?.platforms || [])
   const [activePlatform, setActivePlatform] = useState(
     availablePlatforms[0] || 'instagram',
   )
@@ -87,6 +88,9 @@ export default function SocialMediaPreview({
             )}
             {activePlatform === 'youtube' && (
               <YouTubePreview post={post} client={client} />
+            )}
+            {activePlatform === 'facebook' && (
+              <FacebookPreview post={post} client={client} />
             )}
           </div>
         </div>

@@ -203,7 +203,7 @@ export default function TeamSettings() {
   }
 
   return (
-    <div className="max-w-4xl space-y-14 mx-auto">
+    <div className="w-full space-y-14">
 
       {/* ── Section: Team Members ── */}
       <section className="space-y-8">

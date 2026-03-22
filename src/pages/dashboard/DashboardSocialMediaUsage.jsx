@@ -85,7 +85,7 @@ export default function DashboardSocialMediaUsage() {
           <CardTitle className="text-lg font-medium">
             Social Media Usage
           </CardTitle>
-          <CardDescription>Post distribution across platforms</CardDescription>
+          <CardDescription>Deliverable distribution across platforms</CardDescription>
         </div>
         <Button
           variant="ghost"

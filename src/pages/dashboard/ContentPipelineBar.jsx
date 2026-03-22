@@ -22,7 +22,9 @@ const chartConfig = {
   DRAFT: { label: 'Draft', color: '#3b82f6' },
   'PENDING APPROVAL': { label: 'Pending Approval', color: '#f97316' },
   'NEEDS REVISION': { label: 'Needs Revision', color: '#ec4899' },
+  APPROVED: { label: 'Approved', color: '#22c55e' },
   SCHEDULED: { label: 'Scheduled', color: '#a855f7' },
+  DELIVERED: { label: 'Delivered', color: '#14b8a6' },
   PUBLISHED: { label: 'Published', color: '#10b981' },
   'PARTIALLY PUBLISHED': { label: 'Partially Published', color: '#84cc16' },
 }
@@ -31,7 +33,9 @@ const ALLOWED_STATUSES = [
   'DRAFT',
   'PENDING APPROVAL',
   'NEEDS REVISION',
+  'APPROVED',
   'SCHEDULED',
+  'DELIVERED',
   'PUBLISHED',
   'PARTIALLY PUBLISHED',
 ]
@@ -47,9 +51,12 @@ export default function ContentPipelineBar() {
   }, {})
 
   posts.forEach((post) => {
-    let status = getPublishState(post)?.replace('_', ' ') || 'DRAFT'
+    let status = getPublishState(post)?.replace(/_/g, ' ') || 'DRAFT'
     if (status === 'PENDING') status = 'PENDING APPROVAL'
     if (status === 'REVISIONS') status = 'NEEDS REVISION'
+    if (status === 'PENDING APPROVAL') status = 'PENDING APPROVAL'
+    if (status === 'NEEDS REVISION') status = 'NEEDS REVISION'
+    if (status === 'PARTIALLY PUBLISHED') status = 'PARTIALLY PUBLISHED'
 
     if (ALLOWED_STATUSES.includes(status)) {
       postCounts[status] += 1
@@ -65,7 +72,7 @@ export default function ContentPipelineBar() {
   const pieChartData = chartData.filter((d) => d.value > 0)
 
   const totalPosts = posts.filter((post) => {
-    let status = getPublishState(post)?.replace('_', ' ') || 'DRAFT'
+    let status = getPublishState(post)?.replace(/_/g, ' ') || 'DRAFT'
     if (status === 'PENDING') status = 'PENDING APPROVAL'
     if (status === 'REVISIONS') status = 'NEEDS REVISION'
     return ALLOWED_STATUSES.includes(status)

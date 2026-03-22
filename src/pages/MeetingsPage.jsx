@@ -1,6 +1,15 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query'
 import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  useDraggable,
+  useDroppable,
+} from '@dnd-kit/core'
+import {
   Calendar,
   Plus,
   Filter,
@@ -12,6 +21,8 @@ import {
   Link as LinkIcon,
   CheckCircle2,
   RotateCcw,
+  LayoutGrid,
+  Columns3,
 } from 'lucide-react'
 import { format, isPast } from 'date-fns'
 import { toast } from 'sonner'
@@ -63,7 +74,7 @@ import {
 const STATUS_TABS = [
   { key: 'ALL', label: 'All' },
   { key: 'UPCOMING', label: 'Upcoming' },
-  { key: 'PAST', label: 'Past' },
+  { key: 'PAST', label: 'Missed' },
   { key: 'COMPLETED', label: 'Completed' },
 ]
 
@@ -158,7 +169,7 @@ function MeetingCard({ meeting, clientMap }) {
                         : 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
                   )}
                 >
-                  {isCompleted ? 'Completed' : isMeetingPast ? 'Past' : 'Upcoming'}
+                  {isCompleted ? 'Completed' : isMeetingPast ? 'Missed' : 'Upcoming'}
                 </Badge>
               </div>
 
@@ -335,6 +346,174 @@ function MeetingsGroup({ title, meetings, clientMap }) {
   )
 }
 
+// ─── Kanban: Draggable Card Wrapper ───────────────────────────────────────────
+
+function DraggableCard({ id, children }) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } =
+    useDraggable({ id })
+
+  const style = transform
+    ? {
+        transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
+        zIndex: 50,
+      }
+    : undefined
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      className={cn(
+        'cursor-grab active:cursor-grabbing touch-none',
+        isDragging && 'opacity-40',
+      )}
+    >
+      {children}
+    </div>
+  )
+}
+
+// ─── Kanban: Column ───────────────────────────────────────────────────────────
+
+function KanbanColumn({ id, title, count, accentClass, children }) {
+  const { setNodeRef, isOver } = useDroppable({ id })
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={cn(
+        'flex flex-col rounded-xl border bg-muted/20 transition-colors min-h-[300px]',
+        isOver && 'ring-2 ring-primary/40 bg-primary/5 border-primary/30',
+      )}
+    >
+      {/* Column Header */}
+      <div className="flex items-center gap-2 px-4 py-3 border-b border-border/50">
+        <span className={cn('size-2 rounded-full shrink-0', accentClass)} />
+        <span className="text-sm font-semibold text-foreground">{title}</span>
+        <span className="text-[11px] bg-muted text-muted-foreground rounded-full px-2 py-0.5 font-medium min-w-[20px] text-center">
+          {count}
+        </span>
+      </div>
+
+      {/* Cards */}
+      <div className="flex-1 p-3 space-y-3">
+        {children}
+        {count === 0 && (
+          <div className="flex items-center justify-center h-24 text-xs text-muted-foreground/50 italic">
+            Drop cards here
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ─── Kanban Meetings View ─────────────────────────────────────────────────────
+
+function KanbanMeetingsView({ meetings, clientMap, queryClient, selectedClient }) {
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+  )
+
+  const upcomingMeetings = meetings.filter(
+    (m) => !m.completed_at && !isPast(new Date(m.datetime)),
+  )
+  const pastMeetings = meetings.filter(
+    (m) => !m.completed_at && isPast(new Date(m.datetime)),
+  )
+  const completedMeetings = meetings.filter((m) => Boolean(m.completed_at))
+
+  const queryKey = ['global-meetings', selectedClient]
+
+  function handleDragEnd(event) {
+    const { active, over } = event
+    if (!over) return
+    const targetColumn = over.id // 'UPCOMING' | 'PAST' | 'COMPLETED'
+    const meeting = meetings.find((m) => m.id === active.id)
+    if (!meeting) return
+
+    // Only meaningful transitions: anything → COMPLETED, or COMPLETED → non-completed
+    if (targetColumn === 'COMPLETED' && !meeting.completed_at) {
+      const previous = queryClient.getQueryData(queryKey)
+      queryClient.setQueryData(queryKey, (old = []) =>
+        old.map((m) =>
+          m.id === active.id ? { ...m, completed_at: new Date().toISOString() } : m,
+        ),
+      )
+      markMeetingCompleted(active.id)
+        .then(() => toast.success('Meeting marked as completed'))
+        .catch((err) => {
+          queryClient.setQueryData(queryKey, previous)
+          toast.error('Failed to update: ' + err.message)
+        })
+    } else if (targetColumn !== 'COMPLETED' && meeting.completed_at) {
+      const previous = queryClient.getQueryData(queryKey)
+      queryClient.setQueryData(queryKey, (old = []) =>
+        old.map((m) =>
+          m.id === active.id ? { ...m, completed_at: null } : m,
+        ),
+      )
+      unmarkMeetingCompleted(active.id)
+        .then(() => toast.success('Meeting restored'))
+        .catch((err) => {
+          queryClient.setQueryData(queryKey, previous)
+          toast.error('Failed to update: ' + err.message)
+        })
+    }
+  }
+
+  return (
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      onDragEnd={handleDragEnd}
+    >
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
+        <KanbanColumn
+          id="UPCOMING"
+          title="Upcoming"
+          count={upcomingMeetings.length}
+          accentClass="bg-blue-500"
+        >
+          {upcomingMeetings.map((meeting) => (
+            <DraggableCard key={meeting.id} id={meeting.id}>
+              <MeetingCard meeting={meeting} clientMap={clientMap} />
+            </DraggableCard>
+          ))}
+        </KanbanColumn>
+
+        <KanbanColumn
+          id="PAST"
+          title="Missed"
+          count={pastMeetings.length}
+          accentClass="bg-zinc-400"
+        >
+          {pastMeetings.map((meeting) => (
+            <DraggableCard key={meeting.id} id={meeting.id}>
+              <MeetingCard meeting={meeting} clientMap={clientMap} />
+            </DraggableCard>
+          ))}
+        </KanbanColumn>
+
+        <KanbanColumn
+          id="COMPLETED"
+          title="Completed"
+          count={completedMeetings.length}
+          accentClass="bg-emerald-500"
+        >
+          {completedMeetings.map((meeting) => (
+            <DraggableCard key={meeting.id} id={meeting.id}>
+              <MeetingCard meeting={meeting} clientMap={clientMap} />
+            </DraggableCard>
+          ))}
+        </KanbanColumn>
+      </div>
+    </DndContext>
+  )
+}
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function MeetingsPage() {
@@ -344,6 +523,13 @@ export default function MeetingsPage() {
   const [statusTab, setStatusTab] = useState('ALL')
   const [selectedClient, setSelectedClient] = useState('all')
   const [search, setSearch] = useState('')
+  const [view, setView] = useState(
+    () => localStorage.getItem('meetingsView') || 'grid',
+  )
+
+  useEffect(() => {
+    localStorage.setItem('meetingsView', view)
+  }, [view])
 
   useEffect(() => {
     setHeader({
@@ -530,7 +716,7 @@ export default function MeetingsPage() {
             })}
           </div>
 
-          {/* Client Select: Now Responsive */}
+          {/* Client Select */}
           <Select value={selectedClient} onValueChange={setSelectedClient}>
             <SelectTrigger className="w-full sm:w-[200px] h-9 text-xs font-semibold shadow-none bg-background overflow-hidden">
               <div className="flex items-center gap-2 min-w-0 w-full">
@@ -552,10 +738,38 @@ export default function MeetingsPage() {
               ))}
             </SelectContent>
           </Select>
+
+          {/* View Toggle */}
+          <div className="flex items-center rounded-md border bg-background shadow-sm overflow-hidden">
+            <button
+              onClick={() => setView('grid')}
+              className={cn(
+                'h-9 w-9 flex items-center justify-center transition-colors',
+                view === 'grid'
+                  ? 'bg-muted text-foreground'
+                  : 'text-muted-foreground hover:bg-muted/40',
+              )}
+              title="Grid view"
+            >
+              <LayoutGrid size={15} />
+            </button>
+            <button
+              onClick={() => setView('kanban')}
+              className={cn(
+                'h-9 w-9 flex items-center justify-center transition-colors',
+                view === 'kanban'
+                  ? 'bg-muted text-foreground'
+                  : 'text-muted-foreground hover:bg-muted/40',
+              )}
+              title="Kanban view"
+            >
+              <Columns3 size={15} />
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Meetings grid */}
+      {/* Meetings content */}
       {isLoadingMeetings || isLoadingClients ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-4">
           {[...Array(8)].map((_, i) => (
@@ -585,7 +799,7 @@ export default function MeetingsPage() {
             </div>
           ))}
         </div>
-      ) : filteredMeetings.length === 0 ? (
+      ) : filteredMeetings.length === 0 && view === 'grid' ? (
         <Empty className="py-20 border border-dashed rounded-2xl bg-muted/5">
           <EmptyContent>
             <EmptyMedia variant="icon">
@@ -630,6 +844,13 @@ export default function MeetingsPage() {
             )}
           </EmptyContent>
         </Empty>
+      ) : view === 'kanban' ? (
+        <KanbanMeetingsView
+          meetings={filteredMeetings}
+          clientMap={clientMap}
+          queryClient={queryClient}
+          selectedClient={selectedClient}
+        />
       ) : (
         <div className="space-y-8 pt-1">
           {(statusTab === 'ALL' || statusTab === 'UPCOMING') &&
@@ -643,7 +864,7 @@ export default function MeetingsPage() {
           {(statusTab === 'ALL' || statusTab === 'PAST') &&
             pastMeetings.length > 0 && (
               <MeetingsGroup
-                title={`Past · ${pastMeetings.length}`}
+                title={`Missed · ${pastMeetings.length}`}
                 meetings={pastMeetings}
                 clientMap={clientMap}
               />

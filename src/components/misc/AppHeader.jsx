@@ -13,6 +13,7 @@ import { useSubscription } from '@/api/useSubscription'
 import { useNavigate } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 import { formatDate } from '@/lib/helper'
+import { useUrgentClients } from '@/api/clients'
 
 function TrialStatusPill({ phase, daysRemaining, endsAt }) {
   const navigate = useNavigate()
@@ -56,6 +57,44 @@ function TrialStatusPill({ phase, daysRemaining, endsAt }) {
         <span className="hidden sm:inline opacity-60">· {endDateStr}</span>
       )}
     </button>
+  )
+}
+
+function UrgencyAlertIndicator() {
+  const navigate = useNavigate()
+  const { data: urgentClients = [] } = useUrgentClients()
+
+  if (urgentClients.length === 0) return null
+
+  const overdueCount = urgentClients.filter((c) => {
+    const diff = (new Date(c.next_post_at) - new Date()) / (1000 * 60 * 60)
+    return diff < 0
+  }).length
+  const urgentCount = urgentClients.length - overdueCount
+
+  const parts = []
+  if (urgentCount > 0) parts.push(`${urgentCount} urgent`)
+  if (overdueCount > 0) parts.push(`${overdueCount} overdue`)
+  const summary = parts.join(' and ')
+
+  return (
+    <div className="flex items-center gap-2 text-destructive me-2">
+      {/* Pulsating dot */}
+      <span className="relative flex size-2 shrink-0">
+        <span className="animate-ping absolute inline-flex size-full rounded-full bg-rose-500 opacity-75" />
+        <span className="relative inline-flex rounded-full size-2 bg-destructive" />
+      </span>
+      {/* Sentence — hidden on small screens */}
+      <p className="hidden lg:block text-xs font-medium whitespace-nowrap">
+        You have {summary} deliverable{urgentClients.length !== 1 ? 's' : ''}.{' '}
+        <button
+          onClick={() => navigate('/clients')}
+          className="underline underline-offset-2 font-semibold hover:opacity-70 transition-opacity cursor-pointer"
+        >
+          Take action
+        </button>
+      </p>
+    </div>
   )
 }
 
@@ -172,6 +211,7 @@ export function AppHeader({ agencySettings }) {
           <TrialStatusPill phase={sub.trial_phase} daysRemaining={sub.trial_days_remaining} endsAt={sub.trial_ends_at} />
         )}
         {header.actions}
+        <UrgencyAlertIndicator />
         <ModeToggle />
 
         {/* --- MOBILE SIDEBAR TRIGGER --- */}

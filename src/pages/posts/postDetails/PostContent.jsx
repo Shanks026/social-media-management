@@ -19,6 +19,7 @@ import {
   ChevronDownIcon,
   RefreshCw,
   Send,
+  PackageCheck,
 } from 'lucide-react'
 
 // UI Components
@@ -158,6 +159,8 @@ export default function PostContent({
   onResendLink,
   isResendingLink,
   onRefresh,
+  onMarkDelivered,
+  isMarkDeliveredPending,
 }) {
   const notesRef = useRef(null)
   const queryClient = useQueryClient()
@@ -167,12 +170,12 @@ export default function PostContent({
   const [activeIndex, setActiveIndex] = useState(0)
   const [mediaToDelete, setMediaToDelete] = useState(null)
 
+  const isSocialPost = (post.platforms?.length ?? 0) > 0
   const canEdit = post.status === 'DRAFT' || post.status === 'PENDING_APPROVAL'
-  const canSendForApproval =
-    post.status === 'DRAFT' && post.content && post.media_urls?.length > 0
-  // Internal posts approve in-place; same readiness guard
-  const canApproveAndSchedule =
-    post.status === 'DRAFT' && post.content && post.media_urls?.length > 0
+  const canDelete = post.status !== 'PUBLISHED' && post.status !== 'DELIVERED'
+  // Media is optional for non-social deliverables — only require content
+  const canSendForApproval = post.status === 'DRAFT' && !!post.content
+  const canApproveAndSchedule = post.status === 'DRAFT' && !!post.content
 
   const handlePrev = useCallback(() => {
     setActiveIndex((p) => (p === 0 ? post.media_urls.length - 1 : p - 1))
@@ -205,37 +208,13 @@ export default function PostContent({
 
   return (
     <div className="max-w-[1400px] mx-auto flex-1 p-8 space-y-6 min-w-0">
-      {/* Revision Banner */}
-      {post.status === 'NEEDS_REVISION' && (
-        <div className="flex items-start gap-3 p-4 rounded-xl border border-amber-200 bg-amber-50/50 dark:bg-amber-500/5 dark:border-amber-500/20 max-w-2xl">
-          <AlertCircle className="h-5 w-5 text-amber-600 dark:mt-0.5 shrink-0" />
-          <div className="space-y-1">
-            <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">
-              Revision Required
-            </p>
-            <p className="text-sm text-amber-800/90 dark:text-amber-400/90 leading-relaxed">
-              Check the{' '}
-              <button
-                onClick={() =>
-                  notesRef.current?.scrollIntoView({ behavior: 'smooth' })
-                }
-                className="font-semibold underline"
-              >
-                client feedback
-              </button>{' '}
-              below, implement changes, and create a new version.
-            </p>
-          </div>
-        </div>
-      )}
-
       {/* Main Header */}
       <div className="flex flex-col md:flex-row justify-between items-start gap-6">
         <div className="space-y-6 flex-1">
           <div className="flex flex-wrap items-center gap-3">
             <StatusBadge status={getPublishState(post)} />
             <div className="flex items-center gap-1.5">
-              {[].concat(post.platform || []).map((p) => (
+              {[].concat(post.platforms || []).map((p) => (
                 <PlatformIcon key={p} name={p} size="sm" />
               ))}
             </div>
@@ -276,13 +255,17 @@ export default function PostContent({
                       <div className="h-4 w-px bg-border hidden sm:block" />
                       {post.status === 'SCHEDULED' ? (
                         <Clock size={14} className="text-violet-600" />
+                      ) : post.status === 'APPROVED' ? (
+                        <CalendarIcon size={14} className="text-teal-600" />
                       ) : (
                         <CalendarIcon size={14} />
                       )}
                       <span className="text-muted-foreground">
                         {post.status === 'SCHEDULED'
                           ? 'Scheduled for:'
-                          : 'Target Date:'}
+                          : post.status === 'APPROVED'
+                            ? 'Deadline:'
+                            : 'Target Date:'}
                       </span>
                       <Badge
                         variant={
@@ -380,7 +363,7 @@ export default function PostContent({
             </>
           )}
 
-          {/* DRAFT — internal: Approve & Schedule | external: Send for Approval */}
+          {/* DRAFT — internal: Approve (&Schedule) | external: Send for Approval */}
           {post.status === 'DRAFT' &&
             (isInternal ? (
               <Button
@@ -394,7 +377,7 @@ export default function PostContent({
                 ) : (
                   <CheckCircle2 size={13} />
                 )}
-                Approve & Schedule
+                {isSocialPost ? 'Approve & Schedule' : 'Approve'}
               </Button>
             ) : (
               <Button
@@ -429,7 +412,7 @@ export default function PostContent({
               New Version
             </Button>
           )}
-          {post.status === 'SCHEDULED' && !post.platform_schedules && (
+          {post.status === 'SCHEDULED' && !post.platform_schedules && isSocialPost && (
             <Button
               size="sm"
               disabled={isPublishPending}
@@ -459,6 +442,23 @@ export default function PostContent({
                 <Plus size={13} />
               )}
               Create New Version
+            </Button>
+          )}
+
+          {/* APPROVED — Mark as Delivered */}
+          {post.status === 'APPROVED' && (
+            <Button
+              size="sm"
+              onClick={onMarkDelivered}
+              disabled={isMarkDeliveredPending}
+              className="hidden sm:inline-flex gap-1.5 font-semibold"
+            >
+              {isMarkDeliveredPending ? (
+                <Loader2 size={13} className="animate-spin" />
+              ) : (
+                <PackageCheck size={13} />
+              )}
+              Mark as Delivered
             </Button>
           )}
 
@@ -501,8 +501,8 @@ export default function PostContent({
                       onClick={onApproveAndSchedule}
                       disabled={!canApproveAndSchedule}
                     >
-                      <CheckCircle2 size={14} className="mr-2" /> Approve &amp;
-                      Schedule
+                      <CheckCircle2 size={14} className="mr-2" />
+                      {isSocialPost ? 'Approve & Schedule' : 'Approve'}
                     </DropdownMenuItem>
                   ) : (
                     <DropdownMenuItem
@@ -515,7 +515,7 @@ export default function PostContent({
                   ))}
                 {post.status === 'SCHEDULED' && (
                   <>
-                    {!post.platform_schedules && (
+                    {!post.platform_schedules && isSocialPost && (
                       <DropdownMenuItem onClick={onPublish}>
                         <Play size={14} className="mr-2" /> Publish Now
                       </DropdownMenuItem>
@@ -532,11 +532,18 @@ export default function PostContent({
                     <Plus size={14} className="mr-2" /> New Version
                   </DropdownMenuItem>
                 )}
+                {post.status === 'APPROVED' && (
+                  <DropdownMenuItem onClick={onMarkDelivered} disabled={isMarkDeliveredPending}>
+                    <PackageCheck size={14} className="mr-2" /> Mark as Delivered
+                  </DropdownMenuItem>
+                )}
               </div>
 
-              <DropdownMenuItem onClick={() => setIsSocialPreviewOpen(true)}>
-                <Eye size={14} className="mr-2" /> Social Media Preview
-              </DropdownMenuItem>
+              {isSocialPost && (
+                <DropdownMenuItem onClick={() => setIsSocialPreviewOpen(true)}>
+                  <Eye size={14} className="mr-2" /> Social Media Preview
+                </DropdownMenuItem>
+              )}
 
               {!showHistory && (
                 <DropdownMenuItem onClick={() => setShowHistory(true)}>
@@ -551,7 +558,7 @@ export default function PostContent({
               )}
 
               <DropdownMenuItem
-                disabled={post.status === 'PUBLISHED'}
+                disabled={!canDelete}
                 className="text-destructive focus:text-destructive"
                 onClick={onDelete}
               >
@@ -561,6 +568,46 @@ export default function PostContent({
           </DropdownMenu>
         </div>
       </div>
+
+      {/* Status Banners — Revision & Delivered */}
+      {post.status === 'NEEDS_REVISION' && (
+        <div className="flex items-start gap-3 p-4 rounded-xl border border-amber-200 bg-amber-50/50 dark:bg-amber-500/5 dark:border-amber-500/20 max-w-2xl">
+          <AlertCircle className="h-5 w-5 text-amber-600 dark:mt-0.5 shrink-0" />
+          <div className="space-y-1">
+            <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">
+              Revision Required
+            </p>
+            <p className="text-sm text-amber-800/90 dark:text-amber-400/90 leading-relaxed">
+              Check the{' '}
+              <button
+                onClick={() =>
+                  notesRef.current?.scrollIntoView({ behavior: 'smooth' })
+                }
+                className="font-semibold underline"
+              >
+                client feedback
+              </button>{' '}
+              below, implement changes, and create a new version.
+            </p>
+          </div>
+        </div>
+      )}
+      {post.status === 'DELIVERED' && (
+        <div className="flex items-start gap-3 p-4 rounded-xl border border-teal-200 bg-teal-50/50 dark:bg-teal-500/5 dark:border-teal-500/20 max-w-2xl">
+          <PackageCheck className="h-5 w-5 text-teal-600 dark:mt-0.5 shrink-0" />
+          <div className="space-y-1">
+            <p className="text-sm font-semibold text-teal-900 dark:text-teal-200">
+              Delivered
+            </p>
+            <p className="text-sm text-teal-800/90 dark:text-teal-400/90 leading-relaxed">
+              This deliverable has been marked as delivered and is now complete.
+              {post.admin_notes && (
+                <span> Note: <em>{post.admin_notes}</em></span>
+              )}
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Media Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4 py-4">

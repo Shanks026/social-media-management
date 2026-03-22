@@ -1,7 +1,15 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query'
 import {
-  FileText,
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  useDraggable,
+  useDroppable,
+} from '@dnd-kit/core'
+import {
   Plus,
   Filter,
   Building2,
@@ -14,6 +22,10 @@ import {
   Trash2,
   Search,
   StickyNote,
+  LayoutGrid,
+  Columns3,
+  ChevronDown,
+  ChevronRight,
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { toast } from 'sonner'
@@ -323,6 +335,177 @@ function NotesGroup({ title, notes, clientMap }) {
   )
 }
 
+// ─── Kanban: Draggable Card Wrapper ───────────────────────────────────────────
+
+function DraggableCard({ id, children }) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } =
+    useDraggable({ id })
+
+  const style = transform
+    ? {
+        transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
+        zIndex: 50,
+      }
+    : undefined
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      className={cn(
+        'cursor-grab active:cursor-grabbing touch-none',
+        isDragging && 'opacity-40',
+      )}
+    >
+      {children}
+    </div>
+  )
+}
+
+// ─── Kanban: Column ───────────────────────────────────────────────────────────
+
+function KanbanColumn({ id, title, count, accentClass, children, collapsible }) {
+  const [isCollapsed, setIsCollapsed] = useState(collapsible ?? false)
+  const { setNodeRef, isOver } = useDroppable({ id })
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={cn(
+        'flex flex-col rounded-xl border bg-muted/20 transition-colors min-h-[300px]',
+        isOver && 'ring-2 ring-primary/40 bg-primary/5 border-primary/30',
+      )}
+    >
+      {/* Column Header */}
+      <div className="flex items-center justify-between px-4 py-3 border-b border-border/50">
+        <div className="flex items-center gap-2">
+          <span className={cn('size-2 rounded-full shrink-0', accentClass)} />
+          <span className="text-sm font-semibold text-foreground">{title}</span>
+          <span className="text-[11px] bg-muted text-muted-foreground rounded-full px-2 py-0.5 font-medium min-w-[20px] text-center">
+            {count}
+          </span>
+        </div>
+        {collapsible && (
+          <button
+            onClick={() => setIsCollapsed((v) => !v)}
+            className="text-muted-foreground hover:text-foreground transition-colors"
+          >
+            {isCollapsed ? (
+              <ChevronRight size={16} />
+            ) : (
+              <ChevronDown size={16} />
+            )}
+          </button>
+        )}
+      </div>
+
+      {/* Cards */}
+      {!isCollapsed && (
+        <div className="flex-1 p-3 space-y-3">
+          {children}
+          {count === 0 && (
+            <div className="flex items-center justify-center h-24 text-xs text-muted-foreground/50 italic">
+              Drop cards here
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Collapsed drop hint */}
+      {isCollapsed && (
+        <div className="px-4 py-2 text-xs text-muted-foreground/40 italic">
+          {count} note{count !== 1 ? 's' : ''} · drop here to archive
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── Kanban Notes View ────────────────────────────────────────────────────────
+
+function KanbanNotesView({ notes, clientMap, queryClient }) {
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+  )
+
+  const todoNotes = notes.filter((n) => n.status === 'TODO')
+  const doneNotes = notes.filter((n) => n.status === 'DONE')
+  const archivedNotes = notes.filter((n) => n.status === 'ARCHIVED')
+
+  function handleDragEnd(event) {
+    const { active, over } = event
+    if (!over) return
+    const newStatus = over.id
+    const note = notes.find((n) => n.id === active.id)
+    if (!note || note.status === newStatus) return
+
+    // Optimistic update — move the card instantly
+    const previous = queryClient.getQueryData(['global-notes'])
+    queryClient.setQueryData(['global-notes'], (old = []) =>
+      old.map((n) => (n.id === active.id ? { ...n, status: newStatus } : n)),
+    )
+
+    updateNoteStatus(active.id, newStatus)
+      .then(() => toast.success(`Moved to ${STATUS_CONFIG[newStatus]?.label ?? newStatus}`))
+      .catch((err) => {
+        queryClient.setQueryData(['global-notes'], previous)
+        toast.error('Failed to update: ' + err.message)
+      })
+  }
+
+  return (
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      onDragEnd={handleDragEnd}
+    >
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
+        <KanbanColumn
+          id="TODO"
+          title="To Do"
+          count={todoNotes.length}
+          accentClass="bg-blue-500"
+        >
+          {todoNotes.map((note) => (
+            <DraggableCard key={note.id} id={note.id}>
+              <NoteCard note={note} clientMap={clientMap} />
+            </DraggableCard>
+          ))}
+        </KanbanColumn>
+
+        <KanbanColumn
+          id="DONE"
+          title="Done"
+          count={doneNotes.length}
+          accentClass="bg-emerald-500"
+        >
+          {doneNotes.map((note) => (
+            <DraggableCard key={note.id} id={note.id}>
+              <NoteCard note={note} clientMap={clientMap} />
+            </DraggableCard>
+          ))}
+        </KanbanColumn>
+
+        <KanbanColumn
+          id="ARCHIVED"
+          title="Archived"
+          count={archivedNotes.length}
+          accentClass="bg-zinc-400"
+          collapsible
+        >
+          {archivedNotes.map((note) => (
+            <DraggableCard key={note.id} id={note.id}>
+              <NoteCard note={note} clientMap={clientMap} />
+            </DraggableCard>
+          ))}
+        </KanbanColumn>
+      </div>
+    </DndContext>
+  )
+}
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function NotesAndReminders() {
@@ -332,6 +515,13 @@ export default function NotesAndReminders() {
   const [statusTab, setStatusTab] = useState('ALL')
   const [selectedClient, setSelectedClient] = useState('all')
   const [search, setSearch] = useState('')
+  const [view, setView] = useState(
+    () => localStorage.getItem('notesView') || 'grid',
+  )
+
+  useEffect(() => {
+    localStorage.setItem('notesView', view)
+  }, [view])
 
   useEffect(() => {
     setHeader({
@@ -376,7 +566,6 @@ export default function NotesAndReminders() {
 
   const allNotes = useMemo(() => {
     if (selectedClient === 'all') return fetchedNotes
-    // if a note is explicitly assigned to null, and the internal client is selected:
     if (selectedClient === defaultClientId) {
       return fetchedNotes.filter(
         (n) => n.client_id === selectedClient || n.client_id === null,
@@ -544,10 +733,38 @@ export default function NotesAndReminders() {
               ))}
             </SelectContent>
           </Select>
+
+          {/* View Toggle */}
+          <div className="flex items-center rounded-md border bg-background shadow-sm overflow-hidden">
+            <button
+              onClick={() => setView('grid')}
+              className={cn(
+                'h-9 w-9 flex items-center justify-center transition-colors',
+                view === 'grid'
+                  ? 'bg-muted text-foreground'
+                  : 'text-muted-foreground hover:bg-muted/40',
+              )}
+              title="Grid view"
+            >
+              <LayoutGrid size={15} />
+            </button>
+            <button
+              onClick={() => setView('kanban')}
+              className={cn(
+                'h-9 w-9 flex items-center justify-center transition-colors',
+                view === 'kanban'
+                  ? 'bg-muted text-foreground'
+                  : 'text-muted-foreground hover:bg-muted/40',
+              )}
+              title="Kanban view"
+            >
+              <Columns3 size={15} />
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Notes grid */}
+      {/* Notes content */}
       {isLoadingNotes || isLoadingClients ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-4">
           {[...Array(8)].map((_, i) => (
@@ -579,7 +796,7 @@ export default function NotesAndReminders() {
             </div>
           ))}
         </div>
-      ) : filteredNotes.length === 0 ? (
+      ) : filteredNotes.length === 0 && view === 'grid' ? (
         <Empty className="py-20 border border-dashed rounded-2xl bg-muted/5">
           <EmptyContent>
             <EmptyMedia variant="icon">
@@ -626,6 +843,12 @@ export default function NotesAndReminders() {
             )}
           </EmptyContent>
         </Empty>
+      ) : view === 'kanban' ? (
+        <KanbanNotesView
+          notes={filteredNotes}
+          clientMap={clientMap}
+          queryClient={queryClient}
+        />
       ) : (
         <div className="space-y-8 pt-1">
           {(statusTab === 'ALL' || statusTab === 'TODO') &&

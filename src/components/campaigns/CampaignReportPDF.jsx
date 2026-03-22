@@ -282,7 +282,7 @@ export default function CampaignReportPDF({
         {/* KPI bar */}
         <View style={s.kpiRow}>
           <View style={s.kpiCard}>
-            <Text style={s.kpiLabel}>Total Posts</Text>
+            <Text style={s.kpiLabel}>Total Deliverables</Text>
             <Text style={s.kpiValue}>{analytics?.total_posts ?? 0}</Text>
           </View>
           <View style={s.kpiCard}>
@@ -293,7 +293,7 @@ export default function CampaignReportPDF({
           <View style={s.kpiCard}>
             <Text style={s.kpiLabel}>On-Time Rate</Text>
             <Text style={s.kpiValue}>{onTimeRate}</Text>
-            <Text style={s.kpiSub}>of published posts</Text>
+            <Text style={s.kpiSub}>of published deliverables</Text>
           </View>
           <View style={s.kpiCard}>
             <Text style={s.kpiLabel}>Avg Approval</Text>

@@ -121,7 +121,10 @@ export default function PublicReview() {
 
   const handleStatusUpdate = async (newStatus) => {
     setIsSubmitting(true)
-    const finalStatus = newStatus === 'APPROVED' ? 'SCHEDULED' : newStatus
+    const hasPlatforms = (post?.platform?.length ?? 0) > 0
+    const finalStatus = newStatus === 'APPROVED'
+      ? (hasPlatforms ? 'SCHEDULED' : 'APPROVED')
+      : newStatus
 
     const { error } = await supabase.rpc('update_post_status_by_token', {
       p_token: token,
@@ -294,8 +297,9 @@ export default function PublicReview() {
               <div className="space-y-1">
                 <p className="font-bold">Final Review Notice</p>
                 <p className="text-muted-foreground">
-                  Approval will lock this version and notify the team to
-                  schedule for publication.
+                  {post.platform?.length > 0
+                    ? 'Approval will lock this version and notify the team to schedule for publication.'
+                    : 'Approval will lock this version and notify the team to proceed with delivery.'}
                 </p>
               </div>
             </div>
@@ -305,7 +309,8 @@ export default function PublicReview() {
               <Dialog>
                 <DialogTrigger asChild>
                   <Button className="w-full sm:w-auto">
-                    <Check className="mr-2 h-5 w-5" /> Approve &amp; Schedule
+                    <Check className="mr-2 h-5 w-5" />
+                    {post.platform?.length > 0 ? 'Approve & Schedule' : 'Approve'}
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-lg">
@@ -316,10 +321,12 @@ export default function PublicReview() {
                     </div>
                     <div>
                       <DialogTitle className="text-lg">
-                        Approve &amp; Schedule
+                        {post.platform?.length > 0 ? 'Approve & Schedule' : 'Approve Deliverable'}
                       </DialogTitle>
                       <DialogDescription className="text-sm">
-                        You're confirming this content is ready for publication.
+                        {post.platform?.length > 0
+                          ? "You're confirming this content is ready for publication."
+                          : "You're confirming this deliverable is accepted and ready for delivery."}
                       </DialogDescription>
                     </div>
                   </div>
@@ -341,14 +348,18 @@ export default function PublicReview() {
                           </p>
                         ))}
                       </div>
-                    ) : (
+                    ) : post.platform?.length > 0 ? (
                       <p className="text-muted-foreground">
                         {post.platform.join(', ')}
                         {post.target_date
                           ? ` · ${format(new Date(post.target_date), 'MMM d, yyyy')}`
                           : ''}
                       </p>
-                    )}
+                    ) : post.target_date ? (
+                      <p className="text-muted-foreground">
+                        Target date: {format(new Date(post.target_date), 'MMM d, yyyy')}
+                      </p>
+                    ) : null}
                   </div>
 
                   {/* What happens next */}
@@ -357,12 +368,19 @@ export default function PublicReview() {
                       What happens next
                     </p>
                     <ul className="space-y-2">
-                      {[
-                        'This version is locked — no further edits can be made to it.',
-                        'Your team will be notified immediately to begin scheduling.',
-                        'The post will be published on the platform(s) listed above.',
-                        'You will receive a confirmation email once it goes live.',
-                      ].map((step, i) => (
+                      {(post.platform?.length > 0
+                        ? [
+                            'This version is locked — no further edits can be made to it.',
+                            'Your team will be notified immediately to begin scheduling.',
+                            'The post will be published on the platform(s) listed above.',
+                            'You will receive a confirmation email once it goes live.',
+                          ]
+                        : [
+                            'This version is locked — no further edits can be made to it.',
+                            'Your team will be notified to proceed with delivery.',
+                            'You will receive a confirmation once the deliverable has been sent.',
+                          ]
+                      ).map((step, i) => (
                         <li
                           key={i}
                           className="flex items-start gap-3 text-sm text-muted-foreground"
