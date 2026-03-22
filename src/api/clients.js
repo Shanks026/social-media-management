@@ -2,6 +2,7 @@ import { supabase } from '@/lib/supabase'
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '@/context/AuthContext'
 import { resolveWorkspace } from '@/lib/workspace'
+import { getUrgencyStatus } from '@/lib/client-helpers'
 
 export function useClients() {
   const { workspaceUserId } = useAuth()
@@ -37,6 +38,26 @@ const getPathFromUrl = (url) => {
 }
 
 /**
+ * Returns clients whose next_post_at is overdue or urgent (< 24h).
+ * Shares the same query cache as ClientHealthGrid.
+ */
+export function useUrgentClients() {
+  return useQuery({
+    queryKey: ['clients-pipeline-dashboard'],
+    queryFn: () => fetchClients(),
+    staleTime: 30000,
+    select: (data) =>
+      (data?.clients ?? [])
+        .filter((c) => !c.is_internal)
+        .filter((c) => {
+          const urgency = getUrgencyStatus(c.pipeline?.next_post_at)
+          return urgency?.label === 'Overdue' || urgency?.label === 'Urgent'
+        })
+        .map((c) => ({ id: c.id, name: c.name, logo_url: c.logo_url, next_post_at: c.pipeline.next_post_at })),
+  })
+}
+
+/**
  * Fetch all clients with pipeline analytics
  */
 export async function fetchClients(filters = {}) {
@@ -45,6 +66,7 @@ export async function fetchClients(filters = {}) {
     industry = 'all',
     tier = 'all',
     urgency = 'all',
+    status = 'ACTIVE',
   } = filters
 
   const { workspaceUserId } = await resolveWorkspace()
@@ -55,6 +77,7 @@ export async function fetchClients(filters = {}) {
     p_industry: industry,
     p_tier: tier,
     p_urgency: urgency,
+    p_status: status,
   })
 
   if (error) throw error
@@ -63,6 +86,7 @@ export async function fetchClients(filters = {}) {
     id: c.id,
     name: c.name,
     status: c.status,
+    client_type: c.client_type ?? null,
     logo_url: c.logo_url,
     tier: c.tier,
     industry: c.industry,
@@ -131,6 +155,17 @@ export const updateClient = async (id, data) => {
   if (error) throw error
   return result
 }
+/**
+ * Update a client's status (ACTIVE, PAUSED, ARCHIVED)
+ */
+export async function updateClientStatus(clientId, status) {
+  const { error } = await supabase
+    .from('clients')
+    .update({ status })
+    .eq('id', clientId)
+  if (error) throw error
+}
+
 /**
  * Delete a client and all associated data and storage files.
  * DB cascade handles: posts, post_versions, campaigns, meetings, notes,

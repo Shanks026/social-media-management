@@ -35,7 +35,8 @@ function buildPostsQuery(userId, filters = {}) {
         created_at,
         updated_at,
         published_at,
-        platform_schedules
+        platform_schedules,
+        deliverable_type
       )
     `,
     )
@@ -172,9 +173,11 @@ export function usePostCounts() {
         all: 0,
         DRAFT: 0,
         PENDING_APPROVAL: 0,
+        APPROVED: 0,
         SCHEDULED: 0,
         NEEDS_REVISION: 0,
         PARTIALLY_PUBLISHED: 0,
+        DELIVERED: 0,
         PUBLISHED: 0,
         ARCHIVED: 0,
       }

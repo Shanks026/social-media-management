@@ -246,7 +246,7 @@ export default function CalendarReportPDF({
         {/* Summary */}
         <View style={s.summaryRow}>
           <View style={s.summaryCard}>
-            <Text style={s.summaryLabel}>Total Posts</Text>
+            <Text style={s.summaryLabel}>Total Deliverables</Text>
             <Text style={s.summaryValue}>{summary.total}</Text>
             {statusBreakdown ? (
               <Text style={s.summaryBreakdown}>{statusBreakdown}</Text>
@@ -266,7 +266,7 @@ export default function CalendarReportPDF({
         {/* Days & Posts */}
         {days.length === 0 ? (
           <Text style={{ color: C.muted, fontSize: 9, marginTop: 12 }}>
-            No posts scheduled for this period.
+            No deliverables scheduled for this period.
           </Text>
         ) : (
           days.map((day) => (
@@ -275,7 +275,7 @@ export default function CalendarReportPDF({
               <View style={s.dayHeader}>
                 <Text style={s.dayDate}>{format(day.date, 'EEEE, MMMM d')}</Text>
                 <Text style={s.dayCount}>
-                  {day.posts.length} post{day.posts.length !== 1 ? 's' : ''}
+                  {day.posts.length} deliverable{day.posts.length !== 1 ? 's' : ''}
                 </Text>
               </View>
 

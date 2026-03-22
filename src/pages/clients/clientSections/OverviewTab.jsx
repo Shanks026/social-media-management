@@ -90,7 +90,9 @@ const chartConfig = {
   DRAFT: { label: 'Draft', color: '#3b82f6' }, // Tailwind blue-500
   'PENDING APPROVAL': { label: 'Pending Approval', color: '#f97316' }, // Tailwind orange-500
   'NEEDS REVISION': { label: 'Needs Revision', color: '#ec4899' }, // Tailwind pink-500
+  APPROVED: { label: 'Approved', color: '#22c55e' }, // Tailwind green-500
   SCHEDULED: { label: 'Scheduled', color: '#a855f7' }, // Tailwind purple-500
+  DELIVERED: { label: 'Delivered', color: '#14b8a6' }, // Tailwind teal-500
   'PARTIALLY PUBLISHED': { label: 'Partially Published', color: '#84cc16' }, // Tailwind lime-500
   PUBLISHED: { label: 'Published', color: '#10b981' }, // Tailwind emerald-500
 }
@@ -99,7 +101,9 @@ const ALLOWED_STATUSES = [
   'DRAFT',
   'PENDING APPROVAL',
   'NEEDS REVISION',
+  'APPROVED',
   'SCHEDULED',
+  'DELIVERED',
   'PARTIALLY PUBLISHED',
   'PUBLISHED',
 ]

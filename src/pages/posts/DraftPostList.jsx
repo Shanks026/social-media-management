@@ -53,6 +53,27 @@ import { cn } from '@/lib/utils'
 import { getUrgencyStatus } from '@/lib/client-helpers'
 import { getPublishState, renderCaption } from '@/lib/helper'
 
+const DELIVERABLE_TYPE_LABELS = {
+  reel_short_video: 'Reel',
+  long_form_video: 'Long-form Video',
+  video_editing: 'Video Edit',
+  ad_creative: 'Ad Creative',
+  motion_graphic: 'Motion Graphic',
+  static_graphic: 'Static',
+  carousel: 'Carousel',
+  story: 'Story',
+  photography: 'Photography',
+  ugc: 'UGC',
+  brand_identity: 'Brand Identity',
+  infographic: 'Infographic',
+  presentation: 'Deck',
+  website_design: 'Website / UI',
+  blog_copy: 'Blog / Copy',
+  email_campaign: 'Email Campaign',
+  podcast: 'Podcast',
+  other: 'Other',
+}
+
 const isVideoSource = (url) => {
   if (!url) return false
   const videoExtensions = ['.mp4', '.mov', '.webm', '.ogg', '.m4v']
@@ -320,6 +341,11 @@ export default function DraftPostList({ clientId, onCreatePost }) {
                         <p>{post.campaign_name}</p>
                       </TooltipContent>
                     </Tooltip>
+                  )}
+                  {post.deliverable_type && DELIVERABLE_TYPE_LABELS[post.deliverable_type] && (
+                    <Badge variant="outline" className="rounded-full text-[10px] px-2 py-0.5 font-medium text-muted-foreground border-border/60">
+                      {DELIVERABLE_TYPE_LABELS[post.deliverable_type]}
+                    </Badge>
                   )}
                 </div>
 

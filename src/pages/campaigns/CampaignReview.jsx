@@ -87,7 +87,7 @@ function BrandingHeader({ data, progress }) {
 
       {/* Progress */}
       <div className="shrink-0 text-xs text-muted-foreground font-medium">
-        {progress.reviewed} of {progress.total} posts reviewed
+        {progress.reviewed} of {progress.total} deliverables reviewed
       </div>
     </div>
   )
@@ -292,7 +292,7 @@ function MainPanel({ post, onApprove, onRevise, isSubmitting, feedback, setFeedb
                 className="gap-2"
               >
                 <CheckCircle2 className="size-4" />
-                Approve This Post
+                Approve This Deliverable
               </Button>
             </div>
           </>
@@ -400,7 +400,8 @@ export default function CampaignReview() {
     if (isSubmitting || !selectedPost?.review_token) return
     setIsSubmitting(true)
     try {
-      await submitCampaignPostReview(selectedPost.review_token, 'SCHEDULED', '')
+      const approvalStatus = (selectedPost.platforms?.length ?? 0) > 0 ? 'SCHEDULED' : 'APPROVED'
+      await submitCampaignPostReview(selectedPost.review_token, approvalStatus, '')
       setApprovedIds((prev) => new Set([...prev, selectedPost.post_id]))
       setFeedback('')
       advanceSelection(selectedPost.post_id)

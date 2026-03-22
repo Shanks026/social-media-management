@@ -40,6 +40,14 @@ import { INDUSTRY_OPTIONS } from '../../lib/industries'
 import { useAuth } from '@/context/AuthContext'
 import { useHeader } from '@/components/misc/header-context'
 
+const CLIENT_TYPE_OPTIONS = [
+  { value: 'monthly_retainer', label: 'Monthly Retainer' },
+  { value: 'project_based', label: 'Project-Based' },
+  { value: 'campaign_based', label: 'Campaign-Based' },
+  { value: 'one_off', label: 'One-Off / Ad-hoc' },
+  { value: 'advisory', label: 'Advisory / Consulting' },
+]
+
 // --- SCHEMA ---
 const clientSchema = z.object({
   name: z.string().min(2, 'Client name is required'),
@@ -49,7 +57,11 @@ const clientSchema = z.object({
     .string()
     .min(1, 'Mobile number is required')
     .regex(/^\+91[6-9]\d{9}$/, 'Must be a valid +91 number'),
-  status: z.enum(['ACTIVE', 'PAUSED']),
+  status: z.enum(['ACTIVE', 'PAUSED', 'ARCHIVED']),
+  client_type: z.preprocess(
+    (v) => (v === '' || v === null ? undefined : v),
+    z.enum(['monthly_retainer', 'project_based', 'campaign_based', 'one_off', 'advisory']).optional()
+  ),
   tier: z.enum(['BASIC', 'PRO', 'VIP', 'INTERNAL']),
   logo_url: z.string().min(1, 'Client logo is required'),
   industry: z.string().min(1, 'Industry is required'),
@@ -117,6 +129,7 @@ export default function CreateClientPage({
       email: '',
       mobile_number: '+91',
       status: 'ACTIVE',
+      client_type: undefined,
       tier: 'BASIC',
       logo_url: '',
       platforms: [],
@@ -497,6 +510,9 @@ export default function CreateClientPage({
                           <SelectContent>
                             <SelectItem value="ACTIVE">Active</SelectItem>
                             <SelectItem value="PAUSED">Paused</SelectItem>
+                            {isEditMode && (
+                              <SelectItem value="ARCHIVED">Archived</SelectItem>
+                            )}
                           </SelectContent>
                         </Select>
                       )}
@@ -532,6 +548,38 @@ export default function CreateClientPage({
                     />
                   </div>
                 </div>
+
+                {/* Engagement Type */}
+                {!isInternalContext && (
+                  <div className="space-y-2">
+                    <Label>
+                      Engagement Type{' '}
+                      <span className="text-muted-foreground font-normal">(optional)</span>
+                    </Label>
+                    <Controller
+                      name="client_type"
+                      control={control}
+                      render={({ field }) => (
+                        <Select
+                          onValueChange={(val) => field.onChange(val === 'none' ? null : val)}
+                          value={field.value || 'none'}
+                        >
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select engagement type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">Not specified</SelectItem>
+                            {CLIENT_TYPE_OPTIONS.map((opt) => (
+                              <SelectItem key={opt.value} value={opt.value}>
+                                {opt.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                    />
+                  </div>
+                )}
               </div>
             </div>
           </section>

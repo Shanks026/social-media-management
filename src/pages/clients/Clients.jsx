@@ -33,6 +33,7 @@ import {
   IndustryFilter,
   TierFilter,
   UrgencyFilter,
+  StatusFilter,
 } from './ClientFilters'
 
 export default function Clients() {
@@ -58,6 +59,7 @@ export default function Clients() {
   const urgency = searchParams.get('urgency') || 'all'
   const industry = searchParams.get('industry') || 'all'
   const tier = searchParams.get('tier') || 'all'
+  const status = searchParams.get('status') || 'ACTIVE'
 
   // Refactored to navigate to the dedicated page
   const handleCreateClick = () => {
@@ -79,12 +81,12 @@ export default function Clients() {
   }
 
   const isFilterActive =
-    search !== '' || urgency !== 'all' || industry !== 'all' || tier !== 'all'
+    search !== '' || urgency !== 'all' || industry !== 'all' || tier !== 'all' || status !== 'ACTIVE'
   const resetFilters = () => setSearchParams({})
 
   const { data, isLoading } = useQuery({
-    queryKey: ['clients', user.id, { search, industry, tier }],
-    queryFn: () => fetchClients({ search, industry, tier, urgency: 'all' }), // Always fetch all for local counts
+    queryKey: ['clients', user.id, { search, industry, tier, status }],
+    queryFn: () => fetchClients({ search, industry, tier, urgency: 'all', status }),
     enabled: !!user?.id,
   })
 
@@ -233,6 +235,10 @@ export default function Clients() {
             <TierFilter
               value={tier}
               onValueChange={(v) => updateParams('tier', v)}
+            />
+            <StatusFilter
+              value={status}
+              onValueChange={(v) => updateParams('status', v)}
             />
             {isFilterActive && (
               <button

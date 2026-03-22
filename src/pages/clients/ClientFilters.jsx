@@ -221,3 +221,22 @@ export const TierFilter = ({ value, onValueChange }) => {
     </Select>
   )
 }
+
+/* ----------------------------------------------------
+   5. Status Filter
+---------------------------------------------------- */
+export const StatusFilter = ({ value, onValueChange }) => {
+  return (
+    <Select value={value} onValueChange={onValueChange}>
+      <SelectTrigger className="w-32 h-9 text-sm">
+        <SelectValue placeholder="Status" />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="ACTIVE">Active</SelectItem>
+        <SelectItem value="PAUSED">Paused</SelectItem>
+        <SelectItem value="ARCHIVED">Archived</SelectItem>
+        <SelectItem value="all">All Clients</SelectItem>
+      </SelectContent>
+    </Select>
+  )
+}

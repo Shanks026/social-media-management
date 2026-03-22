@@ -1,5 +1,13 @@
 import { useState } from 'react'
 import { cn } from '@/lib/utils'
+
+const CLIENT_TYPE_LABELS = {
+  monthly_retainer: 'Retainer',
+  project_based: 'Project',
+  campaign_based: 'Campaign',
+  one_off: 'One-Off',
+  advisory: 'Advisory',
+}
 import {
   Dialog,
   DialogContent,
@@ -136,6 +144,11 @@ function ClientCard({ client, onOpen, onDelete }) {
                   {client.name}
                 </h3>
                 <TierBadge tier={client.tier} />
+                {client.client_type && (
+                  <span className="shrink-0 inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium text-muted-foreground border-border bg-muted/50">
+                    {CLIENT_TYPE_LABELS[client.client_type] ?? client.client_type}
+                  </span>
+                )}
               </div>
               <div className="mt-1">
                 <IndustryBadge industryValue={client.industry} />

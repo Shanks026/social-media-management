@@ -165,7 +165,7 @@ export default function ProfileSettings() {
     avatarUrl !== (user?.user_metadata?.avatar_url || '')
 
   return (
-    <div className="max-w-4xl space-y-14 mx-auto">
+    <div className="w-full space-y-14">
       {/* ── Section: Avatar & Identity ── */}
       <section className="space-y-8">
         <div className="space-y-1">
@@ -237,7 +237,7 @@ export default function ProfileSettings() {
         </div>
 
         {/* Row 2: Name & Details */}
-        <div className="space-y-6">
+        <div className="space-y-6 max-w-xl">
           <div className="space-y-2">
             <Label>Full Name</Label>
             <Input
