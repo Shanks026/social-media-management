@@ -126,7 +126,7 @@ function ClientCard({ client, onOpen, onDelete }) {
             : 'dark:bg-card/70 dark:border-none',
         )}
       >
-        <CardContent className="p-7 flex flex-col gap-5 h-full">
+        <CardContent className="p-7 flex flex-col gap-3 h-full">
           {/* Header: logo + name + tier + industry */}
           <div className="flex items-center gap-4">
             <div className="h-12 w-12 shrink-0 rounded-xl overflow-hidden bg-muted">
@@ -157,7 +157,7 @@ function ClientCard({ client, onOpen, onDelete }) {
           </div>
 
           {/* Pipeline stats */}
-          <div className="pt-5 border-t border-dashed border-border/50 min-h-9.5">
+          <div className="pt-4 border-t border-dashed border-border/50 min-h-9.5">
             {hasPipelineData ? (
               <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
                 <StatItem count={pipeline.drafts} label="Drafts" colorClass="bg-blue-500" />
@@ -172,7 +172,7 @@ function ClientCard({ client, onOpen, onDelete }) {
 
           {/* Metrics row: MRR + Margin + Campaigns */}
           {hasMetrics && (
-            <div className="pt-5 border-t border-dashed border-border/50 grid grid-cols-3">
+            <div className="pt-3 border-t border-dashed border-border/50 grid grid-cols-3">
               {showFinancials ? (
                 <MetricItem icon={TrendingUp} label="MRR" value={formatMRR(client.avg_monthly_retainer ?? 0)} />
               ) : <div />}

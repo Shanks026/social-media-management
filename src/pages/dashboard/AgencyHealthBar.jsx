@@ -68,7 +68,7 @@ export default function AgencyHealthBar() {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
       {/* 1. NET PROFIT */}
-      <Card className="rounded-2xl border-none bg-card/50 shadow-sm ring-1 ring-border/50 dark:bg-card/20 group hover:ring-emerald-500/20 transition-all">
+      <Card className="rounded-2xl gap-4 border-none bg-card/50 shadow-sm ring-1 ring-border/50 dark:bg-card/20 group hover:ring-emerald-500/20 transition-all">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
             Net Profit (Mo)
@@ -91,7 +91,7 @@ export default function AgencyHealthBar() {
       </Card>
 
       {/* 2. REVENUE */}
-      <Card className="rounded-2xl border-none bg-card/50 shadow-sm ring-1 ring-border/50 dark:bg-card/20 group hover:ring-primary/20 transition-all">
+      <Card className="rounded-2xl gap-4 border-none bg-card/50 shadow-sm ring-1 ring-border/50 dark:bg-card/20 group hover:ring-primary/20 transition-all">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
             Revenue (Mo)
@@ -111,7 +111,7 @@ export default function AgencyHealthBar() {
       </Card>
 
       {/* 3. EXPENSES */}
-      <Card className="rounded-2xl border-none bg-card/50 shadow-sm ring-1 ring-border/50 dark:bg-card/20 group hover:ring-rose-500/20 transition-all">
+      <Card className="rounded-2xl gap-4 border-none bg-card/50 shadow-sm ring-1 ring-border/50 dark:bg-card/20 group hover:ring-rose-500/20 transition-all">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
             Expenses (Mo)
@@ -131,7 +131,7 @@ export default function AgencyHealthBar() {
       </Card>
 
       {/* 4. ACTIVE CLIENTS */}
-      <Card className="rounded-2xl border-none bg-card/50 shadow-sm ring-1 ring-border/50 dark:bg-card/20 group hover:ring-blue-500/20 transition-all">
+      <Card className="rounded-2xl gap-4 border-none bg-card/50 shadow-sm ring-1 ring-border/50 dark:bg-card/20 group hover:ring-blue-500/20 transition-all">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
             Active Clients
