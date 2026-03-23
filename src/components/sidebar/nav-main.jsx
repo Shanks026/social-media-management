@@ -20,6 +20,7 @@ import {
   Lock,
   FolderOpen,
   Megaphone,
+  Target,
 } from 'lucide-react'
 import { NavLink, useLocation } from 'react-router-dom'
 import {
@@ -50,6 +51,7 @@ const BASE_NAV_ITEMS = [
   { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
   { title: 'My Organization', url: '/myorganization', icon: Building2 },
   { title: 'Clients', url: '/clients', icon: UserStar },
+  { title: 'Prospects', url: '/prospects', icon: Target },
   { title: 'Proposals', url: '/proposals', icon: FileText },
   { title: 'Campaigns', url: '/campaigns', icon: Megaphone, requiresFlag: 'campaigns' },
   {
