@@ -181,34 +181,37 @@ export default function DashboardMeetingsNotes() {
                 </p>
               </div>
             ) : (
-              <div className="flex flex-col gap-3">
-                {visibleMeetings.map((meeting) => (
-                  <MeetingRow
-                    key={meeting.id}
-                    meeting={meeting}
-                    clientsMap={clientsMap}
-                    markMeetingDone={markMeetingDone}
-                    isCompletingMeeting={isCompletingMeeting}
-                    variant="dashboard-card"
-                    alwaysShowActions
-                  />
-                ))}
-                {extraMeetings > 0 && (
-                  <div className="flex items-center justify-between pt-3 border-t border-dashed border-border/40">
+              <div className="flex flex-col flex-1">
+                <div className="flex flex-col gap-3">
+                  {visibleMeetings.map((meeting) => (
+                    <MeetingRow
+                      key={meeting.id}
+                      meeting={meeting}
+                      clientsMap={clientsMap}
+                      markMeetingDone={markMeetingDone}
+                      isCompletingMeeting={isCompletingMeeting}
+                      variant="dashboard-card"
+                      alwaysShowActions
+                    />
+                  ))}
+                </div>
+                <div className="flex items-center justify-between mt-auto pt-3 border-t border-dashed border-border/40">
+                  {extraMeetings > 0 ? (
                     <span className="text-xs text-muted-foreground">
-                      +{extraMeetings} more meeting
-                      {extraMeetings !== 1 && 's'}
+                      +{extraMeetings} more meeting{extraMeetings !== 1 && 's'}
                     </span>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 text-xs px-2 text-muted-foreground hover:text-foreground -mr-2"
-                      onClick={() => navigate('/operations/meetings')}
-                    >
-                      View all <ArrowUpRight className="ml-1 h-3 w-3" />
-                    </Button>
-                  </div>
-                )}
+                  ) : (
+                    <span />
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 text-xs px-2 text-muted-foreground hover:text-foreground -mr-2"
+                    onClick={() => navigate('/operations/meetings')}
+                  >
+                    View all <ArrowUpRight className="ml-1 h-3 w-3" />
+                  </Button>
+                </div>
               </div>
             )}
           </TabsContent>
@@ -231,32 +234,36 @@ export default function DashboardMeetingsNotes() {
                 </p>
               </div>
             ) : (
-              <div className="flex flex-col gap-3">
-                {visibleNotes.map((note) => (
-                  <NoteRow
-                    key={note.id}
-                    note={note}
-                    clientMap={clientsMap}
-                    showClient={true}
-                    variant="dashboard-card"
-                    alwaysShowActions
-                  />
-                ))}
-                {extraNotes > 0 && (
-                  <div className="flex items-center justify-between pt-3 border-t border-dashed border-border/40">
+              <div className="flex flex-col flex-1">
+                <div className="flex flex-col gap-3">
+                  {visibleNotes.map((note) => (
+                    <NoteRow
+                      key={note.id}
+                      note={note}
+                      clientMap={clientsMap}
+                      showClient={true}
+                      variant="dashboard-card"
+                      alwaysShowActions
+                    />
+                  ))}
+                </div>
+                <div className="flex items-center justify-between mt-auto pt-3 border-t border-dashed border-border/40">
+                  {extraNotes > 0 ? (
                     <span className="text-xs text-muted-foreground">
                       +{extraNotes} more note{extraNotes !== 1 && 's'}
                     </span>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 text-xs px-2 text-muted-foreground hover:text-foreground -mr-2"
-                      onClick={() => navigate('/operations/notes')}
-                    >
-                      View all <ArrowUpRight className="ml-1 h-3 w-3" />
-                    </Button>
-                  </div>
-                )}
+                  ) : (
+                    <span />
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 text-xs px-2 text-muted-foreground hover:text-foreground -mr-2"
+                    onClick={() => navigate('/operations/notes')}
+                  >
+                    View all <ArrowUpRight className="ml-1 h-3 w-3" />
+                  </Button>
+                </div>
               </div>
             )}
           </TabsContent>

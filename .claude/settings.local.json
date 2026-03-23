@@ -76,7 +76,13 @@
       "Bash(python -m pytest test_documents.py -v)",
       "Bash(python -m pytest test_operations.py -v)",
       "Bash(python -m pytest test_settings.py -v)",
-      "Bash(python -m pytest test_settings.py::TestBillingPage::test_billing_shows_plan_name -v)"
+      "Bash(python -m pytest test_settings.py::TestBillingPage::test_billing_shows_plan_name -v)",
+      "Bash(find c:Userschris_austinDesktopsocial-media-management -type f -path *supabase*migrations* -name *client*)",
+      "Bash(find c:Userschris_austinDesktopsocial-media-management -type f \\\\\\(-name *.sql -o -name *migration* \\\\\\))",
+      "Bash(timeout 5 cat \"C:\\\\Users\\\\CHRIS_~1\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-chris-austin-Desktop-social-media-management\\\\639630f9-6d38-4e70-a6be-8ae96bd6d345\\\\tasks\\\\br2ycb8ld.output\")",
+      "WebSearch",
+      "Bash(npx tsc:*)",
+      "Bash(grep -v \"^$\")"
     ]
   }
 }
