@@ -60,6 +60,27 @@ import CreateMeetingDialog from '@/components/CreateMeetingDialog'
 /**
  * Helper to check if a URL is a video
  */
+const DELIVERABLE_TYPE_LABELS = {
+  reel_short_video: 'Reel',
+  long_form_video: 'Long-form Video',
+  video_editing: 'Video Edit',
+  ad_creative: 'Ad Creative',
+  motion_graphic: 'Motion Graphic',
+  static_graphic: 'Static',
+  carousel: 'Carousel',
+  story: 'Story',
+  photography: 'Photography',
+  ugc: 'UGC',
+  brand_identity: 'Brand Identity',
+  infographic: 'Infographic',
+  presentation: 'Deck',
+  website_design: 'Website / UI',
+  blog_copy: 'Blog / Copy',
+  email_campaign: 'Email Campaign',
+  podcast: 'Podcast',
+  other: 'Other',
+}
+
 const isVideoSource = (url) => {
   if (!url) return false
   const videoExtensions = ['.mp4', '.mov', '.webm', '.ogg', '.m4v']
@@ -377,14 +398,13 @@ export function CalendarPostCard({ post }) {
       >
         {/* Header: Status, Version & ClientInfo */}
         <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 me-2">
             <StatusBadge status={getPublishState(post) || 'DRAFT'} />
-            <Badge
-              variant="secondary"
-              className="rounded-full text-muted-foreground hover:bg-muted/80 text-xs px-2.5 py-0.5 border-none font-medium font-mono"
-            >
-              v{post.version_number || '1'}
-            </Badge>
+            {post.deliverable_type && DELIVERABLE_TYPE_LABELS[post.deliverable_type] && (
+              <Badge variant="secondary" className="rounded-full text-xs px-2 py-0.5 shrink-0 text-foreground/80">
+                {DELIVERABLE_TYPE_LABELS[post.deliverable_type]}
+              </Badge>
+            )}
             {post.campaign_id && post.campaign_name && (
               <TooltipProvider>
                 <Tooltip delayDuration={300}>
@@ -482,10 +502,18 @@ export function CalendarPostCard({ post }) {
           </div>
         </div>
 
-        {/* Title */}
-        <h3 className="text-lg font-medium tracking-tight text-foreground mb-6 line-clamp-1">
-          {post.title || 'Untitled Draft'}
-        </h3>
+        {/* Title + version */}
+        <div className="flex items-center gap-2 mb-6 min-w-0">
+          <h3 className="text-lg font-medium tracking-tight text-foreground line-clamp-1 min-w-0">
+            {post.title || 'Untitled Draft'}
+          </h3>
+          <Badge
+            variant="secondary"
+            className="rounded-full text-foreground text-xs px-2 py-0.5 font-medium font-mono shrink-0"
+          >
+            v{post.version_number || '1'}
+          </Badge>
+        </div>
 
         {/* Media Preview Section */}
         <div

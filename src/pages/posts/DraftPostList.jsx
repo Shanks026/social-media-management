@@ -333,12 +333,11 @@ export default function DraftPostList({ clientId, onCreatePost }) {
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
                   <StatusBadge status={getPublishState(post) || 'DRAFT'} />
-                  <Badge
-                    variant="secondary"
-                    className="rounded-full text-muted-foreground hover:bg-muted/80 text-xs px-2.5 py-0.5 border-none font-medium font-mono"
-                  >
-                    v{post.version_number || '1'}
-                  </Badge>
+                  {post.deliverable_type && DELIVERABLE_TYPE_LABELS[post.deliverable_type] && (
+                    <Badge variant="secondary" className="rounded-full text-xs px-2 py-0.5 shrink-0">
+                      {DELIVERABLE_TYPE_LABELS[post.deliverable_type]}
+                    </Badge>
+                  )}
                   {post.campaign_id && post.campaign_name && (
                     <Tooltip delayDuration={300}>
                       <TooltipTrigger asChild>
@@ -354,15 +353,6 @@ export default function DraftPostList({ clientId, onCreatePost }) {
                       </TooltipContent>
                     </Tooltip>
                   )}
-                  {post.deliverable_type &&
-                    DELIVERABLE_TYPE_LABELS[post.deliverable_type] && (
-                      <Badge
-                        variant="outline"
-                        className="rounded-full text-[10px] px-2 py-0.5 font-medium text-muted-foreground border-border/60"
-                      >
-                        {DELIVERABLE_TYPE_LABELS[post.deliverable_type]}
-                      </Badge>
-                    )}
                 </div>
 
                 <div onClick={(e) => e.stopPropagation()}>
@@ -433,10 +423,18 @@ export default function DraftPostList({ clientId, onCreatePost }) {
                 </div>
               </div>
 
-              {/* Title */}
-              <h3 className="text-lg font-medium tracking-tight text-foreground mb-6 line-clamp-1">
-                {post.title || 'Untitled Draft'}
-              </h3>
+              {/* Title + version */}
+              <div className="flex items-center gap-2 mb-6 min-w-0">
+                <h3 className="text-lg font-medium tracking-tight text-foreground line-clamp-1 min-w-0">
+                  {post.title || 'Untitled Draft'}
+                </h3>
+                <Badge
+                  variant="secondary"
+                  className="rounded-full text-foreground text-xs px-2 py-0.5 font-medium font-mono shrink-0"
+                >
+                  v{post.version_number || '1'}
+                </Badge>
+              </div>
 
               {/* Media Preview Section */}
               <div

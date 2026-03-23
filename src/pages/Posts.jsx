@@ -66,6 +66,28 @@ import { useSubscription } from '@/api/useSubscription'
 import { ClientAvatar } from '@/components/NoteRow'
 import { UrgencyFilter } from '@/pages/clients/ClientFilters'
 
+// ─── Deliverable type labels ────────────────────────────
+const DELIVERABLE_TYPE_LABELS = {
+  reel_short_video: 'Reel',
+  long_form_video: 'Long-form Video',
+  video_editing: 'Video Edit',
+  ad_creative: 'Ad Creative',
+  motion_graphic: 'Motion Graphic',
+  static_graphic: 'Static',
+  carousel: 'Carousel',
+  story: 'Story',
+  photography: 'Photography',
+  ugc: 'UGC',
+  brand_identity: 'Brand Identity',
+  infographic: 'Infographic',
+  presentation: 'Deck',
+  website_design: 'Website / UI',
+  blog_copy: 'Blog / Copy',
+  email_campaign: 'Email Campaign',
+  podcast: 'Podcast',
+  other: 'Other',
+}
+
 // ─── Post health ────────────────────────────────────────
 const TERMINAL_STATUSES = ['PUBLISHED', 'ARCHIVED', 'DELIVERED']
 
@@ -264,10 +286,16 @@ export default function Posts() {
           <p className="text-sm font-medium truncate">
             {item.title || 'Untitled'}
           </p>
-          <p className="text-xs text-muted-foreground truncate mt-0.5">
-            {item.content?.substring(0, 60)}
-            {item.content?.length > 60 ? '...' : ''}
-          </p>
+          {item.deliverable_type && DELIVERABLE_TYPE_LABELS[item.deliverable_type] ? (
+            <Badge variant="secondary" className="rounded-full text-[10px] px-1.5 py-0 mt-1 font-medium">
+              {DELIVERABLE_TYPE_LABELS[item.deliverable_type]}
+            </Badge>
+          ) : (
+            <p className="text-xs text-muted-foreground truncate mt-0.5">
+              {item.content?.substring(0, 60)}
+              {item.content?.length > 60 ? '...' : ''}
+            </p>
+          )}
         </div>
       ),
     },
