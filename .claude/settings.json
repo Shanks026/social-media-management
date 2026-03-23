@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -l \"Empty\\\\|Dialog\\\\|Toast\" /d/Tertiary/src/components/ui/*.jsx)",
+      "Bash(npx shadcn@latest add radio-group --yes)",
+      "Bash(git add src/api/clients.js src/api/posts.js src/components/WelcomeCarousel.jsx src/components/misc/AppHeader.jsx src/pages/posts/postDetails/PostContent.jsx src/pages/posts/socialMediaPreview/SocialMediaPreview.jsx src/pages/posts/socialMediaPreview/FacebookPreview.jsx src/pages/dashboard/Dashboard.jsx)",
+      "Bash(git push origin app-expand)",
+      "Bash(git add src/pages/Settings.jsx src/pages/settings/AgencySettings.jsx src/pages/settings/ProfileSettings.jsx src/pages/settings/TeamSettings.jsx src/api/feedback.js src/components/ui/radio-group.jsx src/pages/settings/SupportSettings.jsx supabase/functions/send-feedback-notification/)",
+      "Bash(grep -i \"grid\\\\|list\\\\|view\" src/pages/*.jsx)",
+      "Bash(npm install @dnd-kit/core @dnd-kit/sortable @dnd-kit/utilities)",
+      "Bash(npm run lint -- --max-warnings=0 src/pages/NotesAndReminders.jsx src/pages/MeetingsPage.jsx)",
+      "Bash(npx eslint src/pages/NotesAndReminders.jsx src/pages/MeetingsPage.jsx)",
+      "Bash(node -e \"require\\(''@dnd-kit/core''\\); console.log\\(''ok''\\)\")",
+      "Bash(git add package.json package-lock.json src/pages/MeetingsPage.jsx src/pages/NotesAndReminders.jsx src/pages/dashboard/Dashboard.jsx src/pages/dashboard/DashboardMeetingsNotes.jsx src/pages/dashboard/DashboardWeekTimeline.jsx)"
+    ]
+  }
+}

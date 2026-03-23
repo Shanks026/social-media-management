@@ -9,6 +9,8 @@ import {
   Trash2,
   Target,
   CalendarClock,
+  LayoutGrid,
+  TableProperties,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -16,8 +18,10 @@ import { useHeader } from '@/components/misc/header-context'
 import { useProspects, useDeleteProspect, PROSPECT_STATUSES } from '@/api/prospects'
 import { ProspectStatusBadge } from '@/components/prospects/ProspectStatusBadge'
 import { ProspectSourceBadge } from '@/components/prospects/ProspectSourceBadge'
+import { ProspectCard } from '@/components/prospects/ProspectCard'
 import { AddProspectDialog } from '@/components/prospects/AddProspectDialog'
 import { ImportProspectsDialog } from '@/components/prospects/ImportProspectsDialog'
+import EditProspectDialog from '@/components/prospects/EditProspectDialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -51,7 +55,9 @@ import {
 import { formatDate } from '@/lib/helper'
 import { cn } from '@/lib/utils'
 
-// ── Skeleton ──────────────────────────────────────────────────────────────────
+const VIEW_KEY = 'prospects_view'
+
+// ── Skeletons ─────────────────────────────────────────────────────────────────
 
 function ProspectRowSkeleton() {
   return (
@@ -69,11 +75,39 @@ function ProspectRowSkeleton() {
   )
 }
 
-// ── Status tabs ───────────────────────────────────────────────────────────────
+function ProspectCardSkeleton() {
+  return (
+    <div className="rounded-xl border border-border/50 bg-card p-6 flex flex-col gap-4">
+      <div className="flex items-center justify-between">
+        <Skeleton className="h-5 w-24 rounded-full" />
+        <Skeleton className="h-5 w-16 rounded-full" />
+      </div>
+      <div className="space-y-1.5">
+        <Skeleton className="h-6 w-40" />
+        <Skeleton className="h-3.5 w-32" />
+      </div>
+      <div className="border-t border-dashed border-border pt-4 grid grid-cols-2 gap-x-4 gap-y-3">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="space-y-1">
+            <Skeleton className="h-2.5 w-16" />
+            <Skeleton className="h-3.5 w-28" />
+          </div>
+        ))}
+      </div>
+      <div className="border-t border-dashed border-border pt-4 flex items-center justify-between">
+        <div className="flex items-center gap-1">
+          <Skeleton className="size-5 rounded-full" />
+          <Skeleton className="size-5 rounded-full -ml-1" />
+        </div>
+        <Skeleton className="h-3 w-32" />
+      </div>
+    </div>
+  )
+}
+
+// ── Constants ─────────────────────────────────────────────────────────────────
 
 const STATUS_TABS = ['all', ...PROSPECT_STATUSES.map((s) => s.value)]
-
-// ── Overdue helper ────────────────────────────────────────────────────────────
 
 function isOverdue(dateStr) {
   if (!dateStr) return false
@@ -94,11 +128,21 @@ export default function ProspectsPage() {
   const [addOpen, setAddOpen]                   = useState(false)
   const [importOpen, setImportOpen]             = useState(false)
   const [deletingProspect, setDeletingProspect] = useState(null)
+  const [editingProspect, setEditingProspect]   = useState(null)
+
+  // View toggle — persisted in localStorage, default 'table'
+  const [view, setView] = useState(() => {
+    try { return localStorage.getItem(VIEW_KEY) || 'table' } catch { return 'table' }
+  })
+
+  function handleViewChange(v) {
+    setView(v)
+    try { localStorage.setItem(VIEW_KEY, v) } catch {}
+  }
 
   const { data: prospects = [], isLoading } = useProspects({ search })
   const deleteProspect = useDeleteProspect()
 
-  // Client-side status filter (search is server-side)
   const filtered = prospects.filter((p) => {
     if (activeTab !== 'all' && p.status !== activeTab) return false
     return true
@@ -141,14 +185,14 @@ export default function ProspectsPage() {
           <div className="flex items-center gap-2 shrink-0">
             <Button
               variant="outline"
-              className="gap-2 h-9"
+              className="gap-2"
               onClick={() => setImportOpen(true)}
             >
               <Upload size={15} />
               Import CSV
             </Button>
             <Button
-              className="gap-2 h-9"
+              className="gap-2"
               onClick={() => setAddOpen(true)}
             >
               <Plus size={16} />
@@ -168,6 +212,7 @@ export default function ProspectsPage() {
               className="pl-9 bg-muted/20 border-border/40"
             />
           </div>
+
           {isFiltered && (
             <Button
               variant="ghost"
@@ -177,6 +222,28 @@ export default function ProspectsPage() {
               Reset
             </Button>
           )}
+
+          {/* View toggle */}
+          <div className="ml-auto flex items-center border rounded-lg overflow-hidden bg-background">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => handleViewChange('card')}
+              className={cn('h-9 w-9 rounded-none', view === 'card' && 'bg-muted')}
+              title="Card view"
+            >
+              <LayoutGrid size={16} />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => handleViewChange('table')}
+              className={cn('h-9 w-9 rounded-none', view === 'table' && 'bg-muted')}
+              title="Table view"
+            >
+              <TableProperties size={16} />
+            </Button>
+          </div>
         </div>
 
         {/* ── Status Tabs ────────────────────────────────────────────────── */}
@@ -229,11 +296,19 @@ export default function ProspectsPage() {
 
         {/* ── Content ────────────────────────────────────────────────────── */}
         {isLoading ? (
-          <div className="rounded-xl border border-border/50 overflow-hidden bg-card">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <ProspectRowSkeleton key={i} />
-            ))}
-          </div>
+          view === 'card' ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <ProspectCardSkeleton key={i} />
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-xl border border-border/50 overflow-hidden bg-card">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <ProspectRowSkeleton key={i} />
+              ))}
+            </div>
+          )
         ) : filtered.length === 0 ? (
           <Empty className="py-20 border border-dashed rounded-2xl bg-muted/5 animate-in fade-in duration-500">
             <EmptyContent>
@@ -252,10 +327,7 @@ export default function ProspectsPage() {
               </EmptyHeader>
               {!isFiltered && (
                 <div className="flex items-center gap-3 mt-2">
-                  <Button
-                    variant="outline"
-                    onClick={() => setImportOpen(true)}
-                  >
+                  <Button variant="outline" onClick={() => setImportOpen(true)}>
                     <Upload className="size-4 mr-2" />
                     Import CSV
                   </Button>
@@ -267,8 +339,25 @@ export default function ProspectsPage() {
               )}
             </EmptyContent>
           </Empty>
+        ) : view === 'card' ? (
+
+          /* ── Card grid ─────────────────────────────────────────────── */
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 animate-in fade-in duration-300">
+            {filtered.map((prospect) => (
+              <ProspectCard
+                key={prospect.id}
+                prospect={prospect}
+                onClick={() => navigate(`/prospects/${prospect.id}`)}
+                onEdit={(p) => setEditingProspect(p)}
+                onDelete={(p) => setDeletingProspect(p)}
+              />
+            ))}
+          </div>
+
         ) : (
-          <div className="rounded-xl border border-border/50 overflow-hidden bg-card">
+
+          /* ── Table view ────────────────────────────────────────────── */
+          <div className="rounded-xl border border-border/50 overflow-hidden bg-card animate-in fade-in duration-300">
             {/* Table header */}
             <div className="grid grid-cols-[1fr_auto_auto_auto_auto_auto] gap-4 px-4 py-2.5 border-b border-border/50 bg-muted/30">
               <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
@@ -298,7 +387,6 @@ export default function ProspectsPage() {
                   onClick={() => navigate(`/prospects/${prospect.id}`)}
                   className="grid grid-cols-[1fr_auto_auto_auto_auto_auto] gap-4 px-4 py-3.5 border-b border-border/40 last:border-b-0 hover:bg-muted/20 transition-colors group items-center cursor-pointer"
                 >
-                  {/* Business + contact */}
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-foreground truncate group-hover:text-primary transition-colors">
                       {prospect.business_name}
@@ -310,22 +398,18 @@ export default function ProspectsPage() {
                     </p>
                   </div>
 
-                  {/* Location */}
                   <span className="text-xs text-muted-foreground w-28 truncate">
                     {prospect.location || '—'}
                   </span>
 
-                  {/* Status */}
                   <div className="w-28">
                     <ProspectStatusBadge status={prospect.status} />
                   </div>
 
-                  {/* Source */}
                   <div className="w-20">
                     <ProspectSourceBadge source={prospect.source} />
                   </div>
 
-                  {/* Follow-up date */}
                   <div className="w-28">
                     {prospect.next_followup_at ? (
                       <span
@@ -344,7 +428,6 @@ export default function ProspectsPage() {
                     )}
                   </div>
 
-                  {/* Row actions */}
                   <div
                     className="w-8 flex justify-end"
                     onClick={(e) => e.stopPropagation()}
@@ -382,10 +465,18 @@ export default function ProspectsPage() {
         )}
       </div>
 
-      {/* ── Dialogs & Sheet ────────────────────────────────────────────────── */}
+      {/* ── Dialogs ──────────────────────────────────────────────────────────── */}
       <AddProspectDialog open={addOpen} onOpenChange={setAddOpen} />
 
       <ImportProspectsDialog open={importOpen} onOpenChange={setImportOpen} />
+
+      {editingProspect && (
+        <EditProspectDialog
+          prospect={editingProspect}
+          open={!!editingProspect}
+          onOpenChange={(v) => !v && setEditingProspect(null)}
+        />
+      )}
 
       <AlertDialog
         open={!!deletingProspect}

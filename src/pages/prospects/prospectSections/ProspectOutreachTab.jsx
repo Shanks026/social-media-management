@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -13,6 +13,8 @@ import {
   ArrowRightLeft,
   Plus,
   Trash2,
+  Search,
+  X,
 } from 'lucide-react'
 
 import {
@@ -97,8 +99,8 @@ const TYPE_CONFIG = {
   note: {
     icon:  StickyNote,
     label: 'Note',
-    color: 'text-slate-500 dark:text-slate-400',
-    bg:    'bg-slate-100 dark:bg-slate-800',
+    color: 'text-gray-500 dark:text-gray-400',
+    bg:    'bg-gray-100 dark:bg-gray-800',
   },
   status_change: {
     icon:  ArrowRightLeft,
@@ -298,11 +300,27 @@ function LogActivityDialog({ prospectId, open, onOpenChange }) {
 
 // ── Main Tab ──────────────────────────────────────────────────────────────────
 
+// ── Type filter pills config ──────────────────────────────────────────────────
+
+const TYPE_FILTERS = [
+  { value: 'all',           label: 'All' },
+  { value: 'call',          label: 'Calls' },
+  { value: 'email',         label: 'Emails' },
+  { value: 'dm',            label: 'DMs' },
+  { value: 'meeting',       label: 'Meetings' },
+  { value: 'note',          label: 'Notes' },
+  { value: 'status_change', label: 'Status Changes' },
+]
+
+// ── Main Tab ──────────────────────────────────────────────────────────────────
+
 export default function ProspectOutreachTab({ prospectId }) {
   const { data: activities = [], isLoading } = useProspectActivities(prospectId)
   const deleteActivity = useDeleteActivity()
   const [deletingActivity, setDeletingActivity] = useState(null)
   const [logOpen, setLogOpen] = useState(false)
+  const [search, setSearch] = useState('')
+  const [typeFilter, setTypeFilter] = useState('all')
 
   async function handleDelete() {
     if (!deletingActivity) return
@@ -318,6 +336,21 @@ export default function ProspectOutreachTab({ prospectId }) {
       setDeletingActivity(null)
     }
   }
+
+  // Filter activities
+  const filtered = useMemo(() => {
+    let result = activities
+    if (typeFilter !== 'all') {
+      result = result.filter((a) => a.type === typeFilter)
+    }
+    if (search.trim()) {
+      const q = search.trim().toLowerCase()
+      result = result.filter((a) => a.body?.toLowerCase().includes(q))
+    }
+    return result
+  }, [activities, typeFilter, search])
+
+  const isFiltered = search !== '' || typeFilter !== 'all'
 
   // Group activities by date label
   function groupByDate(items) {
@@ -335,16 +368,52 @@ export default function ProspectOutreachTab({ prospectId }) {
     return groups
   }
 
-  const grouped = groupByDate(activities)
+  const grouped = groupByDate(filtered)
 
   return (
     <div className="pt-4 space-y-4">
       {/* Header row */}
-      <div className="flex items-center justify-end">
-        <Button size="sm" className="gap-1.5" onClick={() => setLogOpen(true)}>
-          <Plus className="size-3.5" />
-          Log Activity
-        </Button>
+      <div className="flex items-center gap-3">
+        {/* Search */}
+        <div className="relative flex-1 max-w-xs">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
+          <input
+            type="text"
+            placeholder="Search activity..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full h-8 pl-8 pr-8 text-sm bg-muted/20 border border-border/40 rounded-lg focus:outline-none focus:ring-1 focus:ring-ring placeholder:text-muted-foreground/60"
+          />
+          {search && (
+            <button
+              onClick={() => setSearch('')}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            >
+              <X className="size-3" />
+            </button>
+          )}
+        </div>
+
+        <div className="ml-auto flex items-center gap-2 shrink-0">
+          {/* Type filter */}
+          <Select value={typeFilter} onValueChange={setTypeFilter}>
+            <SelectTrigger className="h-8 w-36 text-sm bg-muted/20 border-border/40">
+              <SelectValue placeholder="All types" />
+            </SelectTrigger>
+            <SelectContent>
+              {TYPE_FILTERS.map((f) => (
+                <SelectItem key={f.value} value={f.value}>
+                  {f.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Button size="sm" className="gap-1.5 shrink-0" onClick={() => setLogOpen(true)}>
+            <Plus className="size-3.5" />
+            Log Activity
+          </Button>
+        </div>
       </div>
 
       {/* Feed */}
@@ -360,16 +429,20 @@ export default function ProspectOutreachTab({ prospectId }) {
             </div>
           ))}
         </div>
-      ) : activities.length === 0 ? (
+      ) : filtered.length === 0 ? (
         <Empty className="py-16 border border-dashed rounded-2xl bg-muted/5">
           <EmptyContent>
             <EmptyMedia variant="icon">
               <MessageCircle className="size-6 text-muted-foreground/60" />
             </EmptyMedia>
             <EmptyHeader>
-              <EmptyTitle className="font-normal text-lg">No activity yet</EmptyTitle>
+              <EmptyTitle className="font-normal text-lg">
+                {isFiltered ? 'No matching activity' : 'No activity yet'}
+              </EmptyTitle>
               <EmptyDescription className="font-normal">
-                Log your first outreach — calls, emails, DMs, or meetings.
+                {isFiltered
+                  ? 'Try adjusting your search or filter.'
+                  : 'Log your first outreach — calls, emails, DMs, or meetings.'}
               </EmptyDescription>
             </EmptyHeader>
           </EmptyContent>

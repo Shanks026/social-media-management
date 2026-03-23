@@ -2,22 +2,29 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import {
   Globe,
-  Instagram,
-  Linkedin,
   ExternalLink,
   Pencil,
-  Trash2,
   PieChart,
   MessageCircle,
+  Check,
+  ChevronDown,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { cn } from '@/lib/utils'
 
-import { useProspect, useDeleteProspect } from '@/api/prospects'
+import { useProspect, useDeleteProspect, useUpdateProspect, PROSPECT_STATUSES } from '@/api/prospects'
 import { useHeader } from '@/components/misc/header-context'
-import { ProspectStatusBadge } from '@/components/prospects/ProspectStatusBadge'
+import { ProspectStatusBadge, PROSPECT_STATUS_CONFIG } from '@/components/prospects/ProspectStatusBadge'
 import { ProspectSourceBadge } from '@/components/prospects/ProspectSourceBadge'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   AlertDialog,
@@ -33,11 +40,34 @@ import ProspectOverviewTab from './prospectSections/ProspectOverviewTab'
 import ProspectOutreachTab from './prospectSections/ProspectOutreachTab'
 import EditProspectDialog from '@/components/prospects/EditProspectDialog'
 
+// ── Status dot colors ──────────────────────────────────────────────────────────
+
+const STATUS_DOT = {
+  new:            'bg-gray-400',
+  contacted:      'bg-blue-500',
+  follow_up:      'bg-amber-500',
+  demo_scheduled: 'bg-violet-500',
+  proposal_sent:  'bg-indigo-500',
+  won:            'bg-green-500',
+  lost:           'bg-red-500',
+}
+
+// Button-style trigger colors (match badge palette)
+const STATUS_BUTTON_CLASS = {
+  new:            'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700',
+  contacted:      'bg-blue-100 text-blue-700 hover:bg-blue-200 dark:bg-blue-950 dark:text-blue-300 dark:hover:bg-blue-900',
+  follow_up:      'bg-amber-100 text-amber-700 hover:bg-amber-200 dark:bg-amber-950 dark:text-amber-300 dark:hover:bg-amber-900',
+  demo_scheduled: 'bg-violet-100 text-violet-700 hover:bg-violet-200 dark:bg-violet-950 dark:text-violet-300 dark:hover:bg-violet-900',
+  proposal_sent:  'bg-indigo-100 text-indigo-700 hover:bg-indigo-200 dark:bg-indigo-950 dark:text-indigo-300 dark:hover:bg-indigo-900',
+  won:            'bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-950 dark:text-green-300 dark:hover:bg-green-900',
+  lost:           'bg-red-100 text-red-600 hover:bg-red-200 dark:bg-red-950 dark:text-red-300 dark:hover:bg-red-900',
+}
+
 // ── Tabs config ────────────────────────────────────────────────────────────────
 
 const TABS_CONFIG = [
-  { value: 'overview', label: 'Overview', icon: PieChart },
   { value: 'outreach', label: 'Outreach', icon: MessageCircle },
+  { value: 'overview', label: 'Overview', icon: PieChart },
   // { value: 'notes',     label: 'Notes',     icon: StickyNote },    // Phase 2c
   // { value: 'meetings',  label: 'Meetings',  icon: Video },         // Phase 2c
   // { value: 'documents', label: 'Documents', icon: FolderOpen },    // Phase 2c
@@ -73,8 +103,23 @@ export default function ProspectDetailPage() {
 
   const { data: prospect, isLoading, error } = useProspect(prospectId)
   const deleteProspect = useDeleteProspect()
+  const updateProspect = useUpdateProspect()
 
-  const activeTab = searchParams.get('tab') || 'overview'
+  async function handleStatusChange(newStatus) {
+    if (!prospect || newStatus === prospect.status) return
+    try {
+      await updateProspect.mutateAsync({
+        id: prospectId,
+        status: newStatus,
+        _prevStatus: prospect.status,
+      })
+      toast.success(`Status updated to ${PROSPECT_STATUS_CONFIG[newStatus]?.label ?? newStatus}`)
+    } catch (err) {
+      toast.error(err.message || 'Failed to update status')
+    }
+  }
+
+  const activeTab = searchParams.get('tab') || 'outreach'
 
   useEffect(() => {
     if (prospect) {
@@ -159,86 +204,109 @@ export default function ProspectDetailPage() {
 
           {/* Name + meta */}
           <div className="flex-1 min-w-0 space-y-1.5">
-            <h1 className="text-2xl font-medium tracking-normal text-foreground truncate">
-              {prospect.business_name}
-            </h1>
-
-            {/* Contact name + email */}
-            {(prospect.contact_name || prospect.email) && (
-              <p className="text-sm text-muted-foreground truncate">
-                {[prospect.contact_name, prospect.email].filter(Boolean).join(' · ')}
-              </p>
-            )}
-
-            {/* Badges + quick links */}
-            <div className="flex flex-wrap items-center gap-2 pt-0.5">
-              <ProspectStatusBadge status={prospect.status} />
+            {/* Title row with source badge inline */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="text-2xl font-medium tracking-normal text-foreground truncate">
+                {prospect.business_name}
+              </h1>
               <ProspectSourceBadge source={prospect.source} />
-
-              {hasLinks && (
-                <span className="text-border/60 select-none mx-0.5">·</span>
-              )}
-
-              {websiteHref && (
-                <a
-                  href={websiteHref}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  <Globe className="size-3" />
-                  Website
-                  <ExternalLink className="size-2.5 opacity-50" />
-                </a>
-              )}
-              {instagramHref && (
-                <a
-                  href={instagramHref}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  <Instagram className="size-3" />
-                  Instagram
-                  <ExternalLink className="size-2.5 opacity-50" />
-                </a>
-              )}
-              {linkedinHref && (
-                <a
-                  href={linkedinHref}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  <Linkedin className="size-3" />
-                  LinkedIn
-                  <ExternalLink className="size-2.5 opacity-50" />
-                </a>
-              )}
             </div>
+
+            {/* Contact name + email + quick links — single row */}
+            {(prospect.contact_name || prospect.email || hasLinks) && (
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
+                {(prospect.contact_name || prospect.email) && (
+                  <span className="truncate">
+                    {[prospect.contact_name, prospect.email].filter(Boolean).join(' · ')}
+                  </span>
+                )}
+
+                {(prospect.contact_name || prospect.email) && hasLinks && (
+                  <span className="text-border/60 select-none">·</span>
+                )}
+
+                {websiteHref && (
+                  <a
+                    href={websiteHref}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 text-[13px] hover:text-foreground transition-colors"
+                  >
+                    <Globe className="size-3.5" />
+                    Website
+                    <ExternalLink className="size-3 opacity-50" />
+                  </a>
+                )}
+                {instagramHref && (
+                  <a
+                    href={instagramHref}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 text-[13px] hover:text-foreground transition-colors"
+                  >
+                    <img src="/platformIcons/instagram.png" alt="Instagram" className="size-3.5 object-contain" />
+                    Instagram
+                    <ExternalLink className="size-3 opacity-50" />
+                  </a>
+                )}
+                {linkedinHref && (
+                  <a
+                    href={linkedinHref}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 text-[13px] hover:text-foreground transition-colors"
+                  >
+                    <img src="/platformIcons/linkedin.png" alt="LinkedIn" className="size-3.5 object-contain" />
+                    LinkedIn
+                    <ExternalLink className="size-3 opacity-50" />
+                  </a>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Action buttons */}
           <div className="flex items-center gap-2 shrink-0">
-            {activeTab === 'overview' && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 gap-1.5"
-                onClick={() => setEditOpen(true)}
-              >
-                <Pencil className="size-3.5" />
-                Edit
-              </Button>
-            )}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  className={cn(
+                    'h-8 px-3 rounded-md text-sm font-medium flex items-center gap-1.5 transition-colors',
+                    STATUS_BUTTON_CLASS[prospect.status] ?? 'bg-muted text-muted-foreground hover:bg-muted/80'
+                  )}
+                >
+                  {PROSPECT_STATUS_CONFIG[prospect.status]?.label ?? prospect.status}
+                  <ChevronDown className="size-3" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuLabel className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider px-2 py-1">
+                  Set Status
+                </DropdownMenuLabel>
+                {PROSPECT_STATUSES.map((s) => (
+                  <DropdownMenuItem
+                    key={s.value}
+                    onClick={() => handleStatusChange(s.value)}
+                    className="gap-2.5"
+                  >
+                    <span className={cn('size-3 rounded-[3px] shrink-0', STATUS_DOT[s.value] ?? 'bg-muted-foreground')} />
+                    <span className="flex-1">{s.label}</span>
+                    {prospect.status === s.value && (
+                      <Check className="size-3 text-muted-foreground shrink-0" />
+                    )}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
             <Button
               variant="outline"
               size="sm"
-              className="h-8 gap-1.5 text-destructive hover:text-destructive border-destructive/30 hover:bg-destructive/5"
-              onClick={() => setDeleteOpen(true)}
+              className="h-8 gap-1.5"
+              onClick={() => setEditOpen(true)}
             >
-              <Trash2 className="size-3.5" />
-              Delete
+              <Pencil className="size-3.5" />
+              Edit
             </Button>
           </div>
         </div>
@@ -276,7 +344,11 @@ export default function ProspectDetailPage() {
             value="overview"
             className="mt-2 focus-visible:ring-0 outline-none data-[state=active]:animate-in data-[state=active]:fade-in data-[state=active]:duration-300"
           >
-            <ProspectOverviewTab prospect={prospect} />
+            <ProspectOverviewTab
+              prospect={prospect}
+              onEdit={() => setEditOpen(true)}
+              onDelete={() => setDeleteOpen(true)}
+            />
           </TabsContent>
 
           <TabsContent

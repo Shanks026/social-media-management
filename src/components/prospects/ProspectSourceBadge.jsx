@@ -19,7 +19,7 @@ export function ProspectSourceBadge({ source, className }) {
     <Badge
       variant="outline"
       className={cn(
-        'text-[11px] font-medium whitespace-nowrap bg-muted/60 text-muted-foreground border-transparent',
+        'font-medium whitespace-nowrap bg-muted/60 text-muted-foreground border-transparent',
         className
       )}
     >

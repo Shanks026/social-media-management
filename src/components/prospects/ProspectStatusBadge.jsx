@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils'
 const STATUS_CONFIG = {
   new: {
     label: 'New',
-    className: 'bg-slate-100 text-slate-600 border-transparent dark:bg-slate-800 dark:text-slate-300',
+    className: 'bg-gray-100 text-gray-600 border-transparent dark:bg-gray-800 dark:text-gray-300',
   },
   contacted: {
     label: 'Contacted',
