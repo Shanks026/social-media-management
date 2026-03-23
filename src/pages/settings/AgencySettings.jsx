@@ -85,14 +85,15 @@ export default function AgencySettings() {
   // Horizontal logo editing
   const [horizontalLogoUrl, setHorizontalLogoUrl] = useState(null) // null = not editing (pending upload)
   const [savedHorizontalLogoUrl, setSavedHorizontalLogoUrl] = useState(
-    () => agencySettings?.logo_horizontal_url || ''
+    () => agencySettings?.logo_horizontal_url || '',
   )
-  const [isUploadingHorizontalLogo, setIsUploadingHorizontalLogo] = useState(false)
+  const [isUploadingHorizontalLogo, setIsUploadingHorizontalLogo] =
+    useState(false)
   const [isSavingHorizontalLogo, setIsSavingHorizontalLogo] = useState(false)
   const horizontalLogoInputRef = useRef(null)
 
-  const [cropSrc, setCropSrc] = useState(null)        // local objectURL for the crop modal
-  const [isCropOpen, setIsCropOpen] = useState(false)  // controls crop dialog visibility
+  const [cropSrc, setCropSrc] = useState(null) // local objectURL for the crop modal
+  const [isCropOpen, setIsCropOpen] = useState(false) // controls crop dialog visibility
 
   const { data: internalClient, isLoading: isClientLoading } = useQuery({
     queryKey: ['internal-client', user?.id],
@@ -214,7 +215,9 @@ export default function AgencySettings() {
         .from('post-media')
         .upload(filePath, blob, { contentType: 'image/png' })
       if (uploadError) throw uploadError
-      const { data: { publicUrl } } = supabase.storage.from('post-media').getPublicUrl(filePath)
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from('post-media').getPublicUrl(filePath)
       setHorizontalLogoUrl(publicUrl)
       toast.success('Horizontal logo cropped! Click Save to apply.')
     } finally {
@@ -241,7 +244,10 @@ export default function AgencySettings() {
       const dbUrl = horizontalLogoUrl === '' ? null : horizontalLogoUrl
       const { error: subErr } = await supabase
         .from('agency_subscriptions')
-        .update({ logo_horizontal_url: dbUrl, updated_at: new Date().toISOString() })
+        .update({
+          logo_horizontal_url: dbUrl,
+          updated_at: new Date().toISOString(),
+        })
         .eq('user_id', user?.id)
       if (subErr) throw subErr
 
@@ -316,8 +322,10 @@ export default function AgencySettings() {
 
   // ── PATH A: Workspace exists — show agency profile ──
   if (internalClient) {
-    const displayLogoUrl = agencyLogoUrl !== null ? agencyLogoUrl : internalClient.logo_url
-    const displayHorizontalLogoUrl = horizontalLogoUrl !== null ? horizontalLogoUrl : savedHorizontalLogoUrl
+    const displayLogoUrl =
+      agencyLogoUrl !== null ? agencyLogoUrl : internalClient.logo_url
+    const displayHorizontalLogoUrl =
+      horizontalLogoUrl !== null ? horizontalLogoUrl : savedHorizontalLogoUrl
     const platforms = internalClient.platforms || []
 
     return (
@@ -329,7 +337,7 @@ export default function AgencySettings() {
               <h2 className="text-2xl font-normal tracking-tight">
                 Agency Profile
               </h2>
-              <p className="text-sm text-muted-foreground font-light">
+              <p className="text-sm text-muted-foreground font-normal">
                 Your internal agency identity and workspace details.
               </p>
             </div>
@@ -445,15 +453,35 @@ export default function AgencySettings() {
             {(agencyLogoUrl !== null || horizontalLogoUrl !== null) && (
               <div className="flex flex-col gap-2 self-end pb-0.5">
                 {agencyLogoUrl !== null && (
-                  <Button size="sm" className="gap-2" onClick={handleSaveAgencyLogo} disabled={isSavingAgency}>
-                    {isSavingAgency ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                  <Button
+                    size="sm"
+                    className="gap-2"
+                    onClick={handleSaveAgencyLogo}
+                    disabled={isSavingAgency}
+                  >
+                    {isSavingAgency ? (
+                      <Loader2 size={14} className="animate-spin" />
+                    ) : (
+                      <Save size={14} />
+                    )}
                     Save Logo
                   </Button>
                 )}
                 {horizontalLogoUrl !== null && (
-                  <Button size="sm" className="gap-2" onClick={handleSaveHorizontalLogo} disabled={isSavingHorizontalLogo}>
-                    {isSavingHorizontalLogo ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-                    {horizontalLogoUrl === '' ? 'Remove Horizontal Logo' : 'Save Horizontal Logo'}
+                  <Button
+                    size="sm"
+                    className="gap-2"
+                    onClick={handleSaveHorizontalLogo}
+                    disabled={isSavingHorizontalLogo}
+                  >
+                    {isSavingHorizontalLogo ? (
+                      <Loader2 size={14} className="animate-spin" />
+                    ) : (
+                      <Save size={14} />
+                    )}
+                    {horizontalLogoUrl === ''
+                      ? 'Remove Horizontal Logo'
+                      : 'Save Horizontal Logo'}
                   </Button>
                 )}
               </div>
@@ -484,7 +512,13 @@ export default function AgencySettings() {
                 icon={<ShieldCheck size={16} />}
                 label="Account Status"
                 value={
-                  <span className={internalClient.status === 'ACTIVE' ? 'text-green-600 font-medium' : 'text-amber-600 font-medium'}>
+                  <span
+                    className={
+                      internalClient.status === 'ACTIVE'
+                        ? 'text-green-600 font-medium'
+                        : 'text-amber-600 font-medium'
+                    }
+                  >
                     {internalClient.status === 'ACTIVE' ? 'Active' : 'Paused'}
                   </span>
                 }
@@ -492,7 +526,11 @@ export default function AgencySettings() {
               <InfoRow
                 icon={<ShieldCheck size={16} />}
                 label="Account Tier"
-                value={<span className="font-medium text-primary">{internalClient.tier || 'INTERNAL'}</span>}
+                value={
+                  <span className="font-medium text-primary">
+                    {internalClient.tier || 'INTERNAL'}
+                  </span>
+                }
               />
               <InfoRow
                 icon={<Mail size={16} />}
@@ -519,7 +557,9 @@ export default function AgencySettings() {
                       rel="noopener noreferrer"
                       className="hover:text-primary transition-colors flex items-center gap-1 group truncate"
                     >
-                      <span className="truncate">{internalClient.website.replace(/(^\w+:|^)\/\//, '')}</span>
+                      <span className="truncate">
+                        {internalClient.website.replace(/(^\w+:|^)\/\//, '')}
+                      </span>
                       <ExternalLink className="size-3 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
                     </a>
                   ) : (
@@ -532,7 +572,10 @@ export default function AgencySettings() {
                 label="Created"
                 value={
                   internalClient.created_at
-                    ? format(new Date(internalClient.created_at), 'MMMM d, yyyy')
+                    ? format(
+                        new Date(internalClient.created_at),
+                        'MMMM d, yyyy',
+                      )
                     : '—'
                 }
               />
@@ -545,10 +588,8 @@ export default function AgencySettings() {
         {/* Section: Platforms */}
         <section className="space-y-6">
           <div className="space-y-1">
-            <h2 className="text-2xl font-normal tracking-tight">
-              Platforms
-            </h2>
-            <p className="text-sm text-muted-foreground font-light">
+            <h2 className="text-2xl font-normal tracking-tight">Platforms</h2>
+            <p className="text-sm text-muted-foreground font-normal">
               Social platforms linked to your agency workspace.
             </p>
           </div>
@@ -556,9 +597,7 @@ export default function AgencySettings() {
           {platforms.length > 0 ? (
             <div className="flex flex-wrap gap-3">
               {platforms.map((pId) => {
-                const platform = SUPPORTED_PLATFORMS.find(
-                  (p) => p.id === pId,
-                )
+                const platform = SUPPORTED_PLATFORMS.find((p) => p.id === pId)
                 if (!platform) return null
                 return (
                   <div
@@ -593,7 +632,7 @@ export default function AgencySettings() {
             <h2 className="text-lg font-medium text-destructive tracking-tight">
               Danger Zone
             </h2>
-            <p className="text-sm text-muted-foreground font-light">
+            <p className="text-sm text-muted-foreground font-normal">
               Agency-level destructive actions.
             </p>
           </div>
@@ -634,7 +673,6 @@ export default function AgencySettings() {
     return (
       <>
         <div className="max-w-4xl mx-auto space-y-14 animate-in fade-in slide-in-from-bottom-4 duration-700">
-
           {/* Compact workspace banner */}
           <div className="rounded-xl border border-primary/20 bg-muted/30 px-6 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="space-y-0.5">
@@ -642,8 +680,9 @@ export default function AgencySettings() {
                 <Zap size={13} className="text-primary" fill="currentColor" />
                 Workspace not initialized
               </p>
-              <p className="text-xs text-muted-foreground font-light">
-                Activate your operational workspace to manage your agency&apos;s social media.
+              <p className="text-xs text-muted-foreground font-normal">
+                Activate your operational workspace to manage your agency&apos;s
+                social media.
               </p>
             </div>
             <div className="flex items-center gap-3 shrink-0">
@@ -673,8 +712,10 @@ export default function AgencySettings() {
           <section className="space-y-8">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="space-y-1">
-                <h2 className="text-2xl font-normal tracking-tight">Agency Profile</h2>
-                <p className="text-sm text-muted-foreground font-light">
+                <h2 className="text-2xl font-normal tracking-tight">
+                  Agency Profile
+                </h2>
+                <p className="text-sm text-muted-foreground font-normal">
                   Your internal agency identity and workspace details.
                 </p>
               </div>
@@ -748,7 +789,9 @@ export default function AgencySettings() {
                       ) : (
                         <ImagePlus className="size-5" />
                       )}
-                      <span className="text-xs font-medium">Horizontal Logo</span>
+                      <span className="text-xs font-medium">
+                        Horizontal Logo
+                      </span>
                     </div>
                   )}
                   <input
@@ -760,15 +803,28 @@ export default function AgencySettings() {
                     disabled={isUploadingHorizontalLogo}
                   />
                 </div>
-                <p className="text-[11px] text-muted-foreground">For invoices &amp; documents.</p>
+                <p className="text-[11px] text-muted-foreground">
+                  For invoices &amp; documents.
+                </p>
               </div>
 
               {/* Save horizontal logo */}
               {horizontalLogoUrl !== null && (
                 <div className="flex flex-col gap-2 self-end pb-0.5">
-                  <Button size="sm" className="gap-2" onClick={handleSaveHorizontalLogo} disabled={isSavingHorizontalLogo}>
-                    {isSavingHorizontalLogo ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-                    {horizontalLogoUrl === '' ? 'Remove Horizontal Logo' : 'Save Horizontal Logo'}
+                  <Button
+                    size="sm"
+                    className="gap-2"
+                    onClick={handleSaveHorizontalLogo}
+                    disabled={isSavingHorizontalLogo}
+                  >
+                    {isSavingHorizontalLogo ? (
+                      <Loader2 size={14} className="animate-spin" />
+                    ) : (
+                      <Save size={14} />
+                    )}
+                    {horizontalLogoUrl === ''
+                      ? 'Remove Horizontal Logo'
+                      : 'Save Horizontal Logo'}
                   </Button>
                 </div>
               )}
@@ -809,7 +865,10 @@ export default function AgencySettings() {
                   label="Created"
                   value={
                     agencySettings.created_at
-                      ? format(new Date(agencySettings.created_at), 'MMMM d, yyyy')
+                      ? format(
+                          new Date(agencySettings.created_at),
+                          'MMMM d, yyyy',
+                        )
                       : '—'
                   }
                 />
@@ -823,7 +882,7 @@ export default function AgencySettings() {
           <section className="space-y-6">
             <div className="space-y-1">
               <h2 className="text-2xl font-normal tracking-tight">Platforms</h2>
-              <p className="text-sm text-muted-foreground font-light">
+              <p className="text-sm text-muted-foreground font-normal">
                 Social platforms linked to your agency workspace.
               </p>
             </div>
@@ -843,7 +902,9 @@ export default function AgencySettings() {
                         alt={platform.label}
                         className="size-4 object-contain"
                       />
-                      <span className="text-sm font-medium">{platform.label}</span>
+                      <span className="text-sm font-medium">
+                        {platform.label}
+                      </span>
                     </div>
                   )
                 })}
@@ -872,8 +933,8 @@ export default function AgencySettings() {
   return (
     <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-6 duration-1000">
       <div className="text-center space-y-2">
-        <h2 className="text-2xl font-light tracking-tight">Get Started</h2>
-        <p className="text-muted-foreground text-sm font-light">
+        <h2 className="text-2xl font-normal tracking-tight">Get Started</h2>
+        <p className="text-muted-foreground text-sm font-normal">
           Choose how you want to initialize your agency profile.
         </p>
       </div>
@@ -909,7 +970,9 @@ function InfoRow({ icon, label, value }) {
         <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
           {label}
         </p>
-        <div className="text-sm text-foreground truncate max-w-[200px] sm:max-w-xs">{value}</div>
+        <div className="text-sm text-foreground truncate max-w-[200px] sm:max-w-xs">
+          {value}
+        </div>
       </div>
     </div>
   )
@@ -938,7 +1001,7 @@ function ChoiceCard({ icon, title, description, onClick, highlight = false }) {
       </div>
       <div className="space-y-2">
         <h3 className="text-xl font-medium tracking-tight">{title}</h3>
-        <p className="text-sm text-muted-foreground font-light leading-relaxed line-clamp-3">
+        <p className="text-sm text-muted-foreground font-normal leading-relaxed line-clamp-3">
           {description}
         </p>
       </div>
@@ -959,7 +1022,7 @@ function CompactBenefit({ icon, title, desc }) {
         <h4 className="text-[12px] font-semibold text-foreground uppercase tracking-wider leading-none">
           {title}
         </h4>
-        <p className="text-[11px] text-muted-foreground font-light">{desc}</p>
+        <p className="text-[11px] text-muted-foreground font-normal">{desc}</p>
       </div>
     </div>
   )
@@ -978,7 +1041,7 @@ function ActivationDialog({ open, onOpenChange, agencyName, onActivate }) {
               <DialogTitle className="text-3xl font-semibold tracking-tight">
                 Activate Agency Hub
               </DialogTitle>
-              <DialogDescription className="text-base font-light leading-relaxed text-muted-foreground">
+              <DialogDescription className="text-base font-normal leading-relaxed text-muted-foreground">
                 Initialize a dedicated operational environment for{' '}
                 <span className="text-foreground font-medium">
                   {agencyName}
@@ -1009,10 +1072,7 @@ function ActivationDialog({ open, onOpenChange, agencyName, onActivate }) {
             >
               Maybe Later
             </Button>
-            <Button
-              className="flex-1 h-14 rounded-full"
-              onClick={onActivate}
-            >
+            <Button className="flex-1 h-14 rounded-full" onClick={onActivate}>
               Activate Now
             </Button>
           </DialogFooter>
@@ -1028,7 +1088,7 @@ function BenefitDetail({ icon, title, desc }) {
       <div className="mt-1 h-10 w-10 shrink-0 rounded-xl bg-secondary/50 flex items-center justify-center text-primary">
         {icon}
       </div>
-      <div className="space-y-1 text-sm font-light">
+      <div className="space-y-1 text-sm font-normal">
         <h4 className="font-semibold text-foreground tracking-tight">
           {title}
         </h4>

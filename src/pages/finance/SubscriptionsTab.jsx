@@ -12,7 +12,12 @@ import {
 } from 'lucide-react'
 
 // API & Libs
-import { useExpenses, useDeleteExpense, useRenewSubscription, useUpdateExpense } from '@/api/expenses'
+import {
+  useExpenses,
+  useDeleteExpense,
+  useRenewSubscription,
+  useUpdateExpense,
+} from '@/api/expenses'
 import { formatCurrency } from '@/utils/finance'
 import { supabase } from '@/lib/supabase'
 import { useQuery } from '@tanstack/react-query'
@@ -86,15 +91,19 @@ export default function SubscriptionsTab({ clientId, subTabs }) {
     let monthlyBurn = 0
     filteredExpenses.forEach((e) => {
       // Only include active subscriptions in burn rate
-      if (!e.is_active) return;
-      
+      if (!e.is_active) return
+
       const cost = parseFloat(e.cost)
       if (e.billing_cycle === 'MONTHLY') monthlyBurn += cost
       else if (e.billing_cycle === 'QUARTERLY') monthlyBurn += cost / 3
       else if (e.billing_cycle === 'YEARLY') monthlyBurn += cost / 12
     })
     const nextBill = filteredExpenses
-      .filter((e) => e.is_active && !isBefore(new Date(e.next_billing_date), startOfToday()))
+      .filter(
+        (e) =>
+          e.is_active &&
+          !isBefore(new Date(e.next_billing_date), startOfToday()),
+      )
       .sort(
         (a, b) => new Date(a.next_billing_date) - new Date(b.next_billing_date),
       )[0]
@@ -108,11 +117,13 @@ export default function SubscriptionsTab({ clientId, subTabs }) {
   const handleMarkAsPaid = (expense) => {
     renewSubscription(expense.id, {
       onSuccess: () => {
-        toast.success(`Marked ${expense.name} as paid! Next billing date updated.`)
+        toast.success(
+          `Marked ${expense.name} as paid! Next billing date updated.`,
+        )
       },
       onError: () => {
         toast.error('Failed to update billing date.')
-      }
+      },
     })
   }
 
@@ -179,9 +190,11 @@ export default function SubscriptionsTab({ clientId, subTabs }) {
       header: 'Status',
       width: '10%',
       render: (e) => (
-        <Switch 
-          checked={e.is_active !== false} 
-          onCheckedChange={() => handleToggleStatus(e.id, e.is_active !== false)}
+        <Switch
+          checked={e.is_active !== false}
+          onCheckedChange={() =>
+            handleToggleStatus(e.id, e.is_active !== false)
+          }
           aria-label="Toggle active status"
         />
       ),
@@ -192,42 +205,43 @@ export default function SubscriptionsTab({ clientId, subTabs }) {
       headerClassName: 'text-right pr-6',
       cellClassName: 'text-right pr-6',
       render: (e) => {
-        const isDueSoon = differenceInDays(new Date(e.next_billing_date), startOfToday()) <= 3
+        const isDueSoon =
+          differenceInDays(new Date(e.next_billing_date), startOfToday()) <= 3
         return (
           <div className="flex justify-end gap-1">
             {e.is_active !== false && isDueSoon && (
               <Button
                 variant="ghost"
+                size="icon"
+                title="Mark as Paid"
+                onClick={() => handleMarkAsPaid(e)}
+                className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50"
+              >
+                <TrendingUp className="h-4 w-4" />
+              </Button>
+            )}
+            <Button
+              variant="ghost"
               size="icon"
-              title="Mark as Paid"
-              onClick={() => handleMarkAsPaid(e)}
-              className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50"
+              title="Edit"
+              onClick={() => {
+                setEditingExpense(e)
+                setIsDialogOpen(true)
+              }}
+              className="h-8 w-8"
             >
-              <TrendingUp className="h-4 w-4" />
+              <Edit2 className="h-4 w-4" />
             </Button>
-          )}
-          <Button
-            variant="ghost"
-            size="icon"
-            title="Edit"
-            onClick={() => {
-              setEditingExpense(e)
-              setIsDialogOpen(true)
-            }}
-            className="h-8 w-8"
-          >
-            <Edit2 className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            title="Delete"
-            onClick={() => deleteExpense(e.id)}
-            className="h-8 w-8 text-destructive hover:bg-destructive/10"
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              title="Delete"
+              onClick={() => deleteExpense(e.id)}
+              className="h-8 w-8 text-destructive hover:bg-destructive/10"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
         )
       },
     },
@@ -239,7 +253,7 @@ export default function SubscriptionsTab({ clientId, subTabs }) {
         {subTabs ? (
           subTabs
         ) : (
-          <h2 className="text-2xl font-normal">Subscriptions</h2>
+          <h2 className="text-3xl font-normal">Subscriptions</h2>
         )}
         <div className="flex items-center gap-3">
           {!clientId && (
@@ -322,7 +336,7 @@ export default function SubscriptionsTab({ clientId, subTabs }) {
                 </div>
               </>
             ) : (
-              <div className="text-2xl font-light text-muted-foreground">
+              <div className="text-2xl font-normal text-muted-foreground">
                 No upcoming bills
               </div>
             )}
@@ -336,16 +350,19 @@ export default function SubscriptionsTab({ clientId, subTabs }) {
         <Empty className="py-20 border border-dashed rounded-2xl bg-muted/5">
           <EmptyContent>
             <EmptyMedia variant="icon">
-              {filterMode !== 'ALL'
-                ? <CreditCard className="size-6 text-muted-foreground/60" />
-                : <CreditCard className="size-6 text-muted-foreground/60" />}
+              {filterMode !== 'ALL' ? (
+                <CreditCard className="size-6 text-muted-foreground/60" />
+              ) : (
+                <CreditCard className="size-6 text-muted-foreground/60" />
+              )}
             </EmptyMedia>
             <EmptyHeader>
               <EmptyTitle className="font-normal text-xl">
                 No subscriptions tracked
               </EmptyTitle>
-              <EmptyDescription className="font-light">
-                Track recurring software or service costs your agency pays for clients.
+              <EmptyDescription className="font-normal">
+                Track recurring software or service costs your agency pays for
+                clients.
               </EmptyDescription>
             </EmptyHeader>
             <Button
@@ -362,7 +379,11 @@ export default function SubscriptionsTab({ clientId, subTabs }) {
           </EmptyContent>
         </Empty>
       ) : (
-        <CustomTable columns={columns} data={filteredExpenses} isLoading={false} />
+        <CustomTable
+          columns={columns}
+          data={filteredExpenses}
+          isLoading={false}
+        />
       )}
 
       <AddSubscriptionDialog

@@ -36,15 +36,19 @@ export default function Settings() {
         <div className="px-8 pt-8 pb-20 space-y-8 max-w-[1400px] mx-auto animate-in fade-in slide-in-from-bottom-4 duration-700 fill-mode-both">
           {/* PAGE HEADER */}
           <div className="space-y-1">
-            <h1 className="text-3xl font-light tracking-tight text-foreground">
+            <h1 className="text-3xl font-normal tracking-tight text-foreground">
               Settings
             </h1>
-            <p className="text-sm text-muted-foreground font-light">
+            <p className="text-sm text-muted-foreground font-normal">
               Manage your profile and agency workspace.
             </p>
           </div>
 
-          <Tabs value={tab} onValueChange={handleTabChange} className="space-y-10">
+          <Tabs
+            value={tab}
+            onValueChange={handleTabChange}
+            className="space-y-10"
+          >
             <TabsList className="bg-transparent border-b border-white/5 rounded-none p-0 h-auto gap-8 w-full justify-start">
               {[
                 { value: 'profile', icon: User, label: 'Profile' },

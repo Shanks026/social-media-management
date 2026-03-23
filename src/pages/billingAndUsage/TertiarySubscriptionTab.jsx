@@ -152,7 +152,7 @@ Thank you.`
             <Label className="text-xs text-muted-foreground">
               Upgrade Request
             </Label>
-            <div className="rounded-lg border bg-muted/30 p-4 text-[13px] leading-relaxed text-muted-foreground whitespace-pre-line font-light">
+            <div className="rounded-lg border bg-muted/30 p-4 text-[13px] leading-relaxed text-muted-foreground whitespace-pre-line font-normal">
               {prefilledMessage}
             </div>
           </div>
@@ -211,7 +211,7 @@ const FeatureValue = ({ feature, accentClass, isPopular }) => {
     return (
       <div className="flex items-start gap-3">
         <X className={cn('size-4 shrink-0 mt-0.5', mutedTextColor)} />
-        <span className={cn('text-[13px] font-light', mutedTextColor)}>
+        <span className={cn('text-[13px] font-normal', mutedTextColor)}>
           {feature.value}
         </span>
       </div>
@@ -222,7 +222,7 @@ const FeatureValue = ({ feature, accentClass, isPopular }) => {
     <div className="flex items-start gap-3">
       {/* Subtle touch of color on the checkmark */}
       <Check className={cn('size-4 shrink-0 mt-0.5', accentClass)} />
-      <span className={cn('text-[13px] font-light', textColor)}>
+      <span className={cn('text-[13px] font-normal', textColor)}>
         {feature.value}
       </span>
     </div>
@@ -268,13 +268,13 @@ export const PlanCard = ({ plan, isCurrentPlan, onContactTeam }) => {
 
       {/* Price */}
       <div className="mb-2 flex items-baseline gap-1">
-        <span className="text-5xl font-light tracking-tight">
+        <span className="text-5xl font-normal tracking-tight">
           ₹{plan.price}
         </span>
-        <span className={cn('text-sm font-light', descClasses)}>/ mo</span>
+        <span className={cn('text-sm font-normal', descClasses)}>/ mo</span>
       </div>
 
-      <p className={cn('text-sm font-light mb-8', descClasses)}>
+      <p className={cn('text-sm font-normal mb-8', descClasses)}>
         For {plan.bestFor.toLowerCase()}
       </p>
 
@@ -414,10 +414,10 @@ export const SubscriptionTab = ({ sub, isLoading }) => {
           </div>
         </div>
         <div className="space-y-2">
-          <h3 className="text-2xl font-light tracking-tight">
+          <h3 className="text-2xl font-normal tracking-tight">
             Choose your plan
           </h3>
-          <p className="text-sm text-muted-foreground font-light">
+          <p className="text-sm text-muted-foreground font-normal">
             Simple, transparent pricing tailored to your scale.
           </p>
         </div>
@@ -511,7 +511,7 @@ export const SubscriptionTab = ({ sub, isLoading }) => {
                   {row.values.map((val, i) => (
                     <td
                       key={i}
-                      className="text-left px-4 py-4 text-[13px] font-light"
+                      className="text-left px-4 py-4 text-[13px] font-normal"
                     >
                       {val === true ? (
                         <Check className="size-4 text-emerald-500" />

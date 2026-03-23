@@ -30,7 +30,7 @@ export default function DashboardInvoiceTable() {
   // Merge client data into invoices
   const tableData = invoices
     .map((inv) => {
-      const client = Array.isArray(clientData) 
+      const client = Array.isArray(clientData)
         ? clientData.find((c) => c.id === inv.client_id)
         : null
       return {
@@ -86,7 +86,9 @@ export default function DashboardInvoiceTable() {
     {
       header: 'Amount',
       width: '15%',
-      render: (inv) => <span className="font-semibold">{formatCurrency(inv.total)}</span>,
+      render: (inv) => (
+        <span className="font-semibold">{formatCurrency(inv.total)}</span>
+      ),
     },
     {
       header: 'Status',
@@ -95,7 +97,7 @@ export default function DashboardInvoiceTable() {
       cellClassName: 'text-right pr-6',
       render: (inv) => (
         <div className="flex justify-end">
-           <StatusBadge status={inv.status} />
+          <StatusBadge status={inv.status} />
         </div>
       ),
     },
@@ -108,7 +110,7 @@ export default function DashboardInvoiceTable() {
           <CardTitle className="text-lg font-medium tracking-normal text-foreground">
             Recent Invoices
           </CardTitle>
-          <p className="text-sm text-muted-foreground font-light">
+          <p className="text-sm text-muted-foreground font-normal">
             Latest billed items across all clients
           </p>
         </div>
@@ -134,7 +136,9 @@ export default function DashboardInvoiceTable() {
             columns={columns}
             data={tableData}
             isLoading={isLoadingInvoices}
-            onRowClick={(row) => navigate(`/finance/overview?tab=invoices&invoiceId=${row.id}`)}
+            onRowClick={(row) =>
+              navigate(`/finance/overview?tab=invoices&invoiceId=${row.id}`)
+            }
           />
         )}
       </CardContent>

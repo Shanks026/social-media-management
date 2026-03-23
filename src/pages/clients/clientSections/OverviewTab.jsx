@@ -316,138 +316,7 @@ export default function OverviewTab({ client }) {
     <div className="flex flex-col gap-4 animate-in fade-in duration-500">
       {/* ROW 1: 3-COLUMN GRID */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {/* COLUMN 1: WORKFLOW HEALTH */}
-        <Card className="border-none shadow-sm ring-1 ring-border/50 bg-card/50 flex flex-col">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg font-medium">Workflow Health</CardTitle>
-            <CardDescription>
-              Pipeline distribution across statuses
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex-1 flex flex-col justify-between">
-            {isLoadingPosts ? (
-              <div className="h-[280px] w-full mt-2 flex flex-col items-center justify-center">
-                <Skeleton className="h-[200px] w-[200px] rounded-full" />
-                <div className="w-full flex justify-between mt-6 px-4">
-                  <div className="flex items-center gap-2">
-                    <Skeleton className="h-3 w-3 rounded-full" />
-                    <Skeleton className="h-3 w-16" />
-                  </div>
-                  <Skeleton className="h-3 w-8" />
-                </div>
-                <div className="w-full flex justify-between mt-3 px-4">
-                  <div className="flex items-center gap-2">
-                    <Skeleton className="h-3 w-3 rounded-full" />
-                    <Skeleton className="h-3 w-16" />
-                  </div>
-                  <Skeleton className="h-3 w-8" />
-                </div>
-              </div>
-            ) : totalPosts === 0 ? (
-              <div className="flex-1 flex flex-col items-center justify-center text-center py-8 gap-2">
-                <div className="h-10 w-10 border border-dashed rounded-full flex items-center justify-center text-muted-foreground">
-                  <FileText className="h-4 w-4" />
-                </div>
-                <p className="text-sm text-muted-foreground">No active posts</p>
-              </div>
-            ) : (
-              <>
-                {/* Scaled-up Donut Chart using Shadcn ChartContainer */}
-                <div className="h-[280px] w-full mt-2 relative">
-                  <ChartContainer config={chartConfig} className="h-full w-full">
-                    <PieChart>
-                      <Pie
-                        data={pieChartData}
-                        cx="50%"
-                        cy="80%"
-                        startAngle={180}
-                        endAngle={0}
-                        innerRadius={110}
-                        outerRadius={150}
-                        paddingAngle={2}
-                        cornerRadius={6}
-                        dataKey="value"
-                        nameKey="name"
-                        stroke="none"
-                      >
-                        {pieChartData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.fill} />
-                        ))}
-                      </Pie>
-                      <ChartTooltip
-                        cursor={false}
-                        content={<ChartTooltipContent hideLabel />}
-                      />
-                    </PieChart>
-                  </ChartContainer>
-                  {/* Center text adjusted for scaled pie chart */}
-                  <div
-                    className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none"
-                    style={{ top: '35%' }}
-                  >
-                    <span className="text-4xl font-bold">{totalPosts}</span>
-                    <span className="text-xs text-muted-foreground font-medium uppercase tracking-wider">
-                      Posts
-                    </span>
-                  </div>
-                </div>
-
-                {/* Legend */}
-                <div className="flex flex-col gap-2.5 mt-4 w-full px-1">
-                  {chartData.map((data, idx) => (
-                    <div
-                      key={idx}
-                      className="flex items-center justify-between text-xs"
-                    >
-                      <div className="flex items-center gap-2.5">
-                        <div
-                          className="h-2.5 w-2.5 rounded-full shrink-0"
-                          style={{ backgroundColor: data.fill }}
-                        />
-                        <span className="text-muted-foreground capitalize">
-                          {data.name.toLowerCase()}
-                        </span>
-                      </div>
-                      <span className="font-semibold tabular-nums">
-                        {data.value}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Bottleneck Alert */}
-                <div className="mt-4 pt-3 border-t border-border/40 px-1">
-                  {needsRevisionCount > 0 ? (
-                    <div className="flex items-center gap-2 border-l-2 border-destructive pl-3">
-                      <AlertCircle className="h-3.5 w-3.5 text-destructive shrink-0" />
-                      <span className="text-xs text-destructive font-medium">
-                        {needsRevisionCount} post{needsRevisionCount !== 1 && 's'}{' '}
-                        require immediate revision
-                      </span>
-                    </div>
-                  ) : pendingApprovalCount > 0 ? (
-                    <div className="flex items-center gap-2 border-l-2 border-amber-500 pl-3">
-                      <AlertCircle className="h-3.5 w-3.5 text-amber-500 shrink-0" />
-                      <span className="text-xs text-amber-600 dark:text-amber-400 font-medium">
-                        {pendingApprovalCount} post
-                        {pendingApprovalCount !== 1 && 's'} awaiting approval
-                      </span>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-2 border-l-2 border-emerald-500 pl-3">
-                      <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
-                      <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
-                        Pipeline is looking good!
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* COLUMN 2: MEETINGS + NOTES TABS */}
+        {/* COLUMN 2: MEETINGS + NOTES TABS (moved first) */}
         <Card className="border-none shadow-sm ring-1 ring-border/50 bg-card/50 flex flex-col">
           <Tabs
             value={activeEngagementTab}
@@ -587,6 +456,137 @@ export default function OverviewTab({ client }) {
               </TabsContent>
             </CardContent>
           </Tabs>
+        </Card>
+
+        {/* COLUMN 1: WORKFLOW HEALTH (moved to center) */}
+        <Card className="border-none shadow-sm ring-1 ring-border/50 bg-card/50 flex flex-col">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg font-medium">Workflow Health</CardTitle>
+            <CardDescription>
+              Pipeline distribution across statuses
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex-1 flex flex-col justify-between">
+            {isLoadingPosts ? (
+              <div className="h-[280px] w-full mt-2 flex flex-col items-center justify-center">
+                <Skeleton className="h-[200px] w-[200px] rounded-full" />
+                <div className="w-full flex justify-between mt-6 px-4">
+                  <div className="flex items-center gap-2">
+                    <Skeleton className="h-3 w-3 rounded-full" />
+                    <Skeleton className="h-3 w-16" />
+                  </div>
+                  <Skeleton className="h-3 w-8" />
+                </div>
+                <div className="w-full flex justify-between mt-3 px-4">
+                  <div className="flex items-center gap-2">
+                    <Skeleton className="h-3 w-3 rounded-full" />
+                    <Skeleton className="h-3 w-16" />
+                  </div>
+                  <Skeleton className="h-3 w-8" />
+                </div>
+              </div>
+            ) : totalPosts === 0 ? (
+              <div className="flex-1 flex flex-col items-center justify-center text-center py-8 gap-2">
+                <div className="h-10 w-10 border border-dashed rounded-full flex items-center justify-center text-muted-foreground">
+                  <FileText className="h-4 w-4" />
+                </div>
+                <p className="text-sm text-muted-foreground">No active posts</p>
+              </div>
+            ) : (
+              <>
+                {/* Scaled-up Donut Chart using Shadcn ChartContainer */}
+                <div className="h-[280px] w-full mt-2 relative">
+                  <ChartContainer config={chartConfig} className="h-full w-full">
+                    <PieChart>
+                      <Pie
+                        data={pieChartData}
+                        cx="50%"
+                        cy="80%"
+                        startAngle={180}
+                        endAngle={0}
+                        innerRadius={110}
+                        outerRadius={150}
+                        paddingAngle={2}
+                        cornerRadius={6}
+                        dataKey="value"
+                        nameKey="name"
+                        stroke="none"
+                      >
+                        {pieChartData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.fill} />
+                        ))}
+                      </Pie>
+                      <ChartTooltip
+                        cursor={false}
+                        content={<ChartTooltipContent hideLabel />}
+                      />
+                    </PieChart>
+                  </ChartContainer>
+                  {/* Center text adjusted for scaled pie chart */}
+                  <div
+                    className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none"
+                    style={{ top: '35%' }}
+                  >
+                    <span className="text-4xl font-bold">{totalPosts}</span>
+                    <span className="text-xs text-muted-foreground font-medium uppercase tracking-wider">
+                      Posts
+                    </span>
+                  </div>
+                </div>
+
+                {/* Legend */}
+                <div className="flex flex-col gap-2.5 mt-4 w-full px-1">
+                  {chartData.map((data, idx) => (
+                    <div
+                      key={idx}
+                      className="flex items-center justify-between text-xs"
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <div
+                          className="h-2.5 w-2.5 rounded-full shrink-0"
+                          style={{ backgroundColor: data.fill }}
+                        />
+                        <span className="text-muted-foreground capitalize">
+                          {data.name.toLowerCase()}
+                        </span>
+                      </div>
+                      <span className="font-semibold tabular-nums">
+                        {data.value}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Bottleneck Alert */}
+                <div className="mt-4 pt-3 border-t border-border/40 px-1">
+                  {needsRevisionCount > 0 ? (
+                    <div className="flex items-center gap-2 border-l-2 border-destructive pl-3">
+                      <AlertCircle className="h-3.5 w-3.5 text-destructive shrink-0" />
+                      <span className="text-xs text-destructive font-medium">
+                        {needsRevisionCount} post{needsRevisionCount !== 1 && 's'}{' '}
+                        require immediate revision
+                      </span>
+                    </div>
+                  ) : pendingApprovalCount > 0 ? (
+                    <div className="flex items-center gap-2 border-l-2 border-amber-500 pl-3">
+                      <AlertCircle className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+                      <span className="text-xs text-amber-600 dark:text-amber-400 font-medium">
+                        {pendingApprovalCount} post
+                        {pendingApprovalCount !== 1 && 's'} awaiting approval
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 border-l-2 border-emerald-500 pl-3">
+                      <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                      <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+                        Pipeline is looking good!
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+          </CardContent>
         </Card>
 
         {/* COLUMN 3: QUICK ACTIONS + RECENT TRANSACTIONS (external only) */}

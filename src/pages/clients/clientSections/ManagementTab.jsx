@@ -41,7 +41,6 @@ const CLIENT_TYPE_LABELS = {
   advisory: 'Advisory / Consulting',
 }
 
-
 export default function ManagementTab({ client }) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -54,7 +53,9 @@ export default function ManagementTab({ client }) {
     onSuccess: (_, newStatus) => {
       queryClient.invalidateQueries({ queryKey: ['clients'] })
       queryClient.invalidateQueries({ queryKey: ['client', client.id] })
-      toast.success(newStatus === 'ARCHIVED' ? 'Client archived' : 'Client restored')
+      toast.success(
+        newStatus === 'ARCHIVED' ? 'Client archived' : 'Client restored',
+      )
       if (newStatus === 'ARCHIVED') navigate('/clients')
     },
     onError: () => toast.error('Failed to update client status'),
@@ -77,7 +78,6 @@ export default function ManagementTab({ client }) {
     return industry ? industry.label : value || 'Not Specified'
   }
 
-
   const tier = client.tier?.toUpperCase() || 'BASIC'
   const platforms = client.platforms || []
 
@@ -90,8 +90,9 @@ export default function ManagementTab({ client }) {
             <h2 className="text-2xl font-normal tracking-tight">
               Client Profile
             </h2>
-            <p className="text-sm text-muted-foreground font-light">
-              {client.description || 'Workspace details and contact information.'}
+            <p className="text-sm text-muted-foreground font-normal">
+              {client.description ||
+                'Workspace details and contact information.'}
             </p>
           </div>
           <Button
@@ -138,14 +139,20 @@ export default function ManagementTab({ client }) {
               icon={<ShieldCheck size={16} />}
               label="Account Status"
               value={
-                <span className={
-                  client.status === 'ACTIVE'
-                    ? 'text-green-600 font-medium'
+                <span
+                  className={
+                    client.status === 'ACTIVE'
+                      ? 'text-green-600 font-medium'
+                      : client.status === 'ARCHIVED'
+                        ? 'text-slate-500 font-medium'
+                        : 'text-amber-600 font-medium'
+                  }
+                >
+                  {client.status === 'ACTIVE'
+                    ? 'Active'
                     : client.status === 'ARCHIVED'
-                      ? 'text-slate-500 font-medium'
-                      : 'text-amber-600 font-medium'
-                }>
-                  {client.status === 'ACTIVE' ? 'Active' : client.status === 'ARCHIVED' ? 'Archived' : 'Paused'}
+                      ? 'Archived'
+                      : 'Paused'}
                 </span>
               }
             />
@@ -158,7 +165,9 @@ export default function ManagementTab({ client }) {
               <InfoRow
                 icon={<Handshake size={16} />}
                 label="Engagement Type"
-                value={CLIENT_TYPE_LABELS[client.client_type] ?? client.client_type}
+                value={
+                  CLIENT_TYPE_LABELS[client.client_type] ?? client.client_type
+                }
               />
             )}
             <InfoRow
@@ -177,12 +186,18 @@ export default function ManagementTab({ client }) {
               value={
                 client.website ? (
                   <a
-                    href={client.website.startsWith('http') ? client.website : `https://${client.website}`}
+                    href={
+                      client.website.startsWith('http')
+                        ? client.website
+                        : `https://${client.website}`
+                    }
                     target="_blank"
                     rel="noopener noreferrer"
                     className="hover:text-primary transition-colors flex items-center gap-1 group truncate"
                   >
-                    <span className="truncate">{client.website.replace(/(^\w+:|^)\/\//, '')}</span>
+                    <span className="truncate">
+                      {client.website.replace(/(^\w+:|^)\/\//, '')}
+                    </span>
                     <ExternalLink className="size-3 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
                   </a>
                 ) : (
@@ -194,7 +209,9 @@ export default function ManagementTab({ client }) {
               icon={<CalendarDays size={16} />}
               label="Created"
               value={
-                client.created_at ? format(new Date(client.created_at), 'MMMM d, yyyy') : '—'
+                client.created_at
+                  ? format(new Date(client.created_at), 'MMMM d, yyyy')
+                  : '—'
               }
             />
           </div>
@@ -207,7 +224,7 @@ export default function ManagementTab({ client }) {
       <section className="space-y-6">
         <div className="space-y-1">
           <h2 className="text-2xl font-normal tracking-tight">Platforms</h2>
-          <p className="text-sm text-muted-foreground font-light">
+          <p className="text-sm text-muted-foreground font-normal">
             Social platforms linked to this workspace.
           </p>
         </div>
@@ -226,7 +243,9 @@ export default function ManagementTab({ client }) {
                     alt={p}
                     className="size-4 object-contain"
                   />
-                  <span className="text-sm font-medium capitalize">{p.replace('_', ' ')}</span>
+                  <span className="text-sm font-medium capitalize">
+                    {p.replace('_', ' ')}
+                  </span>
                 </div>
               )
             })}
@@ -247,7 +266,7 @@ export default function ManagementTab({ client }) {
           <h2 className="text-lg font-medium text-destructive tracking-tight">
             Danger Zone
           </h2>
-          <p className="text-sm text-muted-foreground font-light">
+          <p className="text-sm text-muted-foreground font-normal">
             Irreversible actions. Please proceed with caution.
           </p>
         </div>
@@ -256,9 +275,12 @@ export default function ManagementTab({ client }) {
         {client.status !== 'ARCHIVED' ? (
           <div className="flex items-center justify-between rounded-xl border border-border px-5 py-4">
             <div className="space-y-0.5">
-              <p className="text-sm font-semibold text-foreground">Archive Client</p>
+              <p className="text-sm font-semibold text-foreground">
+                Archive Client
+              </p>
               <p className="text-xs text-muted-foreground">
-                Hide {client.name} from the active clients list. All data is preserved and can be restored.
+                Hide {client.name} from the active clients list. All data is
+                preserved and can be restored.
               </p>
             </div>
             <Button
@@ -275,7 +297,9 @@ export default function ManagementTab({ client }) {
         ) : (
           <div className="flex items-center justify-between rounded-xl border border-border px-5 py-4">
             <div className="space-y-0.5">
-              <p className="text-sm font-semibold text-foreground">Restore Client</p>
+              <p className="text-sm font-semibold text-foreground">
+                Restore Client
+              </p>
               <p className="text-xs text-muted-foreground">
                 Move {client.name} back to the active clients list.
               </p>
@@ -299,7 +323,8 @@ export default function ManagementTab({ client }) {
               Delete Workspace
             </p>
             <p className="text-xs text-muted-foreground">
-              Once deleted, all posts, history, and media for {client.name} will be removed.
+              Once deleted, all posts, history, and media for {client.name} will
+              be removed.
             </p>
           </div>
           <Button
@@ -320,11 +345,17 @@ export default function ManagementTab({ client }) {
           <DialogHeader>
             <DialogTitle>Archive {client.name}?</DialogTitle>
             <DialogDescription>
-              This client will be hidden from your active clients list. All data, posts, and history are preserved. You can restore them at any time.
+              This client will be hidden from your active clients list. All
+              data, posts, and history are preserved. You can restore them at
+              any time.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="mt-4 gap-2 flex-col sm:flex-row">
-            <Button variant="ghost" onClick={() => setArchiveDialogOpen(false)} className="w-full sm:w-auto">
+            <Button
+              variant="ghost"
+              onClick={() => setArchiveDialogOpen(false)}
+              className="w-full sm:w-auto"
+            >
               Cancel
             </Button>
             <Button
@@ -355,7 +386,11 @@ export default function ManagementTab({ client }) {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="mt-4 gap-2 flex-col sm:flex-row">
-            <Button variant="ghost" onClick={() => setDeleteDialogOpen(false)} className="w-full sm:w-auto">
+            <Button
+              variant="ghost"
+              onClick={() => setDeleteDialogOpen(false)}
+              className="w-full sm:w-auto"
+            >
               Cancel
             </Button>
             <Button
@@ -383,7 +418,9 @@ function InfoRow({ icon, label, value }) {
         <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
           {label}
         </p>
-        <div className="text-sm text-foreground truncate max-w-[200px] sm:max-w-xs">{value}</div>
+        <div className="text-sm text-foreground truncate max-w-[200px] sm:max-w-xs">
+          {value}
+        </div>
       </div>
     </div>
   )

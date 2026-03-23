@@ -16,7 +16,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog'
-import { CalendarDays, TrendingUp, Percent, Megaphone } from 'lucide-react'
+import { CalendarDays } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { getUrgencyStatus } from '@/lib/client-helpers'
@@ -29,27 +29,16 @@ import { useSubscription } from '@/api/useSubscription'
 const StatItem = ({ count, label, colorClass }) => {
   if (!count || count < 1) return null
   return (
-    <div className="flex items-center gap-1.5 shrink-0">
-      <div className={`size-2 rounded-full ${colorClass}`} />
-      <span className="text-xs font-semibold text-foreground leading-none">{count}</span>
-      <span className="text-xs text-muted-foreground/60">{label}</span>
+    <div className="flex flex-col gap-2.5">
+      <div className="flex items-center gap-1.5">
+        <div className={`size-2 rounded-full ${colorClass}`} />
+        <span className="text-[10px] text-muted-foreground leading-none truncate">{label}</span>
+      </div>
+      <span className="text-sm font-bold text-foreground leading-none">{count}</span>
     </div>
   )
 }
 
-const MetricItem = ({ label, icon: Icon, value, valueClass }) => (
-  <div className="flex flex-col gap-1.5">
-    <div className="flex items-center gap-1 leading-none">
-      {Icon && <Icon className="size-3 text-muted-foreground/60" />}
-      <span className="text-[10px] font-medium text-muted-foreground/60 capitalize leading-none">
-        {label}
-      </span>
-    </div>
-    <span className={`text-sm font-semibold leading-none ${valueClass ?? 'text-foreground'}`}>
-      {value}
-    </span>
-  </div>
-)
 
 function ClientCard({ client, onOpen, onDelete }) {
   const [deleteOpen, setDeleteOpen] = useState(false)
@@ -95,11 +84,11 @@ function ClientCard({ client, onOpen, onDelete }) {
         .slice(0, 2)
     : 'CL'
 
-  const hasPipelineData =
-    pipeline.drafts > 0 ||
-    pipeline.pending > 0 ||
-    pipeline.revisions > 0 ||
-    pipeline.scheduled > 0
+  const activePipelineCount = [pipeline.drafts, pipeline.pending, pipeline.revisions, pipeline.scheduled].filter(
+    (v) => v > 0,
+  ).length
+  const hasPipelineData = activePipelineCount > 0
+  const pipelineCols = Math.max(activePipelineCount, 3)
 
   const showFinancials = !client.is_internal
   const showCampaigns = !!sub?.campaigns && (client.active_campaigns ?? 0) > 0
@@ -126,7 +115,7 @@ function ClientCard({ client, onOpen, onDelete }) {
             : 'dark:bg-card/70 dark:border-none',
         )}
       >
-        <CardContent className="p-7 flex flex-col gap-3 h-full">
+        <CardContent className="p-7 flex flex-col gap-4 h-full">
           {/* Header: logo + name + tier + industry */}
           <div className="flex items-center gap-4">
             <div className="h-12 w-12 shrink-0 rounded-xl overflow-hidden bg-muted">
@@ -144,63 +133,79 @@ function ClientCard({ client, onOpen, onDelete }) {
                   {client.name}
                 </h3>
                 <TierBadge tier={client.tier} />
-                {client.client_type && (
-                  <span className="shrink-0 inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium text-muted-foreground border-border bg-muted/50">
-                    {CLIENT_TYPE_LABELS[client.client_type] ?? client.client_type}
-                  </span>
-                )}
               </div>
-              <div className="mt-1">
+              <div className="mt-1 flex items-center gap-2">
                 <IndustryBadge industryValue={client.industry} />
+                {client.client_type && (
+                  <>
+                    <div className="size-1 rounded-full bg-muted-foreground/30 shrink-0" />
+                    <span className="text-xs text-muted-foreground mt-0.5 leading-none">
+                      {CLIENT_TYPE_LABELS[client.client_type] ?? client.client_type}
+                    </span>
+                  </>
+                )}
               </div>
             </div>
           </div>
 
           {/* Pipeline stats */}
-          <div className="pt-4 border-t border-dashed border-border/50 min-h-9.5">
+          <div className="pt-4 border-t border-dashed border-border">
             {hasPipelineData ? (
-              <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+              <div className={cn('grid', pipelineCols === 4 ? 'grid-cols-4' : 'grid-cols-3')}>
                 <StatItem count={pipeline.drafts} label="Drafts" colorClass="bg-blue-500" />
-                <StatItem count={pipeline.revisions} label="Revisions" colorClass="bg-pink-500" />
-                <StatItem count={pipeline.pending} label="Pending" colorClass="bg-orange-500" />
-                <StatItem count={pipeline.scheduled} label="Scheduled" colorClass="bg-purple-500" />
+                <StatItem count={pipeline.pending} label="Submit." colorClass="bg-orange-500" />
+                <StatItem count={pipeline.revisions} label="Needs Rev." colorClass="bg-pink-500" />
+                <StatItem count={pipeline.scheduled} label="Sched." colorClass="bg-purple-500" />
               </div>
             ) : (
-              <span className="text-xs italic text-muted-foreground/40">No active workflow</span>
+              <span className="text-xs italic text-muted-foreground">No active workflow</span>
             )}
           </div>
 
           {/* Metrics row: MRR + Margin + Campaigns */}
           {hasMetrics && (
-            <div className="pt-3 border-t border-dashed border-border/50 grid grid-cols-3">
-              {showFinancials ? (
-                <MetricItem icon={TrendingUp} label="MRR" value={formatMRR(client.avg_monthly_retainer ?? 0)} />
-              ) : <div />}
-              {showFinancials ? (
-                <MetricItem
-                  icon={Percent}
-                  label="Margin"
-                  value={`${margin}%`}
-                  valueClass={marginColorClass}
-                />
-              ) : <div />}
-              {showCampaigns ? (
-                <MetricItem icon={Megaphone} label="Campaigns" value={client.active_campaigns} />
-              ) : <div />}
+            <div className="pt-4 border-t border-dashed border-border flex items-center gap-2.5">
+              {showFinancials && (
+                <span className="text-xs font-semibold text-foreground">
+                  {(client.avg_monthly_retainer ?? 0) > 0 ? formatMRR(client.avg_monthly_retainer) : '-'}{' '}
+                  <span className="font-normal text-muted-foreground">MRR</span>
+                </span>
+              )}
+              {showFinancials && (
+                <>
+                  <div className="size-1 rounded-full bg-muted-foreground/30 shrink-0" />
+                  <span className={`text-xs font-semibold ${margin > 0 ? marginColorClass : 'text-foreground'}`}>
+                    {margin > 0 ? `${margin}%` : '-'}{' '}
+                    <span className="font-normal text-muted-foreground">Margin</span>
+                  </span>
+                </>
+              )}
+              {showCampaigns && (
+                <>
+                  {showFinancials && <div className="size-1 rounded-full bg-muted-foreground/30 shrink-0" />}
+                  <span className="text-xs font-semibold text-foreground">
+                    {client.active_campaigns}{' '}
+                    <span className="font-normal text-muted-foreground">Campaigns</span>
+                  </span>
+                </>
+              )}
             </div>
           )}
 
           {/* Footer: platform icons | next post / joined date */}
-          <div className="mt-auto flex items-center justify-between pt-5 border-t border-dashed border-border/50">
+          <div className="mt-auto flex items-center justify-between pt-5 border-t border-dashed border-border">
             <PlatformStack platforms={platforms} max={3} size={22} />
 
             {/* Right: next scheduled post with urgency indicator, or joined date */}
             {health && nextPostFormatted ? (
               <div className="flex items-center gap-2 shrink-0">
-                <div
-                  className={`size-2 rounded-full ${health.color} ${health.pulse ? 'animate-pulse' : ''}`}
-                />
-                <span className="text-xs text-muted-foreground/60">Next</span>
+                <div className="relative flex size-2 items-center justify-center shrink-0">
+                  {health.pulse && (
+                    <span className={`absolute inline-flex h-full w-full animate-ping rounded-full opacity-75 ${health.color}`} />
+                  )}
+                  <span className={`relative inline-flex size-2 rounded-full ${health.color}`} />
+                </div>
+                <span className="text-xs text-muted-foreground">Next Post:</span>
                 <span className="text-xs font-medium text-foreground">{nextPostFormatted}</span>
                 {health.label && (
                   <span className={`text-xs font-semibold ${health.color.replace('bg-', 'text-')}`}>
@@ -209,7 +214,7 @@ function ClientCard({ client, onOpen, onDelete }) {
                 )}
               </div>
             ) : (
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground/60">
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <CalendarDays size={13} />
                 <span>{joinedDateFormatted}</span>
               </div>

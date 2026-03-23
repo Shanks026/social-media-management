@@ -13,6 +13,7 @@ import {
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -85,9 +86,18 @@ export default function NoteRow({
     queryClient.invalidateQueries({ queryKey: ['notes', 'week-timeline'] })
   }
 
+  const STATUS_TOASTS = {
+    DONE: 'Note marked as done',
+    TODO: 'Note reopened',
+    ARCHIVED: 'Note archived',
+  }
+
   const { mutate: setStatus, isPending: isSettingStatus } = useMutation({
     mutationFn: (newStatus) => updateNoteStatus(note.id, newStatus),
-    onSuccess: invalidate,
+    onSuccess: (_, newStatus) => {
+      invalidate()
+      toast.success(STATUS_TOASTS[newStatus] ?? 'Note updated')
+    },
     onError: (err) => toast.error('Failed to update note: ' + err.message),
   })
 
@@ -272,50 +282,70 @@ export default function NoteRow({
               )}
             >
               <div className="overflow-hidden">
-                <div className="flex items-center gap-1 px-4 py-2 border-t border-border/40 bg-muted/30">
-                  {note.status === 'ARCHIVED' ? (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 text-xs text-muted-foreground hover:text-primary gap-1.5"
-                      onClick={() => setStatus('TODO')}
-                      disabled={isBusy}
-                    >
-                      <RotateCcw className="size-3" /> Restore
-                    </Button>
-                  ) : (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 text-xs text-muted-foreground hover:text-amber-500 gap-1.5"
-                      onClick={() => setStatus('ARCHIVED')}
-                      disabled={isBusy}
-                    >
-                      <Archive className="size-3" /> Archive
-                    </Button>
-                  )}
-
-                  {note.status !== 'ARCHIVED' && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 text-xs text-muted-foreground hover:text-primary gap-1.5"
-                      onClick={() => setEditOpen(true)}
-                      disabled={isBusy}
-                    >
-                      <Pencil className="size-3" /> Edit
-                    </Button>
-                  )}
-
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 text-xs text-muted-foreground hover:text-destructive gap-1.5"
-                    onClick={() => setDeleteOpen(true)}
-                    disabled={isBusy}
-                  >
-                    <Trash2 className="size-3" /> Delete
-                  </Button>
+                <div className="flex items-center justify-between px-4 py-2 border-t border-border/40 bg-muted/30">
+                  <div className="flex items-center gap-1">
+                    {note.status === 'ARCHIVED' ? (
+                      <Tooltip delayDuration={400}>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="size-7 text-muted-foreground hover:text-primary"
+                            onClick={() => setStatus('TODO')}
+                            disabled={isBusy}
+                          >
+                            <RotateCcw className="size-3.5" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="text-xs">Restore</TooltipContent>
+                      </Tooltip>
+                    ) : (
+                      <Tooltip delayDuration={400}>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="size-7 text-muted-foreground hover:text-amber-500"
+                            onClick={() => setStatus('ARCHIVED')}
+                            disabled={isBusy}
+                          >
+                            <Archive className="size-3.5" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="text-xs">Archive</TooltipContent>
+                      </Tooltip>
+                    )}
+                    {note.status !== 'ARCHIVED' && (
+                      <Tooltip delayDuration={400}>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="size-7 text-muted-foreground hover:text-primary"
+                            onClick={() => setEditOpen(true)}
+                            disabled={isBusy}
+                          >
+                            <Pencil className="size-3.5" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="text-xs">Edit</TooltipContent>
+                      </Tooltip>
+                    )}
+                  </div>
+                  <Tooltip delayDuration={400}>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="size-7 text-muted-foreground hover:text-destructive"
+                        onClick={() => setDeleteOpen(true)}
+                        disabled={isBusy}
+                      >
+                        <Trash2 className="size-3.5" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="text-xs">Delete</TooltipContent>
+                  </Tooltip>
                 </div>
               </div>
             </div>

@@ -5,7 +5,11 @@ import { toast } from 'sonner'
 import { FolderOpen, FolderPlus, Search, X, Lock } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { useSubscription } from '@/api/useSubscription'
-import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip'
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+} from '@/components/ui/tooltip'
 import { useDocuments, useCollections, uploadDocument } from '@/api/documents'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
@@ -54,13 +58,18 @@ export default function DocumentsTab({ clientId }) {
         next.set('doc_tab', tab)
         return next
       },
-      { replace: true, preventScrollReset: true }
+      { replace: true, preventScrollReset: true },
     )
   }
 
   // Fetch all statuses — filtered client-side
-  const { data: documents, isLoading: docsLoading, error } = useDocuments({ clientId })
-  const { data: collections, isLoading: collectionsLoading } = useCollections(clientId)
+  const {
+    data: documents,
+    isLoading: docsLoading,
+    error,
+  } = useDocuments({ clientId })
+  const { data: collections, isLoading: collectionsLoading } =
+    useCollections(clientId)
 
   // ── Filters ────────────────────────────────────────────────────────────────
   const [searchRaw, setSearchRaw] = useState('')
@@ -75,9 +84,7 @@ export default function DocumentsTab({ clientId }) {
   }, [searchRaw])
 
   const isFilterActive =
-    search !== '' ||
-    selectedStatus !== 'all' ||
-    selectedCategory !== 'all'
+    search !== '' || selectedStatus !== 'all' || selectedCategory !== 'all'
 
   function clearFilters() {
     setSearchRaw('')
@@ -153,16 +160,24 @@ export default function DocumentsTab({ clientId }) {
 
   function applyFilters(docs) {
     return docs.filter((doc) => {
-      if (selectedStatus !== 'all' && doc.status !== selectedStatus) return false
-      if (selectedCategory !== 'all' && doc.category !== selectedCategory) return false
-      if (search && !doc.display_name.toLowerCase().includes(search.toLowerCase())) return false
+      if (selectedStatus !== 'all' && doc.status !== selectedStatus)
+        return false
+      if (selectedCategory !== 'all' && doc.category !== selectedCategory)
+        return false
+      if (
+        search &&
+        !doc.display_name.toLowerCase().includes(search.toLowerCase())
+      )
+        return false
       return true
     })
   }
 
   const filteredDocs = applyFilters(allDocs)
   const ungroupedDocs = applyFilters(
-    allDocs.filter((d) => !d.collection_id || !collectionIds.has(d.collection_id)),
+    allDocs.filter(
+      (d) => !d.collection_id || !collectionIds.has(d.collection_id),
+    ),
   )
   const filteredCollections = collections ?? []
   const archivedCount = allDocs.filter((d) => d.status === 'Archived').length
@@ -170,234 +185,307 @@ export default function DocumentsTab({ clientId }) {
   return (
     <>
       <Tabs value={activeTab} onValueChange={setTab} className="mt-4 space-y-4">
-      {/* ── Row 1: Filters + New Collection ── */}
-      <div className="flex items-center gap-2 flex-wrap">
-        <div className="relative">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none" />
-          <Input
-            value={searchRaw}
-            onChange={(e) => setSearchRaw(e.target.value)}
-            placeholder="Search documents…"
-            className="pl-8 h-9 w-52 text-sm"
-          />
-        </div>
+        {/* ── Row 1: Filters + New Collection ── */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none" />
+            <Input
+              value={searchRaw}
+              onChange={(e) => setSearchRaw(e.target.value)}
+              placeholder="Search documents…"
+              className="pl-8 h-9 w-52 text-sm"
+            />
+          </div>
 
-        <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-          <SelectTrigger className="w-[130px] h-9 text-sm">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="Active">Active</SelectItem>
-            <SelectItem value="Archived">Archived</SelectItem>
-            <SelectItem value="all">All statuses</SelectItem>
-          </SelectContent>
-        </Select>
+          <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+            <SelectTrigger className="w-[130px] h-9 text-sm">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="Active">Active</SelectItem>
+              <SelectItem value="Archived">Archived</SelectItem>
+              <SelectItem value="all">All statuses</SelectItem>
+            </SelectContent>
+          </Select>
 
-        <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-          <SelectTrigger className="w-[155px] h-9 text-sm">
-            <SelectValue placeholder="All categories" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All categories</SelectItem>
-            {DOCUMENT_CATEGORIES.map((cat) => (
-              <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+          <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+            <SelectTrigger className="w-[155px] h-9 text-sm">
+              <SelectValue placeholder="All categories" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All categories</SelectItem>
+              {DOCUMENT_CATEGORIES.map((cat) => (
+                <SelectItem key={cat} value={cat}>
+                  {cat}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
-        {isFilterActive && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-9 gap-1.5 text-muted-foreground"
-            onClick={clearFilters}
-          >
-            <X className="size-3.5" /> Clear
-          </Button>
-        )}
-
-        <div className="ml-auto flex items-center gap-3 shrink-0">
-          <TabsList>
-            <TabsTrigger value="all">All</TabsTrigger>
-            <TabsTrigger value="collections">Collections</TabsTrigger>
-            <TabsTrigger value="ungrouped">Ungrouped</TabsTrigger>
-          </TabsList>
-
-          {collectionsUnlocked ? (
-            <Button className="gap-2" onClick={() => setCreateCollectionOpen(true)}>
-              <FolderPlus className="size-4" />
-              New Collection
+          {isFilterActive && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-9 gap-1.5 text-muted-foreground"
+              onClick={clearFilters}
+            >
+              <X className="size-3.5" /> Clear
             </Button>
-          ) : (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button className="gap-2 opacity-50 cursor-not-allowed" disabled>
-                  <FolderPlus className="size-4" />
-                  New Collection
-                  <Lock size={12} />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Collections are available on Velocity and above</TooltipContent>
-            </Tooltip>
           )}
+
+          <div className="ml-auto flex items-center gap-3 shrink-0">
+            <TabsList>
+              <TabsTrigger value="all">All</TabsTrigger>
+              <TabsTrigger value="collections">Collections</TabsTrigger>
+              <TabsTrigger value="ungrouped">Ungrouped</TabsTrigger>
+            </TabsList>
+
+            {collectionsUnlocked ? (
+              <Button
+                className="gap-2"
+                onClick={() => setCreateCollectionOpen(true)}
+              >
+                <FolderPlus className="size-4" />
+                New Collection
+              </Button>
+            ) : (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    className="gap-2 opacity-50 cursor-not-allowed"
+                    disabled
+                  >
+                    <FolderPlus className="size-4" />
+                    New Collection
+                    <Lock size={12} />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  Collections are available on Velocity and above
+                </TooltipContent>
+              </Tooltip>
+            )}
+          </div>
         </div>
-      </div>
 
-      {/* ── Row 2: Upload zone ── */}
-      <DocumentUploadZone
-        onFileSelected={handleFileSelected}
-        disabled={uploadMutation.isPending}
-      />
+        {/* ── Row 2: Upload zone ── */}
+        <DocumentUploadZone
+          onFileSelected={handleFileSelected}
+          disabled={uploadMutation.isPending}
+        />
 
-      {/* ── Row 3: Content ── */}
-      <div className="mt-4">
+        {/* ── Row 3: Content ── */}
+        <div className="mt-4">
+          {/* All */}
+          <TabsContent value="all" className="mt-4 space-y-4">
+            {filteredDocs.length === 0 ? (
+              isFilterActive ? (
+                <Empty className="py-20 border border-dashed rounded-2xl bg-muted/5">
+                  <EmptyHeader>
+                    <EmptyMedia variant="icon">
+                      {selectedStatus === 'Archived' ? (
+                        <FolderOpen />
+                      ) : (
+                        <Search />
+                      )}
+                    </EmptyMedia>
+                    <EmptyTitle className="font-normal text-xl">
+                      {selectedStatus === 'Archived'
+                        ? 'No archived documents'
+                        : 'No documents match your search'}
+                    </EmptyTitle>
+                    <EmptyDescription className="font-normal">
+                      {selectedStatus === 'Archived'
+                        ? 'No documents have been archived yet.'
+                        : 'Try adjusting your filters or search terms.'}
+                    </EmptyDescription>
+                  </EmptyHeader>
+                  {selectedStatus !== 'Archived' && (
+                    <EmptyContent className="mt-4">
+                      <Button
+                        variant="link"
+                        onClick={clearFilters}
+                        className="text-primary font-medium"
+                      >
+                        Clear filters
+                      </Button>
+                    </EmptyContent>
+                  )}
+                </Empty>
+              ) : (
+                <Empty className="py-20 border border-dashed rounded-2xl bg-muted/5">
+                  <EmptyHeader>
+                    <EmptyMedia variant="icon">
+                      <FolderOpen />
+                    </EmptyMedia>
+                    <EmptyTitle className="font-normal text-xl">
+                      No active documents
+                    </EmptyTitle>
+                    <EmptyDescription className="font-normal">
+                      {archivedCount > 0
+                        ? `You have ${archivedCount} archived document${archivedCount !== 1 ? 's' : ''}.`
+                        : 'Upload a contract, brief, or brand asset to get started.'}
+                    </EmptyDescription>
+                  </EmptyHeader>
+                  {archivedCount > 0 && (
+                    <EmptyContent className="mt-4">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setSelectedStatus('Archived')}
+                      >
+                        View archived ({archivedCount})
+                      </Button>
+                    </EmptyContent>
+                  )}
+                </Empty>
+              )
+            ) : (
+              <>
+                {filteredCollections.length > 0 && (
+                  <div className="space-y-3">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                      Collections
+                    </p>
+                    {filteredCollections.map((col) => (
+                      <CollectionCard
+                        key={col.id}
+                        collection={col}
+                        documents={applyFilters(
+                          allDocs.filter((d) => d.collection_id === col.id),
+                        )}
+                        locked={!collectionsUnlocked}
+                      />
+                    ))}
+                  </div>
+                )}
+                {ungroupedDocs.length > 0 && (
+                  <div className="space-y-3">
+                    {filteredCollections.length > 0 && (
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                        Ungrouped
+                      </p>
+                    )}
+                    <div className="space-y-2">
+                      {ungroupedDocs.map((doc) => (
+                        <DocumentCard key={doc.id} doc={doc} />
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </TabsContent>
 
-        {/* All */}
-        <TabsContent value="all" className="mt-4 space-y-4">
-          {filteredDocs.length === 0 ? (
-            isFilterActive ? (
+          {/* Collections */}
+          <TabsContent value="collections" className="mt-4 space-y-3">
+            {filteredCollections.length === 0 ? (
               <Empty className="py-20 border border-dashed rounded-2xl bg-muted/5">
                 <EmptyHeader>
                   <EmptyMedia variant="icon">
-                    {selectedStatus === 'Archived' ? <FolderOpen /> : <Search />}
+                    <FolderOpen />
                   </EmptyMedia>
                   <EmptyTitle className="font-normal text-xl">
-                    {selectedStatus === 'Archived' ? 'No archived documents' : 'No documents match your search'}
+                    No collections yet
                   </EmptyTitle>
-                  <EmptyDescription className="font-light">
-                    {selectedStatus === 'Archived'
-                      ? 'No documents have been archived yet.'
-                      : 'Try adjusting your filters or search terms.'}
+                  <EmptyDescription className="font-normal">
+                    Create a collection to group related documents.
                   </EmptyDescription>
-                </EmptyHeader>
-                {selectedStatus !== 'Archived' && (
-                  <EmptyContent className="mt-4">
-                    <Button variant="link" onClick={clearFilters} className="text-primary font-medium">
-                      Clear filters
-                    </Button>
-                  </EmptyContent>
-                )}
-              </Empty>
-            ) : (
-              <Empty className="py-20 border border-dashed rounded-2xl bg-muted/5">
-                <EmptyHeader>
-                  <EmptyMedia variant="icon"><FolderOpen /></EmptyMedia>
-                  <EmptyTitle className="font-normal text-xl">No active documents</EmptyTitle>
-                  <EmptyDescription className="font-light">
-                    {archivedCount > 0
-                      ? `You have ${archivedCount} archived document${archivedCount !== 1 ? 's' : ''}.`
-                      : 'Upload a contract, brief, or brand asset to get started.'}
-                  </EmptyDescription>
-                </EmptyHeader>
-                {archivedCount > 0 && (
-                  <EmptyContent className="mt-4">
-                    <Button variant="outline" size="sm" onClick={() => setSelectedStatus('Archived')}>
-                      View archived ({archivedCount})
-                    </Button>
-                  </EmptyContent>
-                )}
-              </Empty>
-            )
-          ) : (
-            <>
-              {filteredCollections.length > 0 && (
-                <div className="space-y-3">
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Collections</p>
-                  {filteredCollections.map((col) => (
-                    <CollectionCard
-                      key={col.id}
-                      collection={col}
-                      documents={applyFilters(allDocs.filter((d) => d.collection_id === col.id))}
-                      locked={!collectionsUnlocked}
-                    />
-                  ))}
-                </div>
-              )}
-              {ungroupedDocs.length > 0 && (
-                <div className="space-y-3">
-                  {filteredCollections.length > 0 && (
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Ungrouped</p>
-                  )}
-                  <div className="space-y-2">
-                    {ungroupedDocs.map((doc) => <DocumentCard key={doc.id} doc={doc} />)}
-                  </div>
-                </div>
-              )}
-            </>
-          )}
-        </TabsContent>
-
-        {/* Collections */}
-        <TabsContent value="collections" className="mt-4 space-y-3">
-          {filteredCollections.length === 0 ? (
-            <Empty className="py-20 border border-dashed rounded-2xl bg-muted/5">
-              <EmptyHeader>
-                <EmptyMedia variant="icon"><FolderOpen /></EmptyMedia>
-                <EmptyTitle className="font-normal text-xl">No collections yet</EmptyTitle>
-                <EmptyDescription className="font-light">Create a collection to group related documents.</EmptyDescription>
-              </EmptyHeader>
-              <EmptyContent className="mt-4">
-                {collectionsUnlocked ? (
-                  <Button variant="outline" size="sm" onClick={() => setCreateCollectionOpen(true)}>
-                    <FolderPlus className="size-4 mr-2" /> New Collection
-                  </Button>
-                ) : (
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button variant="outline" size="sm" className="opacity-50 cursor-not-allowed" disabled>
-                        <FolderPlus className="size-4 mr-2" /> New Collection <Lock size={11} className="ml-1.5" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Collections are available on Velocity and above</TooltipContent>
-                  </Tooltip>
-                )}
-              </EmptyContent>
-            </Empty>
-          ) : (
-            filteredCollections.map((col) => (
-              <CollectionCard
-                key={col.id}
-                collection={col}
-                documents={applyFilters(allDocs.filter((d) => d.collection_id === col.id))}
-                locked={!collectionsUnlocked}
-              />
-            ))
-          )}
-        </TabsContent>
-
-        {/* Ungrouped */}
-        <TabsContent value="ungrouped" className="mt-4">
-          {ungroupedDocs.length === 0 ? (
-            isFilterActive ? (
-              <Empty className="py-20 border border-dashed rounded-2xl bg-muted/5">
-                <EmptyHeader>
-                  <EmptyMedia variant="icon"><Search /></EmptyMedia>
-                  <EmptyTitle className="font-normal text-xl">No ungrouped documents match your search</EmptyTitle>
-                  <EmptyDescription className="font-light">Try adjusting your filters or search terms.</EmptyDescription>
                 </EmptyHeader>
                 <EmptyContent className="mt-4">
-                  <Button variant="link" onClick={clearFilters} className="text-primary font-medium">
-                    Clear filters
-                  </Button>
+                  {collectionsUnlocked ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCreateCollectionOpen(true)}
+                    >
+                      <FolderPlus className="size-4 mr-2" /> New Collection
+                    </Button>
+                  ) : (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="opacity-50 cursor-not-allowed"
+                          disabled
+                        >
+                          <FolderPlus className="size-4 mr-2" /> New Collection{' '}
+                          <Lock size={11} className="ml-1.5" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        Collections are available on Velocity and above
+                      </TooltipContent>
+                    </Tooltip>
+                  )}
                 </EmptyContent>
               </Empty>
             ) : (
-              <Empty className="py-12 border border-dashed rounded-2xl bg-muted/5">
-                <EmptyHeader>
-                  <EmptyMedia variant="icon"><FolderOpen /></EmptyMedia>
-                  <EmptyTitle className="font-normal text-xl">No ungrouped documents</EmptyTitle>
-                  <EmptyDescription className="font-light">All your documents are organised into collections.</EmptyDescription>
-                </EmptyHeader>
-              </Empty>
-            )
-          ) : (
-            <div className="space-y-2">
-              {ungroupedDocs.map((doc) => <DocumentCard key={doc.id} doc={doc} />)}
-            </div>
-          )}
-        </TabsContent>
-      </div>
-    </Tabs>
+              filteredCollections.map((col) => (
+                <CollectionCard
+                  key={col.id}
+                  collection={col}
+                  documents={applyFilters(
+                    allDocs.filter((d) => d.collection_id === col.id),
+                  )}
+                  locked={!collectionsUnlocked}
+                />
+              ))
+            )}
+          </TabsContent>
+
+          {/* Ungrouped */}
+          <TabsContent value="ungrouped" className="mt-4">
+            {ungroupedDocs.length === 0 ? (
+              isFilterActive ? (
+                <Empty className="py-20 border border-dashed rounded-2xl bg-muted/5">
+                  <EmptyHeader>
+                    <EmptyMedia variant="icon">
+                      <Search />
+                    </EmptyMedia>
+                    <EmptyTitle className="font-normal text-xl">
+                      No ungrouped documents match your search
+                    </EmptyTitle>
+                    <EmptyDescription className="font-normal">
+                      Try adjusting your filters or search terms.
+                    </EmptyDescription>
+                  </EmptyHeader>
+                  <EmptyContent className="mt-4">
+                    <Button
+                      variant="link"
+                      onClick={clearFilters}
+                      className="text-primary font-medium"
+                    >
+                      Clear filters
+                    </Button>
+                  </EmptyContent>
+                </Empty>
+              ) : (
+                <Empty className="py-12 border border-dashed rounded-2xl bg-muted/5">
+                  <EmptyHeader>
+                    <EmptyMedia variant="icon">
+                      <FolderOpen />
+                    </EmptyMedia>
+                    <EmptyTitle className="font-normal text-xl">
+                      No ungrouped documents
+                    </EmptyTitle>
+                    <EmptyDescription className="font-normal">
+                      All your documents are organised into collections.
+                    </EmptyDescription>
+                  </EmptyHeader>
+                </Empty>
+              )
+            ) : (
+              <div className="space-y-2">
+                {ungroupedDocs.map((doc) => (
+                  <DocumentCard key={doc.id} doc={doc} />
+                ))}
+              </div>
+            )}
+          </TabsContent>
+        </div>
+      </Tabs>
 
       {/* ── Dialogs ── */}
       <UploadMetaDialog

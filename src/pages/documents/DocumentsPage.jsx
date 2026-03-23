@@ -149,7 +149,9 @@ export default function DocumentsPage() {
     return true
   })
 
-  const archivedCount = (documents ?? []).filter((d) => d.status === 'Archived').length
+  const archivedCount = (documents ?? []).filter(
+    (d) => d.status === 'Archived',
+  ).length
 
   const ungroupedDocs = filteredDocs.filter((d) => !d.collection_id)
 
@@ -254,7 +256,7 @@ export default function DocumentsPage() {
         {/* ── SECTION 1: HEADER ── */}
         <div className="flex items-center justify-between">
           <div className="space-y-1">
-            <h1 className="text-3xl font-light tracking-tight text-foreground">
+            <h1 className="text-3xl font-normal tracking-tight text-foreground">
               Documents{' '}
               {filteredDocs.length > 0 && (
                 <span className="text-muted-foreground/50 ml-2 font-extralight">
@@ -262,7 +264,7 @@ export default function DocumentsPage() {
                 </span>
               )}
             </h1>
-            <p className="text-sm text-muted-foreground font-light">
+            <p className="text-sm text-muted-foreground font-normal">
               All documents across your clients and workspace.
             </p>
           </div>
@@ -427,19 +429,22 @@ export default function DocumentsPage() {
                     <Empty className="py-20 border border-dashed rounded-2xl bg-muted/5">
                       <EmptyContent>
                         <EmptyMedia variant="icon">
-                          {isFilterActive
-                            ? <Search className="size-6 text-muted-foreground/60" />
-                            : <FolderOpen className="size-6 text-muted-foreground/60" />}
+                          {isFilterActive ? (
+                            <Search className="size-6 text-muted-foreground/60" />
+                          ) : (
+                            <FolderOpen className="size-6 text-muted-foreground/60" />
+                          )}
                         </EmptyMedia>
                         <EmptyHeader>
                           <EmptyTitle className="font-normal text-xl">
                             {isFilterActive
-                              ? selectedStatus === 'Active' || selectedStatus === 'all'
+                              ? selectedStatus === 'Active' ||
+                                selectedStatus === 'all'
                                 ? 'No documents match your filters'
                                 : 'No archived documents'
                               : 'No active documents'}
                           </EmptyTitle>
-                          <EmptyDescription className="font-light">
+                          <EmptyDescription className="font-normal">
                             {isFilterActive
                               ? selectedStatus === 'Archived'
                                 ? 'No documents have been archived yet.'
@@ -508,8 +513,10 @@ export default function DocumentsPage() {
                           <FolderOpen className="size-6 text-muted-foreground/60" />
                         </EmptyMedia>
                         <EmptyHeader>
-                          <EmptyTitle className="font-normal text-xl">No collections yet</EmptyTitle>
-                          <EmptyDescription className="font-light">
+                          <EmptyTitle className="font-normal text-xl">
+                            No collections yet
+                          </EmptyTitle>
+                          <EmptyDescription className="font-normal">
                             {activeClientId
                               ? 'Open this client\u2019s Documents tab to create a collection.'
                               : 'Open a client\u2019s Documents tab to create collections.'}

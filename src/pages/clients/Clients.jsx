@@ -81,12 +81,17 @@ export default function Clients() {
   }
 
   const isFilterActive =
-    search !== '' || urgency !== 'all' || industry !== 'all' || tier !== 'all' || status !== 'ACTIVE'
+    search !== '' ||
+    urgency !== 'all' ||
+    industry !== 'all' ||
+    tier !== 'all' ||
+    status !== 'ACTIVE'
   const resetFilters = () => setSearchParams({})
 
   const { data, isLoading } = useQuery({
     queryKey: ['clients', user.id, { search, industry, tier, status }],
-    queryFn: () => fetchClients({ search, industry, tier, urgency: 'all', status }),
+    queryFn: () =>
+      fetchClients({ search, industry, tier, urgency: 'all', status }),
     enabled: !!user?.id,
   })
 
@@ -188,7 +193,7 @@ export default function Clients() {
         {/* --- SECTION 1: HEADER & PRIMARY ACTION --- */}
         <div className="flex items-end justify-between">
           <div className="space-y-1">
-            <h1 className="text-3xl font-light tracking-tight text-foreground">
+            <h1 className="text-3xl font-normal tracking-tight text-foreground">
               Clients{' '}
               {realClientCount > 0 && (
                 <span className="text-muted-foreground/50 ml-2 font-extralight">
@@ -196,7 +201,7 @@ export default function Clients() {
                 </span>
               )}
             </h1>
-            <p className="text-sm text-muted-foreground font-light">
+            <p className="text-sm text-muted-foreground font-normal">
               Manage your active partnerships and social pipelines.
             </p>
           </div>
@@ -266,9 +271,11 @@ export default function Clients() {
           <Empty className="py-20 border border-dashed rounded-2xl bg-muted/5">
             <EmptyContent>
               <EmptyMedia variant="icon">
-                {isFilterActive
-                  ? <Search className="size-6 text-muted-foreground/60" />
-                  : <UserStar className="size-6 text-muted-foreground/60" />}
+                {isFilterActive ? (
+                  <Search className="size-6 text-muted-foreground/60" />
+                ) : (
+                  <UserStar className="size-6 text-muted-foreground/60" />
+                )}
               </EmptyMedia>
               <EmptyHeader>
                 <EmptyTitle className="font-normal text-xl">
@@ -276,7 +283,7 @@ export default function Clients() {
                     ? 'No clients match your criteria'
                     : 'Ready to scale your agency?'}
                 </EmptyTitle>
-                <EmptyDescription className="font-light">
+                <EmptyDescription className="font-normal">
                   {isFilterActive
                     ? 'Adjust your filters or search terms to find specific client profiles.'
                     : 'Onboard your first partner to start managing their content strategy and workflow.'}
@@ -295,7 +302,9 @@ export default function Clients() {
                   onClick={handleCreateClick}
                   variant="outline"
                   size="sm"
-                  disabled={isSubLoading || subscription?.is_client_limit_reached}
+                  disabled={
+                    isSubLoading || subscription?.is_client_limit_reached
+                  }
                 >
                   <Plus className="size-4 mr-2" />
                   Onboard Your First Client

@@ -67,7 +67,7 @@ export default function LedgerTab({ clientId, subTabs }) {
       header: 'Date',
       width: '140px', // Fixed width for dates
       headerClassName: 'pl-6',
-      cellClassName: 'pl-6 text-muted-foreground font-light text-sm',
+      cellClassName: 'pl-6 text-muted-foreground font-normal text-sm',
       render: (t) => format(new Date(t.date), 'MMM d, yyyy'),
     },
     {
@@ -223,7 +223,7 @@ export default function LedgerTab({ clientId, subTabs }) {
         {subTabs ? (
           subTabs
         ) : (
-          <span className="text-2xl font-normal">Ledger - Transactions</span>
+          <span className="text-3xl font-normal">Ledger - Transactions</span>
         )}
 
         <div className="flex items-center gap-3 w-full md:w-auto">
@@ -276,23 +276,25 @@ export default function LedgerTab({ clientId, subTabs }) {
         <Empty className="py-20 border border-dashed rounded-2xl bg-muted/5">
           <EmptyContent>
             <EmptyMedia variant="icon">
-              {(searchTerm || filterMode !== 'ALL')
-                ? <Search className="size-6 text-muted-foreground/60" />
-                : <Receipt className="size-6 text-muted-foreground/60" />}
+              {searchTerm || filterMode !== 'ALL' ? (
+                <Search className="size-6 text-muted-foreground/60" />
+              ) : (
+                <Receipt className="size-6 text-muted-foreground/60" />
+              )}
             </EmptyMedia>
             <EmptyHeader>
               <EmptyTitle className="font-normal text-xl">
-                {(searchTerm || filterMode !== 'ALL')
+                {searchTerm || filterMode !== 'ALL'
                   ? 'No transactions found'
                   : 'No transactions yet'}
               </EmptyTitle>
-              <EmptyDescription className="font-light">
-                {(searchTerm || filterMode !== 'ALL')
+              <EmptyDescription className="font-normal">
+                {searchTerm || filterMode !== 'ALL'
                   ? 'No transactions match your current filters. Try adjusting your search.'
                   : 'Record your first transaction to start tracking agency income and expenses.'}
               </EmptyDescription>
             </EmptyHeader>
-            {(searchTerm || filterMode !== 'ALL') ? (
+            {searchTerm || filterMode !== 'ALL' ? (
               <Button
                 variant="link"
                 onClick={() => {
@@ -304,7 +306,11 @@ export default function LedgerTab({ clientId, subTabs }) {
                 Clear filters
               </Button>
             ) : (
-              <Button variant="outline" size="sm" onClick={() => setIsDialogOpen(true)}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsDialogOpen(true)}
+              >
                 <Plus className="size-4 mr-2" />
                 Record Transaction
               </Button>

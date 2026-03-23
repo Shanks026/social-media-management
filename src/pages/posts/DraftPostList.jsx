@@ -34,7 +34,12 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog'
-import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip'
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+  TooltipProvider,
+} from '@/components/ui/tooltip'
 import DraftPostForm from './DraftPostForm'
 import { AssignCampaignDialog } from '@/components/campaigns/AssignCampaignDialog'
 import { useSubscription } from '@/api/useSubscription'
@@ -161,7 +166,8 @@ export default function DraftPostList({ clientId, onCreatePost }) {
   const [postToAssign, setPostToAssign] = useState(null)
 
   // Only DRAFT and PENDING_APPROVAL are directly editable
-  const canEdit = (postStatus) => ['DRAFT', 'PENDING_APPROVAL'].includes(postStatus)
+  const canEdit = (postStatus) =>
+    ['DRAFT', 'PENDING_APPROVAL'].includes(postStatus)
   // NEEDS_REVISION creates a new version
   const canCreateNewVersion = (postStatus) => postStatus === 'NEEDS_REVISION'
   // Delete is allowed for everything except PUBLISHED
@@ -169,7 +175,7 @@ export default function DraftPostList({ clientId, onCreatePost }) {
 
   const createRevisionMutation = useMutation({
     mutationFn: (post) => createRevision(post.version_id, user?.id),
-    onSuccess: (newVersionId, post) => {
+    onSuccess: (newVersionId) => {
       queryClient.invalidateQueries({ queryKey: ['draft-posts', clientId] })
       queryClient.invalidateQueries({ queryKey: ['global-posts'] })
       toast.success('New version created')
@@ -203,7 +209,7 @@ export default function DraftPostList({ clientId, onCreatePost }) {
     onError: (error) => {
       toast.error('Failed to delete post: ' + error.message)
       setPostToDelete(null)
-    }
+    },
   })
 
   useEffect(() => {
@@ -282,17 +288,15 @@ export default function DraftPostList({ clientId, onCreatePost }) {
             <LayoutGrid className="size-6 text-muted-foreground/60" />
           </EmptyMedia>
           <EmptyHeader>
-            <EmptyTitle className="font-normal text-xl">No posts yet</EmptyTitle>
-            <EmptyDescription className="font-light">
+            <EmptyTitle className="font-normal text-xl">
+              No posts yet
+            </EmptyTitle>
+            <EmptyDescription className="font-normal">
               Create your first draft to start building content for this client.
             </EmptyDescription>
           </EmptyHeader>
           {onCreatePost && (
-            <Button
-              onClick={onCreatePost}
-              variant="outline"
-              className="mt-2"
-            >
+            <Button onClick={onCreatePost} variant="outline" className="mt-2">
               <Plus className="size-4 mr-2" />
               Create Post
             </Button>
@@ -313,7 +317,9 @@ export default function DraftPostList({ clientId, onCreatePost }) {
 
           // Calculate health
           const isCompleted = ['PUBLISHED', 'ARCHIVED'].includes(post.status)
-          const health = !isCompleted ? getUrgencyStatus(post.target_date) : null
+          const health = !isCompleted
+            ? getUrgencyStatus(post.target_date)
+            : null
 
           return (
             <div
@@ -327,13 +333,19 @@ export default function DraftPostList({ clientId, onCreatePost }) {
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
                   <StatusBadge status={getPublishState(post) || 'DRAFT'} />
-                  <Badge variant="secondary" className="rounded-full text-muted-foreground hover:bg-muted/80 text-xs px-2.5 py-0.5 border-none font-medium font-mono">
+                  <Badge
+                    variant="secondary"
+                    className="rounded-full text-muted-foreground hover:bg-muted/80 text-xs px-2.5 py-0.5 border-none font-medium font-mono"
+                  >
                     v{post.version_number || '1'}
                   </Badge>
                   {post.campaign_id && post.campaign_name && (
                     <Tooltip delayDuration={300}>
                       <TooltipTrigger asChild>
-                        <Badge variant="secondary" className="rounded-full flex items-center justify-center p-0 size-6 border-none hover:bg-muted/80">
+                        <Badge
+                          variant="secondary"
+                          className="rounded-full flex items-center justify-center p-0 size-6 border-none hover:bg-muted/80"
+                        >
                           <Megaphone className="h-3 w-3 text-muted-foreground" />
                         </Badge>
                       </TooltipTrigger>
@@ -342,11 +354,15 @@ export default function DraftPostList({ clientId, onCreatePost }) {
                       </TooltipContent>
                     </Tooltip>
                   )}
-                  {post.deliverable_type && DELIVERABLE_TYPE_LABELS[post.deliverable_type] && (
-                    <Badge variant="outline" className="rounded-full text-[10px] px-2 py-0.5 font-medium text-muted-foreground border-border/60">
-                      {DELIVERABLE_TYPE_LABELS[post.deliverable_type]}
-                    </Badge>
-                  )}
+                  {post.deliverable_type &&
+                    DELIVERABLE_TYPE_LABELS[post.deliverable_type] && (
+                      <Badge
+                        variant="outline"
+                        className="rounded-full text-[10px] px-2 py-0.5 font-medium text-muted-foreground border-border/60"
+                      >
+                        {DELIVERABLE_TYPE_LABELS[post.deliverable_type]}
+                      </Badge>
+                    )}
                 </div>
 
                 <div onClick={(e) => e.stopPropagation()}>
@@ -360,7 +376,10 @@ export default function DraftPostList({ clientId, onCreatePost }) {
                         <MoreVertical className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-48 rounded-xl">
+                    <DropdownMenuContent
+                      align="end"
+                      className="w-48 rounded-xl"
+                    >
                       <DropdownMenuItem
                         disabled={!canEdit(post.status || 'DRAFT')}
                         className="cursor-pointer font-medium text-foreground py-2"
@@ -383,7 +402,7 @@ export default function DraftPostList({ clientId, onCreatePost }) {
                           <Plus className="h-4 w-4 mr-2" /> Create New Version
                         </DropdownMenuItem>
                       )}
-                      
+
                       {/* Assign to Campaign logic */}
                       {sub?.campaigns && (
                         <DropdownMenuItem
@@ -394,10 +413,11 @@ export default function DraftPostList({ clientId, onCreatePost }) {
                             setAssignCampaignOpen(true)
                           }}
                         >
-                          <FolderOpen className="h-4 w-4 mr-2 text-muted-foreground" /> Assign to Campaign
+                          <FolderOpen className="h-4 w-4 mr-2 text-muted-foreground" />{' '}
+                          Assign to Campaign
                         </DropdownMenuItem>
                       )}
-                      
+
                       <DropdownMenuItem
                         disabled={!canDelete(post.status || 'DRAFT')}
                         className="cursor-pointer font-medium text-destructive focus:bg-destructive/10 focus:text-destructive py-2"
@@ -442,7 +462,7 @@ export default function DraftPostList({ clientId, onCreatePost }) {
               {/* Dotted Divider & Footer */}
               <div className="mt-auto">
                 <hr className="border-t border-dashed border-border mb-4" />
-                
+
                 <div className="flex items-center justify-between">
                   {/* Platforms */}
                   <div className="flex items-center">
@@ -459,46 +479,27 @@ export default function DraftPostList({ clientId, onCreatePost }) {
                   </div>
 
                   {/* Date Badge and Urgency Info */}
-                  <div
-                    className={cn(
-                      "rounded-full px-3 py-1.5 flex items-center justify-center gap-2 border shadow-sm",
-                      health?.label === 'Overdue'
-                        ? "bg-destructive/10 border-destructive/20 text-destructive"
-                        : "bg-muted/50 border-border/50 text-muted-foreground"
-                    )}
-                  >
-                    {health && health.color && (
-                      <div className="flex items-center gap-1.5">
-                        <div className="relative flex h-2 w-2 items-center justify-center">
-                          {health.pulse && (
-                            <span
-                              className={cn(
-                                'absolute inline-flex h-full w-full animate-ping rounded-full opacity-75',
-                                health.color
-                              )}
-                            />
-                          )}
-                          <span
-                            className={cn(
-                              'relative inline-flex h-2 w-2 rounded-full',
-                              health.color
-                            )}
-                          />
-                        </div>
-                        {['Overdue', 'Urgent'].includes(health.label) && (
-                          <span className="text-[10px] font-bold uppercase tracking-wider whitespace-nowrap">
-                            {health.label}
-                          </span>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {health && (
+                      <div className="relative flex size-2 items-center justify-center shrink-0">
+                        {health.pulse && (
+                          <span className={cn('absolute inline-flex h-full w-full animate-ping rounded-full opacity-75', health.color)} />
                         )}
+                        <span className={cn('relative inline-flex size-2 rounded-full', health.color)} />
                       </div>
                     )}
-                    <span className="text-[13px] font-medium tracking-tight whitespace-nowrap">
+                    <span className="text-xs font-medium text-foreground whitespace-nowrap">
                       {post.status === 'PUBLISHED'
-                        ? `Published on ${format(new Date(post.published_at || post.updated_at), 'd MMM, yyyy')}`
+                        ? format(new Date(post.published_at || post.updated_at), 'd MMM, yyyy')
                         : post.target_date
-                          ? format(new Date(post.target_date), "d MMMM yyyy '•' h:mm a")
+                          ? format(new Date(post.target_date), "d MMM yyyy '·' h:mm a")
                           : 'No Date Set'}
                     </span>
+                    {health?.label && ['Overdue', 'Urgent'].includes(health.label) && (
+                      <span className={cn('text-xs font-semibold', health.color.replace('bg-', 'text-'))}>
+                        {health.label}
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -593,7 +594,11 @@ export default function DraftPostList({ clientId, onCreatePost }) {
             </Button>
             <Button
               variant="destructive"
-              onClick={() => deleteMutation.mutate(postToDelete?.actual_post_id || postToDelete?.id)}
+              onClick={() =>
+                deleteMutation.mutate(
+                  postToDelete?.actual_post_id || postToDelete?.id,
+                )
+              }
               disabled={deleteMutation.isPending}
               className="rounded-xl w-full sm:w-auto font-medium"
             >

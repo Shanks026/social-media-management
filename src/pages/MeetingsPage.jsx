@@ -51,7 +51,12 @@ import {
 
 import { useHeader } from '@/components/misc/header-context'
 import { useClients } from '@/api/clients'
-import { fetchMeetings, deleteMeeting, markMeetingCompleted, unmarkMeetingCompleted } from '@/api/meetings'
+import {
+  fetchMeetings,
+  deleteMeeting,
+  markMeetingCompleted,
+  unmarkMeetingCompleted,
+} from '@/api/meetings'
 import CreateMeetingDialog from '@/components/CreateMeetingDialog'
 import { ClientAvatar } from '@/components/NoteRow'
 import {
@@ -131,7 +136,7 @@ function MeetingCard({ meeting, clientMap }) {
       <div
         className={cn(
           'group flex flex-col bg-card/50 rounded-xl shadow-sm ring-1 ring-border/50 overflow-hidden transition-all hover:shadow-md',
-          (isMeetingPast && !isCompleted) && 'opacity-60',
+          isMeetingPast && !isCompleted && 'opacity-60',
           isCompleted && 'opacity-50',
         )}
       >
@@ -169,7 +174,11 @@ function MeetingCard({ meeting, clientMap }) {
                         : 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
                   )}
                 >
-                  {isCompleted ? 'Completed' : isMeetingPast ? 'Missed' : 'Upcoming'}
+                  {isCompleted
+                    ? 'Completed'
+                    : isMeetingPast
+                      ? 'Missed'
+                      : 'Upcoming'}
                 </Badge>
               </div>
 
@@ -412,7 +421,12 @@ function KanbanColumn({ id, title, count, accentClass, children }) {
 
 // ─── Kanban Meetings View ─────────────────────────────────────────────────────
 
-function KanbanMeetingsView({ meetings, clientMap, queryClient, selectedClient }) {
+function KanbanMeetingsView({
+  meetings,
+  clientMap,
+  queryClient,
+  selectedClient,
+}) {
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
   )
@@ -439,7 +453,9 @@ function KanbanMeetingsView({ meetings, clientMap, queryClient, selectedClient }
       const previous = queryClient.getQueryData(queryKey)
       queryClient.setQueryData(queryKey, (old = []) =>
         old.map((m) =>
-          m.id === active.id ? { ...m, completed_at: new Date().toISOString() } : m,
+          m.id === active.id
+            ? { ...m, completed_at: new Date().toISOString() }
+            : m,
         ),
       )
       markMeetingCompleted(active.id)
@@ -451,9 +467,7 @@ function KanbanMeetingsView({ meetings, clientMap, queryClient, selectedClient }
     } else if (targetColumn !== 'COMPLETED' && meeting.completed_at) {
       const previous = queryClient.getQueryData(queryKey)
       queryClient.setQueryData(queryKey, (old = []) =>
-        old.map((m) =>
-          m.id === active.id ? { ...m, completed_at: null } : m,
-        ),
+        old.map((m) => (m.id === active.id ? { ...m, completed_at: null } : m)),
       )
       unmarkMeetingCompleted(active.id)
         .then(() => toast.success('Meeting restored'))
@@ -571,7 +585,8 @@ export default function MeetingsPage() {
       const isMeetingPast = isPast(new Date(meeting.datetime))
 
       if (statusTab === 'COMPLETED' && !isCompleted) return false
-      if (statusTab === 'UPCOMING' && (isCompleted || isMeetingPast)) return false
+      if (statusTab === 'UPCOMING' && (isCompleted || isMeetingPast))
+        return false
       if (statusTab === 'PAST' && (isCompleted || !isMeetingPast)) return false
 
       if (search.trim()) {
@@ -610,10 +625,15 @@ export default function MeetingsPage() {
     )
     // Sort completed descending (most recently completed first)
     completed.sort(
-      (a, b) => new Date(b.completed_at).getTime() - new Date(a.completed_at).getTime(),
+      (a, b) =>
+        new Date(b.completed_at).getTime() - new Date(a.completed_at).getTime(),
     )
 
-    return { upcomingMeetings: upcoming, pastMeetings: past, completedMeetings: completed }
+    return {
+      upcomingMeetings: upcoming,
+      pastMeetings: past,
+      completedMeetings: completed,
+    }
   }, [filteredMeetings])
 
   const counts = useMemo(() => {
@@ -633,7 +653,9 @@ export default function MeetingsPage() {
     }
   }, [allMeetings])
 
-  const isFiltered = Boolean(search || selectedClient !== 'all' || statusTab !== 'ALL')
+  const isFiltered = Boolean(
+    search || selectedClient !== 'all' || statusTab !== 'ALL',
+  )
 
   // ── Render ────────────────────────────────────────────────────────────────
 
@@ -803,15 +825,17 @@ export default function MeetingsPage() {
         <Empty className="py-20 border border-dashed rounded-2xl bg-muted/5">
           <EmptyContent>
             <EmptyMedia variant="icon">
-              {isFiltered
-                ? <Search className="size-6 text-muted-foreground/60" />
-                : <Calendar className="size-6 text-muted-foreground/60" />}
+              {isFiltered ? (
+                <Search className="size-6 text-muted-foreground/60" />
+              ) : (
+                <Calendar className="size-6 text-muted-foreground/60" />
+              )}
             </EmptyMedia>
             <EmptyHeader>
               <EmptyTitle className="font-normal text-xl">
                 {isFiltered ? 'No meetings found' : 'No meetings scheduled'}
               </EmptyTitle>
-              <EmptyDescription className="font-light">
+              <EmptyDescription className="font-normal">
                 {isFiltered
                   ? 'No meetings match your current filters. Try adjusting your search.'
                   : 'Schedule a meeting to stay on top of client calls, check-ins, and reviews.'}
@@ -832,7 +856,9 @@ export default function MeetingsPage() {
             ) : (
               <CreateMeetingDialog
                 onSuccess={() => {
-                  queryClient.invalidateQueries({ queryKey: ['global-meetings'] })
+                  queryClient.invalidateQueries({
+                    queryKey: ['global-meetings'],
+                  })
                   queryClient.invalidateQueries({ queryKey: ['meetings'] })
                 }}
               >

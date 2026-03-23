@@ -56,7 +56,10 @@ import { cn } from '@/lib/utils'
 // ── Status config ─────────────────────────────────────────────────────────────
 
 const STATUS_CONFIG = {
-  draft: { label: 'Draft', className: 'bg-muted text-muted-foreground border-transparent' },
+  draft: {
+    label: 'Draft',
+    className: 'bg-muted text-muted-foreground border-transparent',
+  },
   sent: {
     label: 'Sent',
     className:
@@ -74,7 +77,8 @@ const STATUS_CONFIG = {
   },
   declined: {
     label: 'Declined',
-    className: 'bg-red-100 text-red-700 border-transparent dark:bg-red-950 dark:text-red-300',
+    className:
+      'bg-red-100 text-red-700 border-transparent dark:bg-red-950 dark:text-red-300',
   },
   expired: {
     label: 'Expired',
@@ -88,12 +92,27 @@ const STATUS_CONFIG = {
   },
 }
 
-const STATUS_TABS = ['all', 'draft', 'sent', 'viewed', 'accepted', 'declined', 'expired', 'archived']
+const STATUS_TABS = [
+  'all',
+  'draft',
+  'sent',
+  'viewed',
+  'accepted',
+  'declined',
+  'expired',
+  'archived',
+]
 
 function StatusBadge({ status }) {
-  const config = STATUS_CONFIG[status] ?? { label: status, className: 'bg-muted text-muted-foreground' }
+  const config = STATUS_CONFIG[status] ?? {
+    label: status,
+    className: 'bg-muted text-muted-foreground',
+  }
   return (
-    <Badge variant="outline" className={cn('text-[11px] font-medium capitalize', config.className)}>
+    <Badge
+      variant="outline"
+      className={cn('text-[11px] font-medium capitalize', config.className)}
+    >
       {config.label}
     </Badge>
   )
@@ -158,7 +177,8 @@ export function ProposalTab({ clientId }) {
       if (
         !p.title?.toLowerCase().includes(q) &&
         !p.prospect_name?.toLowerCase().includes(q)
-      ) return false
+      )
+        return false
     }
     return true
   })
@@ -166,8 +186,16 @@ export function ProposalTab({ clientId }) {
   async function handleDelete() {
     if (!deletingProposal) return
     try {
-      await deleteProposal.mutateAsync({ id: deletingProposal.id, status: deletingProposal.status, file_url: deletingProposal.file_url })
-      toast.success(deletingProposal.status === 'draft' ? 'Proposal deleted' : 'Proposal archived')
+      await deleteProposal.mutateAsync({
+        id: deletingProposal.id,
+        status: deletingProposal.status,
+        file_url: deletingProposal.file_url,
+      })
+      toast.success(
+        deletingProposal.status === 'draft'
+          ? 'Proposal deleted'
+          : 'Proposal archived',
+      )
     } catch (err) {
       toast.error(err.message || 'Something went wrong')
     } finally {
@@ -205,7 +233,12 @@ export function ProposalTab({ clientId }) {
             <DropdownMenuContent align="end" className="w-52">
               <DropdownMenuItem
                 onClick={() => {
-                  if (atLimit) { setUpgradeOpen(true) } else { setEditingProposal(null); setDialogOpen(true) }
+                  if (atLimit) {
+                    setUpgradeOpen(true)
+                  } else {
+                    setEditingProposal(null)
+                    setDialogOpen(true)
+                  }
                 }}
               >
                 <PenLine className="size-4 mr-2" />
@@ -213,7 +246,11 @@ export function ProposalTab({ clientId }) {
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => {
-                  if (atLimit) { setUpgradeOpen(true) } else { setUploadDialogOpen(true) }
+                  if (atLimit) {
+                    setUpgradeOpen(true)
+                  } else {
+                    setUploadDialogOpen(true)
+                  }
                 }}
               >
                 <Upload className="size-4 mr-2" />
@@ -242,9 +279,11 @@ export function ProposalTab({ clientId }) {
                   : 'border-transparent text-muted-foreground hover:text-foreground',
               )}
             >
-              {tab === 'all' ? 'All' : STATUS_CONFIG[tab]?.label ?? tab}
+              {tab === 'all' ? 'All' : (STATUS_CONFIG[tab]?.label ?? tab)}
               {count > 0 && (
-                <span className="ml-1.5 text-[10px] opacity-60 tabular-nums">{count}</span>
+                <span className="ml-1.5 text-[10px] opacity-60 tabular-nums">
+                  {count}
+                </span>
               )}
             </button>
           )
@@ -265,8 +304,10 @@ export function ProposalTab({ clientId }) {
               <FileText className="size-6 text-muted-foreground/60" />
             </EmptyMedia>
             <EmptyHeader>
-              <EmptyTitle className="font-normal text-lg">No Proposals</EmptyTitle>
-              <EmptyDescription className="font-light">
+              <EmptyTitle className="font-normal text-lg">
+                No Proposals
+              </EmptyTitle>
+              <EmptyDescription className="font-normal">
                 {search || activeTab !== 'all'
                   ? 'No proposals match your current filters.'
                   : 'No proposals for this client yet. Create the first one.'}
@@ -350,21 +391,24 @@ export function ProposalTab({ clientId }) {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => navigate(`/proposals/${proposal.id}`)}>
+                    <DropdownMenuItem
+                      onClick={() => navigate(`/proposals/${proposal.id}`)}
+                    >
                       <ChevronRight className="size-4 mr-2" />
                       View Details
                     </DropdownMenuItem>
-                    {proposal.status !== 'archived' && proposal.proposal_type !== 'uploaded' && (
-                      <DropdownMenuItem
-                        onClick={() => {
-                          setEditingProposal(proposal)
-                          setDialogOpen(true)
-                        }}
-                      >
-                        <Pencil className="size-4 mr-2" />
-                        Edit
-                      </DropdownMenuItem>
-                    )}
+                    {proposal.status !== 'archived' &&
+                      proposal.proposal_type !== 'uploaded' && (
+                        <DropdownMenuItem
+                          onClick={() => {
+                            setEditingProposal(proposal)
+                            setDialogOpen(true)
+                          }}
+                        >
+                          <Pencil className="size-4 mr-2" />
+                          Edit
+                        </DropdownMenuItem>
+                      )}
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
                       onClick={() => setDeletingProposal(proposal)}
@@ -426,18 +470,21 @@ export function ProposalTab({ clientId }) {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {deletingProposal?.status === 'draft' ? 'Delete Proposal?' : 'Archive Proposal?'}
+              {deletingProposal?.status === 'draft'
+                ? 'Delete Proposal?'
+                : 'Archive Proposal?'}
             </AlertDialogTitle>
             <AlertDialogDescription>
               {deletingProposal?.status === 'draft' ? (
                 <>
                   This will permanently delete{' '}
-                  <strong>{deletingProposal?.title}</strong>. This action cannot be undone.
+                  <strong>{deletingProposal?.title}</strong>. This action cannot
+                  be undone.
                 </>
               ) : (
                 <>
-                  <strong>{deletingProposal?.title}</strong> will be archived and hidden from
-                  active proposals.
+                  <strong>{deletingProposal?.title}</strong> will be archived
+                  and hidden from active proposals.
                 </>
               )}
             </AlertDialogDescription>

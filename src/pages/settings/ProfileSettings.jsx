@@ -62,9 +62,7 @@ export default function ProfileSettings() {
   }
 
   // Profile fields
-  const [fullName, setFullName] = useState(
-    user?.user_metadata?.full_name || '',
-  )
+  const [fullName, setFullName] = useState(user?.user_metadata?.full_name || '')
   const [avatarUrl, setAvatarUrl] = useState(
     user?.user_metadata?.avatar_url || '',
   )
@@ -169,10 +167,8 @@ export default function ProfileSettings() {
       {/* ── Section: Avatar & Identity ── */}
       <section className="space-y-8">
         <div className="space-y-1">
-          <h2 className="text-2xl font-normal tracking-tight">
-            Profile
-          </h2>
-          <p className="text-sm text-muted-foreground font-light">
+          <h2 className="text-2xl font-normal tracking-tight">Profile</h2>
+          <p className="text-sm text-muted-foreground font-normal">
             Your personal identity and avatar.
           </p>
         </div>
@@ -228,8 +224,17 @@ export default function ProfileSettings() {
 
           {hasChanges && (
             <div className="self-end pb-0.5">
-              <Button onClick={handleSaveProfile} disabled={isSaving} size="sm" className="gap-2">
-                {isSaving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+              <Button
+                onClick={handleSaveProfile}
+                disabled={isSaving}
+                size="sm"
+                className="gap-2"
+              >
+                {isSaving ? (
+                  <Loader2 size={14} className="animate-spin" />
+                ) : (
+                  <Save size={14} />
+                )}
                 Save Changes
               </Button>
             </div>
@@ -298,7 +303,7 @@ export default function ProfileSettings() {
       <section className="space-y-6">
         <div className="space-y-1">
           <h2 className="text-lg font-medium tracking-tight">Subscription</h2>
-          <p className="text-sm text-muted-foreground font-light">
+          <p className="text-sm text-muted-foreground font-normal">
             Manage your agency&apos;s billing and feature access.
           </p>
         </div>
@@ -320,7 +325,7 @@ export default function ProfileSettings() {
       <section className="space-y-6">
         <div className="space-y-1">
           <h2 className="text-lg font-medium tracking-tight">Security</h2>
-          <p className="text-sm text-muted-foreground font-light">
+          <p className="text-sm text-muted-foreground font-normal">
             Manage your password and authentication settings.
           </p>
         </div>
@@ -329,7 +334,8 @@ export default function ProfileSettings() {
           <div className="space-y-0.5">
             <p className="text-sm font-semibold text-foreground">Password</p>
             <p className="text-xs text-muted-foreground">
-              Ensure your account is using a long, random password to stay secure.
+              Ensure your account is using a long, random password to stay
+              secure.
             </p>
           </div>
           <Button
@@ -351,7 +357,7 @@ export default function ProfileSettings() {
           <h2 className="text-lg font-medium text-destructive tracking-tight">
             Danger Zone
           </h2>
-          <p className="text-sm text-muted-foreground font-light">
+          <p className="text-sm text-muted-foreground font-normal">
             Irreversible actions. Please proceed with caution.
           </p>
         </div>
@@ -396,8 +402,8 @@ export default function ProfileSettings() {
               </DialogTitle>
               <DialogDescription className="text-sm leading-relaxed text-muted-foreground">
                 It&apos;s been a wonderful journey. If you ever change your
-                mind, we&apos;ll be right here &mdash; ready to welcome you
-                back with open arms.
+                mind, we&apos;ll be right here &mdash; ready to welcome you back
+                with open arms.
               </DialogDescription>
             </div>
           </DialogHeader>
@@ -454,7 +460,7 @@ export default function ProfileSettings() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      
+
       {/* ── Change Password Dialog ── */}
       <ChangePasswordDialog
         open={isChangePasswordOpen}

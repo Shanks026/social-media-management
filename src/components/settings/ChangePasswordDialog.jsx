@@ -39,7 +39,11 @@ const STEPS = {
   NEW_PASSWORD: 'new_password',
 }
 
-export default function ChangePasswordDialog({ open, onOpenChange, userEmail }) {
+export default function ChangePasswordDialog({
+  open,
+  onOpenChange,
+  userEmail,
+}) {
   const [step, setStep] = useState(STEPS.SEND_OTP)
   const [isBusy, setIsBusy] = useState(false)
 
@@ -149,26 +153,30 @@ export default function ChangePasswordDialog({ open, onOpenChange, userEmail }) 
         email: userEmail,
         password: oldPassword,
       })
-      
+
       if (signInError) {
         throw new Error('Incorrect old password.')
       }
 
-      const { data: userData, error } = await supabase.auth.updateUser({ password: newPassword })
+      const { data: userData, error } = await supabase.auth.updateUser({
+        password: newPassword,
+      })
       if (error) throw error
 
       toast.success('Password updated successfully! Logging you out...')
-      
+
       // Get fresh session to ensure the edge function succeeds
-      const { data: { session } } = await supabase.auth.getSession()
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
 
       // Send notification email
       if (userData?.user?.email && session?.access_token) {
         await supabase.functions.invoke('send-password-update-email', {
           body: { email: userData.user.email, type: 'change' },
           headers: {
-            Authorization: `Bearer ${session.access_token}`
-          }
+            Authorization: `Bearer ${session.access_token}`,
+          },
         })
       }
 
@@ -200,7 +208,11 @@ export default function ChangePasswordDialog({ open, onOpenChange, userEmail }) 
         </div>
       ),
       footer: (
-        <Button className="w-full gap-2" onClick={handleSendOtp} disabled={isBusy}>
+        <Button
+          className="w-full gap-2"
+          onClick={handleSendOtp}
+          disabled={isBusy}
+        >
           {isBusy ? (
             <Loader2 className="size-4 animate-spin" />
           ) : (
@@ -219,7 +231,9 @@ export default function ChangePasswordDialog({ open, onOpenChange, userEmail }) 
           <Label>One-Time Code</Label>
           <Input
             value={otp}
-            onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+            onChange={(e) =>
+              setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))
+            }
             placeholder="000000"
             className="text-center text-xl tracking-[0.5em] font-mono"
             maxLength={6}
@@ -257,7 +271,8 @@ export default function ChangePasswordDialog({ open, onOpenChange, userEmail }) 
     [STEPS.NEW_PASSWORD]: {
       icon: <Lock className="size-6 text-primary" />,
       title: 'Set New Password',
-      description: 'Choose a strong new password. It must be at least 8 characters. Please note that you will be logged out of your account once the password is changed successfully.',
+      description:
+        'Choose a strong new password. It must be at least 8 characters. Please note that you will be logged out of your account once the password is changed successfully.',
       body: (
         <div className="space-y-6">
           <div className="space-y-3">
@@ -276,7 +291,11 @@ export default function ChangePasswordDialog({ open, onOpenChange, userEmail }) 
                 onClick={() => setShowOld((v) => !v)}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
               >
-                {showOld ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                {showOld ? (
+                  <EyeOff className="size-4" />
+                ) : (
+                  <Eye className="size-4" />
+                )}
               </button>
             </div>
           </div>
@@ -295,7 +314,11 @@ export default function ChangePasswordDialog({ open, onOpenChange, userEmail }) 
                 onClick={() => setShowNew((v) => !v)}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
               >
-                {showNew ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                {showNew ? (
+                  <EyeOff className="size-4" />
+                ) : (
+                  <Eye className="size-4" />
+                )}
               </button>
             </div>
           </div>
@@ -357,7 +380,6 @@ export default function ChangePasswordDialog({ open, onOpenChange, userEmail }) 
           <DialogHeader className="space-y-2">
             {/* Step pip + icon */}
             <div className="flex flex-col items-start gap-8">
-              
               {/* Step dots */}
               <div className="flex gap-1.5">
                 {[1, 2, 3].map((n) => (
@@ -373,16 +395,16 @@ export default function ChangePasswordDialog({ open, onOpenChange, userEmail }) 
                   />
                 ))}
               </div>
-               <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0 py-4">
+              <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0 py-4">
                 {current.icon}
+              </div>
             </div>
-            </div>
-           
+
             <div className="space-y-1.5">
               <DialogTitle className="text-xl font-semibold tracking-tight">
                 {current.title}
               </DialogTitle>
-              <DialogDescription className="text-sm font-light leading-relaxed">
+              <DialogDescription className="text-sm font-normal leading-relaxed">
                 {current.description}
               </DialogDescription>
             </div>
@@ -412,8 +434,9 @@ export default function ChangePasswordDialog({ open, onOpenChange, userEmail }) 
           <AlertDialogHeader>
             <AlertDialogTitle>Discard Password Change?</AlertDialogTitle>
             <AlertDialogDescription>
-              You&apos;re in the middle of changing your password. If you close now,
-              your progress will not be saved and you&apos;ll need to start over.
+              You&apos;re in the middle of changing your password. If you close
+              now, your progress will not be saved and you&apos;ll need to start
+              over.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

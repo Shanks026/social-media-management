@@ -2,7 +2,11 @@ import { useState, useEffect } from 'react'
 import { Plus, Search, Megaphone } from 'lucide-react'
 import { toast } from 'sonner'
 
-import { useCampaigns, useDeleteCampaign, useUpdateCampaign } from '@/api/campaigns'
+import {
+  useCampaigns,
+  useDeleteCampaign,
+  useUpdateCampaign,
+} from '@/api/campaigns'
 import { useSubscription } from '@/api/useSubscription'
 import { CampaignCard } from './CampaignCard'
 import { CampaignDialog } from './CampaignDialog'
@@ -27,7 +31,14 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Empty, EmptyHeader, EmptyTitle, EmptyDescription, EmptyContent, EmptyMedia } from '@/components/ui/empty'
+import {
+  Empty,
+  EmptyHeader,
+  EmptyTitle,
+  EmptyDescription,
+  EmptyContent,
+  EmptyMedia,
+} from '@/components/ui/empty'
 
 function CampaignSkeleton() {
   return (
@@ -42,16 +53,22 @@ function CampaignSkeleton() {
   )
 }
 
-export function CampaignTab({ 
-  clientId, 
-  isCreateOpen: externalIsCreateOpen, 
-  setIsCreateOpen: externalSetIsCreateOpen 
+export function CampaignTab({
+  clientId,
+  isCreateOpen: externalIsCreateOpen,
+  setIsCreateOpen: externalSetIsCreateOpen,
 }) {
   const { data: sub, isLoading: subLoading } = useSubscription()
   const [localIsCreateOpen, setLocalIsCreateOpen] = useState(false)
-  
-  const isCreateOpen = externalIsCreateOpen !== undefined ? externalIsCreateOpen : localIsCreateOpen
-  const setIsCreateOpen = externalSetIsCreateOpen !== undefined ? externalSetIsCreateOpen : setLocalIsCreateOpen
+
+  const isCreateOpen =
+    externalIsCreateOpen !== undefined
+      ? externalIsCreateOpen
+      : localIsCreateOpen
+  const setIsCreateOpen =
+    externalSetIsCreateOpen !== undefined
+      ? externalSetIsCreateOpen
+      : setLocalIsCreateOpen
 
   const canCampaigns = sub?.campaigns ?? false
 
@@ -59,10 +76,10 @@ export function CampaignTab({
   if (!canCampaigns) return <CampaignUpgradePrompt />
 
   return (
-    <CampaignTabContent 
-      clientId={clientId} 
-      isCreateOpen={isCreateOpen} 
-      setIsCreateOpen={setIsCreateOpen} 
+    <CampaignTabContent
+      clientId={clientId}
+      isCreateOpen={isCreateOpen}
+      setIsCreateOpen={setIsCreateOpen}
     />
   )
 }
@@ -159,7 +176,7 @@ function CampaignTabContent({ clientId, isCreateOpen, setIsCreateOpen }) {
                 setSearch('')
                 setStatusFilter('All')
               }}
-              className="text-muted-foreground font-light hover:text-foreground h-9 px-3"
+              className="text-muted-foreground font-normal hover:text-foreground h-9 px-3"
             >
               Reset Filters
             </Button>
@@ -205,17 +222,19 @@ function CampaignTabContent({ clientId, isCreateOpen, setIsCreateOpen }) {
               <Megaphone className="size-6 text-muted-foreground/60" />
             </EmptyMedia>
             <EmptyHeader>
-              <EmptyTitle className="font-normal text-xl">No Campaigns Found</EmptyTitle>
-              <EmptyDescription className="font-light">
-                {isFilterActive 
+              <EmptyTitle className="font-normal text-xl">
+                No Campaigns Found
+              </EmptyTitle>
+              <EmptyDescription className="font-normal">
+                {isFilterActive
                   ? "We couldn't find any campaigns matching your current filters."
                   : "You haven't created any content campaigns yet. Start your first initiative!"}
               </EmptyDescription>
             </EmptyHeader>
             {!isFilterActive && (
-              <Button 
+              <Button
                 onClick={() => setIsCreateOpen && setIsCreateOpen(true)}
-                variant="outline" 
+                variant="outline"
                 className="mt-2 rounded-full px-6 font-medium"
               >
                 <Plus className="size-4 mr-2" />
@@ -223,8 +242,8 @@ function CampaignTabContent({ clientId, isCreateOpen, setIsCreateOpen }) {
               </Button>
             )}
             {isFilterActive && (
-              <Button 
-                variant="link" 
+              <Button
+                variant="link"
                 onClick={() => {
                   setSearch('')
                   setStatusFilter('All')
@@ -255,9 +274,9 @@ function CampaignTabContent({ clientId, isCreateOpen, setIsCreateOpen }) {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Campaign?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will delete{' '}
-              <strong>{deletingCampaign?.name}</strong>. Posts in this campaign
-              will not be deleted — they will simply become uncategorised.
+              This will delete <strong>{deletingCampaign?.name}</strong>. Posts
+              in this campaign will not be deleted — they will simply become
+              uncategorised.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

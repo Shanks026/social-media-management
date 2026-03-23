@@ -267,7 +267,10 @@ export default function InvoicesTab({ clientId, subTabs }) {
           {inv.campaign_id && (
             <Tooltip>
               <TooltipTrigger asChild>
-                <Badge variant="secondary" className="p-1 h-auto cursor-default">
+                <Badge
+                  variant="secondary"
+                  className="p-1 h-auto cursor-default"
+                >
                   <Megaphone className="h-3 w-3" />
                 </Badge>
               </TooltipTrigger>
@@ -537,7 +540,7 @@ export default function InvoicesTab({ clientId, subTabs }) {
           {subTabs ? (
             subTabs
           ) : (
-            <span className="text-2xl font-normal">Invoices</span>
+            <span className="text-3xl font-normal">Invoices</span>
           )}
 
           <TabsList className="bg-muted/50 p-1">
@@ -715,23 +718,33 @@ export default function InvoicesTab({ clientId, subTabs }) {
           <Empty className="py-20 border border-dashed rounded-2xl bg-muted/5">
             <EmptyContent>
               <EmptyMedia variant="icon">
-                {(searchTerm || filterStatus !== 'ALL' || filterClient !== 'ALL')
-                  ? <Search className="size-6 text-muted-foreground/60" />
-                  : <Receipt className="size-6 text-muted-foreground/60" />}
+                {searchTerm ||
+                filterStatus !== 'ALL' ||
+                filterClient !== 'ALL' ? (
+                  <Search className="size-6 text-muted-foreground/60" />
+                ) : (
+                  <Receipt className="size-6 text-muted-foreground/60" />
+                )}
               </EmptyMedia>
               <EmptyHeader>
                 <EmptyTitle className="font-normal text-xl">
-                  {(searchTerm || filterStatus !== 'ALL' || filterClient !== 'ALL')
+                  {searchTerm ||
+                  filterStatus !== 'ALL' ||
+                  filterClient !== 'ALL'
                     ? 'No invoices found'
                     : 'No invoices yet'}
                 </EmptyTitle>
-                <EmptyDescription className="font-light">
-                  {(searchTerm || filterStatus !== 'ALL' || filterClient !== 'ALL')
+                <EmptyDescription className="font-normal">
+                  {searchTerm ||
+                  filterStatus !== 'ALL' ||
+                  filterClient !== 'ALL'
                     ? 'No invoices match your current filters. Try adjusting your search.'
                     : 'Generate your first invoice and start tracking client billing.'}
                 </EmptyDescription>
               </EmptyHeader>
-              {(searchTerm || filterStatus !== 'ALL' || filterClient !== 'ALL') ? (
+              {searchTerm ||
+              filterStatus !== 'ALL' ||
+              filterClient !== 'ALL' ? (
                 <Button
                   variant="link"
                   onClick={() => {
@@ -744,7 +757,11 @@ export default function InvoicesTab({ clientId, subTabs }) {
                   Clear filters
                 </Button>
               ) : (
-                <Button variant="outline" size="sm" onClick={() => setIsDialogOpen(true)}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsDialogOpen(true)}
+                >
                   <Plus className="size-4 mr-2" />
                   New Invoice
                 </Button>
@@ -752,7 +769,11 @@ export default function InvoicesTab({ clientId, subTabs }) {
             </EmptyContent>
           </Empty>
         ) : (
-          <CustomTable columns={columns} data={filteredData} isLoading={false} />
+          <CustomTable
+            columns={columns}
+            data={filteredData}
+            isLoading={false}
+          />
         )}
       </TabsContent>
 

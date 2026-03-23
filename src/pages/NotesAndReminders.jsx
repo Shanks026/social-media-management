@@ -366,7 +366,14 @@ function DraggableCard({ id, children }) {
 
 // ─── Kanban: Column ───────────────────────────────────────────────────────────
 
-function KanbanColumn({ id, title, count, accentClass, children, collapsible }) {
+function KanbanColumn({
+  id,
+  title,
+  count,
+  accentClass,
+  children,
+  collapsible,
+}) {
   const [isCollapsed, setIsCollapsed] = useState(collapsible ?? false)
   const { setNodeRef, isOver } = useDroppable({ id })
 
@@ -448,7 +455,11 @@ function KanbanNotesView({ notes, clientMap, queryClient }) {
     )
 
     updateNoteStatus(active.id, newStatus)
-      .then(() => toast.success(`Moved to ${STATUS_CONFIG[newStatus]?.label ?? newStatus}`))
+      .then(() =>
+        toast.success(
+          `Moved to ${STATUS_CONFIG[newStatus]?.label ?? newStatus}`,
+        ),
+      )
       .catch((err) => {
         queryClient.setQueryData(['global-notes'], previous)
         toast.error('Failed to update: ' + err.message)
@@ -800,23 +811,33 @@ export default function NotesAndReminders() {
         <Empty className="py-20 border border-dashed rounded-2xl bg-muted/5">
           <EmptyContent>
             <EmptyMedia variant="icon">
-              {(search.trim() || statusTab !== 'ALL' || selectedClient !== 'all')
-                ? <Search className="size-6 text-muted-foreground/60" />
-                : <StickyNote className="size-6 text-muted-foreground/60" />}
+              {search.trim() ||
+              statusTab !== 'ALL' ||
+              selectedClient !== 'all' ? (
+                <Search className="size-6 text-muted-foreground/60" />
+              ) : (
+                <StickyNote className="size-6 text-muted-foreground/60" />
+              )}
             </EmptyMedia>
             <EmptyHeader>
               <EmptyTitle className="font-normal text-xl">
-                {(search.trim() || statusTab !== 'ALL' || selectedClient !== 'all')
+                {search.trim() ||
+                statusTab !== 'ALL' ||
+                selectedClient !== 'all'
                   ? 'No notes found'
                   : 'No notes yet'}
               </EmptyTitle>
-              <EmptyDescription className="font-light">
-                {(search.trim() || statusTab !== 'ALL' || selectedClient !== 'all')
+              <EmptyDescription className="font-normal">
+                {search.trim() ||
+                statusTab !== 'ALL' ||
+                selectedClient !== 'all'
                   ? 'No notes match your current filters. Try adjusting your search.'
                   : 'Capture important reminders, action items, or client instructions here.'}
               </EmptyDescription>
             </EmptyHeader>
-            {(search.trim() || statusTab !== 'ALL' || selectedClient !== 'all') ? (
+            {search.trim() ||
+            statusTab !== 'ALL' ||
+            selectedClient !== 'all' ? (
               <Button
                 variant="link"
                 onClick={() => {

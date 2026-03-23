@@ -322,9 +322,13 @@ export function useUpdateInvoice() {
 
       return updatedInvoice
     },
-    onSuccess: () => {
+    onSuccess: (updatedInvoice) => {
       queryClient.invalidateQueries({ queryKey: invoiceKeys.all })
       queryClient.invalidateQueries({ queryKey: transactionKeys.all })
+      queryClient.invalidateQueries({ queryKey: ['clients-list', workspaceUserId] })
+      if (updatedInvoice?.client_id) {
+        queryClient.invalidateQueries({ queryKey: ['client', updatedInvoice.client_id] })
+      }
     },
   })
 }
