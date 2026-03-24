@@ -32,7 +32,10 @@ const schema = z
   .object({
     firstName: z.string().min(1, 'First name is required'),
     lastName: z.string().min(1, 'Last name is required'),
-    email: z.string().min(1, 'Email is required').email({ message: 'Enter a valid email address' }),
+    email: z
+      .string()
+      .min(1, 'Email is required')
+      .email({ message: 'Enter a valid email address' }),
     password: z.string().min(8, 'Password must be at least 8 characters'),
     confirmPassword: z.string(),
     functionalRole: z.string().optional(),
@@ -60,18 +63,23 @@ export default function JoinTeam() {
       .then((data) => {
         if (cancelled) return
         if (!data?.valid) {
-          setTokenError(data?.error || 'This invite link is invalid or has expired.')
+          setTokenError(
+            data?.error || 'This invite link is invalid or has expired.',
+          )
         } else {
           setInvite(data)
         }
       })
       .catch(() => {
-        if (!cancelled) setTokenError('This invite link is invalid or has expired.')
+        if (!cancelled)
+          setTokenError('This invite link is invalid or has expired.')
       })
       .finally(() => {
         if (!cancelled) setTokenLoading(false)
       })
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+    }
   }, [token])
 
   const {
@@ -95,18 +103,19 @@ export default function JoinTeam() {
     setSubmitError(null)
     setIsSubmitting(true)
     try {
-      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-        email: values.email,
-        password: values.password,
-        options: {
-          data: {
-            invite_token: token,
-            first_name: values.firstName,
-            last_name: values.lastName,
-            full_name: `${values.firstName} ${values.lastName}`.trim(),
+      const { data: signUpData, error: signUpError } =
+        await supabase.auth.signUp({
+          email: values.email,
+          password: values.password,
+          options: {
+            data: {
+              invite_token: token,
+              first_name: values.firstName,
+              last_name: values.lastName,
+              full_name: `${values.firstName} ${values.lastName}`.trim(),
+            },
           },
-        },
-      })
+        })
 
       if (signUpError) throw signUpError
 
@@ -152,8 +161,12 @@ export default function JoinTeam() {
             <AlertCircle className="size-7 text-destructive" />
           </div>
           <div className="space-y-2">
-            <h1 className="text-2xl font-normal tracking-tight">Invite link unavailable</h1>
-            <p className="text-sm text-muted-foreground font-light">{tokenError}</p>
+            <h1 className="text-2xl font-normal tracking-tight">
+              Invite link unavailable
+            </h1>
+            <p className="text-sm text-muted-foreground font-normal">
+              {tokenError}
+            </p>
             <p className="text-xs text-muted-foreground">
               Ask your team admin to generate a new invite link.
             </p>
@@ -168,7 +181,6 @@ export default function JoinTeam() {
     <div className="w-full min-h-screen bg-background">
       <form onSubmit={handleSubmit(onSubmit)}>
         <div className="mx-auto max-w-4xl px-6 py-10 space-y-14 pb-32">
-
           {/* ── Title ── */}
           <div className="space-y-6">
             {/* Branding bar: Tercero (left) · Agency (right) */}
@@ -216,8 +228,12 @@ export default function JoinTeam() {
               <h1 className="text-3xl font-normal tracking-tight">
                 You&apos;re invited
               </h1>
-              <p className="text-muted-foreground font-light">
-                Create your account to join {invite?.agency_name ? `the ${invite.agency_name} workspace` : 'the team'}.
+              <p className="text-muted-foreground font-normal">
+                Create your account to join{' '}
+                {invite?.agency_name
+                  ? `the ${invite.agency_name} workspace`
+                  : 'the team'}
+                .
               </p>
             </div>
           </div>
@@ -233,7 +249,9 @@ export default function JoinTeam() {
                 </Label>
                 <Input {...register('firstName')} placeholder="Jane" />
                 {errors.firstName && (
-                  <p className="text-xs text-destructive">{errors.firstName.message}</p>
+                  <p className="text-xs text-destructive">
+                    {errors.firstName.message}
+                  </p>
                 )}
               </div>
 
@@ -243,7 +261,9 @@ export default function JoinTeam() {
                 </Label>
                 <Input {...register('lastName')} placeholder="Smith" />
                 {errors.lastName && (
-                  <p className="text-xs text-destructive">{errors.lastName.message}</p>
+                  <p className="text-xs text-destructive">
+                    {errors.lastName.message}
+                  </p>
                 )}
               </div>
             </div>
@@ -252,9 +272,15 @@ export default function JoinTeam() {
               <Label>
                 Email address <span className="text-destructive">*</span>
               </Label>
-              <Input type="email" {...register('email')} placeholder="jane@example.com" />
+              <Input
+                type="email"
+                {...register('email')}
+                placeholder="jane@example.com"
+              />
               {errors.email && (
-                <p className="text-xs text-destructive">{errors.email.message}</p>
+                <p className="text-xs text-destructive">
+                  {errors.email.message}
+                </p>
               )}
             </div>
 
@@ -263,9 +289,15 @@ export default function JoinTeam() {
                 <Label>
                   Password <span className="text-destructive">*</span>
                 </Label>
-                <Input type="password" {...register('password')} placeholder="At least 8 characters" />
+                <Input
+                  type="password"
+                  {...register('password')}
+                  placeholder="At least 8 characters"
+                />
                 {errors.password && (
-                  <p className="text-xs text-destructive">{errors.password.message}</p>
+                  <p className="text-xs text-destructive">
+                    {errors.password.message}
+                  </p>
                 )}
               </div>
 
@@ -273,9 +305,15 @@ export default function JoinTeam() {
                 <Label>
                   Confirm password <span className="text-destructive">*</span>
                 </Label>
-                <Input type="password" {...register('confirmPassword')} placeholder="Repeat your password" />
+                <Input
+                  type="password"
+                  {...register('confirmPassword')}
+                  placeholder="Repeat your password"
+                />
                 {errors.confirmPassword && (
-                  <p className="text-xs text-destructive">{errors.confirmPassword.message}</p>
+                  <p className="text-xs text-destructive">
+                    {errors.confirmPassword.message}
+                  </p>
                 )}
               </div>
             </div>
@@ -285,7 +323,7 @@ export default function JoinTeam() {
           <section className="space-y-8">
             <div className="space-y-1">
               <h2 className="text-2xl font-normal">Your Role</h2>
-              <p className="text-muted-foreground font-light text-sm">
+              <p className="text-muted-foreground font-normal text-sm">
                 Optional — helps your team know what you do.
               </p>
             </div>
@@ -302,7 +340,9 @@ export default function JoinTeam() {
                     </SelectTrigger>
                     <SelectContent>
                       {FUNCTIONAL_ROLES.map((r) => (
-                        <SelectItem key={r} value={r}>{r}</SelectItem>
+                        <SelectItem key={r} value={r}>
+                          {r}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -321,16 +361,11 @@ export default function JoinTeam() {
 
           {/* ── Actions ── */}
           <div className="flex flex-col sm:flex-row items-center justify-end gap-3 pt-6">
-            <Button
-              type="submit"
-              size="lg"
-              disabled={isSubmitting}
-            >
+            <Button type="submit" size="lg" disabled={isSubmitting}>
               {isSubmitting && <Loader2 className="size-4 animate-spin" />}
               Create account &amp; join
             </Button>
           </div>
-
         </div>
       </form>
     </div>

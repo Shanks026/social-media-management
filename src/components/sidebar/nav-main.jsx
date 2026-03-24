@@ -1,25 +1,22 @@
 import {
-  Home,
-  UserStar,
-  Calendar,
-  Building2,
-  Banknote,
   ChevronRight,
-  PieChart,
-  ListOrdered,
-  CreditCard,
-  LayoutGrid,
+  Lock,
+  LayoutDashboard,
+  Building2,
+  UserStar,
+  Target,
   FileText,
+  Megaphone,
   Layers,
   Newspaper,
-  StickyNote,
   Bell,
-  Users,
   Video,
-  LayoutDashboard,
-  Lock,
   FolderOpen,
-  Megaphone,
+  Calendar,
+  Banknote,
+  PieChart,
+  CreditCard,
+  ListOrdered,
 } from 'lucide-react'
 import { NavLink, useLocation } from 'react-router-dom'
 import {
@@ -50,6 +47,7 @@ const BASE_NAV_ITEMS = [
   { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
   { title: 'My Organization', url: '/myorganization', icon: Building2 },
   { title: 'Clients', url: '/clients', icon: UserStar },
+  { title: 'Prospects', url: '/prospects', icon: Target },
   { title: 'Proposals', url: '/proposals', icon: FileText },
   { title: 'Campaigns', url: '/campaigns', icon: Megaphone, requiresFlag: 'campaigns' },
   {
@@ -58,21 +56,9 @@ const BASE_NAV_ITEMS = [
     icon: Layers,
     items: [
       { title: 'Deliverables', url: '/posts', icon: Newspaper },
-      {
-        title: 'Notes & Reminders',
-        url: '/operations/notes',
-        icon: Bell,
-      },
-      {
-        title: 'Meetings',
-        url: '/operations/meetings',
-        icon: Video,
-      },
-      {
-        title: 'Documents',
-        url: '/documents',
-        icon: FileText,
-      },
+      { title: 'Notes & Reminders', url: '/operations/notes', icon: Bell },
+      { title: 'Meetings', url: '/operations/meetings', icon: Video },
+      { title: 'Documents', url: '/documents', icon: FolderOpen },
     ],
   },
   { title: 'Calendar', url: '/calendar', icon: Calendar },
@@ -82,12 +68,7 @@ const BASE_NAV_ITEMS = [
     icon: Banknote,
     items: [
       { title: 'Overview', url: '/finance/overview', icon: PieChart },
-      {
-        title: 'Subscriptions',
-        url: '/finance/subscriptions',
-        icon: CreditCard,
-        requiresFlag: 'finance_subscriptions',
-      },
+      { title: 'Subscriptions', url: '/finance/subscriptions', icon: CreditCard, requiresFlag: 'finance_subscriptions' },
       { title: 'Ledger', url: '/finance/ledger', icon: ListOrdered },
       { title: 'Invoices', url: '/finance/invoices', icon: FileText },
     ],
@@ -152,9 +133,7 @@ export function NavMain() {
                                     <SidebarMenuSubButton
                                       className="cursor-not-allowed opacity-40 hover:bg-transparent hover:text-inherit"
                                     >
-                                      {subItem.icon && (
-                                        <subItem.icon className="size-3.5 me-0.5 opacity-70" />
-                                      )}
+                                      {subItem.icon && <subItem.icon className="size-3.5 me-0.5 opacity-70" />}
                                       <span>{subItem.title}</span>
                                       <Lock className="ml-auto size-3 shrink-0" />
                                     </SidebarMenuSubButton>
@@ -174,9 +153,7 @@ export function NavMain() {
                                 isActive={location.pathname === subItem.url}
                               >
                                 <NavLink to={subItem.url}>
-                                  {subItem.icon && (
-                                    <subItem.icon className="size-3.5 me-0.5 opacity-70" />
-                                  )}
+                                  {subItem.icon && <subItem.icon className="size-3.5 me-0.5 opacity-70" />}
                                   <span>{subItem.title}</span>
                                 </NavLink>
                               </SidebarMenuSubButton>

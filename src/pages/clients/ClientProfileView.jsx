@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import {
   LayoutGrid,
@@ -9,11 +9,24 @@ import {
   FolderOpen,
   Megaphone,
   FileText,
+  Plus,
+  CircleDollarSign,
+  ChevronDown,
 } from 'lucide-react'
 
 // UI Components
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import TierBadge from '@/components/TierBadge'
+import CreateDraftPost from '@/pages/posts/DraftPostForm'
+import { CreateInvoiceDialog } from '@/pages/finance/CreateInvoiceDialog'
+import { AddTransactionDialog } from '@/pages/finance/AddTransactionDialog'
 
 // Section Imports
 import OverviewTab from './clientSections/OverviewTab'
@@ -40,6 +53,10 @@ export default function ClientProfileView({ client }) {
     : 'CL'
 
   const [searchParams, setSearchParams] = useSearchParams()
+  const [createPostOpen, setCreatePostOpen] = useState(false)
+  const [createInvoiceOpen, setCreateInvoiceOpen] = useState(false)
+  const [createTransactionOpen, setCreateTransactionOpen] = useState(false)
+  const [invoicePrefill, setInvoicePrefill] = useState(null)
 
   // Get active tab from URL or default to 'overview'
   const activeTab = searchParams.get('tab') || 'overview'
@@ -71,8 +88,8 @@ export default function ClientProfileView({ client }) {
 
   return (
     <div className="min-h-full bg-background selection:bg-primary/10">
-      {/* MAIN CONTAINER: Standardised to max-w-[1400px] to match the Clients List Page */}
-      <div className="px-8 pt-6 pb-10 space-y-6 max-w-[1400px] mx-auto animate-in fade-in duration-700">
+      {/* MAIN CONTAINER: Standardised to max-w-350 to match the Clients List Page */}
+      <div className="px-8 pt-6 pb-10 space-y-6 max-w-350 mx-auto animate-in fade-in duration-700">
         {/* --- HEADER SECTION --- */}
         <div className="flex items-center gap-6">
           <div className="h-16 w-16 shrink-0 rounded-2xl bg-muted/20 border border-border/40 flex items-center justify-center overflow-hidden shadow-sm transition-transform hover:scale-[1.02]">
@@ -100,6 +117,32 @@ export default function ClientProfileView({ client }) {
               <IndustryBadge industryValue={client.industry} />
             </div>
           </div>
+
+          {/* Quick Actions */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size="sm" className="h-8 gap-1.5 shrink-0">
+                Quick Actions
+                <ChevronDown className="size-3.5 text-muted-foreground" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-44">
+              <DropdownMenuItem onClick={() => setCreatePostOpen(true)}>
+                <Plus className="size-3.5" />
+                New Post
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setCreateTransactionOpen(true)}>
+                <CircleDollarSign className="size-3.5" />
+                Record Transaction
+              </DropdownMenuItem>
+              {!client.is_internal && (
+                <DropdownMenuItem onClick={() => setCreateInvoiceOpen(true)}>
+                  <FileText className="size-3.5" />
+                  Create Invoice
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
         {/* --- NAVIGATION & CONTENT --- */}
@@ -198,6 +241,37 @@ export default function ClientProfileView({ client }) {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Global Dialogs */}
+      <CreateDraftPost
+        clientId={client.id}
+        open={createPostOpen}
+        onOpenChange={setCreatePostOpen}
+      />
+      <CreateInvoiceDialog
+        preselectedClientId={invoicePrefill?.clientId || client.id}
+        open={createInvoiceOpen}
+        onOpenChange={(val) => {
+          setCreateInvoiceOpen(val)
+          if (!val) setInvoicePrefill(null)
+        }}
+        prefill={invoicePrefill}
+        onSuccess={() =>
+          setSearchParams(
+            (prev) => { prev.set('tab', 'billing'); return prev },
+            { replace: false },
+          )
+        }
+      />
+      <AddTransactionDialog
+        open={createTransactionOpen}
+        onOpenChange={setCreateTransactionOpen}
+        defaultClientId={client.id}
+        onCreateInvoice={(prefill) => {
+          setInvoicePrefill(prefill)
+          setCreateInvoiceOpen(true)
+        }}
+      />
     </div>
   )
 }

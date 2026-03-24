@@ -27,6 +27,8 @@ import CampaignsPage from './pages/campaigns/CampaignsPage'
 import CampaignDetailPage from './pages/campaigns/CampaignDetailPage'
 import CampaignReview from './pages/campaigns/CampaignReview'
 import JoinTeam from './pages/JoinTeam'
+import ProspectsPage from './pages/prospects/ProspectsPage'
+import ProspectDetailPage from './pages/prospects/ProspectDetailPage'
 import ProposalsPage from './pages/proposals/ProposalsPage'
 import ProposalDetailPage from './pages/proposals/ProposalDetailPage'
 import ProposalReview from './pages/proposals/ProposalReview'
@@ -84,6 +86,8 @@ function AppRoutes() {
             path="/clients/:clientId/posts/:postId"
             element={<PostDetails />}
           />
+          <Route path="/prospects" element={<ProspectsPage />} />
+          <Route path="/prospects/:prospectId" element={<ProspectDetailPage />} />
           <Route path="/proposals" element={<ProposalsPage />} />
           <Route path="/proposals/:proposalId" element={<ProposalDetailPage />} />
           <Route path="/campaigns" element={<CampaignsPage />} />

@@ -197,7 +197,7 @@ export default function OverviewPage({ clientId, client, subTabs }) {
           {subTabs ? (
             subTabs
           ) : (
-            <span className="text-2xl font-normal">Performance Metrics</span>
+            <span className="text-3xl font-normal">Performance Metrics</span>
           )}
         </div>
 
@@ -360,7 +360,7 @@ export default function OverviewPage({ clientId, client, subTabs }) {
                 <CardTitle className="text-lg font-medium tracking-normal text-foreground">
                   Profitability Trend
                 </CardTitle>
-                <p className="text-sm text-muted-foreground font-light">
+                <p className="text-sm text-muted-foreground font-normal">
                   {accountingMethod === 'CASH'
                     ? 'Cash Collected'
                     : 'Total Invoiced'}{' '}
@@ -443,7 +443,7 @@ export default function OverviewPage({ clientId, client, subTabs }) {
                 <CardTitle className="text-lg font-medium tracking-tight text-slate-900 dark:text-slate-100">
                   Pending Invoices
                 </CardTitle>
-                <p className="text-sm text-muted-foreground font-light">
+                <p className="text-sm text-muted-foreground font-normal">
                   Currently awaiting collection
                 </p>
               </div>
@@ -457,7 +457,9 @@ export default function OverviewPage({ clientId, client, subTabs }) {
                   (inv) => inv.status === 'SENT' || inv.status === 'OVERDUE',
                 )
                 // IDs of invoices already covered above
-                const coveredInvoiceIds = new Set(outstandingInvoices.map((inv) => inv.id))
+                const coveredInvoiceIds = new Set(
+                  outstandingInvoices.map((inv) => inv.id),
+                )
                 // Pending income transactions not linked to an outstanding invoice
                 const pendingTxs = dashboardData.filteredTransactions.filter(
                   (t) =>
@@ -466,7 +468,8 @@ export default function OverviewPage({ clientId, client, subTabs }) {
                     !coveredInvoiceIds.has(t.invoice_id),
                 )
 
-                const hasItems = outstandingInvoices.length > 0 || pendingTxs.length > 0
+                const hasItems =
+                  outstandingInvoices.length > 0 || pendingTxs.length > 0
 
                 if (!hasItems) {
                   return (
@@ -474,15 +477,21 @@ export default function OverviewPage({ clientId, client, subTabs }) {
                       <div className="h-10 w-10 border border-dashed rounded-full flex items-center justify-center text-muted-foreground mb-1">
                         <TrendingUp className="h-4 w-4" />
                       </div>
-                      <p className="text-sm font-medium text-foreground">All clear</p>
-                      <p className="text-xs text-muted-foreground">No pending payments found.</p>
+                      <p className="text-sm font-medium text-foreground">
+                        All clear
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        No pending payments found.
+                      </p>
                     </div>
                   )
                 }
 
                 // Combine: invoices first (sorted by due_date desc), then standalone transactions
                 const invoiceItems = [...outstandingInvoices].sort(
-                  (a, b) => new Date(b.due_date ?? b.issue_date) - new Date(a.due_date ?? a.issue_date),
+                  (a, b) =>
+                    new Date(b.due_date ?? b.issue_date) -
+                    new Date(a.due_date ?? a.issue_date),
                 )
                 const txItems = [...pendingTxs].sort(
                   (a, b) => new Date(b.date) - new Date(a.date),
@@ -492,7 +501,9 @@ export default function OverviewPage({ clientId, client, subTabs }) {
                   const isInvoice = 'invoice_number' in item
                   const client = item.client
                   const amount = isInvoice ? item.total : item.amount
-                  const dateVal = isInvoice ? (item.due_date ?? item.issue_date) : item.date
+                  const dateVal = isInvoice
+                    ? (item.due_date ?? item.issue_date)
+                    : item.date
                   const label = isInvoice
                     ? `Invoice #${item.invoice_number}`
                     : item.description
@@ -523,7 +534,9 @@ export default function OverviewPage({ clientId, client, subTabs }) {
                         </div>
                         <div className="min-w-0">
                           <p className="text-sm font-medium text-foreground truncate">
-                            {client?.is_internal || !item.client_id ? 'My Agency' : client?.name}
+                            {client?.is_internal || !item.client_id
+                              ? 'My Agency'
+                              : client?.name}
                           </p>
                           <p className="text-sm text-muted-foreground truncate">
                             {label}
@@ -534,8 +547,12 @@ export default function OverviewPage({ clientId, client, subTabs }) {
                         <p className="text-base font-semibold text-foreground">
                           {formatCurrency(amount)}
                         </p>
-                        <p className={`text-[10px] ${isOverdue ? 'text-rose-500 font-medium' : 'text-muted-foreground'}`}>
-                          {isOverdue ? 'Overdue' : `Due ${format(new Date(dateVal), 'MMM d')}`}
+                        <p
+                          className={`text-[10px] ${isOverdue ? 'text-rose-500 font-medium' : 'text-muted-foreground'}`}
+                        >
+                          {isOverdue
+                            ? 'Overdue'
+                            : `Due ${format(new Date(dateVal), 'MMM d')}`}
                         </p>
                       </div>
                     </div>

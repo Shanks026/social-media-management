@@ -13,17 +13,21 @@ export class ProposalLimitError extends Error {
 
 // ─── Read ──────────────────────────────────────────────────────────────────────
 
-export function useProposals({ clientId } = {}) {
+export function useProposals({ clientId, prospectId } = {}) {
   const { workspaceUserId } = useAuth()
   return useQuery({
-    queryKey: ['proposals', 'list', { clientId: clientId ?? null }],
+    queryKey: ['proposals', 'list', { clientId: clientId ?? null, prospectId: prospectId ?? null }],
     queryFn: async () => {
+      // When filtering by prospect, fetch all workspace proposals then filter client-side
+      // (the RPC only supports client_id filtering natively)
       const { data, error } = await supabase.rpc('get_proposals_with_totals', {
         p_user_id: workspaceUserId,
-        p_client_id: clientId ?? null,
+        p_client_id: prospectId ? null : (clientId ?? null),
       })
       if (error) throw error
-      return data ?? []
+      const rows = data ?? []
+      if (prospectId) return rows.filter((p) => p.prospect_id === prospectId)
+      return rows
     },
     enabled: !!workspaceUserId,
     staleTime: 30000,
@@ -309,6 +313,19 @@ export async function markProposalViewed(token) {
 
 export async function acceptProposal(token) {
   const { error } = await supabase.rpc('accept_proposal', { p_token: token })
+  if (error) throw error
+}
+
+export async function sendProposalEmail({ recipientEmail, recipientName, proposalTitle, proposalUrl, agencyUserId }) {
+  const { error } = await supabase.functions.invoke('send-proposal-email', {
+    body: {
+      recipient_email: recipientEmail,
+      recipient_name: recipientName,
+      proposal_title: proposalTitle,
+      proposal_url: proposalUrl,
+      agency_user_id: agencyUserId,
+    },
+  })
   if (error) throw error
 }
 

@@ -4,7 +4,11 @@ import { z } from 'zod'
 import { toast } from 'sonner'
 import { useAuth } from '@/context/AuthContext'
 import { useSubscription } from '@/api/useSubscription'
-import { useMyFeedback, useSubmitFeedback, useDismissFeedback } from '@/api/feedback'
+import {
+  useMyFeedback,
+  useSubmitFeedback,
+  useDismissFeedback,
+} from '@/api/feedback'
 import { formatDate } from '@/lib/helper'
 import { cn } from '@/lib/utils'
 
@@ -55,24 +59,40 @@ const bugSchema = z.object({
   severity: z.enum(['low', 'medium', 'high', 'critical'], {
     required_error: 'Please select how urgent this is',
   }),
-  description: z.string().min(20, 'Please describe what happened in a bit more detail'),
+  description: z
+    .string()
+    .min(20, 'Please describe what happened in a bit more detail'),
   steps_to_reproduce: z.string().optional(),
 })
 
 const suggestionSchema = z.object({
   title: z.string().min(1, 'Please give your idea a short title').max(150),
-  category: z.enum(['feature_request', 'ux_improvement', 'performance', 'general'], {
-    required_error: 'Please select the type of feedback',
-  }),
-  description: z.string().min(20, 'Please describe your idea in a bit more detail'),
+  category: z.enum(
+    ['feature_request', 'ux_improvement', 'performance', 'general'],
+    {
+      required_error: 'Please select the type of feedback',
+    },
+  ),
+  description: z
+    .string()
+    .min(20, 'Please describe your idea in a bit more detail'),
   expected_benefit: z.string().optional(),
 })
 
 // ─── Constants ─────────────────────────────────────────────────────────────────
 
 const FEATURE_AREAS = [
-  'Dashboard', 'Clients', 'Posts', 'Calendar', 'Proposals',
-  'Campaigns', 'Finance', 'Documents', 'Operations', 'Settings', 'Other',
+  'Dashboard',
+  'Clients',
+  'Posts',
+  'Calendar',
+  'Proposals',
+  'Campaigns',
+  'Finance',
+  'Documents',
+  'Operations',
+  'Settings',
+  'Other',
 ]
 
 const SEVERITY_OPTIONS = [
@@ -106,37 +126,90 @@ const SEVERITY_LABELS = {
 // ─── Status config ─────────────────────────────────────────────────────────────
 
 const BUG_STATUS_CONFIG = {
-  open: { label: 'Open', icon: CircleDot, className: 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400' },
-  in_progress: { label: 'In Progress', icon: Loader2, className: 'bg-blue-500/10 text-blue-600 dark:text-blue-400' },
-  resolved: { label: 'Resolved', icon: CheckCircle2, className: 'bg-green-500/10 text-green-600 dark:text-green-400' },
-  closed: { label: 'Closed', icon: XCircle, className: 'bg-muted text-muted-foreground' },
-  wont_fix: { label: "Won't Fix", icon: CircleOff, className: 'bg-muted text-muted-foreground' },
+  open: {
+    label: 'Open',
+    icon: CircleDot,
+    className: 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400',
+  },
+  in_progress: {
+    label: 'In Progress',
+    icon: Loader2,
+    className: 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
+  },
+  resolved: {
+    label: 'Resolved',
+    icon: CheckCircle2,
+    className: 'bg-green-500/10 text-green-600 dark:text-green-400',
+  },
+  closed: {
+    label: 'Closed',
+    icon: XCircle,
+    className: 'bg-muted text-muted-foreground',
+  },
+  wont_fix: {
+    label: "Won't Fix",
+    icon: CircleOff,
+    className: 'bg-muted text-muted-foreground',
+  },
 }
 
 const SUGGESTION_STATUS_CONFIG = {
-  received: { label: 'Received', icon: Clock, className: 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400' },
-  under_review: { label: 'Under Review', icon: BookMarked, className: 'bg-blue-500/10 text-blue-600 dark:text-blue-400' },
-  planned: { label: 'Planned', icon: Rocket, className: 'bg-purple-500/10 text-purple-600 dark:text-purple-400' },
-  implemented: { label: 'Implemented', icon: CheckCircle2, className: 'bg-green-500/10 text-green-600 dark:text-green-400' },
-  declined: { label: 'Declined', icon: Ban, className: 'bg-muted text-muted-foreground' },
+  received: {
+    label: 'Received',
+    icon: Clock,
+    className: 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400',
+  },
+  under_review: {
+    label: 'Under Review',
+    icon: BookMarked,
+    className: 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
+  },
+  planned: {
+    label: 'Planned',
+    icon: Rocket,
+    className: 'bg-purple-500/10 text-purple-600 dark:text-purple-400',
+  },
+  implemented: {
+    label: 'Implemented',
+    icon: CheckCircle2,
+    className: 'bg-green-500/10 text-green-600 dark:text-green-400',
+  },
+  declined: {
+    label: 'Declined',
+    icon: Ban,
+    className: 'bg-muted text-muted-foreground',
+  },
 }
 
 // ─── StatusBadge ───────────────────────────────────────────────────────────────
 
 function StatusBadge({ type, status }) {
   const config =
-    type === 'bug_report' ? BUG_STATUS_CONFIG[status] : SUGGESTION_STATUS_CONFIG[status]
+    type === 'bug_report'
+      ? BUG_STATUS_CONFIG[status]
+      : SUGGESTION_STATUS_CONFIG[status]
   if (!config) return null
   const Icon = config.icon
   return (
-    <span className={cn('inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium', config.className)}>
+    <span
+      className={cn(
+        'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium',
+        config.className,
+      )}
+    >
       <Icon className="size-3" />
       {config.label}
     </span>
   )
 }
 
-const TERMINAL_STATUSES = new Set(['resolved', 'closed', 'wont_fix', 'implemented', 'declined'])
+const TERMINAL_STATUSES = new Set([
+  'resolved',
+  'closed',
+  'wont_fix',
+  'implemented',
+  'declined',
+])
 
 // ─── SubmissionCard ─────────────────────────────────────────────────────────────
 
@@ -147,14 +220,17 @@ function SubmissionCard({ item }) {
 
   return (
     <div className="flex items-start gap-4 rounded-xl border border-border/50 bg-card/30 px-5 py-4">
-      <div className={cn(
-        'size-10 rounded-xl flex items-center justify-center shrink-0',
-        isBug ? 'bg-red-500/10' : 'bg-purple-500/10',
-      )}>
-        {isBug
-          ? <Bug className="size-4 text-red-500" />
-          : <Lightbulb className="size-4 text-purple-500" />
-        }
+      <div
+        className={cn(
+          'size-10 rounded-xl flex items-center justify-center shrink-0',
+          isBug ? 'bg-red-500/10' : 'bg-purple-500/10',
+        )}
+      >
+        {isBug ? (
+          <Bug className="size-4 text-red-500" />
+        ) : (
+          <Lightbulb className="size-4 text-purple-500" />
+        )}
       </div>
 
       <div className="flex-1 min-w-0 space-y-1">
@@ -179,7 +255,9 @@ function SubmissionCard({ item }) {
             </button>
           )}
         </div>
-        <span className="text-xs text-muted-foreground">{formatDate(item.created_at)}</span>
+        <span className="text-xs text-muted-foreground">
+          {formatDate(item.created_at)}
+        </span>
       </div>
     </div>
   )
@@ -203,7 +281,7 @@ function SubmissionHistory({ type }) {
 
   if (items.length === 0) {
     return (
-      <p className="text-sm text-muted-foreground font-light py-2">
+      <p className="text-sm text-muted-foreground font-normal py-2">
         {type === 'bug_report'
           ? "You haven't reported any bugs yet."
           : "You haven't submitted any suggestions yet."}
@@ -258,7 +336,10 @@ function BugReportForm() {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 max-w-xl">
+      <form
+        onSubmit={form.handleSubmit(onSubmit)}
+        className="space-y-6 max-w-xl"
+      >
         <FormField
           control={form.control}
           name="title"
@@ -266,7 +347,10 @@ function BugReportForm() {
             <FormItem>
               <FormLabel>What's the issue?</FormLabel>
               <FormControl>
-                <Input placeholder="e.g. Invoice PDF not downloading" {...field} />
+                <Input
+                  placeholder="e.g. Invoice PDF not downloading"
+                  {...field}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -287,7 +371,9 @@ function BugReportForm() {
                 </FormControl>
                 <SelectContent>
                   {FEATURE_AREAS.map((area) => (
-                    <SelectItem key={area} value={area}>{area}</SelectItem>
+                    <SelectItem key={area} value={area}>
+                      {area}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -319,7 +405,10 @@ function BugReportForm() {
                           : 'border-border/50 bg-card/30 hover:border-foreground/30',
                       )}
                     >
-                      <RadioGroupItem id={`severity-${opt.value}`} value={opt.value} />
+                      <RadioGroupItem
+                        id={`severity-${opt.value}`}
+                        value={opt.value}
+                      />
                       <span className="text-sm">{opt.label}</span>
                     </Label>
                   ))}
@@ -355,7 +444,9 @@ function BugReportForm() {
             <FormItem>
               <FormLabel>
                 Anything else that might help?{' '}
-                <span className="text-muted-foreground font-normal">(optional)</span>
+                <span className="text-muted-foreground font-normal">
+                  (optional)
+                </span>
               </FormLabel>
               <FormControl>
                 <Textarea
@@ -369,8 +460,15 @@ function BugReportForm() {
           )}
         />
 
-        <Button type="submit" size="sm" disabled={form.formState.isSubmitting} className="gap-2">
-          {form.formState.isSubmitting && <Loader2 className="size-3.5 animate-spin" />}
+        <Button
+          type="submit"
+          size="sm"
+          disabled={form.formState.isSubmitting}
+          className="gap-2"
+        >
+          {form.formState.isSubmitting && (
+            <Loader2 className="size-3.5 animate-spin" />
+          )}
           Submit Report
         </Button>
       </form>
@@ -415,7 +513,10 @@ function SuggestionForm() {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 max-w-xl">
+      <form
+        onSubmit={form.handleSubmit(onSubmit)}
+        className="space-y-6 max-w-xl"
+      >
         <FormField
           control={form.control}
           name="title"
@@ -423,7 +524,10 @@ function SuggestionForm() {
             <FormItem>
               <FormLabel>What's your idea?</FormLabel>
               <FormControl>
-                <Input placeholder="e.g. Let me duplicate a campaign" {...field} />
+                <Input
+                  placeholder="e.g. Let me duplicate a campaign"
+                  {...field}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -444,7 +548,9 @@ function SuggestionForm() {
                 </FormControl>
                 <SelectContent>
                   {CATEGORY_OPTIONS.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -478,7 +584,9 @@ function SuggestionForm() {
             <FormItem>
               <FormLabel>
                 What would this allow you to do?{' '}
-                <span className="text-muted-foreground font-normal">(optional)</span>
+                <span className="text-muted-foreground font-normal">
+                  (optional)
+                </span>
               </FormLabel>
               <FormControl>
                 <Textarea
@@ -492,8 +600,15 @@ function SuggestionForm() {
           )}
         />
 
-        <Button type="submit" size="sm" disabled={form.formState.isSubmitting} className="gap-2">
-          {form.formState.isSubmitting && <Loader2 className="size-3.5 animate-spin" />}
+        <Button
+          type="submit"
+          size="sm"
+          disabled={form.formState.isSubmitting}
+          className="gap-2"
+        >
+          {form.formState.isSubmitting && (
+            <Loader2 className="size-3.5 animate-spin" />
+          )}
           Submit Feedback
         </Button>
       </form>
@@ -506,10 +621,9 @@ function SuggestionForm() {
 export default function SupportSettings() {
   return (
     <div className="w-full space-y-8">
-
       <div className="space-y-1">
         <h2 className="text-2xl font-normal tracking-tight">Support</h2>
-        <p className="text-sm text-muted-foreground font-light">
+        <p className="text-sm text-muted-foreground font-normal">
           Report a bug or share an idea — we read everything.
         </p>
       </div>
@@ -526,12 +640,18 @@ export default function SupportSettings() {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="bug" className="focus-visible:outline-none space-y-12">
+        <TabsContent
+          value="bug"
+          className="focus-visible:outline-none space-y-12"
+        >
           <section className="space-y-8">
             <div className="space-y-1">
-              <h2 className="text-2xl font-normal tracking-tight">Report a Bug</h2>
-              <p className="text-sm text-muted-foreground font-light">
-                Something not working as expected? Let us know and we'll get it fixed.
+              <h2 className="text-2xl font-normal tracking-tight">
+                Report a Bug
+              </h2>
+              <p className="text-sm text-muted-foreground font-normal">
+                Something not working as expected? Let us know and we'll get it
+                fixed.
               </p>
             </div>
             <BugReportForm />
@@ -539,18 +659,27 @@ export default function SupportSettings() {
 
           <section className="space-y-6">
             <div className="space-y-1">
-              <h2 className="text-2xl font-normal tracking-tight">Your past reports</h2>
-              <p className="text-sm text-muted-foreground font-light">Track the status of bugs you've reported.</p>
+              <h2 className="text-2xl font-normal tracking-tight">
+                Your past reports
+              </h2>
+              <p className="text-sm text-muted-foreground font-normal">
+                Track the status of bugs you've reported.
+              </p>
             </div>
             <SubmissionHistory type="bug_report" />
           </section>
         </TabsContent>
 
-        <TabsContent value="suggestion" className="focus-visible:outline-none space-y-12">
+        <TabsContent
+          value="suggestion"
+          className="focus-visible:outline-none space-y-12"
+        >
           <section className="space-y-8">
             <div className="space-y-1">
-              <h2 className="text-2xl font-normal tracking-tight">Share Feedback</h2>
-              <p className="text-sm text-muted-foreground font-light">
+              <h2 className="text-2xl font-normal tracking-tight">
+                Share Feedback
+              </h2>
+              <p className="text-sm text-muted-foreground font-normal">
                 Have an idea or suggestion? We'd love to hear it.
               </p>
             </div>
@@ -559,14 +688,17 @@ export default function SupportSettings() {
 
           <section className="space-y-6">
             <div className="space-y-1">
-              <h2 className="text-2xl font-normal tracking-tight">Your past suggestions</h2>
-              <p className="text-sm text-muted-foreground font-light">Track the status of feedback you've shared.</p>
+              <h2 className="text-2xl font-normal tracking-tight">
+                Your past suggestions
+              </h2>
+              <p className="text-sm text-muted-foreground font-normal">
+                Track the status of feedback you've shared.
+              </p>
             </div>
             <SubmissionHistory type="suggestion" />
           </section>
         </TabsContent>
       </Tabs>
-
     </div>
   )
 }

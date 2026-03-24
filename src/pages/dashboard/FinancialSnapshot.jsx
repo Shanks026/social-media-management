@@ -92,7 +92,7 @@ export default function FinancialSnapshot() {
             <CardTitle className="text-lg font-medium tracking-normal text-foreground">
               Profitability Trend
             </CardTitle>
-            <p className="text-sm text-muted-foreground font-light">
+            <p className="text-sm text-muted-foreground font-normal">
               Cash Collected vs Expenses (Last {chartRange.replace('M', ' ')}{' '}
               Months)
             </p>

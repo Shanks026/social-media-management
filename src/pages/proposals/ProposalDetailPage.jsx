@@ -21,6 +21,7 @@ import {
   FileText,
   Download,
   Send,
+  Mail,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useForm, useFieldArray, Controller } from 'react-hook-form'
@@ -39,6 +40,7 @@ import {
 } from '@/api/proposals'
 import { resolveWorkspace } from '@/lib/workspace'
 import ProposalPreview from '@/components/proposals/ProposalPreview'
+import { SendProposalEmailDialog } from '@/components/proposals/SendProposalEmailDialog'
 import { downloadProposalPDF } from '@/utils/downloadProposalPDF.jsx'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -198,6 +200,7 @@ export default function ProposalDetailPage() {
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [archiveDialogOpen, setArchiveDialogOpen] = useState(false)
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false)
   const [isPdfExporting, setIsPdfExporting] = useState(false)
   const [saveState, setSaveState] = useState('idle') // 'idle' | 'saving' | 'saved' | 'error'
   const [isReplacing, setIsReplacing] = useState(false)
@@ -358,13 +361,7 @@ export default function ProposalDetailPage() {
     try {
       const result = await generateToken.mutateAsync(proposalId)
       await navigator.clipboard.writeText(result.url)
-
-      if (proposal?.status === 'draft') {
-        await markSent.mutateAsync(proposalId)
-        toast.success('Link copied — proposal marked as Sent')
-      } else {
-        toast.success('Link copied to clipboard')
-      }
+      toast.success('Link copied to clipboard')
     } catch (err) {
       toast.error(err.message || 'Failed to copy link')
     }
@@ -477,6 +474,14 @@ export default function ProposalDetailPage() {
     null
   const isCopyingLink = generateToken.isPending || markSent.isPending
 
+  // Default email for the send dialog — prospect email takes priority, then client email
+  const defaultEmailRecipient = proposal?.prospect_email ||
+    clients.find((c) => c.id === proposal?.client_id)?.email ||
+    ''
+  const defaultNameRecipient = proposal?.prospect_name ||
+    clients.find((c) => c.id === proposal?.client_id)?.name ||
+    ''
+
   return (
     <div className="h-full flex flex-col bg-background overflow-hidden max-w-[1400px] mx-auto w-full">
       {/* ── Page header ── */}
@@ -548,6 +553,18 @@ export default function ProposalDetailPage() {
               {isCopyingLink ? 'Generating…' : 'Copy Link'}
             </Button>
 
+            {status !== 'archived' && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setEmailDialogOpen(true)}
+                className="gap-2 h-8"
+              >
+                <Mail className="size-4" />
+                Send via Email
+              </Button>
+            )}
+
             {status === 'draft' && (
               <Button
                 variant="outline"
@@ -561,7 +578,7 @@ export default function ProposalDetailPage() {
                   }
                 }}
                 disabled={markSent.isPending}
-                className="gap-2 h-8 text-muted-foreground hover:text-foreground"
+                className="gap-2 h-8"
               >
                 {markSent.isPending ? (
                   <Loader2 className="size-4 animate-spin" />
@@ -594,7 +611,7 @@ export default function ProposalDetailPage() {
                 variant="outline"
                 size="sm"
                 onClick={() => setArchiveDialogOpen(true)}
-                className="gap-2 h-8 text-muted-foreground hover:text-foreground"
+                className="gap-2 h-8"
               >
                 <Archive className="size-4" />
                 Archive
@@ -648,38 +665,47 @@ export default function ProposalDetailPage() {
 
             <div className="space-y-1.5">
               <Label className="text-xs font-medium text-muted-foreground">Client / Prospect</Label>
-              <Select
-                value={watch('client_type') === 'prospect' ? '__prospect__' : watch('client_id') || ''}
-                disabled={isReadOnly}
-                onValueChange={(v) => {
-                  if (v === '__prospect__') {
-                    setValue('client_type', 'prospect')
-                    setValue('client_id', null)
-                  } else {
-                    setValue('client_type', 'client')
-                    setValue('client_id', v)
-                  }
-                  autoSave()
-                }}
-              >
-                <SelectTrigger className="bg-muted/20 border-border/40" disabled={isReadOnly}>
-                  <SelectValue placeholder="Select…" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__prospect__">— New Prospect —</SelectItem>
-                  {clients.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {watch('client_type') === 'prospect' && (
-                <Input
-                  {...register('prospect_name')}
-                  disabled={isReadOnly}
-                  placeholder="Prospect name"
-                  className="bg-muted/20 border-border/40 mt-2"
-                  onBlur={autoSave}
-                />
+              {proposal?.prospect_id ? (
+                <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-muted/30 border border-border/40 text-sm">
+                  <span className="text-foreground font-medium truncate">{proposal.prospect_name}</span>
+                  <span className="text-xs text-muted-foreground ml-auto shrink-0">Prospect</span>
+                </div>
+              ) : (
+                <>
+                  <Select
+                    value={watch('client_type') === 'prospect' ? '__prospect__' : watch('client_id') || ''}
+                    disabled={isReadOnly}
+                    onValueChange={(v) => {
+                      if (v === '__prospect__') {
+                        setValue('client_type', 'prospect')
+                        setValue('client_id', null)
+                      } else {
+                        setValue('client_type', 'client')
+                        setValue('client_id', v)
+                      }
+                      autoSave()
+                    }}
+                  >
+                    <SelectTrigger className="bg-muted/20 border-border/40" disabled={isReadOnly}>
+                      <SelectValue placeholder="Select…" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__prospect__">— New Prospect —</SelectItem>
+                      {clients.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {watch('client_type') === 'prospect' && (
+                    <Input
+                      {...register('prospect_name')}
+                      disabled={isReadOnly}
+                      placeholder="Prospect name"
+                      className="bg-muted/20 border-border/40 mt-2"
+                      onBlur={autoSave}
+                    />
+                  )}
+                </>
               )}
             </div>
 
@@ -825,58 +851,69 @@ export default function ProposalDetailPage() {
 
             {/* Client / Prospect selector */}
             <div className="space-y-3">
-              <Label className="text-xs font-medium text-muted-foreground">Client</Label>
-              <Select
-                value={clientType === 'prospect' ? '__prospect__' : watchedClientId || ''}
-                disabled={isReadOnly}
-                onValueChange={(v) => {
-                  if (v === '__prospect__') {
-                    setValue('client_type', 'prospect')
-                    setValue('client_id', null)
-                  } else {
-                    setValue('client_type', 'client')
-                    setValue('client_id', v)
-                  }
-                  autoSave()
-                }}
-              >
-                <SelectTrigger className="bg-muted/20 border-border/40" disabled={isReadOnly}>
-                  <SelectValue placeholder="Select a client or new prospect…" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__prospect__">— New Prospect —</SelectItem>
-                  {clients.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {c.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              {clientType === 'prospect' && (
-                <div className="space-y-2 pl-1 border-l-2 border-border/40 ml-1">
-                  <div className="space-y-1.5 pl-3">
-                    <Label className="text-xs text-muted-foreground">Prospect Name</Label>
-                    <Input
-                      {...register('prospect_name')}
-                      disabled={isReadOnly}
-                      placeholder="e.g. Zara India"
-                      className="bg-muted/20 border-border/40"
-                      onBlur={autoSave}
-                    />
-                  </div>
-                  <div className="space-y-1.5 pl-3">
-                    <Label className="text-xs text-muted-foreground">Email (optional)</Label>
-                    <Input
-                      {...register('prospect_email')}
-                      disabled={isReadOnly}
-                      type="email"
-                      placeholder="prospect@company.com"
-                      className="bg-muted/20 border-border/40"
-                      onBlur={autoSave}
-                    />
-                  </div>
+              <Label className="text-xs font-medium text-muted-foreground">
+                {proposal?.prospect_id ? 'Prospect' : 'Client'}
+              </Label>
+              {proposal?.prospect_id ? (
+                <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-muted/30 border border-border/40 text-sm">
+                  <span className="text-foreground font-medium truncate">{proposal.prospect_name}</span>
+                  <span className="text-xs text-muted-foreground ml-auto shrink-0">Prospect</span>
                 </div>
+              ) : (
+                <>
+                  <Select
+                    value={clientType === 'prospect' ? '__prospect__' : watchedClientId || ''}
+                    disabled={isReadOnly}
+                    onValueChange={(v) => {
+                      if (v === '__prospect__') {
+                        setValue('client_type', 'prospect')
+                        setValue('client_id', null)
+                      } else {
+                        setValue('client_type', 'client')
+                        setValue('client_id', v)
+                      }
+                      autoSave()
+                    }}
+                  >
+                    <SelectTrigger className="bg-muted/20 border-border/40" disabled={isReadOnly}>
+                      <SelectValue placeholder="Select a client or new prospect…" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__prospect__">— New Prospect —</SelectItem>
+                      {clients.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  {clientType === 'prospect' && (
+                    <div className="space-y-2 pl-1 border-l-2 border-border/40 ml-1">
+                      <div className="space-y-1.5 pl-3">
+                        <Label className="text-xs text-muted-foreground">Prospect Name</Label>
+                        <Input
+                          {...register('prospect_name')}
+                          disabled={isReadOnly}
+                          placeholder="e.g. Zara India"
+                          className="bg-muted/20 border-border/40"
+                          onBlur={autoSave}
+                        />
+                      </div>
+                      <div className="space-y-1.5 pl-3">
+                        <Label className="text-xs text-muted-foreground">Email (optional)</Label>
+                        <Input
+                          {...register('prospect_email')}
+                          disabled={isReadOnly}
+                          type="email"
+                          placeholder="prospect@company.com"
+                          className="bg-muted/20 border-border/40"
+                          onBlur={autoSave}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
             </div>
 
@@ -1130,6 +1167,14 @@ export default function ProposalDetailPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <SendProposalEmailDialog
+        open={emailDialogOpen}
+        onOpenChange={setEmailDialogOpen}
+        proposal={proposal}
+        defaultEmail={defaultEmailRecipient}
+        defaultName={defaultNameRecipient}
+      />
     </div>
   )
 }

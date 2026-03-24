@@ -8,7 +8,7 @@ import { useAuth } from '@/context/AuthContext'
 const TRIAL_DAY_OVERRIDE = null // e.g. TRIAL_DAY_OVERRIDE = 8
 
 export function useSubscription() {
-  const { user, workspaceUserId } = useAuth()
+  const { workspaceUserId } = useAuth()
 
   return useQuery({
     queryKey: ['subscription', workspaceUserId],
@@ -109,6 +109,8 @@ export function useSubscription() {
         proposals_limit: sub.proposals_limit ?? null,
         client_count: count || 0,
         max_clients: sub.max_clients,
+        is_client_limit_reached: (count || 0) >= sub.max_clients,
+        max_team_members: sub.max_team_members ?? null,
         is_trial: isTrial,
         trial_phase: trialPhase,
         trial_days_remaining: trialDaysRemaining,

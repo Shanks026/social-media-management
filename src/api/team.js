@@ -123,6 +123,26 @@ export function useGenerateInvite() {
 
   return useMutation({
     mutationFn: async () => {
+      // Check seat limit before generating an invite
+      const { data: sub, error: subError } = await supabase
+        .from('agency_subscriptions')
+        .select('max_team_members')
+        .eq('user_id', workspaceUserId)
+        .single()
+      if (subError) throw subError
+
+      if (sub.max_team_members !== null) {
+        const { count, error: countError } = await supabase
+          .from('agency_members')
+          .select('*', { count: 'exact', head: true })
+          .eq('agency_user_id', workspaceUserId)
+          .eq('is_active', true)
+        if (countError) throw countError
+        if (count >= sub.max_team_members) {
+          throw new Error('TEAM_SEAT_LIMIT_REACHED')
+        }
+      }
+
       const { data, error } = await supabase
         .from('agency_invites')
         .insert({ agency_user_id: workspaceUserId })

@@ -142,7 +142,7 @@ export function SidebarSubCard() {
             </div>
 
             {isFreeTier && isClientReached && !isStorageReached && (
-              <p className="text-[10.5px] text-muted-foreground leading-relaxed font-light">
+              <p className="text-[10.5px] text-muted-foreground leading-relaxed font-normal">
                 You've utilized your free tier benefits. Upgrade to add more
                 clients.
               </p>

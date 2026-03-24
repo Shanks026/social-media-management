@@ -33,7 +33,7 @@ export const UsageCard = ({
       <div className="space-y-1">
         <div className="flex items-baseline gap-1">
           <span
-            className={cn('text-4xl font-light tracking-tight', status.text)}
+            className={cn('text-4xl font-normal tracking-tight', status.text)}
           >
             {value}
           </span>
@@ -42,7 +42,7 @@ export const UsageCard = ({
               {valueUnit}
             </span>
           )}
-          <span className="text-sm font-light text-muted-foreground/60">
+          <span className="text-sm font-normal text-muted-foreground/60">
             / {max} {unit}
           </span>
         </div>

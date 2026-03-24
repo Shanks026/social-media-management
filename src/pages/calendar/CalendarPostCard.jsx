@@ -60,6 +60,27 @@ import CreateMeetingDialog from '@/components/CreateMeetingDialog'
 /**
  * Helper to check if a URL is a video
  */
+const DELIVERABLE_TYPE_LABELS = {
+  reel_short_video: 'Reel',
+  long_form_video: 'Long-form Video',
+  video_editing: 'Video Edit',
+  ad_creative: 'Ad Creative',
+  motion_graphic: 'Motion Graphic',
+  static_graphic: 'Static',
+  carousel: 'Carousel',
+  story: 'Story',
+  photography: 'Photography',
+  ugc: 'UGC',
+  brand_identity: 'Brand Identity',
+  infographic: 'Infographic',
+  presentation: 'Deck',
+  website_design: 'Website / UI',
+  blog_copy: 'Blog / Copy',
+  email_campaign: 'Email Campaign',
+  podcast: 'Podcast',
+  other: 'Other',
+}
+
 const isVideoSource = (url) => {
   if (!url) return false
   const videoExtensions = ['.mp4', '.mov', '.webm', '.ogg', '.m4v']
@@ -154,7 +175,9 @@ export function CalendarPostCard({ post }) {
   const createRevisionMutation = useMutation({
     mutationFn: () => createRevision(post.version_id, user?.id),
     onSuccess: (newVersionId) => {
-      queryClient.invalidateQueries({ queryKey: ['draft-posts', post.client_id] })
+      queryClient.invalidateQueries({
+        queryKey: ['draft-posts', post.client_id],
+      })
       queryClient.invalidateQueries({ queryKey: ['global-posts'] })
       queryClient.invalidateQueries({ queryKey: ['global-calendar'] })
       toast.success('New version created')
@@ -183,20 +206,24 @@ export function CalendarPostCard({ post }) {
   const { mutate: handleDeletePost, isPending: isDeletingPost } = useMutation({
     mutationFn: (postId) => deletePost(postId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['draft-posts', post?.client_id] })
+      queryClient.invalidateQueries({
+        queryKey: ['draft-posts', post?.client_id],
+      })
       queryClient.invalidateQueries({ queryKey: ['posts', post?.client_id] })
       queryClient.invalidateQueries({ queryKey: ['global-posts'] })
       queryClient.invalidateQueries({ queryKey: ['calendar'] })
       queryClient.invalidateQueries({ queryKey: ['global-calendar'] })
       queryClient.invalidateQueries({ queryKey: ['global-post-counts'] })
-      queryClient.invalidateQueries({ queryKey: ['postCounts', post?.client_id] })
+      queryClient.invalidateQueries({
+        queryKey: ['postCounts', post?.client_id],
+      })
       toast.success('Post deleted successfully')
       setPostToDelete(null)
     },
     onError: (error) => {
       toast.error('Failed to delete post: ' + error.message)
       setPostToDelete(null)
-    }
+    },
   })
 
   const handleCardClick = () => {
@@ -207,22 +234,26 @@ export function CalendarPostCard({ post }) {
 
   if (post.isMeeting) {
     return (
-      <div
-        className="flex flex-col bg-card/50 shadow-sm rounded-2xl px-6 py-8 transition-all duration-200 border border-blue-200/50 dark:border-blue-900/50"
-      >
+      <div className="flex flex-col bg-card/50 shadow-sm rounded-2xl px-6 py-8 transition-all duration-200 border border-blue-200/50 dark:border-blue-900/50">
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
-            <Badge variant="outline" className="border-blue-500 text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/50 rounded-full px-2.5 py-0.5 border-none font-medium">
+            <Badge
+              variant="outline"
+              className="border-blue-500 text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/50 rounded-full px-2.5 py-0.5 border-none font-medium"
+            >
               Meeting
             </Badge>
           </div>
-          <div className="flex items-center gap-2 min-w-0" onClick={(e) => e.stopPropagation()}>
-             <div className="size-5 rounded-md bg-blue-100 dark:bg-blue-900 flex items-center justify-center shrink-0 ring-1 ring-border">
-                <span className="text-[10px] font-bold text-blue-600 dark:text-blue-300">
-                   {post.client_name?.charAt(0) || 'M'}
-                </span>
-             </div>
+          <div
+            className="flex items-center gap-2 min-w-0"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="size-5 rounded-md bg-blue-100 dark:bg-blue-900 flex items-center justify-center shrink-0 ring-1 ring-border">
+              <span className="text-[10px] font-bold text-blue-600 dark:text-blue-300">
+                {post.client_name?.charAt(0) || 'M'}
+              </span>
+            </div>
             <span className="text-xs font-semibold text-foreground truncate max-w-[100px]">
               {post.client_name}
             </span>
@@ -244,8 +275,16 @@ export function CalendarPostCard({ post }) {
           <hr className="border-t border-dashed border-border mb-4" />
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <CreateMeetingDialog editMeeting={post} defaultClientId={post.client_id}>
-                <Button variant="outline" size="sm" className="h-7 text-xs px-2" onClick={(e) => e.stopPropagation()}>
+              <CreateMeetingDialog
+                editMeeting={post}
+                defaultClientId={post.client_id}
+              >
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 text-xs px-2"
+                  onClick={(e) => e.stopPropagation()}
+                >
                   Reschedule
                 </Button>
               </CreateMeetingDialog>
@@ -359,16 +398,21 @@ export function CalendarPostCard({ post }) {
       >
         {/* Header: Status, Version & ClientInfo */}
         <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 me-2">
             <StatusBadge status={getPublishState(post) || 'DRAFT'} />
-            <Badge variant="secondary" className="rounded-full text-muted-foreground hover:bg-muted/80 text-xs px-2.5 py-0.5 border-none font-medium font-mono">
-              v{post.version_number || '1'}
-            </Badge>
+            {post.deliverable_type && DELIVERABLE_TYPE_LABELS[post.deliverable_type] && (
+              <Badge variant="secondary" className="rounded-full text-xs px-2 py-0.5 shrink-0 text-foreground/80">
+                {DELIVERABLE_TYPE_LABELS[post.deliverable_type]}
+              </Badge>
+            )}
             {post.campaign_id && post.campaign_name && (
               <TooltipProvider>
                 <Tooltip delayDuration={300}>
                   <TooltipTrigger asChild>
-                    <Badge variant="secondary" className="rounded-full flex items-center justify-center p-0 size-6 border-none hover:bg-muted/80">
+                    <Badge
+                      variant="secondary"
+                      className="rounded-full flex items-center justify-center p-0 size-6 border-none hover:bg-muted/80"
+                    >
                       <Megaphone className="h-3 w-3 text-muted-foreground" />
                     </Badge>
                   </TooltipTrigger>
@@ -379,7 +423,10 @@ export function CalendarPostCard({ post }) {
               </TooltipProvider>
             )}
           </div>
-          <div className="flex items-center gap-3 min-w-0" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="flex items-center gap-3 min-w-0"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex items-center gap-2 min-w-0">
               {post.client_logo && (
                 <img
@@ -436,7 +483,8 @@ export function CalendarPostCard({ post }) {
                       setAssignCampaignOpen(true)
                     }}
                   >
-                    <FolderOpen className="h-4 w-4 mr-2 text-muted-foreground" /> Assign to Campaign
+                    <FolderOpen className="h-4 w-4 mr-2 text-muted-foreground" />{' '}
+                    Assign to Campaign
                   </DropdownMenuItem>
                 )}
                 <DropdownMenuItem
@@ -454,10 +502,18 @@ export function CalendarPostCard({ post }) {
           </div>
         </div>
 
-        {/* Title */}
-        <h3 className="text-lg font-medium tracking-tight text-foreground mb-6 line-clamp-1">
-          {post.title || 'Untitled Draft'}
-        </h3>
+        {/* Title + version */}
+        <div className="flex items-center gap-2 mb-6 min-w-0">
+          <h3 className="text-lg font-medium tracking-tight text-foreground line-clamp-1 min-w-0">
+            {post.title || 'Untitled Draft'}
+          </h3>
+          <Badge
+            variant="secondary"
+            className="rounded-full text-foreground text-xs px-2 py-0.5 font-medium font-mono shrink-0"
+          >
+            v{post.version_number || '1'}
+          </Badge>
+        </div>
 
         {/* Media Preview Section */}
         <div
@@ -483,7 +539,7 @@ export function CalendarPostCard({ post }) {
         {/* Dotted Divider & Footer */}
         <div className="mt-auto">
           <hr className="border-t border-dashed border-border mb-4" />
-          
+
           <div className="flex items-center justify-between">
             {/* Platforms */}
             <div className="flex items-center">
@@ -500,46 +556,27 @@ export function CalendarPostCard({ post }) {
             </div>
 
             {/* Date Badge and Urgency Info */}
-            <div
-              className={cn(
-                "rounded-full px-3 py-1.5 flex items-center justify-center gap-2",
-                health?.label === 'Overdue'
-                  ? "bg-destructive/10 border-destructive/20 text-destructive"
-                  : "bg-muted/50 border-border/50 text-muted-foreground"
-              )}
-            >
-              {health && health.color && (
-                <div className="flex items-center gap-1.5">
-                  <div className="relative flex h-2 w-2 items-center justify-center">
-                    {health.pulse && (
-                      <span
-                        className={cn(
-                          'absolute inline-flex h-full w-full animate-ping rounded-full opacity-75',
-                          health.color
-                        )}
-                      />
-                    )}
-                    <span
-                      className={cn(
-                        'relative inline-flex h-2 w-2 rounded-full',
-                        health.color
-                      )}
-                    />
-                  </div>
-                  {['Overdue', 'Urgent'].includes(health.label) && (
-                    <span className="text-[10px] font-bold uppercase tracking-wider whitespace-nowrap">
-                      {health.label}
-                    </span>
+            <div className="flex items-center gap-2 shrink-0">
+              {health && (
+                <div className="relative flex size-2 items-center justify-center shrink-0">
+                  {health.pulse && (
+                    <span className={cn('absolute inline-flex h-full w-full animate-ping rounded-full opacity-75', health.color)} />
                   )}
+                  <span className={cn('relative inline-flex size-2 rounded-full', health.color)} />
                 </div>
               )}
-              <span className="text-[13px] font-medium tracking-tight whitespace-nowrap">
+              <span className="text-xs font-medium text-foreground whitespace-nowrap">
                 {postStatus === 'PUBLISHED' && (post.published_at || post.updated_at)
-                  ? `Published on ${format(new Date(post.published_at || post.updated_at), 'd MMM, yyyy')}`
+                  ? format(new Date(post.published_at || post.updated_at), 'd MMM, yyyy')
                   : post.target_date
-                    ? format(new Date(post.target_date), "d MMMM yyyy '•' h:mm a")
+                    ? format(new Date(post.target_date), "d MMM yyyy '·' h:mm a")
                     : 'No Date Set'}
               </span>
+              {health?.label && ['Overdue', 'Urgent'].includes(health.label) && (
+                <span className={cn('text-xs font-semibold', health.color.replace('bg-', 'text-'))}>
+                  {health.label}
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -550,7 +587,11 @@ export function CalendarPostCard({ post }) {
         clientId={editingPost?.client_id}
         open={!!editingPost}
         onOpenChange={(open) => !open && setEditingPost(null)}
-        initialData={editingPost ? { ...editingPost, platform: editingPost.platforms } : null}
+        initialData={
+          editingPost
+            ? { ...editingPost, platform: editingPost.platforms }
+            : null
+        }
       />
 
       {/* 3. Media Preview Dialog */}
@@ -626,15 +667,19 @@ export function CalendarPostCard({ post }) {
               variant="outline"
               onClick={() => setPostToDelete(null)}
               disabled={isDeletingPost}
-  
             >
               Cancel
             </Button>
             <Button
               variant="destructive"
-              onClick={() => handleDeletePost(postToDelete?.actual_post_id || postToDelete?.post_id || postToDelete?.id)}
+              onClick={() =>
+                handleDeletePost(
+                  postToDelete?.actual_post_id ||
+                    postToDelete?.post_id ||
+                    postToDelete?.id,
+                )
+              }
               disabled={isDeletingPost}
-              
             >
               {isDeletingPost ? 'Deleting...' : 'Delete Post'}
             </Button>

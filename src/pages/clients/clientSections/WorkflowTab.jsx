@@ -22,7 +22,7 @@ export default function WorkflowTab({ client }) {
           <div className="relative w-full">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search posts..."
+              placeholder="Search deliverables..."
               className="pl-10 h-9 rounded-lg text-sm"
             />
           </div>
@@ -47,7 +47,7 @@ export default function WorkflowTab({ client }) {
             onClick={() => setCreateOpen(true)}
             className="h-9 px-4"
           >
-            <Plus className="h-4 w-4 mr-2" /> Create Post
+            <Plus className="h-4 w-4" /> Create Deliverable
           </Button>
         </div>
       </div>
