@@ -14,10 +14,10 @@ description: >
 
 There are exactly two empty state patterns in Tercero. Choose based on context:
 
-| Pattern | When to use | Component |
-|---|---|---|
-| **Compact inline** | Small card widgets on the dashboard | Raw `div` with dashed circle icon |
-| **Full section** | Full page lists, tabs within pages, large content areas | `<Empty>` component |
+| Pattern            | When to use                                             | Component                         |
+| ------------------ | ------------------------------------------------------- | --------------------------------- |
+| **Compact inline** | Small card widgets on the dashboard                     | Raw `div` with dashed circle icon |
+| **Full section**   | Full page lists, tabs within pages, large content areas | `<Empty>` component               |
 
 ---
 
@@ -35,6 +35,7 @@ Use this inside small dashboard widget cards where vertical space is limited.
 ```
 
 Rules:
+
 - Dashed circle container (`border border-dashed rounded-full`), `h-10 w-10`
 - Icon is `h-4 w-4` inside the circle, `text-muted-foreground`
 - Single short label, `text-sm text-muted-foreground`
@@ -59,15 +60,16 @@ import {
 import { Button } from '@/components/ui/button'
 import { Plus, SomeIcon } from 'lucide-react'
 
-<Empty className="py-20 border border-dashed rounded-2xl bg-muted/5 animate-in fade-in zoom-in-95 duration-500">
+;<Empty className="py-20 border border-dashed rounded-2xl bg-muted/5 animate-in fade-in zoom-in-95 duration-500">
   <EmptyContent>
     <EmptyMedia variant="icon">
       <SomeIcon className="size-6 text-muted-foreground/60" />
     </EmptyMedia>
     <EmptyHeader>
-      <EmptyTitle className="font-light text-xl">No Items Yet</EmptyTitle>
-      <EmptyDescription className="font-light">
-        Helpful sentence explaining what this section is for and how to get started.
+      <EmptyTitle className="font-normal text-xl">No Items Yet</EmptyTitle>
+      <EmptyDescription className="font-normal">
+        Helpful sentence explaining what this section is for and how to get
+        started.
       </EmptyDescription>
     </EmptyHeader>
     <Button
@@ -83,10 +85,11 @@ import { Plus, SomeIcon } from 'lucide-react'
 ```
 
 Rules:
+
 - No animation on the `<Empty>` container — it inherits the page load animation
 - `EmptyMedia variant="icon"` — icon is `size-6 text-muted-foreground/60`
-- `EmptyTitle` — use `font-light text-xl` for consistency
-- `EmptyDescription` — use `font-light`, keep to 1–2 sentences
+- `EmptyTitle` — use `font-normal text-xl` for consistency
+- `EmptyDescription` — use `font-normal`, keep to 1–2 sentences
 - Primary CTA button: `variant="outline" size="sm"` — default shape, no `rounded-full`
 - "Clear filters" CTA: `variant="link"` with `className="text-primary font-medium"` — never `variant="outline"`
 - When filters are active, change the icon to `Search` and swap the CTA to "Clear all filters"
@@ -107,10 +110,10 @@ const isFiltered = Boolean(searchQuery || activeFilter !== 'all')
         : <SomeIcon className="size-6 text-muted-foreground/60" />}
     </EmptyMedia>
     <EmptyHeader>
-      <EmptyTitle className="font-light text-xl">
+      <EmptyTitle className="font-normal text-xl">
         {isFiltered ? 'No results found' : 'No items yet'}
       </EmptyTitle>
-      <EmptyDescription className="font-light">
+      <EmptyDescription className="font-normal">
         {isFiltered
           ? "No items match your current filters. Try adjusting your search."
           : "You haven't added anything yet. Get started below."}
@@ -269,20 +272,20 @@ import {
 
 // Icons — use only these per section
 import {
-  UserStar,        // clients
-  LayoutGrid,      // posts
-  CalendarDays,    // calendar page
-  CalendarIcon,    // meetings widget + meetings page
-  Megaphone,       // campaigns
-  FileText,        // proposals, notes widget
-  StickyNote,      // notes page
-  FolderOpen,      // documents (empty)
-  Search,          // documents (filtered) + any filtered state
-  Receipt,         // invoices
-  TrendingDown,    // expenses
-  CreditCard,      // subscriptions
-  Users,           // team
-  Plus,            // all CTA buttons
+  UserStar, // clients
+  LayoutGrid, // posts
+  CalendarDays, // calendar page
+  CalendarIcon, // meetings widget + meetings page
+  Megaphone, // campaigns
+  FileText, // proposals, notes widget
+  StickyNote, // notes page
+  FolderOpen, // documents (empty)
+  Search, // documents (filtered) + any filtered state
+  Receipt, // invoices
+  TrendingDown, // expenses
+  CreditCard, // subscriptions
+  Users, // team
+  Plus, // all CTA buttons
 } from 'lucide-react'
 ```
 

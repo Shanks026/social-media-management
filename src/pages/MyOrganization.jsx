@@ -152,10 +152,10 @@ export default function MyOrganization() {
       <div className="px-8 pt-8 pb-20 space-y-8 max-w-[1400px] mx-auto">
         {/* PAGE HEADER */}
         <div className="space-y-1">
-          <h1 className="text-3xl font-light tracking-tight text-foreground">
+          <h1 className="text-3xl font-normal tracking-tight text-foreground">
             Organization
           </h1>
-          <p className="text-sm text-muted-foreground font-light">
+          <p className="text-sm text-muted-foreground font-normal">
             Provision and manage your internal agency operational workspace.
           </p>
         </div>
@@ -170,11 +170,11 @@ export default function MyOrganization() {
                     <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-primary/5 border border-primary/10 text-primary text-[10px] font-semibold uppercase tracking-wider">
                       <Zap size={12} fill="currentColor" /> Ready to Deploy
                     </div>
-                    <h2 className="text-3xl font-light tracking-tight">
+                    <h2 className="text-3xl font-normal tracking-tight">
                       Initialize your{' '}
                       <span className="font-normal italic">Workspace.</span>
                     </h2>
-                    <p className="text-muted-foreground text-sm font-light leading-relaxed max-w-xl">
+                    <p className="text-muted-foreground text-sm font-normal leading-relaxed max-w-xl">
                       Your agency identity is verified. Activate your
                       operational workspace to unlock a dedicated environment
                       for your brand's social strategy and creative workflows.
@@ -223,10 +223,10 @@ export default function MyOrganization() {
           /* PATH C: Zero Data - Choice Architecture */
           <div className="space-y-8 animate-in fade-in slide-in-from-bottom-6 duration-1000">
             <div className="text-center space-y-2">
-              <h2 className="text-3xl font-light tracking-tight">
+              <h2 className="text-3xl font-normal tracking-tight">
                 Get Started
               </h2>
-              <p className="text-muted-foreground text-sm font-light">
+              <p className="text-muted-foreground text-sm font-normal">
                 Choose how you want to initialize your organization profile.
               </p>
             </div>
@@ -259,9 +259,11 @@ export default function MyOrganization() {
           <DialogHeader>
             <div className="flex items-center gap-3 mb-1">
               {/* <div className="h-9 w-9 rounded-lg bg-transparent flex items-center justify-center text-primary shrink-0"> */}
-                <Sparkles size={16} />
+              <Sparkles size={16} />
               {/* </div> */}
-              <DialogTitle className="text-2xl font-semibold">Activate Agency Hub</DialogTitle>
+              <DialogTitle className="text-2xl font-semibold">
+                Activate Agency Hub
+              </DialogTitle>
             </div>
             <DialogDescription className="text-sm leading-relaxed text-muted-foreground">
               Initialize a dedicated operational environment for{' '}
@@ -292,9 +294,7 @@ export default function MyOrganization() {
             >
               Maybe Later
             </Button>
-            <Button onClick={handleOneClickActivation}>
-              Activate Now
-            </Button>
+            <Button onClick={handleOneClickActivation}>Activate Now</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -330,7 +330,8 @@ function ChoiceCard({ icon, title, description, onClick, highlight = false }) {
         </p>
       </div>
       <span className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-        Select <ArrowRight className="size-3 transition-transform group-hover:translate-x-0.5" />
+        Select{' '}
+        <ArrowRight className="size-3 transition-transform group-hover:translate-x-0.5" />
       </span>
     </div>
   )
@@ -344,7 +345,7 @@ function CompactBenefit({ icon, title, desc }) {
         <h4 className="text-[12px] font-semibold text-foreground uppercase tracking-wider leading-none">
           {title}
         </h4>
-        <p className="text-[11px] text-muted-foreground font-light">{desc}</p>
+        <p className="text-[11px] text-muted-foreground font-normal">{desc}</p>
       </div>
     </div>
   )

@@ -148,7 +148,9 @@ function KpiCard({ label, value, sub, icon: Icon, color = 'text-primary' }) {
           {value}
         </div>
         {sub && (
-          <p className="text-xs text-muted-foreground mt-1 font-light">{sub}</p>
+          <p className="text-xs text-muted-foreground mt-1 font-normal">
+            {sub}
+          </p>
         )}
       </CardContent>
     </Card>
@@ -423,7 +425,7 @@ export default function CampaignDetailPage() {
                   {campaign.status}
                 </span>
               </div>
-              <div className="flex items-center gap-4 mt-3 text-sm text-muted-foreground font-light flex-wrap">
+              <div className="flex items-center gap-4 mt-3 text-sm text-muted-foreground font-normal flex-wrap">
                 {campaign.clients?.name && (
                   <span className="flex items-center gap-1.5">
                     {campaign.clients.logo_url ? (
@@ -535,7 +537,9 @@ export default function CampaignDetailPage() {
               <Card className="border-none shadow-sm ring-1 ring-border/50 bg-card/50 flex flex-col h-full gap-4">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 shrink-0">
                   <div>
-                    <CardTitle className="text-lg font-medium">Deliverables</CardTitle>
+                    <CardTitle className="text-lg font-medium">
+                      Deliverables
+                    </CardTitle>
                     <CardDescription>
                       Manage and track campaign deliverables
                     </CardDescription>

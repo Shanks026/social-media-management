@@ -111,6 +111,7 @@ function normalizePosts(data) {
         created_at: v.created_at,
         updated_at: v.updated_at,
         platform_schedules: v.platform_schedules,
+        deliverable_type: v.deliverable_type || null,
         // Client info
         client_name: c?.name || 'Unknown',
         client_logo: c?.logo_url,

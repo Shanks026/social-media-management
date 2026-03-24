@@ -14,7 +14,8 @@ export default function NotFound() {
   const { data: sub } = useSubscription()
 
   const agencyLogo = sub?.logo_url
-  const agencyName = sub?.agency_name && sub.agency_name !== APP_NAME ? sub.agency_name : null
+  const agencyName =
+    sub?.agency_name && sub.agency_name !== APP_NAME ? sub.agency_name : null
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
@@ -64,20 +65,27 @@ export default function NotFound() {
       {/* Hero section */}
       <div className="flex flex-col items-center justify-center text-center px-8 py-20 min-h-[calc(100vh-65px)]">
         <div className="max-w-lg space-y-6">
-          <p className="text-8xl font-semibold tracking-tight text-muted-foreground/30">404</p>
+          <p className="text-8xl font-semibold tracking-tight text-muted-foreground/30">
+            404
+          </p>
 
           <div className="space-y-3">
             <h1 className="text-4xl font-semibold tracking-tight">
               Page not found.
               <br />
-              <span className="font-light text-muted-foreground">Let's get you back on track.</span>
+              <span className="font-normal text-muted-foreground">
+                Let's get you back on track.
+              </span>
             </h1>
             <p className="text-base text-muted-foreground leading-relaxed">
               The page you're looking for doesn't exist or may have been moved.
             </p>
           </div>
 
-          <Button onClick={() => navigate(session ? '/dashboard' : '/login')} className="gap-2 px-6">
+          <Button
+            onClick={() => navigate(session ? '/dashboard' : '/login')}
+            className="gap-2 px-6"
+          >
             <ArrowLeft className="h-4 w-4" />
             {session ? 'Back to Dashboard' : 'Back to Login'}
           </Button>

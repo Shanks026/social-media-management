@@ -44,7 +44,7 @@ export const UsageTab = ({ sub, isLoading }) => {
 
       <div className="flex items-center gap-4 p-5 rounded-2xl bg-secondary/20 border border-border/40">
         <ShieldCheck className="size-4 text-muted-foreground" />
-        <p className="text-[13px] text-muted-foreground font-light">
+        <p className="text-[13px] text-muted-foreground font-normal">
           Workspace managed by administrator. For higher limits, upgrade plan or{' '}
           <a
             href="mailto:support@domain.com"

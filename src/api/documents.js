@@ -15,22 +15,23 @@ export const documentKeys = {
 // ─── Read Hooks ────────────────────────────────────────────────────────────────
 
 /**
- * Fetch documents. Optionally filtered by clientId, category, status.
- * When no clientId is provided, returns all documents for the user.
+ * Fetch documents. Optionally filtered by clientId, prospectId, category, status.
+ * When no clientId or prospectId is provided, returns all documents for the user.
  */
-export function useDocuments({ clientId, category, status } = {}) {
+export function useDocuments({ clientId, prospectId, category, status } = {}) {
   const { workspaceUserId } = useAuth()
 
   return useQuery({
-    queryKey: documentKeys.list({ clientId, category, status }),
+    queryKey: documentKeys.list({ clientId, prospectId, category, status }),
     queryFn: async () => {
       let query = supabase
         .from('client_documents')
-        .select('*, clients(name, is_internal, logo_url)')
+        .select('*, clients(name, is_internal, logo_url), prospects(business_name)')
         .eq('user_id', workspaceUserId)
         .order('created_at', { ascending: false })
 
       if (clientId) query = query.eq('client_id', clientId)
+      if (prospectId) query = query.eq('prospect_id', prospectId)
       if (category) query = query.eq('category', category)
       if (status) query = query.eq('status', status)
 
@@ -93,11 +94,15 @@ function sanitizeFilename(name) {
     || 'file'                          // fallback if everything was stripped
 }
 
-export async function uploadDocument({ clientId, file, displayName, category, collectionId, notes }) {
+export async function uploadDocument({ clientId, prospectId, file, displayName, category, collectionId, notes }) {
   const { workspaceUserId } = await resolveWorkspace()
   const documentId = crypto.randomUUID()
   const safeFilename = sanitizeFilename(file.name)
-  const storagePath = `${workspaceUserId}/${clientId}/${documentId}/${safeFilename}`
+
+  // Scope storage path to client or prospect context
+  const storagePath = prospectId
+    ? `${workspaceUserId}/prospects/${prospectId}/${documentId}/${safeFilename}`
+    : `${workspaceUserId}/${clientId}/${documentId}/${safeFilename}`
 
   // 1. Upload to storage
   const { error: uploadError } = await supabase.storage
@@ -110,7 +115,8 @@ export async function uploadDocument({ clientId, file, displayName, category, co
     .from('client_documents')
     .insert({
       user_id: workspaceUserId,
-      client_id: clientId,
+      ...(clientId ? { client_id: clientId } : {}),
+      ...(prospectId ? { prospect_id: prospectId } : {}),
       display_name: displayName,
       original_filename: file.name,
       storage_path: storagePath,

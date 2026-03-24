@@ -85,7 +85,7 @@ function UrgencyAlertIndicator() {
         <span className="relative inline-flex rounded-full size-2 bg-destructive" />
       </span>
       {/* Sentence — hidden on small screens */}
-      <p className="hidden lg:block text-xs font-medium whitespace-nowrap">
+      <p className="hidden lg:block text-sm font-medium whitespace-nowrap">
         You have {summary} deliverable{urgentClients.length !== 1 ? 's' : ''}.{' '}
         <button
           onClick={() => navigate('/clients')}

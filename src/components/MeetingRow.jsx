@@ -1,5 +1,5 @@
 import { format, isToday, isTomorrow, differenceInDays } from 'date-fns'
-import { CalendarIcon, CheckCircle2, Clock, Link as LinkIcon } from 'lucide-react'
+import { CheckCircle2, Clock, Link as LinkIcon, Pencil } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -139,7 +139,7 @@ export default function MeetingRow({
                     size="icon"
                     className="h-8 w-8 text-muted-foreground hover:text-primary"
                   >
-                    <CalendarIcon className="h-4 w-4" />
+                    <Pencil className="h-4 w-4" />
                   </Button>
                 </CreateMeetingDialog>
                 {meeting.meeting_link && (
@@ -154,7 +154,7 @@ export default function MeetingRow({
                         <LinkIcon className="h-4 w-4" />
                       </Button>
                     </TooltipTrigger>
-                    <TooltipContent side="top" className="max-w-[260px] break-all text-xs">
+                    <TooltipContent side="top" className="max-w-65 break-all text-xs">
                       {meeting.meeting_link}
                     </TooltipContent>
                   </Tooltip>
@@ -198,46 +198,58 @@ export default function MeetingRow({
             )}
           >
             <div className="overflow-hidden">
-              <div className="flex items-center gap-2 px-4 py-2 border-t border-border/40 bg-muted/30">
-                <CreateMeetingDialog
-                  editMeeting={meeting}
-                  defaultClientId={meeting.client_id}
-                  lockClient={false}
-                >
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 text-xs text-muted-foreground hover:text-foreground gap-1.5"
-                  >
-                    <CalendarIcon className="size-3" /> Reschedule
-                  </Button>
-                </CreateMeetingDialog>
-                {meeting.meeting_link && (
-                  <Tooltip delayDuration={600}>
+              <div className="flex items-center justify-between px-4 py-2 border-t border-border/40 bg-muted/30">
+                <div className="flex items-center gap-1">
+                  <Tooltip delayDuration={400}>
                     <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-7 text-xs text-muted-foreground hover:text-primary gap-1.5"
-                        onClick={() => window.open(meeting.meeting_link, '_blank')}
+                      <CreateMeetingDialog
+                        editMeeting={meeting}
+                        defaultClientId={meeting.client_id}
+                        lockClient={false}
                       >
-                        <LinkIcon className="size-3" /> Meet Link
-                      </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="size-7 text-muted-foreground hover:text-foreground"
+                        >
+                          <Pencil className="size-3.5" />
+                        </Button>
+                      </CreateMeetingDialog>
                     </TooltipTrigger>
-                    <TooltipContent side="top" className="max-w-[260px] break-all text-xs">
-                      {meeting.meeting_link}
-                    </TooltipContent>
+                    <TooltipContent side="top" className="text-xs">Reschedule</TooltipContent>
                   </Tooltip>
-                )}
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 text-xs text-muted-foreground hover:text-emerald-600 gap-1.5"
-                  onClick={() => markMeetingDone(meeting.id)}
-                  disabled={isCompletingMeeting}
-                >
-                  <CheckCircle2 className="size-3" /> Mark as done
-                </Button>
+                  {meeting.meeting_link && (
+                    <Tooltip delayDuration={400}>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="size-7 text-muted-foreground hover:text-primary"
+                          onClick={() => window.open(meeting.meeting_link, '_blank')}
+                        >
+                          <LinkIcon className="size-3.5" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="max-w-65 break-all text-xs">
+                        {meeting.meeting_link}
+                      </TooltipContent>
+                    </Tooltip>
+                  )}
+                </div>
+                <Tooltip delayDuration={400}>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="size-7 text-muted-foreground hover:text-emerald-600"
+                      onClick={() => markMeetingDone(meeting.id)}
+                      disabled={isCompletingMeeting}
+                    >
+                      <CheckCircle2 className="size-3.5" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="text-xs">Mark as done</TooltipContent>
+                </Tooltip>
               </div>
             </div>
           </div>

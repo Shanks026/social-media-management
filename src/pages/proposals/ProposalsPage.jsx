@@ -102,12 +102,27 @@ const STATUS_CONFIG = {
   },
 }
 
-const STATUS_TABS = ['all', 'draft', 'sent', 'viewed', 'accepted', 'declined', 'expired', 'archived']
+const STATUS_TABS = [
+  'all',
+  'draft',
+  'sent',
+  'viewed',
+  'accepted',
+  'declined',
+  'expired',
+  'archived',
+]
 
 function StatusBadge({ status }) {
-  const config = STATUS_CONFIG[status] ?? { label: status, className: 'bg-muted text-muted-foreground' }
+  const config = STATUS_CONFIG[status] ?? {
+    label: status,
+    className: 'bg-muted text-muted-foreground',
+  }
   return (
-    <Badge variant="outline" className={cn('text-[11px] font-medium capitalize', config.className)}>
+    <Badge
+      variant="outline"
+      className={cn('text-[11px] font-medium capitalize', config.className)}
+    >
       {config.label}
     </Badge>
   )
@@ -201,9 +216,15 @@ export default function ProposalsPage() {
   async function handleDelete() {
     if (!deletingProposal) return
     try {
-      await deleteProposal.mutateAsync({ id: deletingProposal.id, status: deletingProposal.status, file_url: deletingProposal.file_url })
+      await deleteProposal.mutateAsync({
+        id: deletingProposal.id,
+        status: deletingProposal.status,
+        file_url: deletingProposal.file_url,
+      })
       toast.success(
-        deletingProposal.status === 'draft' ? 'Proposal deleted' : 'Proposal archived',
+        deletingProposal.status === 'draft'
+          ? 'Proposal deleted'
+          : 'Proposal archived',
       )
     } catch (err) {
       toast.error(err.message || 'Something went wrong')
@@ -217,11 +238,10 @@ export default function ProposalsPage() {
   return (
     <div className="min-h-full bg-background">
       <div className="px-8 pt-8 pb-20 space-y-6 max-w-[1400px] mx-auto animate-in fade-in duration-700">
-
         {/* ── Header ── */}
         <div className="flex items-end justify-between gap-4">
           <div className="space-y-1">
-            <h1 className="text-3xl font-light tracking-tight text-foreground">
+            <h1 className="text-3xl font-normal tracking-tight text-foreground">
               Proposals{' '}
               {!isLoading && proposals.length > 0 && (
                 <span className="text-muted-foreground/50 ml-2 font-extralight">
@@ -229,7 +249,7 @@ export default function ProposalsPage() {
                 </span>
               )}
             </h1>
-            <p className="text-sm text-muted-foreground font-light">
+            <p className="text-sm text-muted-foreground font-normal">
               Create and send proposals to clients and prospects.
             </p>
           </div>
@@ -252,7 +272,12 @@ export default function ProposalsPage() {
               <DropdownMenuContent align="end" className="w-52">
                 <DropdownMenuItem
                   onClick={() => {
-                    if (atLimit) { setUpgradeOpen(true) } else { setEditingProposal(null); setDialogOpen(true) }
+                    if (atLimit) {
+                      setUpgradeOpen(true)
+                    } else {
+                      setEditingProposal(null)
+                      setDialogOpen(true)
+                    }
                   }}
                 >
                   <PenLine className="size-4 mr-2" />
@@ -260,7 +285,11 @@ export default function ProposalsPage() {
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => {
-                    if (atLimit) { setUpgradeOpen(true) } else { setUploadDialogOpen(true) }
+                    if (atLimit) {
+                      setUpgradeOpen(true)
+                    } else {
+                      setUploadDialogOpen(true)
+                    }
                   }}
                 >
                   <Upload className="size-4 mr-2" />
@@ -304,7 +333,10 @@ export default function ProposalsPage() {
           {isFiltered && (
             <Button
               variant="ghost"
-              onClick={() => { setSearch(''); setClientFilter('all') }}
+              onClick={() => {
+                setSearch('')
+                setClientFilter('all')
+              }}
               className="text-muted-foreground h-9 px-3"
             >
               Reset
@@ -316,9 +348,10 @@ export default function ProposalsPage() {
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="bg-transparent h-auto w-full justify-start rounded-none p-0 gap-8 border-b border-border/40">
             {STATUS_TABS.map((tab) => {
-              const count = tab === 'all'
-                ? proposals.filter((p) => p.status !== 'archived').length
-                : proposals.filter((p) => p.status === tab).length
+              const count =
+                tab === 'all'
+                  ? proposals.filter((p) => p.status !== 'archived').length
+                  : proposals.filter((p) => p.status === tab).length
               return (
                 <TabsTrigger
                   key={tab}
@@ -339,7 +372,7 @@ export default function ProposalsPage() {
                     focus-visible:ring-0
                   "
                 >
-                  {tab === 'all' ? 'All' : STATUS_CONFIG[tab]?.label ?? tab}
+                  {tab === 'all' ? 'All' : (STATUS_CONFIG[tab]?.label ?? tab)}
                   {count > 0 && (
                     <Badge
                       variant="secondary"
@@ -364,14 +397,14 @@ export default function ProposalsPage() {
         ) : filtered.length === 0 ? (
           <Empty className="py-20 border border-dashed rounded-2xl bg-muted/5 animate-in fade-in duration-500">
             <EmptyContent>
-              <EmptyMedia variant="icon">
-                <FileText className="size-6 text-muted-foreground/60" />
-              </EmptyMedia>
+              <div className="text-4xl leading-none select-none mb-2">📋</div>
               <EmptyHeader>
-                <EmptyTitle className="font-normal text-xl">No Proposals Found</EmptyTitle>
-                <EmptyDescription className="font-light">
+                <EmptyTitle className="font-normal text-xl">
+                  No Proposals Found
+                </EmptyTitle>
+                <EmptyDescription className="font-normal">
                   {isFiltered || activeTab !== 'all'
-                    ? "No proposals match your current filters."
+                    ? 'No proposals match your current filters.'
                     : "You haven't created any proposals yet. Start by creating your first one."}
                 </EmptyDescription>
               </EmptyHeader>
@@ -427,7 +460,9 @@ export default function ProposalsPage() {
                     <p className="text-xs text-muted-foreground truncate mt-0.5">
                       {displayName}
                       {!proposal.client_id && proposal.prospect_name && (
-                        <span className="ml-1.5 text-[10px] opacity-60">(prospect)</span>
+                        <span className="ml-1.5 text-[10px] opacity-60">
+                          (prospect)
+                        </span>
                       )}
                     </p>
                   </div>
@@ -444,7 +479,9 @@ export default function ProposalsPage() {
 
                   {/* Valid Until */}
                   <span className="text-xs text-muted-foreground w-28">
-                    {proposal.valid_until ? formatDate(proposal.valid_until) : '—'}
+                    {proposal.valid_until
+                      ? formatDate(proposal.valid_until)
+                      : '—'}
                   </span>
 
                   {/* Created */}
@@ -453,7 +490,10 @@ export default function ProposalsPage() {
                   </span>
 
                   {/* Actions */}
-                  <div className="w-8 flex justify-end" onClick={(e) => e.stopPropagation()}>
+                  <div
+                    className="w-8 flex justify-end"
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button
@@ -465,15 +505,18 @@ export default function ProposalsPage() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        {proposal.status !== 'archived' && proposal.proposal_type !== 'uploaded' && (
-                          <>
-                            <DropdownMenuItem onClick={() => openEditDialog(proposal)}>
-                              <Pencil className="size-4 mr-2" />
-                              Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                          </>
-                        )}
+                        {proposal.status !== 'archived' &&
+                          proposal.proposal_type !== 'uploaded' && (
+                            <>
+                              <DropdownMenuItem
+                                onClick={() => openEditDialog(proposal)}
+                              >
+                                <Pencil className="size-4 mr-2" />
+                                Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                            </>
+                          )}
                         <DropdownMenuItem
                           onClick={() => setDeletingProposal(proposal)}
                           className="text-destructive focus:text-destructive"
@@ -506,13 +549,19 @@ export default function ProposalsPage() {
         onOpenChange={setDialogOpen}
         proposalId={editingProposal?.id}
         onSuccess={() => setEditingProposal(null)}
-        onUpgradeNeeded={() => { setDialogOpen(false); setUpgradeOpen(true) }}
+        onUpgradeNeeded={() => {
+          setDialogOpen(false)
+          setUpgradeOpen(true)
+        }}
       />
 
       <UploadProposalDialog
         open={uploadDialogOpen}
         onOpenChange={setUploadDialogOpen}
-        onUpgradeNeeded={() => { setUploadDialogOpen(false); setUpgradeOpen(true) }}
+        onUpgradeNeeded={() => {
+          setUploadDialogOpen(false)
+          setUpgradeOpen(true)
+        }}
       />
 
       <ProposalsUpgradePrompt

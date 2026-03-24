@@ -66,6 +66,28 @@ import { useSubscription } from '@/api/useSubscription'
 import { ClientAvatar } from '@/components/NoteRow'
 import { UrgencyFilter } from '@/pages/clients/ClientFilters'
 
+// ─── Deliverable type labels ────────────────────────────
+const DELIVERABLE_TYPE_LABELS = {
+  reel_short_video: 'Reel',
+  long_form_video: 'Long-form Video',
+  video_editing: 'Video Edit',
+  ad_creative: 'Ad Creative',
+  motion_graphic: 'Motion Graphic',
+  static_graphic: 'Static',
+  carousel: 'Carousel',
+  story: 'Story',
+  photography: 'Photography',
+  ugc: 'UGC',
+  brand_identity: 'Brand Identity',
+  infographic: 'Infographic',
+  presentation: 'Deck',
+  website_design: 'Website / UI',
+  blog_copy: 'Blog / Copy',
+  email_campaign: 'Email Campaign',
+  podcast: 'Podcast',
+  other: 'Other',
+}
+
 // ─── Post health ────────────────────────────────────────
 const TERMINAL_STATUSES = ['PUBLISHED', 'ARCHIVED', 'DELIVERED']
 
@@ -73,7 +95,7 @@ function getPostHealth(post) {
   if (TERMINAL_STATUSES.includes(post.status)) return 'idle'
   if (!post.target_date) return 'idle'
   const diffHours = (new Date(post.target_date) - new Date()) / (1000 * 60 * 60)
-  if (diffHours < 24) return 'urgent'   // overdue or due within 24h
+  if (diffHours < 24) return 'urgent' // overdue or due within 24h
   if (diffHours < 72) return 'upcoming' // due within 3 days
   return 'idle'
 }
@@ -194,7 +216,9 @@ export default function Posts() {
   // Health counts derived from the current fetched posts (respects all other filters)
   const healthCounts = useMemo(() => {
     const c = { all: posts.length, urgent: 0, upcoming: 0, idle: 0 }
-    posts.forEach((p) => { c[getPostHealth(p)]++ })
+    posts.forEach((p) => {
+      c[getPostHealth(p)]++
+    })
     return c
   }, [posts])
 
@@ -262,10 +286,16 @@ export default function Posts() {
           <p className="text-sm font-medium truncate">
             {item.title || 'Untitled'}
           </p>
-          <p className="text-xs text-muted-foreground truncate mt-0.5">
-            {item.content?.substring(0, 60)}
-            {item.content?.length > 60 ? '...' : ''}
-          </p>
+          {item.deliverable_type && DELIVERABLE_TYPE_LABELS[item.deliverable_type] ? (
+            <Badge variant="secondary" className="rounded-full text-[10px] px-1.5 py-0 mt-1 font-medium">
+              {DELIVERABLE_TYPE_LABELS[item.deliverable_type]}
+            </Badge>
+          ) : (
+            <p className="text-xs text-muted-foreground truncate mt-0.5">
+              {item.content?.substring(0, 60)}
+              {item.content?.length > 60 ? '...' : ''}
+            </p>
+          )}
         </div>
       ),
     },
@@ -353,7 +383,10 @@ export default function Posts() {
             onSelect={setHealthFilter}
             counts={healthCounts}
           />
-          <Button onClick={() => setIsCreatePostOpen(true)} className="gap-2 h-9">
+          <Button
+            onClick={() => setIsCreatePostOpen(true)}
+            className="gap-2 h-9"
+          >
             <Plus size={16} />
             New Deliverable
           </Button>
@@ -572,26 +605,38 @@ export default function Posts() {
             <Empty className="py-20 border border-dashed rounded-2xl bg-muted/5">
               <EmptyContent>
                 <EmptyMedia variant="icon">
-                  {hasActiveFilters
-                    ? <Search className="size-6 text-muted-foreground/60" />
-                    : <Newspaper className="size-6 text-muted-foreground/60" />}
+                  {hasActiveFilters ? (
+                    <Search className="size-6 text-muted-foreground/60" />
+                  ) : (
+                    <Newspaper className="size-6 text-muted-foreground/60" />
+                  )}
                 </EmptyMedia>
                 <EmptyHeader>
                   <EmptyTitle className="font-normal text-xl">
-                    {hasActiveFilters ? 'No deliverables found' : 'No deliverables yet'}
+                    {hasActiveFilters
+                      ? 'No deliverables found'
+                      : 'No deliverables yet'}
                   </EmptyTitle>
-                  <EmptyDescription className="font-light">
+                  <EmptyDescription className="font-normal">
                     {hasActiveFilters
                       ? 'No deliverables match your current filters. Try adjusting your search or filter criteria.'
                       : 'Create your first draft to start building content for your clients.'}
                   </EmptyDescription>
                 </EmptyHeader>
                 {hasActiveFilters ? (
-                  <Button variant="link" onClick={resetFilters} className="text-primary font-medium">
+                  <Button
+                    variant="link"
+                    onClick={resetFilters}
+                    className="text-primary font-medium"
+                  >
                     Clear filters
                   </Button>
                 ) : (
-                  <Button variant="outline" size="sm" onClick={() => setIsCreatePostOpen(true)}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsCreatePostOpen(true)}
+                  >
                     <Plus className="size-4 mr-2" />
                     New Deliverable
                   </Button>

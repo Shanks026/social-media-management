@@ -35,7 +35,7 @@ export default function CampaignsPage() {
         {/* --- SECTION 1: HEADER --- */}
         <div className="flex items-end justify-between">
           <div className="space-y-1">
-            <h1 className="text-3xl font-light tracking-tight text-foreground">
+            <h1 className="text-3xl font-normal tracking-tight text-foreground">
               Campaigns{' '}
               {!campaignsLoading && campaignCount > 0 && (
                 <span className="text-muted-foreground/50 ml-2 font-extralight">
@@ -43,7 +43,7 @@ export default function CampaignsPage() {
                 </span>
               )}
             </h1>
-            <p className="text-sm text-muted-foreground font-light">
+            <p className="text-sm text-muted-foreground font-normal">
               Organize and track your content initiatives across all your social
               channels.
             </p>

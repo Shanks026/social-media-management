@@ -11,7 +11,7 @@ export const InvoicesTab = () => (
         <h3 className="text-base font-semibold tracking-tight">
           No invoices yet
         </h3>
-        <p className="text-sm text-muted-foreground/70 mt-1.5 max-w-sm text-center font-light leading-relaxed">
+        <p className="text-sm text-muted-foreground/70 mt-1.5 max-w-sm text-center font-normal leading-relaxed">
           Your invoice history will appear here once billing is active. All past
           and upcoming invoices will be available for download.
         </p>

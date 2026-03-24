@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -30,9 +30,10 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
-import { Building2 } from 'lucide-react'
+import { Building2, Target } from 'lucide-react'
 import { formatFileSize } from '@/lib/helper'
 import { useClients } from '@/api/clients'
+import { useProspects } from '@/api/prospects'
 
 export const DOCUMENT_CATEGORIES = [
   'Contract',
@@ -43,6 +44,15 @@ export const DOCUMENT_CATEGORIES = [
   'Meeting Notes',
   'Invoice / Finance',
   'SOP',
+  'Other',
+]
+
+export const PROSPECT_DOCUMENT_CATEGORIES = [
+  'Pitch Deck',
+  'Case Study',
+  'NDA',
+  'Discovery Notes',
+  'Contract',
   'Other',
 ]
 
@@ -66,19 +76,25 @@ export default function UploadMetaDialog({
   uploadProgress,
   showClientSelector = false,
   defaultClientId,
+  categories = DOCUMENT_CATEGORIES,
 }) {
   const isUploading = uploadProgress !== null && uploadProgress !== undefined
 
   const { data: clientsData } = useClients()
   const internalAccount = clientsData?.internalAccount
   const realClients = clientsData?.realClients ?? []
+  const { data: prospectsData } = useProspects()
+  const prospects = prospectsData ?? []
+
+  // defaultClientId is already a prefixed "client:uuid" string from the caller
+  const defaultLinkTarget = defaultClientId ?? ''
 
   const schema = z.object({
     displayName: z.string().min(1, 'Name is required').max(200),
     category: z.string().min(1, 'Category is required'),
     notes: z.string().max(500).optional(),
     ...(showClientSelector
-      ? { clientId: z.string().min(1, 'Client is required') }
+      ? { linkTarget: z.string().min(1, 'Link target is required') }
       : {}),
   })
 
@@ -86,11 +102,27 @@ export default function UploadMetaDialog({
     resolver: zodResolver(schema),
     defaultValues: {
       displayName: '',
-      category: 'Other',
+      category: DOCUMENT_CATEGORIES.at(-1) ?? 'Other',
       notes: '',
-      ...(showClientSelector ? { clientId: defaultClientId ?? '' } : {}),
+      ...(showClientSelector ? { linkTarget: defaultLinkTarget } : {}),
     },
   })
+
+  // When the link target selector is shown, derive categories from the selection
+  const linkTarget = form.watch('linkTarget')
+  const activeCategories = useMemo(() => {
+    if (!showClientSelector) return categories
+    return linkTarget?.startsWith('prospect:')
+      ? PROSPECT_DOCUMENT_CATEGORIES
+      : DOCUMENT_CATEGORIES
+  }, [showClientSelector, linkTarget, categories])
+
+  // Reset category to last item of new list when link target changes
+  useEffect(() => {
+    if (showClientSelector && linkTarget) {
+      form.setValue('category', activeCategories.at(-1) ?? 'Other')
+    }
+  }, [linkTarget, activeCategories, showClientSelector, form])
 
   // Pre-fill when file or defaultClientId changes
   useEffect(() => {
@@ -98,15 +130,21 @@ export default function UploadMetaDialog({
       const nameWithoutExt = file.name.replace(/\.[^/.]+$/, '')
       form.reset({
         displayName: nameWithoutExt,
-        category: 'Other',
+        category: activeCategories.at(-1) ?? 'Other',
         notes: '',
-        ...(showClientSelector ? { clientId: defaultClientId ?? '' } : {}),
+        ...(showClientSelector ? { linkTarget: defaultLinkTarget } : {}),
       })
     }
-  }, [file, defaultClientId, showClientSelector, form])
+  }, [file, defaultLinkTarget, showClientSelector, form])
 
-  async function handleSubmit(values) {
-    await onConfirm(values)
+  async function handleSubmit({ linkTarget, ...rest }) {
+    let clientId, prospectId
+    if (linkTarget?.startsWith('prospect:')) {
+      prospectId = linkTarget.replace('prospect:', '')
+    } else if (linkTarget?.startsWith('client:')) {
+      clientId = linkTarget.replace('client:', '')
+    }
+    await onConfirm({ ...rest, clientId, prospectId })
   }
 
   return (
@@ -124,14 +162,14 @@ export default function UploadMetaDialog({
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
-            {/* Client selector — only on global page */}
+            {/* Link to selector — only on global page */}
             {showClientSelector && (
               <FormField
                 control={form.control}
-                name="clientId"
+                name="linkTarget"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Client</FormLabel>
+                    <FormLabel>Link to</FormLabel>
                     <Select
                       onValueChange={field.onChange}
                       value={field.value}
@@ -139,14 +177,14 @@ export default function UploadMetaDialog({
                     >
                       <FormControl>
                         <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Select client" />
+                          <SelectValue placeholder="Select client or prospect" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
                         {internalAccount && (
                           <SelectGroup>
                             <SelectLabel>Workspace</SelectLabel>
-                            <SelectItem value={internalAccount.id}>
+                            <SelectItem value={`client:${internalAccount.id}`}>
                               <span className="flex items-center gap-2">
                                 {internalAccount.logo_url ? (
                                   <img
@@ -166,7 +204,7 @@ export default function UploadMetaDialog({
                           <SelectGroup>
                             <SelectLabel>Clients</SelectLabel>
                             {realClients.map((c) => (
-                              <SelectItem key={c.id} value={c.id}>
+                              <SelectItem key={c.id} value={`client:${c.id}`}>
                                 <span className="flex items-center gap-2">
                                   {c.logo_url ? (
                                     <img
@@ -178,6 +216,19 @@ export default function UploadMetaDialog({
                                     <Building2 className="size-4 text-muted-foreground" />
                                   )}
                                   {c.name}
+                                </span>
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
+                        )}
+                        {prospects.length > 0 && (
+                          <SelectGroup>
+                            <SelectLabel>Prospects</SelectLabel>
+                            {prospects.map((p) => (
+                              <SelectItem key={p.id} value={`prospect:${p.id}`}>
+                                <span className="flex items-center gap-2">
+                                  <Target className="size-4 text-muted-foreground" />
+                                  {p.business_name}
                                 </span>
                               </SelectItem>
                             ))}
@@ -226,7 +277,7 @@ export default function UploadMetaDialog({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {DOCUMENT_CATEGORIES.map((cat) => (
+                      {activeCategories.map((cat) => (
                         <SelectItem key={cat} value={cat}>
                           {cat}
                         </SelectItem>

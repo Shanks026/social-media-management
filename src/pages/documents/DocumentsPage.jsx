@@ -8,11 +8,13 @@ import {
   Search,
   X,
   Building2,
+  Target,
   Lock,
 } from 'lucide-react'
 import { useHeader } from '@/components/misc/header-context'
 import { useAuth } from '@/context/AuthContext'
 import { useClients } from '@/api/clients'
+import { useProspects } from '@/api/prospects'
 import { useSubscription } from '@/api/useSubscription'
 import {
   Tooltip,
@@ -25,12 +27,18 @@ import {
   useAllCollections,
   uploadDocument,
 } from '@/api/documents'
+import {
+  DOCUMENT_CATEGORIES,
+  PROSPECT_DOCUMENT_CATEGORIES,
+} from '@/components/documents/UploadMetaDialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
@@ -47,9 +55,7 @@ import {
 } from '@/components/ui/empty'
 import DocumentCard from '@/components/documents/DocumentCard'
 import DocumentUploadZone from '@/components/documents/DocumentUploadZone'
-import UploadMetaDialog, {
-  DOCUMENT_CATEGORIES,
-} from '@/components/documents/UploadMetaDialog'
+import UploadMetaDialog from '@/components/documents/UploadMetaDialog'
 import CollectionCard from '@/components/documents/CollectionCard'
 import CreateCollectionDialog from '@/components/documents/CreateCollectionDialog'
 
@@ -86,12 +92,15 @@ export default function DocumentsPage() {
   const { data: sub } = useSubscription()
   const collectionsUnlocked = sub?.documents_collections ?? false
 
-  // ── Clients ──────────────────────────────────────────────────────────────────
+  // ── Clients + Prospects ───────────────────────────────────────────────────────
   const { data: clientsData } = useClients()
   const internalAccount = clientsData?.internalAccount
   const realClients = clientsData?.realClients ?? []
+  const { data: prospectsData } = useProspects()
+  const prospects = prospectsData ?? []
 
   // ── Filters ───────────────────────────────────────────────────────────────────
+  // selectedTarget: 'all' | 'client:uuid' | 'prospect:uuid'
   const [selectedClientId, setSelectedClientId] = useState('all')
   const [selectedCategory, setSelectedCategory] = useState('all')
   const [selectedStatus, setSelectedStatus] = useState('all')
@@ -104,8 +113,12 @@ export default function DocumentsPage() {
     return () => clearTimeout(timer)
   }, [searchRaw])
 
-  const activeClientId =
-    selectedClientId !== 'all' ? selectedClientId : undefined
+  const activeClientId = selectedClientId.startsWith('client:')
+    ? selectedClientId.replace('client:', '')
+    : undefined
+  const activeProspectId = selectedClientId.startsWith('prospect:')
+    ? selectedClientId.replace('prospect:', '')
+    : undefined
   const isFilterActive =
     selectedClientId !== 'all' ||
     selectedCategory !== 'all' ||
@@ -120,6 +133,18 @@ export default function DocumentsPage() {
     setSearch('')
   }
 
+  // Active category list depends on whether a prospect or client is selected
+  const activeCategoryList = activeProspectId
+    ? PROSPECT_DOCUMENT_CATEGORIES
+    : DOCUMENT_CATEGORIES
+
+  // Switch away from Collections/Ungrouped tabs when a prospect is selected
+  useEffect(() => {
+    if (activeProspectId && (activeTab === 'collections' || activeTab === 'ungrouped')) {
+      setTab('all')
+    }
+  }, [activeProspectId])
+
   // ── Documents + Collections queries ───────────────────────────────────────────
   const {
     data: documents,
@@ -127,14 +152,17 @@ export default function DocumentsPage() {
     error,
   } = useDocuments({
     clientId: activeClientId,
+    prospectId: activeProspectId,
   })
   const { data: allCollections, isLoading: collectionsLoading } =
     useAllCollections()
 
-  // Scope collections to selected client if one is active
-  const collections = activeClientId
-    ? (allCollections ?? []).filter((c) => c.client_id === activeClientId)
-    : (allCollections ?? [])
+  // Scope collections to selected client; prospects have no collections
+  const collections = activeProspectId
+    ? []
+    : activeClientId
+      ? (allCollections ?? []).filter((c) => c.client_id === activeClientId)
+      : (allCollections ?? [])
 
   // Client-side doc filters
   const filteredDocs = (documents ?? []).filter((doc) => {
@@ -149,7 +177,9 @@ export default function DocumentsPage() {
     return true
   })
 
-  const archivedCount = (documents ?? []).filter((d) => d.status === 'Archived').length
+  const archivedCount = (documents ?? []).filter(
+    (d) => d.status === 'Archived',
+  ).length
 
   const ungroupedDocs = filteredDocs.filter((d) => !d.collection_id)
 
@@ -178,8 +208,8 @@ export default function DocumentsPage() {
   const [createCollectionOpen, setCreateCollectionOpen] = useState(false)
 
   const uploadMutation = useMutation({
-    mutationFn: ({ file, displayName, category, clientId, notes }) =>
-      uploadDocument({ clientId, file, displayName, category, notes }),
+    mutationFn: ({ file, displayName, category, clientId, prospectId, notes }) =>
+      uploadDocument({ clientId, prospectId, file, displayName, category, notes }),
     onMutate: () => setUploadProgress(10),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['documents', 'list'] })
@@ -202,7 +232,7 @@ export default function DocumentsPage() {
     setDialogOpen(true)
   }
 
-  function handleConfirmUpload({ displayName, category, clientId, notes }) {
+  function handleConfirmUpload({ displayName, category, clientId, prospectId, notes }) {
     if (!pendingFile) return
     setUploadProgress(30)
     uploadMutation.mutate({
@@ -210,6 +240,7 @@ export default function DocumentsPage() {
       displayName,
       category,
       clientId,
+      prospectId,
       notes,
     })
   }
@@ -254,7 +285,7 @@ export default function DocumentsPage() {
         {/* ── SECTION 1: HEADER ── */}
         <div className="flex items-center justify-between">
           <div className="space-y-1">
-            <h1 className="text-3xl font-light tracking-tight text-foreground">
+            <h1 className="text-3xl font-normal tracking-tight text-foreground">
               Documents{' '}
               {filteredDocs.length > 0 && (
                 <span className="text-muted-foreground/50 ml-2 font-extralight">
@@ -262,38 +293,40 @@ export default function DocumentsPage() {
                 </span>
               )}
             </h1>
-            <p className="text-sm text-muted-foreground font-light">
+            <p className="text-sm text-muted-foreground font-normal">
               All documents across your clients and workspace.
             </p>
           </div>
 
-          <TooltipProvider>
-            {collectionsUnlocked ? (
-              <Button
-                variant="outline"
-                onClick={() => setCreateCollectionOpen(true)}
-                className="gap-2 h-9"
-              >
-                <FolderPlus className="size-4" />
-                New Collection
-              </Button>
-            ) : (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="gap-2 opacity-50 cursor-not-allowed h-9"
-                    disabled
-                  >
-                    <FolderPlus className="size-4" />
-                    New Collection
-                    <Lock size={12} />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Upgrade to unlock Collections</TooltipContent>
-              </Tooltip>
-            )}
-          </TooltipProvider>
+          {!activeProspectId && (
+            <TooltipProvider>
+              {collectionsUnlocked ? (
+                <Button
+                  variant="outline"
+                  onClick={() => setCreateCollectionOpen(true)}
+                  className="gap-2 h-9"
+                >
+                  <FolderPlus className="size-4" />
+                  New Collection
+                </Button>
+              ) : (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="gap-2 opacity-50 cursor-not-allowed h-9"
+                      disabled
+                    >
+                      <FolderPlus className="size-4" />
+                      New Collection
+                      <Lock size={12} />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Upgrade to unlock Collections</TooltipContent>
+                </Tooltip>
+              )}
+            </TooltipProvider>
+          )}
         </div>
 
         <Tabs value={activeTab} onValueChange={setTab}>
@@ -310,32 +343,53 @@ export default function DocumentsPage() {
               />
             </div>
 
-            {/* Client */}
+            {/* Client / Prospect */}
             <Select
               value={selectedClientId}
               onValueChange={(v) => setSelectedClientId(v)}
             >
               <SelectTrigger className="w-[190px]">
-                <SelectValue placeholder="All clients" />
+                <SelectValue placeholder="All" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All clients</SelectItem>
+                <SelectItem value="all">All</SelectItem>
                 {internalAccount && (
-                  <SelectItem value={internalAccount.id}>
-                    <div className="flex items-center gap-2">
-                      <ClientAvatar client={internalAccount} size="sm" />
-                      <span className="truncate">{internalAccount.name}</span>
-                    </div>
-                  </SelectItem>
+                  <SelectGroup>
+                    <SelectLabel>Workspace</SelectLabel>
+                    <SelectItem value={`client:${internalAccount.id}`}>
+                      <div className="flex items-center gap-2">
+                        <ClientAvatar client={internalAccount} size="sm" />
+                        <span className="truncate">{internalAccount.name}</span>
+                      </div>
+                    </SelectItem>
+                  </SelectGroup>
                 )}
-                {realClients.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    <div className="flex items-center gap-2">
-                      <ClientAvatar client={c} size="sm" />
-                      <span className="truncate">{c.name}</span>
-                    </div>
-                  </SelectItem>
-                ))}
+                {realClients.length > 0 && (
+                  <SelectGroup>
+                    <SelectLabel>Clients</SelectLabel>
+                    {realClients.map((c) => (
+                      <SelectItem key={c.id} value={`client:${c.id}`}>
+                        <div className="flex items-center gap-2">
+                          <ClientAvatar client={c} size="sm" />
+                          <span className="truncate">{c.name}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                )}
+                {prospects.length > 0 && (
+                  <SelectGroup>
+                    <SelectLabel>Prospects</SelectLabel>
+                    {prospects.map((p) => (
+                      <SelectItem key={p.id} value={`prospect:${p.id}`}>
+                        <div className="flex items-center gap-2">
+                          <Target className="size-4 text-muted-foreground" />
+                          <span className="truncate">{p.business_name}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                )}
               </SelectContent>
             </Select>
 
@@ -361,7 +415,7 @@ export default function DocumentsPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All categories</SelectItem>
-                {DOCUMENT_CATEGORIES.map((cat) => (
+                {activeCategoryList.map((cat) => (
                   <SelectItem key={cat} value={cat}>
                     {cat}
                   </SelectItem>
@@ -389,18 +443,22 @@ export default function DocumentsPage() {
                     {filteredDocs.length}
                   </span>
                 </TabsTrigger>
-                <TabsTrigger value="collections">
-                  Collections
-                  <span className="ml-1.5 text-xs text-muted-foreground tabular-nums">
-                    {collections.length}
-                  </span>
-                </TabsTrigger>
-                <TabsTrigger value="ungrouped">
-                  Ungrouped
-                  <span className="ml-1.5 text-xs text-muted-foreground tabular-nums">
-                    {ungroupedDocs.length}
-                  </span>
-                </TabsTrigger>
+                {!activeProspectId && (
+                  <>
+                    <TabsTrigger value="collections">
+                      Collections
+                      <span className="ml-1.5 text-xs text-muted-foreground tabular-nums">
+                        {collections.length}
+                      </span>
+                    </TabsTrigger>
+                    <TabsTrigger value="ungrouped">
+                      Ungrouped
+                      <span className="ml-1.5 text-xs text-muted-foreground tabular-nums">
+                        {ungroupedDocs.length}
+                      </span>
+                    </TabsTrigger>
+                  </>
+                )}
               </TabsList>
             </div>
           </div>
@@ -426,20 +484,19 @@ export default function DocumentsPage() {
                   {filteredDocs.length === 0 ? (
                     <Empty className="py-20 border border-dashed rounded-2xl bg-muted/5">
                       <EmptyContent>
-                        <EmptyMedia variant="icon">
-                          {isFilterActive
-                            ? <Search className="size-6 text-muted-foreground/60" />
-                            : <FolderOpen className="size-6 text-muted-foreground/60" />}
-                        </EmptyMedia>
+                        <div className="text-4xl leading-none select-none mb-2">
+                          {isFilterActive ? '🔍' : '📁'}
+                        </div>
                         <EmptyHeader>
                           <EmptyTitle className="font-normal text-xl">
                             {isFilterActive
-                              ? selectedStatus === 'Active' || selectedStatus === 'all'
+                              ? selectedStatus === 'Active' ||
+                                selectedStatus === 'all'
                                 ? 'No documents match your filters'
                                 : 'No archived documents'
                               : 'No active documents'}
                           </EmptyTitle>
-                          <EmptyDescription className="font-light">
+                          <EmptyDescription className="font-normal">
                             {isFilterActive
                               ? selectedStatus === 'Archived'
                                 ? 'No documents have been archived yet.'
@@ -471,10 +528,62 @@ export default function DocumentsPage() {
                       </EmptyContent>
                     </Empty>
                   ) : (
-                    <div className="space-y-2 animate-in fade-in duration-500">
-                      {filteredDocs.map((doc) => (
-                        <DocumentCard key={doc.id} doc={doc} />
-                      ))}
+                    <div className="space-y-6 animate-in fade-in duration-500">
+                      {/* Collections */}
+                      {collections.length > 0 && (
+                        activeClientId ? (
+                          <div className="space-y-3">
+                            {collections.map((col) => (
+                              <CollectionCard
+                                key={col.id}
+                                collection={col}
+                                documents={filteredDocs.filter((d) => d.collection_id === col.id)}
+                                locked={!collectionsUnlocked}
+                              />
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="space-y-8">
+                            {collectionsByClient.map((group) => (
+                              <div key={group.clientId} className="space-y-3">
+                                <div className="flex items-center gap-2">
+                                  {group.logoUrl ? (
+                                    <img src={group.logoUrl} alt="" className="size-5 rounded-full object-cover ring-1 ring-border" />
+                                  ) : (
+                                    <div className="size-5 rounded-full bg-muted flex items-center justify-center ring-1 ring-border">
+                                      <Building2 className="size-3 text-muted-foreground" />
+                                    </div>
+                                  )}
+                                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                                    {group.clientName}
+                                  </p>
+                                </div>
+                                {group.collections.map((col) => (
+                                  <CollectionCard
+                                    key={col.id}
+                                    collection={col}
+                                    documents={filteredDocs.filter((d) => d.collection_id === col.id)}
+                                    locked={!collectionsUnlocked}
+                                  />
+                                ))}
+                              </div>
+                            ))}
+                          </div>
+                        )
+                      )}
+                      {/* Ungrouped */}
+                      {ungroupedDocs.length > 0 && (
+                        <div className="space-y-2">
+                          {collections.length > 0 && (
+                            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                              Ungrouped
+                            </p>
+                          )}
+                          {ungroupedDocs.map((doc) => (
+                            <DocumentCard key={doc.id} doc={doc} />
+                          ))}
+                        </div>
+                      )}
                     </div>
                   )}
                 </TabsContent>
@@ -504,12 +613,12 @@ export default function DocumentsPage() {
                   {collections.length === 0 ? (
                     <Empty className="py-20 border border-dashed rounded-2xl bg-muted/5">
                       <EmptyContent>
-                        <EmptyMedia variant="icon">
-                          <FolderOpen className="size-6 text-muted-foreground/60" />
-                        </EmptyMedia>
+                        <div className="text-4xl leading-none select-none mb-2">📁</div>
                         <EmptyHeader>
-                          <EmptyTitle className="font-normal text-xl">No collections yet</EmptyTitle>
-                          <EmptyDescription className="font-light">
+                          <EmptyTitle className="font-normal text-xl">
+                            No collections yet
+                          </EmptyTitle>
+                          <EmptyDescription className="font-normal">
                             {activeClientId
                               ? 'Open this client\u2019s Documents tab to create a collection.'
                               : 'Open a client\u2019s Documents tab to create collections.'}
@@ -634,7 +743,7 @@ export default function DocumentsPage() {
         onConfirm={handleConfirmUpload}
         uploadProgress={uploadProgress}
         showClientSelector={true}
-        defaultClientId={internalAccount?.id}
+        defaultClientId={internalAccount?.id ? `client:${internalAccount.id}` : undefined}
       />
     </div>
   )

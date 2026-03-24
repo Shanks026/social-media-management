@@ -18,13 +18,13 @@ export const PlanOverview = ({ sub, currentPlan, onUpgradeClick, isFree }) => {
               <Zap className="size-8" />
             </div>
             <div className="space-y-2 text-center sm:text-left">
-              <h2 className="text-3xl font-light tracking-tight flex items-center justify-center sm:justify-start gap-2 text-muted-foreground">
+              <h2 className="text-3xl font-normal tracking-tight flex items-center justify-center sm:justify-start gap-2 text-muted-foreground">
                 Free
                 <span className="font-normal italic text-muted-foreground/40 text-3xl">
                   Subscription.
                 </span>
               </h2>
-              <p className="w-[70%] text-muted-foreground/70 text-sm font-light leading-relaxed">
+              <p className="w-[70%] text-muted-foreground/70 text-sm font-normal leading-relaxed">
                 You're on the Free tier with limited access. Upgrade to unlock
                 more clients, storage, and advanced features for your agency.
               </p>
@@ -58,13 +58,13 @@ export const PlanOverview = ({ sub, currentPlan, onUpgradeClick, isFree }) => {
           </div>
 
           <div className="space-y-2 text-center sm:text-left">
-            <h2 className="text-3xl font-light tracking-tight flex items-center justify-center sm:justify-start gap-2">
+            <h2 className="text-3xl font-normal tracking-tight flex items-center justify-center sm:justify-start gap-2">
               {planName}
               <span className="font-normal italic text-muted-foreground/50 text-3xl">
                 Subscription.
               </span>
             </h2>
-            <p className="w-[70%] text-muted-foreground text-sm font-light leading-relaxed">
+            <p className="w-[70%] text-muted-foreground text-sm font-normal leading-relaxed">
               Your agency is currently on the {planName} tier, ideal for{' '}
               {bestFor}. You have access to all your included core features and
               storage.

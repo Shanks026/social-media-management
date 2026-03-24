@@ -1,6 +1,15 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/context/AuthContext'
-import { useTeamMembers, usePendingInvites, useGenerateInvite, useRevokeInvite, useRemoveMember, useRemovedMembers, useRestoreMember, useDeleteMemberPermanently } from '@/api/team'
+import {
+  useTeamMembers,
+  usePendingInvites,
+  useGenerateInvite,
+  useRevokeInvite,
+  useRemoveMember,
+  useRemovedMembers,
+  useRestoreMember,
+  useDeleteMemberPermanently,
+} from '@/api/team'
 import { formatDate } from '@/lib/helper'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -25,8 +34,24 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { UserPlus, Copy, Check, Link, Trash2, Users, CalendarDays, Briefcase, Clock, Loader2, RotateCcw } from 'lucide-react'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
+import {
+  UserPlus,
+  Copy,
+  Check,
+  Link,
+  Trash2,
+  Users,
+  CalendarDays,
+  Briefcase,
+  Clock,
+  Loader2,
+  RotateCcw,
+} from 'lucide-react'
 import {
   Empty,
   EmptyContent,
@@ -49,13 +74,18 @@ function InviteDialog({ open, onOpenChange }) {
       setCopied(false)
       return
     }
-    generateInvite.mutateAsync()
+    generateInvite
+      .mutateAsync()
       .then((url) => setInviteUrl(url))
       .catch((err) => {
-        toast.error(err.message || 'Failed to generate invite link')
+        const msg =
+          err.message === 'TEAM_SEAT_LIMIT_REACHED'
+            ? 'Team seat limit reached. Upgrade your plan to invite more members.'
+            : err.message || 'Failed to generate invite link'
+        toast.error(msg)
         onOpenChange(false)
       })
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
 
   const handleCopy = () => {
@@ -85,14 +115,28 @@ function InviteDialog({ open, onOpenChange }) {
             <div className="space-y-1.5">
               <Label>Invite link</Label>
               <div className="flex gap-2">
-                <Input readOnly value={inviteUrl} className="text-xs font-mono" />
-                <Button variant="outline" size="icon" onClick={handleCopy} className="shrink-0">
-                  {copied ? <Check className="size-4 text-green-500" /> : <Copy className="size-4" />}
+                <Input
+                  readOnly
+                  value={inviteUrl}
+                  className="text-xs font-mono"
+                />
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={handleCopy}
+                  className="shrink-0"
+                >
+                  {copied ? (
+                    <Check className="size-4 text-green-500" />
+                  ) : (
+                    <Copy className="size-4" />
+                  )}
                 </Button>
               </div>
             </div>
             <p className="text-xs text-muted-foreground">
-              This link expires in 7 days. Send it via WhatsApp, email, or any other channel.
+              This link expires in 7 days. Send it via WhatsApp, email, or any
+              other channel.
             </p>
           </div>
         ) : null}
@@ -114,7 +158,12 @@ function MemberAvatar({ name, email, avatarUrl }) {
     )
   }
   const initials = name
-    ? name.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase()
+    ? name
+        .split(' ')
+        .map((w) => w[0])
+        .slice(0, 2)
+        .join('')
+        .toUpperCase()
     : (email?.[0] ?? '?').toUpperCase()
   return (
     <div className="size-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary text-sm font-semibold shrink-0">
@@ -175,7 +224,9 @@ export default function TeamSettings() {
     if (!deletingMember) return
     try {
       await deleteMemberPermanently.mutateAsync(deletingMember.id)
-      toast.success(`${deletingMember.full_name || 'Member'} permanently deleted`)
+      toast.success(
+        `${deletingMember.full_name || 'Member'} permanently deleted`,
+      )
     } catch (err) {
       toast.error(err.message || 'Failed to delete member')
     } finally {
@@ -204,7 +255,6 @@ export default function TeamSettings() {
 
   return (
     <div className="w-full space-y-14">
-
       {/* ── Section: Team Members ── */}
       <section className="space-y-8">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -212,8 +262,9 @@ export default function TeamSettings() {
             <h2 className="text-2xl font-normal tracking-tight">
               Team Members
             </h2>
-            <p className="text-sm text-muted-foreground font-light">
-              {members.length} {members.length === 1 ? 'member' : 'members'} with access to your workspace.
+            <p className="text-sm text-muted-foreground font-normal">
+              {members.length} {members.length === 1 ? 'member' : 'members'}{' '}
+              with access to your workspace.
             </p>
           </div>
           {isAdmin && (
@@ -232,17 +283,22 @@ export default function TeamSettings() {
         {members.length === 0 ? (
           <Empty className="py-16 border border-dashed rounded-2xl bg-muted/5">
             <EmptyContent>
-              <EmptyMedia variant="icon">
-                <Users className="size-6 text-muted-foreground/60" />
-              </EmptyMedia>
+              <div className="text-4xl leading-none select-none mb-2">👥</div>
               <EmptyHeader>
-                <EmptyTitle className="font-normal text-xl">Just you for now</EmptyTitle>
-                <EmptyDescription className="font-light">
-                  Invite a teammate to collaborate on client accounts and share the workload.
+                <EmptyTitle className="font-normal text-xl">
+                  Just you for now
+                </EmptyTitle>
+                <EmptyDescription className="font-normal">
+                  Invite a teammate to collaborate on client accounts and share
+                  the workload.
                 </EmptyDescription>
               </EmptyHeader>
               {isAdmin && (
-                <Button variant="outline" size="sm" onClick={() => setInviteOpen(true)}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setInviteOpen(true)}
+                >
                   <UserPlus className="size-4 mr-2" />
                   Invite Team Member
                 </Button>
@@ -261,19 +317,31 @@ export default function TeamSettings() {
                   key={member.id}
                   className="flex items-center gap-4 rounded-xl border border-border/50 bg-card/30 px-5 py-4"
                 >
-                  <MemberAvatar name={member.full_name} email={member.email} avatarUrl={member.avatar_url} />
+                  <MemberAvatar
+                    name={member.full_name}
+                    email={member.email}
+                    avatarUrl={member.avatar_url}
+                  />
 
                   <div className="flex-1 min-w-0 space-y-1">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <p className="text-sm font-medium truncate">{displayName}</p>
+                      <p className="text-sm font-medium truncate">
+                        {displayName}
+                      </p>
                       {isOwner && (
-                        <Badge variant="secondary" className="text-xs">Admin</Badge>
+                        <Badge variant="secondary" className="text-xs">
+                          Admin
+                        </Badge>
                       )}
                       {isSelf && (
-                        <Badge variant="outline" className="text-xs">You</Badge>
+                        <Badge variant="outline" className="text-xs">
+                          You
+                        </Badge>
                       )}
                     </div>
-                    <p className="text-xs text-muted-foreground truncate">{member.email}</p>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {member.email}
+                    </p>
                   </div>
 
                   <div className="hidden sm:flex items-center gap-6 shrink-0">
@@ -316,7 +384,7 @@ export default function TeamSettings() {
               <h2 className="text-2xl font-normal tracking-tight">
                 Pending Invites
               </h2>
-              <p className="text-sm text-muted-foreground font-light">
+              <p className="text-sm text-muted-foreground font-normal">
                 Active invite links that haven&apos;t been accepted yet.
               </p>
             </div>
@@ -381,8 +449,10 @@ export default function TeamSettings() {
 
           <section className="space-y-8">
             <div className="space-y-1">
-              <h2 className="text-2xl font-normal tracking-tight">Removed Members</h2>
-              <p className="text-sm text-muted-foreground font-light">
+              <h2 className="text-2xl font-normal tracking-tight">
+                Removed Members
+              </h2>
+              <p className="text-sm text-muted-foreground font-normal">
                 Members who have been removed from your workspace.
               </p>
             </div>
@@ -393,11 +463,19 @@ export default function TeamSettings() {
                   key={member.id}
                   className="flex items-center gap-4 rounded-xl border border-border/50 bg-card/30 px-5 py-4 opacity-60"
                 >
-                  <MemberAvatar name={member.full_name} email={member.email} avatarUrl={member.avatar_url} />
+                  <MemberAvatar
+                    name={member.full_name}
+                    email={member.email}
+                    avatarUrl={member.avatar_url}
+                  />
 
                   <div className="flex-1 min-w-0 space-y-1">
-                    <p className="text-sm font-medium truncate">{member.full_name || member.email}</p>
-                    <p className="text-xs text-muted-foreground truncate">{member.email}</p>
+                    <p className="text-sm font-medium truncate">
+                      {member.full_name || member.email}
+                    </p>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {member.email}
+                    </p>
                   </div>
 
                   {member.functional_role && (
@@ -446,12 +524,16 @@ export default function TeamSettings() {
       {/* ── Dialogs ── */}
       <InviteDialog open={inviteOpen} onOpenChange={setInviteOpen} />
 
-      <AlertDialog open={!!deletingMember} onOpenChange={(open) => !open && setDeletingMember(null)}>
+      <AlertDialog
+        open={!!deletingMember}
+        onOpenChange={(open) => !open && setDeletingMember(null)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete permanently?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently remove {deletingMember?.full_name || 'this member'} from the database.
+              This will permanently remove{' '}
+              {deletingMember?.full_name || 'this member'} from the database.
               They will need to be re-invited to rejoin. This cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -467,13 +549,16 @@ export default function TeamSettings() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <AlertDialog open={!!removingMember} onOpenChange={(open) => !open && setRemovingMember(null)}>
+      <AlertDialog
+        open={!!removingMember}
+        onOpenChange={(open) => !open && setRemovingMember(null)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Remove team member?</AlertDialogTitle>
             <AlertDialogDescription>
-              {removingMember?.full_name || 'This member'} will lose access to your workspace immediately.
-              This action cannot be undone.
+              {removingMember?.full_name || 'This member'} will lose access to
+              your workspace immediately. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

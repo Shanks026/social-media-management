@@ -2,18 +2,14 @@ import { useState } from 'react'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { Badge } from '@/components/ui/badge'
 import {
   ChevronRight,
   ChevronLeft,
-  Sparkles,
+  ArrowRight,
   Send,
   ShieldCheck,
   MousePointer2,
-  Rocket,
-  ArrowRight,
-  Users,
-  Layers,
-  Link2,
   Megaphone,
   Banknote,
   BarChart3,
@@ -36,21 +32,25 @@ import {
   CreditCard,
   List,
   CalendarCheck,
+  Target,
+  TrendingUp,
+  UserRoundPlus,
+  Handshake,
+  Users,
 } from 'lucide-react'
 
 function FeatureChip({ icon: Icon, label, accent = false }) {
   return (
-    <div
+    <Badge
+      variant="secondary"
       className={cn(
-        'inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium',
-        accent
-          ? 'border-primary/20 bg-primary/5 text-primary'
-          : 'border-border bg-muted/40 text-foreground/70',
+        'gap-2 rounded-full px-4 py-2 text-sm font-medium',
+        accent ? 'bg-primary/10 text-primary hover:bg-primary/10' : 'bg-muted text-foreground/80 hover:bg-muted',
       )}
     >
-      <Icon className="size-3.5 shrink-0" />
+      <Icon className="size-5 shrink-0" />
       {label}
-    </div>
+    </Badge>
   )
 }
 
@@ -62,31 +62,46 @@ export default function WelcomeCarousel({ open, onOpenChange, user }) {
   const SLIDES = [
     {
       title: `Welcome to Tercero, ${userName}`,
+      subtitle: 'First contact to final invoice — your agency, unified.',
       description:
-        "Your agency's new backbone — clients, content, campaigns, finance, and proposals unified in one distraction-free workspace.",
-      icon: <Sparkles className="size-7 text-primary/70" />,
+        'Tercero connects every stage of your agency in one workspace. Prospect a lead, win the deal, deliver the work, and collect payment — without switching tools.',
+      emoji: '🚀',
       buttonText: 'Take the tour',
       chips: [],
     },
     {
+      title: 'Your prospect pipeline',
+      description:
+        'Track every lead from first outreach to closed deal. Manage status, notes, and contact details for each prospect — and convert winning ones directly into client workspaces with data pre-filled.',
+      emoji: '🎯',
+      buttonText: 'Continue',
+      chips: [
+        { icon: Target,         label: 'Prospect pipeline',    accent: true },
+        { icon: TrendingUp,     label: 'Status tracking' },
+        { icon: FileText,       label: 'Proposals to prospects' },
+        { icon: UserRoundPlus,  label: 'Convert to client',    accent: true },
+        { icon: Handshake,      label: 'Engagement types' },
+      ],
+    },
+    {
       title: 'Manage every client relationship',
       description:
-        'Build a full client roster with pipeline health indicators, urgency tracking, custom tiers and industries, and separation of internal accounts.',
-      icon: <Users className="size-7 text-primary/70" />,
+        'Build a full client roster with pipeline health indicators, urgency tracking, custom tiers and industries — plus a clean separation of your own internal account.',
+      emoji: '🤝',
       buttonText: 'Continue',
       chips: [
         { icon: BarChart3,    label: 'Pipeline health' },
         { icon: Clock,        label: 'Urgency indicators' },
         { icon: Tag,          label: 'Tiers & industries' },
-        { icon: Building2,    label: 'Internal accounts' },
-        { icon: Archive,      label: 'Archived clients' },
+        { icon: Building2,    label: 'Internal account' },
+        { icon: Archive,      label: 'Archive & restore' },
       ],
     },
     {
-      title: 'Draft and schedule deliverables',
+      title: 'Draft, version, and schedule content',
       description:
-        'Every post lives through a clear status lifecycle. Track versions, attach media, target specific platforms, and set scheduled dates — all in one view.',
-      icon: <Layers className="size-7 text-primary/70" />,
+        'Every post lives through a clear status lifecycle. Track versions, attach media, target specific platforms, and preview exactly how each post looks before it goes out.',
+      emoji: '✍️',
       buttonText: 'Continue',
       chips: [
         { icon: GitBranch,    label: 'Post versioning' },
@@ -97,10 +112,10 @@ export default function WelcomeCarousel({ open, onOpenChange, user }) {
       ],
     },
     {
-      title: 'The client review loop',
+      title: 'Frictionless client approvals',
       description:
-        'Share a single link. Clients click to approve posts or request revisions — no logins, no email threads. Per-post tokens keep each decision auditable.',
-      icon: <Link2 className="size-7 text-primary/70" />,
+        'Share a single link. Clients approve posts or request revisions — no logins, no email chains. Campaign review lets clients action an entire batch at once.',
+      emoji: '✅',
       buttonText: 'Continue',
       chips: [
         { icon: MousePointer2, label: 'Magic review link',    accent: true },
@@ -112,8 +127,8 @@ export default function WelcomeCarousel({ open, onOpenChange, user }) {
     {
       title: 'Campaigns and the content calendar',
       description:
-        'Group posts into named campaigns to track KPIs, budget spend, and platform distribution. The calendar gives you a full date-range view of every scheduled post.',
-      icon: <Megaphone className="size-7 text-primary/70" />,
+        'Group posts into named campaigns to track KPIs, budget spend, and platform distribution. The calendar gives you a full date-range view of every scheduled post across all clients.',
+      emoji: '📣',
       buttonText: 'Continue',
       chips: [
         { icon: Megaphone,    label: 'Campaign grouping' },
@@ -121,32 +136,32 @@ export default function WelcomeCarousel({ open, onOpenChange, user }) {
         { icon: Banknote,     label: 'Budget tracker' },
         { icon: PieChart,     label: 'Platform distribution' },
         { icon: Calendar,     label: 'Content calendar' },
-        { icon: FileDown,     label: 'PDF calendar export', accent: true },
+        { icon: FileDown,     label: 'PDF calendar export',  accent: true },
       ],
     },
     {
-      title: 'Finance and proposals',
+      title: 'Proposals, invoicing, and finance',
       description:
-        'Generate PDF invoices, track expenses and subscriptions, run a transaction ledger, and send proposals that clients sign off on from a public link.',
-      icon: <Banknote className="size-7 text-primary/70" />,
+        'Send proposals from the same workspace you deliver work in. Generate PDF invoices, track expenses, run a full transaction ledger, and monitor agency profitability — all in one place.',
+      emoji: '💰',
       buttonText: 'Continue',
       chips: [
-        { icon: Receipt,      label: 'PDF invoices' },
+        { icon: FileText,     label: 'Proposals',             accent: true },
+        { icon: Globe,        label: 'Public proposal link' },
+        { icon: Receipt,      label: 'PDF invoices',          accent: true },
         { icon: CreditCard,   label: 'Expense tracking' },
         { icon: List,         label: 'Transaction ledger' },
         { icon: RefreshCw,    label: 'Recurring templates' },
-        { icon: FileText,     label: 'Proposals' },
-        { icon: Globe,        label: 'Public proposal link', accent: true },
       ],
     },
     {
       title: "You're all set",
       description:
-        'Invite your team via a single link — they get immediate workspace access. Meetings, notes, reminders, and document storage are ready when you need them.',
-      icon: <Rocket className="size-7 text-primary/70" />,
+        'Invite your team with a single link — they get full workspace access instantly. Meetings, notes, reminders, and secure document storage are there whenever you need them.',
+      emoji: '🎉',
       buttonText: 'Get started',
       chips: [
-        { icon: Users,        label: 'Team invites' },
+        { icon: Users,        label: 'Team workspace' },
         { icon: FolderOpen,   label: 'Document storage' },
         { icon: Bell,         label: 'Notes & reminders' },
         { icon: Calendar,     label: 'Meetings' },
@@ -189,14 +204,19 @@ export default function WelcomeCarousel({ open, onOpenChange, user }) {
               key={current}
               className="space-y-7 animate-in fade-in slide-in-from-bottom-2 duration-700"
             >
-              <div className="size-14 rounded-xl flex items-center justify-center bg-primary/4 border border-primary/10">
-                {slide.icon}
+              <div className="text-5xl leading-none select-none">
+                {slide.emoji}
               </div>
 
               <div className="space-y-3">
                 <h2 className="text-3xl font-medium tracking-tight text-foreground">
                   {slide.title}
                 </h2>
+                {slide.subtitle && (
+                  <p className="text-lg font-medium text-foreground/60 tracking-tight">
+                    {slide.subtitle}
+                  </p>
+                )}
                 <p className="text-base text-muted-foreground leading-relaxed max-w-xl">
                   {slide.description}
                 </p>
@@ -224,7 +244,6 @@ export default function WelcomeCarousel({ open, onOpenChange, user }) {
                 <Button
                   variant="ghost"
                   onClick={() => setCurrent((prev) => Math.max(0, prev - 1))}
-                  className="text-muted-foreground hover:text-foreground hover:bg-transparent font-medium px-0"
                 >
                   <ChevronLeft className="size-4 mr-1.5" /> Back
                 </Button>
@@ -236,7 +255,6 @@ export default function WelcomeCarousel({ open, onOpenChange, user }) {
                 <Button
                   variant="ghost"
                   onClick={() => onOpenChange(false)}
-                  className="h-10 text-muted-foreground hover:text-foreground hover:bg-transparent font-medium"
                 >
                   Skip
                 </Button>
@@ -250,7 +268,7 @@ export default function WelcomeCarousel({ open, onOpenChange, user }) {
                     setCurrent((prev) => prev + 1)
                   }
                 }}
-              className="h-10 px-6 font-medium"
+              className="px-6"
               >
                 {isLast ? (
                   <>Get started <ArrowRight className="size-4 ml-2" /></>

@@ -2,12 +2,11 @@ import { useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useHeader } from '../../components/misc/header-context'
 import { useSubscription } from '../../api/useSubscription'
-import { BarChart3, CreditCard, FileText } from 'lucide-react'
+import { BarChart3, CreditCard } from 'lucide-react'
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { UsageTab } from './UsageTab'
 import { SubscriptionTab } from './TertiarySubscriptionTab'
-import { InvoicesTab } from './InvoicesTab'
 
 // --- Main Page ---
 
@@ -35,12 +34,11 @@ export default function BillingUsage() {
         <div className="px-8 pt-8 pb-20 space-y-8 max-w-[1400px] mx-auto animate-in fade-in slide-in-from-bottom-4 duration-700 fill-mode-both">
           {/* PAGE HEADER */}
           <div className="space-y-1">
-            <h1 className="text-3xl font-light tracking-tight text-foreground">
+            <h1 className="text-3xl font-normal tracking-tight text-foreground">
               Billing & Usage
             </h1>
-            <p className="text-sm text-muted-foreground font-light">
-              Monitor your plan usage, manage your subscription, and view
-              invoices.
+            <p className="text-sm text-muted-foreground font-normal">
+              Monitor your plan usage and manage your subscription.
             </p>
           </div>
 
@@ -52,12 +50,7 @@ export default function BillingUsage() {
             <TabsList className="bg-transparent border-b border-white/5 rounded-none p-0 h-auto gap-8 w-full justify-start">
               {[
                 { value: 'usage', icon: BarChart3, label: 'Usage' },
-                {
-                  value: 'subscription',
-                  icon: CreditCard,
-                  label: 'Subscription',
-                },
-                { value: 'invoices', icon: FileText, label: 'Invoices' },
+                { value: 'subscription', icon: CreditCard, label: 'Subscription' },
               ].map((tab) => (
                 <TabsTrigger
                   key={tab.value}
@@ -100,13 +93,6 @@ export default function BillingUsage() {
               <SubscriptionTab sub={sub} isLoading={isLoading} />
             </TabsContent>
 
-            {/* ── Tab 3: Invoices ── */}
-            <TabsContent
-              value="invoices"
-              className="space-y-8 focus-visible:outline-none outline-none"
-            >
-              <InvoicesTab />
-            </TabsContent>
           </Tabs>
         </div>
       </div>

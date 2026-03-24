@@ -8,12 +8,12 @@ export function getUrgencyStatus(nextPostAt) {
 
   // Alarming color for missed deadlines
   if (diffInHours < 0) {
-    return { color: 'bg-rose-600', label: 'Overdue', pulse: true }
+    return { color: 'bg-red-500', label: 'Overdue', pulse: true }
   }
 
-  // Under 24h: Urgent (Red)
+  // Under 24h: Urgent (Rose)
   if (diffInHours < 24) {
-    return { color: 'bg-red-600', label: 'Urgent', pulse: true }
+    return { color: 'bg-rose-500', label: 'Urgent', pulse: true }
   }
 
   // Under 48h: Warning (Amber)

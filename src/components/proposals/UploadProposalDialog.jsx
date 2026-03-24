@@ -4,10 +4,11 @@ import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { format } from 'date-fns'
-import { CalendarIcon, Upload, FileText, X, Loader2 } from 'lucide-react'
+import { CalendarIcon, Upload, FileText, X, Loader2, Target } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { useClients } from '@/api/clients'
+import { useProspects } from '@/api/prospects'
 import {
   useCreateProposal,
   useUpdateProposal,
@@ -30,7 +31,9 @@ import {
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
@@ -46,6 +49,7 @@ const schema = z
     title: z.string().min(1, 'Title is required'),
     client_type: z.enum(['client', 'prospect']),
     client_id: z.string().nullable().optional(),
+    prospect_id: z.string().nullable().optional(),
     prospect_name: z.string().nullable().optional(),
     prospect_email: z
       .string()
@@ -71,7 +75,7 @@ const schema = z
         path: ['client_id'],
       })
     }
-    if (data.client_type === 'prospect' && !data.prospect_name?.trim()) {
+    if (data.client_type === 'prospect' && !data.prospect_id && !data.prospect_name?.trim()) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message: 'Prospect name is required',
@@ -82,12 +86,23 @@ const schema = z
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export function UploadProposalDialog({ open, onOpenChange, clientId = null, onUpgradeNeeded }) {
+export function UploadProposalDialog({
+  open,
+  onOpenChange,
+  clientId = null,
+  prospectId = null,
+  prospectName = null,
+  prospectEmail = null,
+  onUpgradeNeeded,
+}) {
   const navigate = useNavigate()
   const fileInputRef = useRef(null)
+  const isProspectMode = !!prospectId
 
   const { data: clientData } = useClients()
+  const { data: prospectsData } = useProspects()
   const clients = useMemo(() => clientData?.realClients || [], [clientData])
+  const prospects = useMemo(() => prospectsData || [], [prospectsData])
 
   const createProposal = useCreateProposal()
   const updateProposal = useUpdateProposal()
@@ -100,10 +115,11 @@ export function UploadProposalDialog({ open, onOpenChange, clientId = null, onUp
     resolver: zodResolver(schema),
     defaultValues: {
       title: '',
-      client_type: 'client',
+      client_type: isProspectMode ? 'prospect' : 'client',
       client_id: clientId || '',
-      prospect_name: '',
-      prospect_email: '',
+      prospect_id: prospectId || '',
+      prospect_name: prospectName || '',
+      prospect_email: prospectEmail || '',
       valid_until: null,
       total_value: '',
     },
@@ -119,16 +135,19 @@ export function UploadProposalDialog({ open, onOpenChange, clientId = null, onUp
   } = form
 
   const clientType = watch('client_type')
+  const watchedClientId = watch('client_id')
+  const watchedProspectId = watch('prospect_id')
 
   // Reset when dialog closes
   useEffect(() => {
     if (!open) {
       reset({
         title: '',
-        client_type: 'client',
+        client_type: isProspectMode ? 'prospect' : 'client',
         client_id: clientId || '',
-        prospect_name: '',
-        prospect_email: '',
+        prospect_id: prospectId || '',
+        prospect_name: prospectName || '',
+        prospect_email: prospectEmail || '',
         valid_until: null,
         total_value: '',
       })
@@ -136,7 +155,7 @@ export function UploadProposalDialog({ open, onOpenChange, clientId = null, onUp
       setFileError(null)
       setUploadProgress(null)
     }
-  }, [open, reset, clientId])
+  }, [open, reset, clientId, prospectId, isProspectMode, prospectName, prospectEmail])
 
   // ─── File selection ────────────────────────────────────────────────────────
 
@@ -181,6 +200,7 @@ export function UploadProposalDialog({ open, onOpenChange, clientId = null, onUp
         proposal_type: 'uploaded',
         title: values.title,
         client_id: values.client_type === 'client' ? (values.client_id || null) : null,
+        prospect_id: values.client_type === 'prospect' ? (values.prospect_id || null) : null,
         prospect_name: values.client_type === 'prospect' ? (values.prospect_name || null) : null,
         prospect_email: values.client_type === 'prospect' ? (values.prospect_email || null) : null,
         valid_until: values.valid_until ? format(values.valid_until, 'yyyy-MM-dd') : null,
@@ -234,85 +254,126 @@ export function UploadProposalDialog({ open, onOpenChange, clientId = null, onUp
           </div>
 
           {/* Client / Prospect */}
-          <div className="space-y-1.5">
+          <div className="space-y-3">
             <Label>For <span className="text-destructive">*</span></Label>
-            <Controller
-              control={control}
-              name="client_type"
-              render={({ field }) => (
-                <Select
-                  value={field.value}
-                  onValueChange={(v) => {
-                    field.onChange(v)
-                    setValue('client_id', '')
+
+            {isProspectMode ? (
+              /* Locked to this prospect */
+              <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-muted/30 border border-border/40 text-sm">
+                <span className="text-foreground font-medium">{prospectName}</span>
+                <span className="text-xs text-muted-foreground ml-auto">Prospect</span>
+              </div>
+            ) : (
+              <Select
+                value={
+                  clientType === 'client'
+                    ? (watchedClientId ? `client:${watchedClientId}` : '')
+                    : (watchedProspectId ? `prospect:${watchedProspectId}` : '__new_prospect__')
+                }
+                onValueChange={(v) => {
+                  if (v.startsWith('client:')) {
+                    setValue('client_type', 'client')
+                    setValue('client_id', v.slice(7))
+                    setValue('prospect_id', null)
                     setValue('prospect_name', '')
                     setValue('prospect_email', '')
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="client">Existing client</SelectItem>
-                    <SelectItem value="prospect">New prospect</SelectItem>
-                  </SelectContent>
-                </Select>
-              )}
-            />
-          </div>
-
-          {clientType === 'client' ? (
-            <div className="space-y-1.5">
-              <Label htmlFor="upload-client">Client <span className="text-destructive">*</span></Label>
-              <Controller
-                control={control}
-                name="client_id"
-                render={({ field }) => (
-                  <Select value={field.value || ''} onValueChange={field.onChange}>
-                    <SelectTrigger id="upload-client">
-                      <SelectValue placeholder="Select a client" />
-                    </SelectTrigger>
-                    <SelectContent>
+                  } else if (v.startsWith('prospect:')) {
+                    const pid = v.slice(9)
+                    const p = prospects.find((x) => x.id === pid)
+                    setValue('client_type', 'prospect')
+                    setValue('client_id', null)
+                    setValue('prospect_id', pid)
+                    setValue('prospect_name', p?.business_name || '')
+                    setValue('prospect_email', p?.email || '')
+                  } else {
+                    setValue('client_type', 'prospect')
+                    setValue('client_id', null)
+                    setValue('prospect_id', null)
+                    setValue('prospect_name', '')
+                    setValue('prospect_email', '')
+                  }
+                }}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select client or prospect…" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__new_prospect__">— New Prospect —</SelectItem>
+                  {clients.length > 0 && (
+                    <SelectGroup>
+                      <SelectLabel>Clients</SelectLabel>
                       {clients.map((c) => (
-                        <SelectItem key={c.id} value={c.id}>
-                          {c.name}
+                        <SelectItem key={c.id} value={`client:${c.id}`}>
+                          <div className="flex items-center gap-2">
+                            {c.logo_url ? (
+                              <img src={c.logo_url} alt="" className="size-5 rounded-full object-cover shrink-0" />
+                            ) : (
+                              <div className="size-5 rounded-full bg-muted flex items-center justify-center shrink-0">
+                                <span className="text-[10px] font-medium text-muted-foreground leading-none">{c.name[0]}</span>
+                              </div>
+                            )}
+                            {c.name}
+                          </div>
                         </SelectItem>
                       ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              />
-              {errors.client_id && (
-                <p className="text-xs text-destructive">{errors.client_id.message}</p>
-              )}
-            </div>
-          ) : (
-            <div className="space-y-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="upload-prospect-name">Prospect name <span className="text-destructive">*</span></Label>
-                <Input
-                  id="upload-prospect-name"
-                  placeholder="e.g. Acme Corp"
-                  {...register('prospect_name')}
-                />
-                {errors.prospect_name && (
-                  <p className="text-xs text-destructive">{errors.prospect_name.message}</p>
-                )}
+                    </SelectGroup>
+                  )}
+                  {prospects.length > 0 && (
+                    <SelectGroup>
+                      <SelectLabel>CRM Prospects</SelectLabel>
+                      {prospects.map((p) => (
+                        <SelectItem key={p.id} value={`prospect:${p.id}`}>
+                          <div className="flex items-center gap-2">
+                            <div className="size-5 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                              <Target className="size-3 text-primary" />
+                            </div>
+                            {p.business_name}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  )}
+                </SelectContent>
+              </Select>
+            )}
+
+            {errors.client_id && (
+              <p className="text-xs text-destructive">{errors.client_id.message}</p>
+            )}
+
+            {/* Prospect name/email fields — only for freeform new prospect */}
+            {clientType === 'prospect' && !isProspectMode && !watchedProspectId && (
+              <div className="space-y-2 pl-1 border-l-2 border-border/40 ml-1">
+                <div className="space-y-1.5 pl-3">
+                  <Label htmlFor="upload-prospect-name" className="text-xs text-muted-foreground">
+                    Prospect name <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    id="upload-prospect-name"
+                    placeholder="e.g. Acme Corp"
+                    {...register('prospect_name')}
+                  />
+                  {errors.prospect_name && (
+                    <p className="text-xs text-destructive">{errors.prospect_name.message}</p>
+                  )}
+                </div>
+                <div className="space-y-1.5 pl-3">
+                  <Label htmlFor="upload-prospect-email" className="text-xs text-muted-foreground">
+                    Email <span className="text-muted-foreground font-normal">(optional)</span>
+                  </Label>
+                  <Input
+                    id="upload-prospect-email"
+                    type="email"
+                    placeholder="contact@acmecorp.com"
+                    {...register('prospect_email')}
+                  />
+                  {errors.prospect_email && (
+                    <p className="text-xs text-destructive">{errors.prospect_email.message}</p>
+                  )}
+                </div>
               </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="upload-prospect-email">Prospect email</Label>
-                <Input
-                  id="upload-prospect-email"
-                  type="email"
-                  placeholder="contact@acmecorp.com"
-                  {...register('prospect_email')}
-                />
-                {errors.prospect_email && (
-                  <p className="text-xs text-destructive">{errors.prospect_email.message}</p>
-                )}
-              </div>
-            </div>
-          )}
+            )}
+          </div>
 
           {/* Valid Until + Total Value — side by side */}
           <div className="grid grid-cols-2 gap-3">
@@ -340,6 +401,7 @@ export function UploadProposalDialog({ open, onOpenChange, clientId = null, onUp
                         mode="single"
                         selected={field.value}
                         onSelect={field.onChange}
+                        disabled={{ before: new Date() }}
                         initialFocus
                       />
                     </PopoverContent>
