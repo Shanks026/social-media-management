@@ -78,7 +78,11 @@ function InviteDialog({ open, onOpenChange }) {
       .mutateAsync()
       .then((url) => setInviteUrl(url))
       .catch((err) => {
-        toast.error(err.message || 'Failed to generate invite link')
+        const msg =
+          err.message === 'TEAM_SEAT_LIMIT_REACHED'
+            ? 'Team seat limit reached. Upgrade your plan to invite more members.'
+            : err.message || 'Failed to generate invite link'
+        toast.error(msg)
         onOpenChange(false)
       })
     // eslint-disable-next-line react-hooks/exhaustive-deps

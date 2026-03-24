@@ -33,16 +33,19 @@ export const plans = [
     name: 'Ignite',
     icon: Zap,
     bestFor: 'Freelancers & Solopreneurs',
-    price: '2,999',
+    price: '1,999',
     accent: { text: 'text-amber-500' },
     features: [
       { value: 'Up to 5 clients', included: true },
       { value: '20 GB storage', included: true },
+      { value: '2 team seats', included: true },
+      { value: '5 active proposals', included: true },
       { value: 'Invoicing, ledger & reports', included: true },
       { value: 'Content calendar & scheduling', included: true },
       { value: 'Client review & approval flow', included: true },
-      { value: 'No agency branding', included: false },
-      { value: 'Email support · ₹500 / extra client', included: true },
+      { value: 'Campaigns', included: false },
+      { value: 'Agency branding', included: false },
+      { value: 'Email support', included: true },
     ],
   },
   {
@@ -50,17 +53,21 @@ export const plans = [
     name: 'Velocity',
     icon: Rocket,
     bestFor: 'Boutique Agencies',
-    price: '8,999',
+    price: '5,999',
     popular: true,
     includesBase: 'Ignite',
     accent: { text: 'text-lime-500' },
     features: [
       { value: 'Up to 15 clients', included: true },
-      { value: '100 GB storage', included: true },
+      { value: '50 GB storage', included: true },
+      { value: '5 team seats', included: true },
+      { value: 'Unlimited proposals', included: true },
+      { value: 'Campaigns (unlimited)', included: true },
       { value: 'Agency logo & name in sidebar', included: true },
       { value: 'Recurring invoices & subscriptions', included: true },
       { value: 'Calendar PDF export', included: true },
-      { value: 'Priority chat support · ₹500 / extra client', included: true },
+      { value: 'Document collections', included: true },
+      { value: 'Priority chat support', included: true },
     ],
   },
   {
@@ -68,15 +75,15 @@ export const plans = [
     name: 'Quantum',
     icon: Atom,
     bestFor: 'Scaling Firms & Enterprises',
-    price: '17,999',
+    price: '12,999',
     includesBase: 'Velocity',
     accent: { text: 'text-violet-500' },
     features: [
-      { value: 'Up to 35 clients', included: true },
-      { value: '500 GB storage', included: true },
+      { value: 'Up to 30 clients', included: true },
+      { value: '100 GB storage', included: true },
+      { value: 'Unlimited team seats', included: true },
       { value: 'Full whitelabel — no Tercero branding', included: true },
       { value: 'VIP Concierge support', included: true },
-      { value: '₹450 / extra client', included: true },
     ],
   },
 ]
@@ -272,6 +279,7 @@ export const PlanCard = ({ plan, isCurrentPlan, onContactTeam }) => {
           ₹{plan.price}
         </span>
         <span className={cn('text-sm font-normal', descClasses)}>/ mo</span>
+        <span className={cn('text-sm font-normal ml-1', descClasses)}>· +₹499 / client</span>
       </div>
 
       <p className={cn('text-sm font-normal mb-8', descClasses)}>
@@ -465,23 +473,39 @@ export const SubscriptionTab = ({ sub, isLoading }) => {
             <tbody>
               {[
                 {
-                  label: 'Max Clients',
-                  values: ['Up to 5', 'Up to 15', 'Up to 35'],
+                  label: 'Clients',
+                  values: ['Up to 5', 'Up to 15', 'Up to 30'],
+                },
+                {
+                  label: 'Storage',
+                  values: ['20 GB', '50 GB', '100 GB'],
+                },
+                {
+                  label: 'Team Seats',
+                  values: ['2', '5', 'Unlimited'],
+                },
+                {
+                  label: 'Prospects (CRM)',
+                  values: ['Unlimited', 'Unlimited', 'Unlimited'],
+                },
+                {
+                  label: 'Proposals',
+                  values: ['5 active', 'Unlimited', 'Unlimited'],
+                },
+                {
+                  label: 'Campaigns',
+                  values: [false, true, true],
                 },
                 {
                   label: 'Internal Workspace',
                   values: [true, true, true],
                 },
                 {
-                  label: 'Storage',
-                  values: ['20 GB', '100 GB', '500 GB'],
+                  label: 'Invoicing & Finance',
+                  values: [true, true, true],
                 },
                 {
-                  label: 'Agency Branding',
-                  values: [false, 'Sidebar logo & name', 'Full whitelabel'],
-                },
-                {
-                  label: 'Calendar Export (PDF)',
+                  label: 'Accrual Accounting',
                   values: [false, true, true],
                 },
                 {
@@ -493,12 +517,24 @@ export const SubscriptionTab = ({ sub, isLoading }) => {
                   values: [false, true, true],
                 },
                 {
+                  label: 'Calendar Export (PDF)',
+                  values: [false, true, true],
+                },
+                {
+                  label: 'Document Collections',
+                  values: [false, true, true],
+                },
+                {
+                  label: 'Agency Branding',
+                  values: [false, 'Sidebar logo & name', 'Full whitelabel'],
+                },
+                {
                   label: 'Support',
                   values: ['Email', 'Priority Chat', 'VIP Concierge'],
                 },
                 {
-                  label: 'Extra Client',
-                  values: ['₹500 / mo', '₹500 / mo', '₹450 / mo'],
+                  label: 'Extra Client Add-on',
+                  values: ['₹499 / mo', '₹499 / mo', '₹499 / mo'],
                 },
               ].map((row) => (
                 <tr

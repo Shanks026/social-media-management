@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { format } from 'date-fns'
 import {
@@ -11,9 +11,14 @@ import {
   Search,
   Edit2,
   Receipt,
+  TrendingUp,
+  TrendingDown,
+  Scale,
+  Hash,
 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import {
   Select,
@@ -44,7 +49,7 @@ import {
 export default function LedgerTab({ clientId, subTabs }) {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingTransaction, setEditingTransaction] = useState(null)
-  const [filterMode, setFilterMode] = useState('ALL')
+  const [filterMode, setFilterMode] = useState(() => clientId || 'ALL')
   const [searchTerm, setSearchTerm] = useState('')
   const [invoiceOpen, setInvoiceOpen] = useState(false)
   const [invoicePrefill, setInvoicePrefill] = useState(null)
@@ -55,11 +60,6 @@ export default function LedgerTab({ clientId, subTabs }) {
   const { data: clientData } = useClients()
   const clients = clientData?.realClients || []
   const internalAccount = clientData?.internalAccount
-
-  // Force filterMode if clientId is present (optional, but cleaner)
-  useEffect(() => {
-    if (clientId) setFilterMode(clientId)
-  }, [clientId])
 
   // 1. Define Columns configuration
   const columns = [
@@ -214,6 +214,21 @@ export default function LedgerTab({ clientId, subTabs }) {
     return data
   }, [transactions, filterMode, searchTerm, internalAccount])
 
+  const kpis = useMemo(() => {
+    const income = filteredData
+      .filter((t) => t.type === 'INCOME')
+      .reduce((sum, t) => sum + (t.amount || 0), 0)
+    const expenses = filteredData
+      .filter((t) => t.type === 'EXPENSE')
+      .reduce((sum, t) => sum + (t.amount || 0), 0)
+    return {
+      income,
+      expenses,
+      net: income - expenses,
+      count: filteredData.length,
+    }
+  }, [filteredData])
+
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       {/* HEADER ACTIONS STAYS THE SAME */}
@@ -269,6 +284,71 @@ export default function LedgerTab({ clientId, subTabs }) {
           </Button>
         </div>
       </div>
+
+      {/* KPI Cards */}
+      {!isLoading && transactions.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Card className="rounded-2xl border-none bg-card/50 shadow-sm ring-1 ring-border/50 dark:bg-card/20">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                Total Income
+              </CardTitle>
+              <TrendingUp className="h-4 w-4 text-emerald-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400">
+                {formatCurrency(kpis.income)}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">All income entries</p>
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-2xl border-none bg-card/50 shadow-sm ring-1 ring-border/50 dark:bg-card/20">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                Total Expenses
+              </CardTitle>
+              <TrendingDown className="h-4 w-4 text-rose-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold tracking-tight text-foreground">
+                {formatCurrency(kpis.expenses)}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">All expense entries</p>
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-2xl border-none bg-card/50 shadow-sm ring-1 ring-border/50 dark:bg-card/20">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                Net Profit
+              </CardTitle>
+              <Scale className="h-4 w-4 text-primary" />
+            </CardHeader>
+            <CardContent>
+              <div className={`text-2xl font-bold tracking-tight ${kpis.net >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
+                {kpis.net >= 0 ? '+' : ''}{formatCurrency(kpis.net)}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">Income minus expenses</p>
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-2xl border-none bg-card/50 shadow-sm ring-1 ring-border/50 dark:bg-card/20">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                Transactions
+              </CardTitle>
+              <Hash className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold tracking-tight text-foreground">
+                {kpis.count}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">Entries in current view</p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {isLoading ? (
         <CustomTable columns={columns} data={[]} isLoading={true} />

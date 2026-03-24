@@ -253,40 +253,43 @@
 
 | Flag                         | Trial | Ignite | Velocity | Quantum |
 | ---------------------------- | :---: | :----: | :------: | :-----: |
-| `branding_agency_sidebar`    | FALSE | FALSE  |   TRUE   |  TRUE   |
-| `branding_powered_by`        | TRUE  |  TRUE  |   TRUE   |  FALSE  |
-| `finance_recurring_invoices` | FALSE | FALSE  |   TRUE   |  TRUE   |
-| `finance_subscriptions`      | FALSE | FALSE  |   TRUE   |  TRUE   |
-| `finance_accrual`            | TRUE  |  TRUE  |   TRUE   |  TRUE   |
-| `calendar_export`            | FALSE | FALSE  |   TRUE   |  TRUE   |
-| `documents_collections`      | FALSE | FALSE  |   TRUE   |  TRUE   |
-| `campaigns`                  | FALSE | FALSE  |   TRUE   |  TRUE   |
+| `branding_agency_sidebar`    | TRUE  | FALSE  |   TRUE   |  TRUE   |
+| `branding_powered_by`        | FALSE |  TRUE  |   TRUE   |  FALSE  |
+| `finance_recurring_invoices` | TRUE  | FALSE  |   TRUE   |  TRUE   |
+| `finance_subscriptions`      | TRUE  | FALSE  |   TRUE   |  TRUE   |
+| `finance_accrual`            | TRUE  | FALSE  |   TRUE   |  TRUE   |
+| `calendar_export`            | TRUE  | FALSE  |   TRUE   |  TRUE   |
+| `documents_collections`      | TRUE  | FALSE  |   TRUE   |  TRUE   |
+| `campaigns`                  | TRUE  | FALSE  |   TRUE   |  TRUE   |
 
 ### Plan Limit Values per Plan
 
-| Column                   |    Trial    |   Ignite    |   Velocity   |   Quantum    |
-| ------------------------ | :---------: | :---------: | :----------: | :----------: |
-| `max_clients`            |      5      |      5      |      15      |      35      |
-| `max_storage_bytes`      | 21474836480 | 21474836480 | 107374182400 | 536870912000 |
-| `extra_client_price_inr` |     500     |     500     |     500      |     450      |
-| `proposals_limit`        |      5      |      5      |    null      |    null      |
+| Column                   |    Trial     |   Ignite    |   Velocity   |   Quantum    |
+| ------------------------ | :----------: | :---------: | :----------: | :----------: |
+| `max_clients`            |      30      |      5      |      15      |      30      |
+| `max_storage_bytes`      | 107374182400 | 21474836480 | 53687091200  | 107374182400 |
+| `extra_client_price_inr` |     null     |     499     |     499      |     499      |
+| `proposals_limit`        |     null     |      5      |    null      |    null      |
+| `max_team_members`       |     null     |      2      |      5       |    null      |
 
 ### Seed SQL (run when a plan is created or changed)
 
 ```sql
--- TRIAL (same limits as Ignite, time-limited via trial_ends_at)
+-- TRIAL (mirrors Quantum — full access, time-limited via trial_ends_at)
 UPDATE agency_subscriptions SET
   plan_name                  = 'trial',
-  max_clients                = 5,
-  max_storage_bytes          = 21474836480,
-  branding_agency_sidebar    = FALSE,
-  branding_powered_by        = TRUE,
-  finance_recurring_invoices = FALSE,
-  finance_subscriptions      = FALSE,
-  calendar_export            = FALSE,
-  documents_collections      = FALSE,
-  campaigns                  = FALSE,
-  proposals_limit            = 5
+  max_clients                = 30,
+  max_storage_bytes          = 107374182400,
+  branding_agency_sidebar    = TRUE,
+  branding_powered_by        = FALSE,
+  finance_recurring_invoices = TRUE,
+  finance_subscriptions      = TRUE,
+  finance_accrual            = TRUE,
+  calendar_export            = TRUE,
+  documents_collections      = TRUE,
+  campaigns                  = TRUE,
+  proposals_limit            = NULL,
+  max_team_members           = NULL
 WHERE user_id = $1;
 
 -- IGNITE
