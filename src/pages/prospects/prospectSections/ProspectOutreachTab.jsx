@@ -432,9 +432,7 @@ export default function ProspectOutreachTab({ prospectId }) {
       ) : filtered.length === 0 ? (
         <Empty className="py-16 border border-dashed rounded-2xl bg-muted/5">
           <EmptyContent>
-            <EmptyMedia variant="icon">
-              <MessageCircle className="size-6 text-muted-foreground/60" />
-            </EmptyMedia>
+            <div className="text-4xl leading-none select-none mb-2">💬</div>
             <EmptyHeader>
               <EmptyTitle className="font-normal text-lg">
                 {isFiltered ? 'No matching activity' : 'No activity yet'}

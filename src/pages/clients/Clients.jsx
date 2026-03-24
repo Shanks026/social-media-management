@@ -270,13 +270,9 @@ export default function Clients() {
         {sortedClients.length === 0 ? (
           <Empty className="py-20 border border-dashed rounded-2xl bg-muted/5">
             <EmptyContent>
-              <EmptyMedia variant="icon">
-                {isFilterActive ? (
-                  <Search className="size-6 text-muted-foreground/60" />
-                ) : (
-                  <UserStar className="size-6 text-muted-foreground/60" />
-                )}
-              </EmptyMedia>
+              <div className="text-4xl leading-none select-none mb-2">
+                {isFilterActive ? '🔍' : '🤝'}
+              </div>
               <EmptyHeader>
                 <EmptyTitle className="font-normal text-xl">
                   {isFilterActive

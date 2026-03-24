@@ -810,15 +810,9 @@ export default function NotesAndReminders() {
       ) : filteredNotes.length === 0 && view === 'grid' ? (
         <Empty className="py-20 border border-dashed rounded-2xl bg-muted/5">
           <EmptyContent>
-            <EmptyMedia variant="icon">
-              {search.trim() ||
-              statusTab !== 'ALL' ||
-              selectedClient !== 'all' ? (
-                <Search className="size-6 text-muted-foreground/60" />
-              ) : (
-                <StickyNote className="size-6 text-muted-foreground/60" />
-              )}
-            </EmptyMedia>
+            <div className="text-4xl leading-none select-none mb-2">
+              {search.trim() || statusTab !== 'ALL' || selectedClient !== 'all' ? '🔍' : '🗒️'}
+            </div>
             <EmptyHeader>
               <EmptyTitle className="font-normal text-xl">
                 {search.trim() ||

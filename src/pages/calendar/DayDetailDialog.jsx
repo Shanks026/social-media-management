@@ -208,13 +208,9 @@ export function DayDetailDialog({ date, posts = [], open, onOpenChange }) {
               <div className="h-full flex items-center justify-center">
                 <Empty className="max-w-md border-none bg-transparent">
                   <EmptyHeader>
-                    <EmptyMedia variant="icon">
-                      {isFiltered ? (
-                        <FilterX className="text-muted-foreground" />
-                      ) : (
-                        <Search className="text-muted-foreground" />
-                      )}
-                    </EmptyMedia>
+                    <div className="text-4xl leading-none select-none mb-2">
+                      {isFiltered ? '🔍' : '📅'}
+                    </div>
                     <EmptyTitle>
                       {regularPosts.length === 0 ? 'No posts scheduled' : 'No results found'}
                     </EmptyTitle>
@@ -257,9 +253,7 @@ export function DayDetailDialog({ date, posts = [], open, onOpenChange }) {
               <div className="h-full flex items-center justify-center">
                 <Empty className="max-w-md border-none bg-transparent">
                   <EmptyHeader>
-                    <EmptyMedia variant="icon">
-                      <CalendarIcon className="text-muted-foreground" />
-                    </EmptyMedia>
+                    <div className="text-4xl leading-none select-none mb-2">🎥</div>
                     <EmptyTitle>No meetings scheduled</EmptyTitle>
                     <EmptyDescription>No meetings are scheduled for this date.</EmptyDescription>
                   </EmptyHeader>

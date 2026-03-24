@@ -282,13 +282,9 @@ export default function DocumentsTab({ clientId }) {
               isFilterActive ? (
                 <Empty className="py-20 border border-dashed rounded-2xl bg-muted/5">
                   <EmptyHeader>
-                    <EmptyMedia variant="icon">
-                      {selectedStatus === 'Archived' ? (
-                        <FolderOpen />
-                      ) : (
-                        <Search />
-                      )}
-                    </EmptyMedia>
+                    <div className="text-4xl leading-none select-none mb-2">
+                      {selectedStatus === 'Archived' ? '📁' : '🔍'}
+                    </div>
                     <EmptyTitle className="font-normal text-xl">
                       {selectedStatus === 'Archived'
                         ? 'No archived documents'
@@ -315,9 +311,7 @@ export default function DocumentsTab({ clientId }) {
               ) : (
                 <Empty className="py-20 border border-dashed rounded-2xl bg-muted/5">
                   <EmptyHeader>
-                    <EmptyMedia variant="icon">
-                      <FolderOpen />
-                    </EmptyMedia>
+                    <div className="text-4xl leading-none select-none mb-2">📁</div>
                     <EmptyTitle className="font-normal text-xl">
                       No active documents
                     </EmptyTitle>
@@ -382,9 +376,7 @@ export default function DocumentsTab({ clientId }) {
             {filteredCollections.length === 0 ? (
               <Empty className="py-20 border border-dashed rounded-2xl bg-muted/5">
                 <EmptyHeader>
-                  <EmptyMedia variant="icon">
-                    <FolderOpen />
-                  </EmptyMedia>
+                  <div className="text-4xl leading-none select-none mb-2">📁</div>
                   <EmptyTitle className="font-normal text-xl">
                     No collections yet
                   </EmptyTitle>
@@ -441,9 +433,7 @@ export default function DocumentsTab({ clientId }) {
               isFilterActive ? (
                 <Empty className="py-20 border border-dashed rounded-2xl bg-muted/5">
                   <EmptyHeader>
-                    <EmptyMedia variant="icon">
-                      <Search />
-                    </EmptyMedia>
+                    <div className="text-4xl leading-none select-none mb-2">🔍</div>
                     <EmptyTitle className="font-normal text-xl">
                       No ungrouped documents match your search
                     </EmptyTitle>
@@ -464,9 +454,7 @@ export default function DocumentsTab({ clientId }) {
               ) : (
                 <Empty className="py-12 border border-dashed rounded-2xl bg-muted/5">
                   <EmptyHeader>
-                    <EmptyMedia variant="icon">
-                      <FolderOpen />
-                    </EmptyMedia>
+                    <div className="text-4xl leading-none select-none mb-2">📁</div>
                     <EmptyTitle className="font-normal text-xl">
                       No ungrouped documents
                     </EmptyTitle>

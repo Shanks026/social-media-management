@@ -484,13 +484,9 @@ export default function DocumentsPage() {
                   {filteredDocs.length === 0 ? (
                     <Empty className="py-20 border border-dashed rounded-2xl bg-muted/5">
                       <EmptyContent>
-                        <EmptyMedia variant="icon">
-                          {isFilterActive ? (
-                            <Search className="size-6 text-muted-foreground/60" />
-                          ) : (
-                            <FolderOpen className="size-6 text-muted-foreground/60" />
-                          )}
-                        </EmptyMedia>
+                        <div className="text-4xl leading-none select-none mb-2">
+                          {isFilterActive ? '🔍' : '📁'}
+                        </div>
                         <EmptyHeader>
                           <EmptyTitle className="font-normal text-xl">
                             {isFilterActive
@@ -617,9 +613,7 @@ export default function DocumentsPage() {
                   {collections.length === 0 ? (
                     <Empty className="py-20 border border-dashed rounded-2xl bg-muted/5">
                       <EmptyContent>
-                        <EmptyMedia variant="icon">
-                          <FolderOpen className="size-6 text-muted-foreground/60" />
-                        </EmptyMedia>
+                        <div className="text-4xl leading-none select-none mb-2">📁</div>
                         <EmptyHeader>
                           <EmptyTitle className="font-normal text-xl">
                             No collections yet

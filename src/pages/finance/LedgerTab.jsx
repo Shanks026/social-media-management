@@ -355,13 +355,9 @@ export default function LedgerTab({ clientId, subTabs }) {
       ) : filteredData.length === 0 ? (
         <Empty className="py-20 border border-dashed rounded-2xl bg-muted/5">
           <EmptyContent>
-            <EmptyMedia variant="icon">
-              {searchTerm || filterMode !== 'ALL' ? (
-                <Search className="size-6 text-muted-foreground/60" />
-              ) : (
-                <Receipt className="size-6 text-muted-foreground/60" />
-              )}
-            </EmptyMedia>
+            <div className="text-4xl leading-none select-none mb-2">
+              {searchTerm || filterMode !== 'ALL' ? '🔍' : '🧾'}
+            </div>
             <EmptyHeader>
               <EmptyTitle className="font-normal text-xl">
                 {searchTerm || filterMode !== 'ALL'

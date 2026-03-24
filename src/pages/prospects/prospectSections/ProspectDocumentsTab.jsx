@@ -173,7 +173,7 @@ export default function ProspectDocumentsTab({ prospectId }) {
           isFilterActive ? (
             <Empty className="py-20 border border-dashed rounded-2xl bg-muted/5">
               <EmptyHeader>
-                <EmptyMedia variant="icon"><Search /></EmptyMedia>
+                <div className="text-4xl leading-none select-none mb-2">🔍</div>
                 <EmptyTitle className="font-normal text-xl">No documents match your search</EmptyTitle>
                 <EmptyDescription className="font-normal">
                   Try adjusting your filters or search terms.
@@ -183,7 +183,7 @@ export default function ProspectDocumentsTab({ prospectId }) {
           ) : (
             <Empty className="py-20 border border-dashed rounded-2xl bg-muted/5">
               <EmptyHeader>
-                <EmptyMedia variant="icon"><FolderOpen /></EmptyMedia>
+                <div className="text-4xl leading-none select-none mb-2">📁</div>
                 <EmptyTitle className="font-normal text-xl">No documents yet</EmptyTitle>
                 <EmptyDescription className="font-normal">
                   Upload a brief, one-pager, or any file related to this prospect.

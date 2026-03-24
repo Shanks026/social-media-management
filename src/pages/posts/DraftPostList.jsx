@@ -284,12 +284,10 @@ export default function DraftPostList({ clientId, onCreatePost }) {
     return (
       <Empty className="py-20 border border-dashed rounded-2xl bg-muted/5">
         <EmptyContent>
-          <EmptyMedia variant="icon">
-            <LayoutGrid className="size-6 text-muted-foreground/60" />
-          </EmptyMedia>
+          <div className="text-4xl leading-none select-none mb-2">📝</div>
           <EmptyHeader>
             <EmptyTitle className="font-normal text-xl">
-              No posts yet
+              No deliverables yet
             </EmptyTitle>
             <EmptyDescription className="font-normal">
               Create your first draft to start building content for this client.
@@ -297,8 +295,8 @@ export default function DraftPostList({ clientId, onCreatePost }) {
           </EmptyHeader>
           {onCreatePost && (
             <Button onClick={onCreatePost} variant="outline" className="mt-2">
-              <Plus className="size-4 mr-2" />
-              Create Post
+              <Plus className="size-4" />
+              Create Deliverable
             </Button>
           )}
         </EmptyContent>

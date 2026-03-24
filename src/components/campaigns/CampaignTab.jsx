@@ -218,9 +218,7 @@ function CampaignTabContent({ clientId, isCreateOpen, setIsCreateOpen }) {
       ) : (
         <Empty className="py-20 border border-dashed rounded-2xl bg-muted/5">
           <EmptyContent>
-            <EmptyMedia variant="icon">
-              <Megaphone className="size-6 text-muted-foreground/60" />
-            </EmptyMedia>
+            <div className="text-4xl leading-none select-none mb-2">📣</div>
             <EmptyHeader>
               <EmptyTitle className="font-normal text-xl">
                 No Campaigns Found
@@ -235,9 +233,9 @@ function CampaignTabContent({ clientId, isCreateOpen, setIsCreateOpen }) {
               <Button
                 onClick={() => setIsCreateOpen && setIsCreateOpen(true)}
                 variant="outline"
-                className="mt-2 rounded-full px-6 font-medium"
+                className="mt-2"
               >
-                <Plus className="size-4 mr-2" />
+                <Plus className="size-4" />
                 Create your first campaign
               </Button>
             )}

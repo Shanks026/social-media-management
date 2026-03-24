@@ -824,13 +824,9 @@ export default function MeetingsPage() {
       ) : filteredMeetings.length === 0 && view === 'grid' ? (
         <Empty className="py-20 border border-dashed rounded-2xl bg-muted/5">
           <EmptyContent>
-            <EmptyMedia variant="icon">
-              {isFiltered ? (
-                <Search className="size-6 text-muted-foreground/60" />
-              ) : (
-                <Calendar className="size-6 text-muted-foreground/60" />
-              )}
-            </EmptyMedia>
+            <div className="text-4xl leading-none select-none mb-2">
+              {isFiltered ? '🔍' : '🎥'}
+            </div>
             <EmptyHeader>
               <EmptyTitle className="font-normal text-xl">
                 {isFiltered ? 'No meetings found' : 'No meetings scheduled'}

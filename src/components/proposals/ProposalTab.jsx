@@ -300,9 +300,7 @@ export function ProposalTab({ clientId, prospectId, prospectName, prospectEmail 
       ) : filtered.length === 0 ? (
         <Empty className="py-16 border border-dashed rounded-2xl bg-muted/5">
           <EmptyContent>
-            <EmptyMedia variant="icon">
-              <FileText className="size-6 text-muted-foreground/60" />
-            </EmptyMedia>
+            <div className="text-4xl leading-none select-none mb-2">📋</div>
             <EmptyHeader>
               <EmptyTitle className="font-normal text-lg">
                 No Proposals
