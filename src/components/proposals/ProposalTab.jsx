@@ -131,10 +131,10 @@ function ProposalRowSkeleton() {
 
 // ── Tab component ─────────────────────────────────────────────────────────────
 
-export function ProposalTab({ clientId }) {
+export function ProposalTab({ clientId, prospectId, prospectName, prospectEmail }) {
   const navigate = useNavigate()
   const { data: sub } = useSubscription()
-  const { data: proposals = [], isLoading } = useProposals({ clientId })
+  const { data: proposals = [], isLoading } = useProposals({ clientId, prospectId })
   const { data: allProposals = [] } = useProposals() // workspace-wide count for limit check
   const deleteProposal = useDeleteProposal()
 
@@ -273,7 +273,7 @@ export function ProposalTab({ clientId }) {
               key={tab}
               onClick={() => setActiveTab(tab)}
               className={cn(
-                'px-3 py-2 text-xs font-medium capitalize border-b-2 -mb-px transition-colors',
+                'px-3 py-2 text-[13px] font-medium capitalize border-b-2 -mb-px transition-colors',
                 activeTab === tab
                   ? 'border-primary text-foreground'
                   : 'border-transparent text-muted-foreground hover:text-foreground',
@@ -310,6 +310,8 @@ export function ProposalTab({ clientId }) {
               <EmptyDescription className="font-normal">
                 {search || activeTab !== 'all'
                   ? 'No proposals match your current filters.'
+                  : prospectId
+                  ? 'No proposals for this prospect yet. Create the first one.'
                   : 'No proposals for this client yet. Create the first one.'}
               </EmptyDescription>
             </EmptyHeader>
@@ -440,6 +442,9 @@ export function ProposalTab({ clientId }) {
         onOpenChange={setDialogOpen}
         proposalId={editingProposal?.id}
         clientId={clientId}
+        prospectId={prospectId}
+        prospectName={prospectName}
+        prospectEmail={prospectEmail}
         onSuccess={() => setEditingProposal(null)}
         onUpgradeNeeded={() => {
           setDialogOpen(false)
@@ -451,6 +456,9 @@ export function ProposalTab({ clientId }) {
         open={uploadDialogOpen}
         onOpenChange={setUploadDialogOpen}
         clientId={clientId}
+        prospectId={prospectId}
+        prospectName={prospectName}
+        prospectEmail={prospectEmail}
         onUpgradeNeeded={() => {
           setUploadDialogOpen(false)
           setUpgradeOpen(true)

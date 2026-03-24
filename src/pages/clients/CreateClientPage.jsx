@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createClient, updateClient, fetchClientById } from '@/api/clients'
 import { supabase } from '@/lib/supabase'
-import { useNavigate, useParams, useOutletContext } from 'react-router-dom'
+import { useNavigate, useParams, useOutletContext, useLocation } from 'react-router-dom'
 
 // UI Components
 import { Button } from '@/components/ui/button'
@@ -53,10 +53,10 @@ const clientSchema = z.object({
   name: z.string().min(2, 'Client name is required'),
   description: z.string().optional(),
   email: z.string().min(1, 'Email is required').email('Invalid email address'),
-  mobile_number: z
-    .string()
-    .min(1, 'Mobile number is required')
-    .regex(/^\+91[6-9]\d{9}$/, 'Must be a valid +91 number'),
+  mobile_number: z.string().optional(),
+  contact_name: z.string().optional(),
+  website: z.string().optional(),
+  location: z.string().optional(),
   status: z.enum(['ACTIVE', 'PAUSED', 'ARCHIVED']),
   client_type: z.preprocess(
     (v) => (v === '' || v === null ? undefined : v),
@@ -96,11 +96,15 @@ export default function CreateClientPage({
   const { clientId } = useParams()
   const isEditMode = !!clientId
   const navigate = useNavigate()
+  const location = useLocation()
   const { setHeader } = useHeader()
   const queryClient = useQueryClient()
   const { user } = useAuth()
   const { refreshAgency } = useOutletContext() || {}
   const fileInputRef = useRef(null)
+
+  // Pre-fill data passed from the Convert to Client flow
+  const fromProspect = location.state?.fromProspect ?? null
 
   const [isUploading, setIsUploading] = useState(false)
   const [previewUrl, setPreviewUrl] = useState(null)
@@ -123,11 +127,29 @@ export default function CreateClientPage({
   const form = useForm({
     resolver: zodResolver(clientSchema),
     mode: 'onSubmit',
-    defaultValues: defaultValues || {
+    defaultValues: defaultValues || (fromProspect ? {
+      name: fromProspect.name || '',
+      description: '',
+      email: fromProspect.email || '',
+      mobile_number: fromProspect.mobile_number || '',
+      contact_name: fromProspect.contact_name || '',
+      website: fromProspect.website || '',
+      location: fromProspect.location || '',
+      status: 'ACTIVE',
+      client_type: undefined,
+      tier: 'BASIC',
+      logo_url: '',
+      platforms: [],
+      industry: fromProspect.industry || '',
+      social_links: {},
+    } : {
       name: '',
       description: '',
       email: '',
-      mobile_number: '+91',
+      mobile_number: '',
+      contact_name: '',
+      website: '',
+      location: '',
       status: 'ACTIVE',
       client_type: undefined,
       tier: 'BASIC',
@@ -135,7 +157,7 @@ export default function CreateClientPage({
       platforms: [],
       industry: '',
       social_links: {},
-    },
+    }),
   })
 
   const {
@@ -172,6 +194,10 @@ export default function CreateClientPage({
       // We use reset with the exact keys we want to populate
       reset({
         ...existingClient,
+        mobile_number: existingClient.mobile_number || '',
+        contact_name: existingClient.contact_name || '',
+        website: existingClient.website || '',
+        location: existingClient.location || '',
         social_links: preparedSocials,
       })
 
@@ -247,8 +273,17 @@ export default function CreateClientPage({
         if (refreshAgency) await refreshAgency()
       }
 
+      // If converting from a prospect, mark it as converted
+      if (fromProspect?.id && data?.id) {
+        await supabase
+          .from('prospects')
+          .update({ converted_client_id: data.id, updated_at: new Date().toISOString() })
+          .eq('id', fromProspect.id)
+        queryClient.invalidateQueries({ queryKey: ['prospects'] })
+      }
+
       toast.success(isEditMode ? 'Client updated' : 'Client onboarded')
-      navigate(isEditMode ? `/clients/${clientId}` : '/clients')
+      navigate(isEditMode ? `/clients/${clientId}` : fromProspect ? `/clients/${data.id}` : '/clients')
     },
     onError: (error) => {
       console.error('Update Error:', error)
@@ -631,17 +666,46 @@ export default function CreateClientPage({
 
               <div className="space-y-2">
                 <Label>
-                  Mobile Number <span className="text-destructive">*</span>
+                  Mobile Number{' '}
+                  <span className="text-muted-foreground font-normal">(optional)</span>
                 </Label>
                 <Input
                   {...form.register('mobile_number')}
                   placeholder="+91 9876543210"
                 />
-                {errors.mobile_number && (
-                  <p className="text-xs text-destructive">
-                    {errors.mobile_number.message}
-                  </p>
-                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label>
+                  Contact Person{' '}
+                  <span className="text-muted-foreground font-normal">(optional)</span>
+                </Label>
+                <Input
+                  {...form.register('contact_name')}
+                  placeholder="e.g. Priya Sharma"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>
+                  Website{' '}
+                  <span className="text-muted-foreground font-normal">(optional)</span>
+                </Label>
+                <Input
+                  {...form.register('website')}
+                  placeholder="https://example.com"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>
+                  Location{' '}
+                  <span className="text-muted-foreground font-normal">(optional)</span>
+                </Label>
+                <Input
+                  {...form.register('location')}
+                  placeholder="e.g. Mumbai"
+                />
               </div>
             </div>
 

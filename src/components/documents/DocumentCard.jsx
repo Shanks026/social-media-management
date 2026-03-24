@@ -244,10 +244,10 @@ export default function DocumentCard({ doc }) {
           )}
         </div>
 
-        {/* Client — avatar + name, far right */}
-        {doc.clients?.name && (
+        {/* Client or prospect — avatar + name, far right */}
+        {(doc.clients?.name || doc.prospects?.business_name) && (
           <div className="flex items-center gap-1.5 shrink-0 mr-1">
-            {doc.clients.logo_url ? (
+            {doc.clients?.logo_url ? (
               <img
                 src={doc.clients.logo_url}
                 alt=""
@@ -259,7 +259,7 @@ export default function DocumentCard({ doc }) {
               </div>
             )}
             <span className="text-xs font-medium text-muted-foreground max-w-28 truncate">
-              {doc.clients.name}
+              {doc.clients?.name ?? doc.prospects?.business_name}
             </span>
           </div>
         )}

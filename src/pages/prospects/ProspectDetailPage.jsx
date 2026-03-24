@@ -6,8 +6,12 @@ import {
   Pencil,
   PieChart,
   MessageCircle,
+  FolderOpen,
+  FileText,
   Check,
   ChevronDown,
+  UserRoundPlus,
+  ArrowUpRight,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
@@ -38,7 +42,10 @@ import {
 } from '@/components/ui/alert-dialog'
 import ProspectOverviewTab from './prospectSections/ProspectOverviewTab'
 import ProspectOutreachTab from './prospectSections/ProspectOutreachTab'
+import ProspectDocumentsTab from './prospectSections/ProspectDocumentsTab'
+import ProspectProposalsTab from './prospectSections/ProspectProposalsTab'
 import EditProspectDialog from '@/components/prospects/EditProspectDialog'
+import { ConvertToClientDialog } from '@/components/prospects/ConvertToClientDialog'
 
 // ── Status dot colors ──────────────────────────────────────────────────────────
 
@@ -66,11 +73,10 @@ const STATUS_BUTTON_CLASS = {
 // ── Tabs config ────────────────────────────────────────────────────────────────
 
 const TABS_CONFIG = [
-  { value: 'outreach', label: 'Outreach', icon: MessageCircle },
-  { value: 'overview', label: 'Overview', icon: PieChart },
-  // { value: 'notes',     label: 'Notes',     icon: StickyNote },    // Phase 2c
-  // { value: 'meetings',  label: 'Meetings',  icon: Video },         // Phase 2c
-  // { value: 'documents', label: 'Documents', icon: FolderOpen },    // Phase 2c
+  { value: 'outreach',  label: 'Outreach',   icon: MessageCircle },
+  { value: 'proposals', label: 'Proposals',  icon: FileText },
+  { value: 'documents', label: 'Documents',  icon: FolderOpen },
+  { value: 'overview',  label: 'Overview',   icon: PieChart },
 ]
 
 // ── Header skeleton ────────────────────────────────────────────────────────────
@@ -100,6 +106,7 @@ export default function ProspectDetailPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
+  const [convertOpen, setConvertOpen] = useState(false)
 
   const { data: prospect, isLoading, error } = useProspect(prospectId)
   const deleteProspect = useDeleteProspect()
@@ -308,6 +315,27 @@ export default function ProspectDetailPage() {
               <Pencil className="size-3.5" />
               Edit
             </Button>
+
+            {prospect.converted_client_id ? (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 gap-1.5 text-green-700 border-green-200 hover:bg-green-50 dark:text-green-400 dark:border-green-900 dark:hover:bg-green-950"
+                onClick={() => navigate(`/clients/${prospect.converted_client_id}`)}
+              >
+                <ArrowUpRight className="size-3.5" />
+                View Client
+              </Button>
+            ) : prospect.status === 'won' ? (
+              <Button
+                size="sm"
+                className="h-8 gap-1.5"
+                onClick={() => setConvertOpen(true)}
+              >
+                <UserRoundPlus className="size-3.5" />
+                Convert to Client
+              </Button>
+            ) : null}
           </div>
         </div>
 
@@ -357,6 +385,20 @@ export default function ProspectDetailPage() {
           >
             <ProspectOutreachTab prospectId={prospectId} />
           </TabsContent>
+
+          <TabsContent
+            value="proposals"
+            className="mt-2 focus-visible:ring-0 outline-none data-[state=active]:animate-in data-[state=active]:fade-in data-[state=active]:duration-300"
+          >
+            <ProspectProposalsTab prospect={prospect} />
+          </TabsContent>
+
+          <TabsContent
+            value="documents"
+            className="mt-2 focus-visible:ring-0 outline-none data-[state=active]:animate-in data-[state=active]:fade-in data-[state=active]:duration-300"
+          >
+            <ProspectDocumentsTab prospectId={prospectId} />
+          </TabsContent>
         </Tabs>
       </div>
 
@@ -365,6 +407,13 @@ export default function ProspectDetailPage() {
         prospect={prospect}
         open={editOpen}
         onOpenChange={setEditOpen}
+      />
+
+      {/* ── Convert to Client dialog ──────────────────────────────────────── */}
+      <ConvertToClientDialog
+        open={convertOpen}
+        onOpenChange={setConvertOpen}
+        prospect={prospect}
       />
 
       {/* ── Delete dialog ─────────────────────────────────────────────────── */}

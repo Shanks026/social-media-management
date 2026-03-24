@@ -11,6 +11,7 @@ import {
   CalendarClock,
   LayoutGrid,
   TableProperties,
+  ArrowUpRight,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -402,8 +403,16 @@ export default function ProspectsPage() {
                     {prospect.location || '—'}
                   </span>
 
-                  <div className="w-28">
+                  <div className="w-28 flex items-center gap-1.5">
                     <ProspectStatusBadge status={prospect.status} />
+                    {prospect.converted_client_id && (
+                      <span
+                        onClick={(e) => { e.stopPropagation(); navigate(`/clients/${prospect.converted_client_id}`) }}
+                        className="inline-flex items-center gap-0.5 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-400 cursor-pointer hover:bg-green-200 dark:hover:bg-green-900 transition-colors shrink-0"
+                      >
+                        Client <ArrowUpRight className="size-2.5" />
+                      </span>
+                    )}
                   </div>
 
                   <div className="w-20">

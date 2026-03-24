@@ -31,6 +31,8 @@ import {
   Handshake,
   Archive,
   ArchiveRestore,
+  UserRound,
+  MapPin,
 } from 'lucide-react'
 
 const CLIENT_TYPE_LABELS = {
@@ -170,6 +172,13 @@ export default function ManagementTab({ client }) {
                 }
               />
             )}
+            {client.contact_name && (
+              <InfoRow
+                icon={<UserRound size={16} />}
+                label="Contact Person"
+                value={client.contact_name}
+              />
+            )}
             <InfoRow
               icon={<Mail size={16} />}
               label="Primary Email"
@@ -180,6 +189,13 @@ export default function ManagementTab({ client }) {
               label="Contact Number"
               value={client.mobile_number || '—'}
             />
+            {client.location && (
+              <InfoRow
+                icon={<MapPin size={16} />}
+                label="Location"
+                value={client.location}
+              />
+            )}
             <InfoRow
               icon={<Globe size={16} />}
               label="Official Website"

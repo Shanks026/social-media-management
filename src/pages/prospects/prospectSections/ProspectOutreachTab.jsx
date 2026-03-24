@@ -235,7 +235,7 @@ function LogActivityDialog({ prospectId, open, onOpenChange }) {
                   <FormLabel className="text-xs">Type</FormLabel>
                   <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
-                      <SelectTrigger className="h-9 text-sm">
+                      <SelectTrigger className="w-full h-9 text-sm">
                         <SelectValue placeholder="Select type" />
                       </SelectTrigger>
                     </FormControl>

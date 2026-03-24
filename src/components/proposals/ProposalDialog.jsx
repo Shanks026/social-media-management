@@ -3,10 +3,11 @@ import { useForm, useFieldArray, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { format } from 'date-fns'
-import { Plus, Trash2, CalendarIcon, FileText } from 'lucide-react'
+import { Plus, Trash2, CalendarIcon, FileText, Target } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { useClients } from '@/api/clients'
+import { useProspects } from '@/api/prospects'
 import {
   useProposal,
   useCreateProposal,
@@ -29,7 +30,9 @@ import {
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
@@ -51,6 +54,7 @@ const schema = z
     title: z.string().min(1, 'Title is required'),
     client_type: z.enum(['client', 'prospect']),
     client_id: z.string().nullable().optional(),
+    prospect_id: z.string().nullable().optional(),
     prospect_name: z.string().nullable().optional(),
     prospect_email: z
       .string()
@@ -86,7 +90,7 @@ const schema = z
         path: ['client_id'],
       })
     }
-    if (data.client_type === 'prospect' && !data.prospect_name?.trim()) {
+    if (data.client_type === 'prospect' && !data.prospect_id && !data.prospect_name?.trim()) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message: 'Prospect name is required',
@@ -102,12 +106,17 @@ export function ProposalDialog({
   onOpenChange,
   proposalId = null,
   clientId = null,
+  prospectId = null,
+  prospectName = null,
+  prospectEmail = null,
   onSuccess,
   onUpgradeNeeded,
 }) {
   const isEditing = !!proposalId
+  const isProspectMode = !!prospectId
 
   const { data: clientData } = useClients()
+  const { data: prospectsData } = useProspects()
   const { data: sub } = useSubscription()
   const { data: existing, isLoading: existingLoading } = useProposal(proposalId)
 
@@ -115,16 +124,18 @@ export function ProposalDialog({
   const updateProposal = useUpdateProposal()
 
   const clients = useMemo(() => clientData?.realClients || [], [clientData])
+  const prospects = useMemo(() => prospectsData || [], [prospectsData])
 
   // ── Form ──
   const form = useForm({
     resolver: zodResolver(schema),
     defaultValues: {
       title: '',
-      client_type: clientId ? 'client' : 'client',
+      client_type: isProspectMode ? 'prospect' : 'client',
       client_id: clientId || '',
-      prospect_name: '',
-      prospect_email: '',
+      prospect_id: prospectId || '',
+      prospect_name: prospectName || '',
+      prospect_email: prospectEmail || '',
       valid_until: null,
       introduction: '',
       scope_notes: '',
@@ -142,6 +153,7 @@ export function ProposalDialog({
   const watchAll = watch()
   const clientType = watch('client_type')
   const watchedClientId = watch('client_id')
+  const watchedProspectId = watch('prospect_id')
   const watchedLineItems = watch('line_items')
 
   // ── Pre-fill when editing ──
@@ -151,6 +163,7 @@ export function ProposalDialog({
         title: existing.title || '',
         client_type: existing.client_id ? 'client' : 'prospect',
         client_id: existing.client_id || '',
+        prospect_id: existing.prospect_id || '',
         prospect_name: existing.prospect_name || '',
         prospect_email: existing.prospect_email || '',
         valid_until: existing.valid_until ? new Date(existing.valid_until) : null,
@@ -175,10 +188,11 @@ export function ProposalDialog({
     if (!open) {
       reset({
         title: '',
-        client_type: 'client',
+        client_type: isProspectMode ? 'prospect' : 'client',
         client_id: clientId || '',
-        prospect_name: '',
-        prospect_email: '',
+        prospect_id: prospectId || '',
+        prospect_name: prospectName || '',
+        prospect_email: prospectEmail || '',
         valid_until: null,
         introduction: '',
         scope_notes: '',
@@ -188,7 +202,7 @@ export function ProposalDialog({
         line_items: [{ ...EMPTY_LINE_ITEM }],
       })
     }
-  }, [open, reset, clientId])
+  }, [open, reset, clientId, isProspectMode, prospectName, prospectEmail])
 
   // ── Live preview data ──
   const selectedClient = useMemo(
@@ -242,6 +256,7 @@ export function ProposalDialog({
       const payload = {
         title: values.title,
         client_id: values.client_type === 'client' ? values.client_id || null : null,
+        prospect_id: values.client_type === 'prospect' ? (values.prospect_id || null) : null,
         prospect_name: values.client_type === 'prospect' ? values.prospect_name || null : null,
         prospect_email: values.client_type === 'prospect' ? values.prospect_email || null : null,
         valid_until: values.valid_until ? format(values.valid_until, 'yyyy-MM-dd') : null,
@@ -322,44 +337,98 @@ export function ProposalDialog({
                   )}
                 </div>
 
-                {/* Client / Prospect selector — single select with sentinel value */}
+                {/* Client / Prospect selector */}
                 <div className="space-y-3">
                   <Label className="text-xs font-medium text-muted-foreground">
-                    Client <span className="text-destructive">*</span>
+                    {isProspectMode ? 'Prospect' : 'Client'} <span className="text-destructive">*</span>
                   </Label>
 
-                  {/* Single select: '__prospect__' = New Prospect, else = client UUID */}
-                  <Select
-                    value={clientType === 'prospect' ? '__prospect__' : watchedClientId || ''}
-                    onValueChange={(v) => {
-                      if (v === '__prospect__') {
-                        setValue('client_type', 'prospect')
-                        setValue('client_id', null)
-                      } else {
-                        setValue('client_type', 'client')
-                        setValue('client_id', v)
+                  {isProspectMode ? (
+                    /* Locked — came from prospect detail page */
+                    <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-muted/30 border border-border/40 text-sm">
+                      <span className="text-foreground font-medium">{prospectName}</span>
+                      <span className="text-xs text-muted-foreground ml-auto">Prospect</span>
+                    </div>
+                  ) : (
+                    <Select
+                      value={
+                        clientType === 'client'
+                          ? (watchedClientId ? `client:${watchedClientId}` : '')
+                          : (watchedProspectId ? `prospect:${watchedProspectId}` : '__new_prospect__')
                       }
-                    }}
-                  >
-                    <SelectTrigger className="bg-muted/20 border-border/40">
-                      <SelectValue placeholder="Select a client or new prospect…" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__prospect__">— New Prospect —</SelectItem>
-                      {clients.map((c) => (
-                        <SelectItem key={c.id} value={c.id}>
-                          {c.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                      onValueChange={(v) => {
+                        if (v.startsWith('client:')) {
+                          setValue('client_type', 'client')
+                          setValue('client_id', v.slice(7))
+                          setValue('prospect_id', null)
+                          setValue('prospect_name', '')
+                          setValue('prospect_email', '')
+                        } else if (v.startsWith('prospect:')) {
+                          const pid = v.slice(9)
+                          const p = prospects.find((x) => x.id === pid)
+                          setValue('client_type', 'prospect')
+                          setValue('client_id', null)
+                          setValue('prospect_id', pid)
+                          setValue('prospect_name', p?.business_name || '')
+                          setValue('prospect_email', p?.email || '')
+                        } else {
+                          setValue('client_type', 'prospect')
+                          setValue('client_id', null)
+                          setValue('prospect_id', null)
+                          setValue('prospect_name', '')
+                          setValue('prospect_email', '')
+                        }
+                      }}
+                    >
+                      <SelectTrigger className="bg-muted/20 border-border/40">
+                        <SelectValue placeholder="Select client or prospect…" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__new_prospect__">— New Prospect —</SelectItem>
+                        {clients.length > 0 && (
+                          <SelectGroup>
+                            <SelectLabel>Clients</SelectLabel>
+                            {clients.map((c) => (
+                              <SelectItem key={c.id} value={`client:${c.id}`}>
+                                <div className="flex items-center gap-2">
+                                  {c.logo_url ? (
+                                    <img src={c.logo_url} alt="" className="size-5 rounded-full object-cover shrink-0" />
+                                  ) : (
+                                    <div className="size-5 rounded-full bg-muted flex items-center justify-center shrink-0">
+                                      <span className="text-[10px] font-medium text-muted-foreground leading-none">{c.name[0]}</span>
+                                    </div>
+                                  )}
+                                  {c.name}
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
+                        )}
+                        {prospects.length > 0 && (
+                          <SelectGroup>
+                            <SelectLabel>CRM Prospects</SelectLabel>
+                            {prospects.map((p) => (
+                              <SelectItem key={p.id} value={`prospect:${p.id}`}>
+                                <div className="flex items-center gap-2">
+                                  <div className="size-5 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                                    <Target className="size-3 text-primary" />
+                                  </div>
+                                  {p.business_name}
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
+                        )}
+                      </SelectContent>
+                    </Select>
+                  )}
 
                   {errors.client_id && (
                     <p className="text-xs text-destructive">{errors.client_id.message}</p>
                   )}
 
-                  {/* Prospect fields */}
-                  {clientType === 'prospect' && (
+                  {/* Prospect fields — only shown for freeform new prospect */}
+                  {clientType === 'prospect' && !isProspectMode && !watchedProspectId && (
                     <div className="space-y-2 pl-1 border-l-2 border-border/40 ml-1">
                       <div className="space-y-1.5 pl-3">
                         <Label className="text-xs text-muted-foreground">
@@ -415,6 +484,7 @@ export function ProposalDialog({
                             mode="single"
                             selected={field.value}
                             onSelect={field.onChange}
+                            disabled={{ before: new Date() }}
                             initialFocus
                           />
                         </PopoverContent>

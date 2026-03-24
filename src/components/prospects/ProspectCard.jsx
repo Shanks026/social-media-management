@@ -164,7 +164,7 @@ export function ProspectCard({ prospect, onClick, onEdit, onDelete }) {
 
         {/* Business name + location */}
         <div className="space-y-1.5">
-          <h3 className="text-lg font-semibold text-foreground tracking-tight leading-tight group-hover:text-primary transition-colors">
+          <h3 className="text-base font-semibold text-foreground tracking-tight leading-tight group-hover:text-primary transition-colors">
             {prospect.business_name}
           </h3>
           {(prospect.location || prospect.address) && (

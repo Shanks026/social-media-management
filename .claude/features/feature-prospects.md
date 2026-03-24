@@ -422,68 +422,207 @@ src/
 
 ---
 
-### Phase 2c — Link Notes, Meetings & Documents to Prospects
+### Phase 2c — Link Documents to Prospects ✅ Complete
 
-Add `prospect_id` nullable FK to three existing tables. Same `client_id` column remains — records can belong to a prospect OR a client, not both simultaneously. The existing `NotesAndReminders`, `MeetingsPage`, and `DocumentsTab` components get a `prospectId` prop alongside the existing `clientId` prop.
+**Scope decision:** Notes and Meetings tabs were intentionally skipped. The Outreach tab (Phase 2b) already covers meeting and note activity logging via `type: 'meeting'` and `type: 'note'` entries. Adding separate Notes/Meetings tabs would create two places to log the same thing for a pre-client record. Documents are kept because files genuinely need to attach and transfer on conversion.
 
-#### DB Migrations
+**Document attachment to outreach log entries was also considered and rejected.** The Documents tab is the file cabinet; the Outreach tab is the timeline. Uploading to Documents and logging the activity in Outreach separately is sufficient for the prospect lifecycle.
+
+#### DB Migration
 ```sql
--- Notes
-ALTER TABLE notes
-  ADD COLUMN prospect_id uuid REFERENCES prospects(id) ON DELETE SET NULL;
-CREATE INDEX notes_prospect_id_idx ON notes (prospect_id);
-
--- Meetings
-ALTER TABLE meetings
-  ADD COLUMN prospect_id uuid REFERENCES prospects(id) ON DELETE SET NULL;
-CREATE INDEX meetings_prospect_id_idx ON meetings (prospect_id);
-
--- Documents (reuse existing client_documents table + client-documents bucket)
+-- Documents only (notes and meetings skipped — covered by Outreach tab)
 ALTER TABLE client_documents
   ADD COLUMN prospect_id uuid REFERENCES prospects(id) ON DELETE SET NULL;
 CREATE INDEX client_documents_prospect_id_idx ON client_documents (prospect_id);
+
+-- client_id made nullable to support prospect documents (no client association)
+ALTER TABLE client_documents ALTER COLUMN client_id DROP NOT NULL;
+
+-- category CHECK constraint expanded to include prospect-specific categories
+ALTER TABLE client_documents
+  DROP CONSTRAINT client_documents_category_check,
+  ADD CONSTRAINT client_documents_category_check CHECK (
+    category = ANY (ARRAY[
+      'Contract', 'NDA', 'Brand Guidelines', 'Creative Brief', 'Brand Assets',
+      'Meeting Notes', 'Invoice / Finance', 'SOP', 'Other',
+      'Proposal', 'Pitch Deck', 'Case Study', 'Discovery Notes'
+    ])
+  );
 ```
 
-#### Component Updates
+#### What was built
 
-Each tab component needs a `prospectId` prop. When `prospectId` is present (and `clientId` absent), filter and create records scoped to the prospect.
+**API (`src/api/documents.js`):**
+- `useDocuments({ prospectId })` — filters by `prospect_id` when provided
+- `uploadDocument({ prospectId })` — uses `{workspaceUserId}/prospects/{prospectId}/{documentId}/{filename}` storage path; sets `prospect_id`, leaves `client_id` null
+- `useDocuments` select joins `prospects(business_name)` alongside `clients` for display in global list
 
-**Notes** (`src/api/notes.js` + `NotesAndReminders` / reused tab component):
-- `useNotes({ prospectId })` — filter by `prospect_id`
-- `createNote` — pass `prospect_id` when creating from prospect context
+**New component (`src/pages/prospects/prospectSections/ProspectDocumentsTab.jsx`):**
+- Purpose-built lighter version — no collections, no status sub-tabs (Active/Archived), no archive flow
+- Upload zone + search + category filter (prospect categories only)
+- Reuses `DocumentCard`, `DocumentUploadZone`, `UploadMetaDialog`
+- Shows only Active documents
 
-**Meetings** (`src/api/meetings.js` + meetings tab component):
-- `useMeetings({ prospectId })` — filter by `prospect_id`
-- `createMeeting` — pass `prospect_id` when creating from prospect context
+**`ProspectDetailPage.jsx`:** Documents tab added (Outreach → Overview → Documents)
 
-**Documents** (`src/api/documents.js` + `DocumentsTab`):
-- `useDocuments({ prospectId })` — filter by `prospect_id`
-- Upload path: `{workspaceUserId}/prospects/{prospectId}/{filename}` (within same `client-documents` bucket)
-- `createDocument` — pass `prospect_id` when creating from prospect context
+**`DocumentsTab.jsx` (client tab) — unchanged.** Prospect documents don't appear in client context; client documents don't appear in prospect context.
+
+**`DocumentCard.jsx`:** Falls back to `doc.prospects?.business_name` when `doc.clients` is null — prospect docs show the prospect name in the global list.
+
+**`DocumentsPage.jsx` (global page):**
+- Filter dropdown now includes a Prospects group alongside Clients
+- When a prospect is selected: Collections tab + Ungrouped tab hidden; New Collection button hidden; category filter switches to prospect categories; auto-switches away from Collections/Ungrouped tabs
+- Upload dialog "Link to" selector includes a Prospects group
+
+**`UploadMetaDialog.jsx`:**
+- "Client" selector renamed to "Link to" with three groups: Workspace, Clients, Prospects
+- Values encoded as `client:uuid` / `prospect:uuid`; parsed before `onConfirm` — callers receive clean `{ clientId, prospectId }`
+- `categories` prop added (defaults to `DOCUMENT_CATEGORIES`); when `showClientSelector` is true, dynamically switches between `DOCUMENT_CATEGORIES` and `PROSPECT_DOCUMENT_CATEGORIES` based on the selected link target; resets category field on switch
+
+**`DocumentCategoryBadge.jsx`:** Prospect category colours added — violet (Proposal), cyan (Pitch Deck), amber (Case Study), teal (Discovery Notes).
+
+**`PROSPECT_DOCUMENT_CATEGORIES`** exported from `UploadMetaDialog.jsx`:
+`Proposal`, `Pitch Deck`, `Case Study`, `NDA`, `Discovery Notes`, `Contract`, `Other`
+> ⚠️ `Proposal` will be removed in Phase 2d — proposals move to the dedicated Proposals tab.
 
 #### File Map (Phase 2c)
 ```
 src/
+  api/
+    documents.js                              ← prospectId support in useDocuments + uploadDocument
   pages/
     prospects/
       prospectSections/
-        ProspectNotesTab.jsx        ← Thin wrapper: <NotesTab prospectId={id} />
-        ProspectMeetingsTab.jsx     ← Thin wrapper: <MeetingsTab prospectId={id} />
-        ProspectDocumentsTab.jsx    ← Thin wrapper: <DocumentsTab prospectId={id} />
+        ProspectDocumentsTab.jsx              ← Purpose-built prospect documents tab
+    documents/
+      DocumentsPage.jsx                       ← Prospect filter + prospect-aware upload
+  components/
+    documents/
+      DocumentCard.jsx                        ← Prospect name fallback
+      DocumentCategoryBadge.jsx               ← Prospect category colours
+      UploadMetaDialog.jsx                    ← Link to selector + dynamic categories
 ```
 
 #### Phase 2c Checklist
-- [ ] DB migrations: `prospect_id` FK on `notes`, `meetings`, `client_documents`
-- [ ] `useNotes` updated to accept `{ prospectId }` filter
-- [ ] `useMeetings` updated to accept `{ prospectId }` filter
-- [ ] `useDocuments` updated to accept `{ prospectId }` filter
-- [ ] `createNote`, `createMeeting`, `createDocument` mutations accept `prospect_id`
-- [ ] Notes, Meetings, Documents tabs wired into `ProspectDetailPage`
-- [ ] Document upload path scoped to `prospects/{prospectId}/` within `client-documents` bucket
+- [x] DB migration: `prospect_id` FK on `client_documents` + `client_id` made nullable
+- [x] DB constraint: `category` CHECK expanded for prospect categories
+- [x] `useDocuments` updated to accept `{ prospectId }` filter
+- [x] `uploadDocument` accepts `prospectId` — prospect-scoped storage path
+- [x] `useDocuments` joins `prospects(business_name)` for global list display
+- [x] `ProspectDocumentsTab.jsx` — purpose-built tab (no collections, active docs only)
+- [x] Documents tab wired into `ProspectDetailPage` (3rd tab after Outreach, Overview)
+- [x] `DocumentCard` shows prospect name when `client_id` is null
+- [x] `UploadMetaDialog` — "Link to" selector with Prospects group + dynamic category switching
+- [x] `DocumentsPage` — prospect filter, prospect-aware upload, hides collections UI for prospects
+- [x] `PROSPECT_DOCUMENT_CATEGORIES` constant + colours in `DocumentCategoryBadge`
+- [x] Notes tab — skipped (covered by Outreach)
+- [x] Meetings tab — skipped (covered by Outreach)
 
 ---
 
-### Phase 2d — Convert to Client
+### Phase 2d — Link Proposals to Prospects ✅ Complete
+
+**Status:** Complete — March 2026.
+
+#### Design Decisions
+
+- Proposals tab on prospect detail page — single source of truth for all proposals sent to a prospect
+- Two creation modes: **build in Tercero** (existing flow) and **upload existing** (new — a proposal record with a file attachment via nullable `file_path` column)
+- Status tracking works for both modes — uploaded proposals can still be marked sent, accepted, declined
+- `Proposal` category removed from `PROSPECT_DOCUMENT_CATEGORIES` — Documents tab is strictly for supporting materials (Pitch Deck, Case Study, NDA, Discovery Notes, Contract, Other). No overlap with Proposals tab.
+- When creating a proposal from the prospect page, `prospect_id` is pre-filled automatically
+
+#### DB Migrations
+
+```sql
+-- Link proposals to prospects
+ALTER TABLE proposals
+  ADD COLUMN prospect_id uuid REFERENCES prospects(id) ON DELETE SET NULL;
+CREATE INDEX proposals_prospect_id_idx ON proposals (prospect_id);
+
+-- Support uploaded proposals (null = built in Tercero, set = uploaded file)
+ALTER TABLE proposals
+  ADD COLUMN file_path text;
+
+-- Remove 'Proposal' from prospect document category constraint
+ALTER TABLE client_documents
+  DROP CONSTRAINT client_documents_category_check,
+  ADD CONSTRAINT client_documents_category_check CHECK (
+    category = ANY (ARRAY[
+      'Contract', 'NDA', 'Brand Guidelines', 'Creative Brief', 'Brand Assets',
+      'Meeting Notes', 'Invoice / Finance', 'SOP', 'Other',
+      'Pitch Deck', 'Case Study', 'Discovery Notes'
+    ])
+  );
+```
+
+#### API Changes (`src/api/proposals.js`)
+
+- `useProposals({ prospectId })` — filter by `prospect_id` when provided
+- `createProposal` — accept `prospect_id` and optional `file_path`
+- `get_proposals_with_totals` RPC — confirm it returns `prospect_id` (or extend if needed)
+
+#### UI
+
+**`ProspectProposalsTab.jsx`** (`src/pages/prospects/prospectSections/`):
+- Same list UI as global Proposals page, scoped to `prospectId`
+- "New Proposal" button — opens existing proposal creation flow with `prospect_id` pre-filled
+- "Upload Existing" button — file picker (PDF only) → name + status → creates a proposal record with `file_path` set
+- Uploaded proposals show a file chip instead of the built-in preview; clicking downloads/opens the file
+- Status badge, accepted/declined state — same as built proposals
+
+**`ProspectDetailPage.jsx`:** Add Proposals tab (Outreach → Proposals → Documents → Overview)
+
+**`PROSPECT_DOCUMENT_CATEGORIES`** updated — `Proposal` removed:
+`Pitch Deck`, `Case Study`, `NDA`, `Discovery Notes`, `Contract`, `Other`
+
+#### File Map (Phase 2d)
+
+```
+src/
+  api/
+    proposals.js                              ← prospectId filter + file_path support
+  pages/
+    prospects/
+      prospectSections/
+        ProspectProposalsTab.jsx              ← Proposals tab scoped to prospect
+  components/
+    proposals/
+      UploadProposalDialog.jsx                ← Upload existing proposal flow
+```
+
+#### Phase 2d Checklist
+- [x] DB migration: `prospect_id` FK + `file_path` column on `proposals`
+- [x] DB constraint: remove `Proposal` from `client_documents` category CHECK
+- [x] `useProposals({ prospectId })` — client-side filter on `prospect_id` field
+- [x] `createProposal` — accepts `prospect_id` via spread fields
+- [x] `get_proposals_with_totals` RPC extended to return `prospect_id`
+- [x] `ProspectProposalsTab.jsx` — thin wrapper delegating to `ProposalTab` with prospect context
+- [x] `UploadProposalDialog.jsx` — three-group selector (existing client / CRM prospect / new prospect) + PDF upload
+- [x] `ProposalDialog.jsx` — three-group selector with client logos + prospect `Target` icon
+- [x] `ProposalTab.jsx` — forwards `prospectId`, `prospectName`, `prospectEmail` to both dialogs
+- [x] Proposals tab wired into `ProspectDetailPage` (order: Outreach → Proposals → Documents → Overview)
+- [x] `PROSPECT_DOCUMENT_CATEGORIES` — `Proposal` removed (Pitch Deck, Case Study, NDA, Discovery Notes, Contract, Other)
+- [x] `DocumentCategoryBadge.jsx` — `Proposal` entry removed
+- [x] Global proposals list — `prospect_name` shown when `client_id` is null, with `(prospect)` label
+- [x] Draft proposals no longer shown as expired in table (RPC fix: `'draft'` added to status exclusion list)
+- [x] Copy link no longer auto-advances status to `sent` — only explicit "Mark as Sent" or "Send via Email" does
+- [x] `SendProposalEmailDialog.jsx` — pre-filled email, sends via `send-proposal-email` edge function, marks as `sent` on success
+- [x] `ProposalDetailPage.jsx` — client/prospect selector locked (read-only) when `prospect_id` is set; "Send via Email" button added
+- [x] `send-proposal-email` Supabase edge function deployed (`verify_jwt: false`)
+
+#### Implementation Notes
+- `ProspectProposalsTab` is a thin wrapper — all the heavy lifting lives in the existing `ProposalTab` + `ProposalDialog` + `UploadProposalDialog`
+- Both creation dialogs use a single grouped `<Select>` with encoded values (`client:uuid` / `prospect:uuid` / `__new_prospect__`) rather than two separate selectors
+- Client logos (or initial fallback) and a `Target` icon for CRM prospects render inside the `SelectItem` — shadcn copies them into the trigger automatically after selection
+- `useProposals` filters prospect proposals client-side (pass `p_client_id: null` to RPC, filter on `prospect_id` in JS) — avoids RPC changes
+- Uploaded proposals store the file in `proposal-files` bucket; `file_url` is saved back on the record after upload
+- `send-proposal-email` edge function deployed with `verify_jwt: false` (uses service role key internally; no caller JWT needed)
+- Proposal detail page locks the "For" selector to read-only when `prospect_id` is set, preventing reassignment
+
+---
+
+### Phase 2e — Convert to Client
 
 "Convert to Client" button on the prospect detail page header — only rendered when `status === 'won'`.
 
@@ -499,9 +638,7 @@ ALTER TABLE prospects
 2. Confirmation dialog opens — shows what will happen: "A new client will be created from this prospect. All linked notes, meetings, and documents will transfer to the new client."
 3. On confirm, the conversion RPC runs atomically:
    - Insert new `clients` row (pre-filled from prospect Layer 1 data: `business_name → name`, `email`, `phone`, `website`, `instagram`, `linkedin`)
-   - Bulk-update `notes.client_id = new_client_id`, clear `notes.prospect_id` where `prospect_id = id`
-   - Bulk-update `meetings.client_id = new_client_id`, clear `meetings.prospect_id`
-   - Bulk-update `client_documents.client_id = new_client_id`, clear `client_documents.prospect_id`
+   - Bulk-update `client_documents.client_id = new_client_id`, clear `client_documents.prospect_id` where `prospect_id = id`
    - Set `prospects.converted_client_id = new_client_id`
    - Set `prospects.status = 'won'` (if not already)
 4. Navigate to the new client's page on success
@@ -516,19 +653,18 @@ Use an RPC for atomicity — this is too important to do as separate JS calls:
 - Prospect row in the list shows a "Converted" indicator (link to client)
 - All linked records now live under the client — nothing orphaned
 
-#### Phase 2d Checklist
+#### Phase 2e Checklist
 - [ ] DB migration: `converted_client_id` FK on `prospects`
-- [ ] RPC `convert_prospect_to_client` — atomic client creation + record migration
+- [ ] RPC `convert_prospect_to_client` — atomic client creation + document migration
 - [ ] "Convert to Client" button in `ProspectDetailPage` header (won status only)
-- [ ] Confirmation dialog with summary of what transfers
+- [ ] Confirmation dialog with summary of what transfers (documents only — notes/meetings not linked)
 - [ ] Converted prospect indicator on the list page row
 - [ ] Navigate to new client on success
 
 ---
 
-### Phase 2e — Deferred (post-Phase 2)
+### Phase 2f — Deferred (post-Phase 2)
 
-- **Link to Proposal** — optional `proposal_id` FK on prospects; show linked proposal in Overview tab
 - **WhatsApp follow-up reminders** — trigger when `next_followup_at` is reached
 
 ---
