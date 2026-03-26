@@ -86,7 +86,16 @@
       "Bash(grep -r prospect_id /c/Users/chris_austin/Desktop/social-media-management/supabase --include=*.sql)",
       "Bash(find /c/Users/chris_austin/Desktop/social-media-management -type f -name *.sql)",
       "Bash(grep -r prospect_id /c/Users/chris_austin/Desktop/social-media-management/src --include=*.js --include=*.jsx)",
-      "Bash(find /c/Users/chris_austin/Desktop/social-media-management/src -name *prospect* -type f)"
+      "Bash(find /c/Users/chris_austin/Desktop/social-media-management/src -name *prospect* -type f)",
+      "Bash(find /c/Users/chris_austin/Desktop/social-media-management -name *.sql -o -name *enum*)",
+      "Bash(find /c/Users/chris_austin/Desktop/social-media-management -path */node_modules -prune -o -type f \\\\\\(-name *.sql -o -name *schema* \\\\\\) -print)",
+      "Bash(grep -r \"PARTIALLY_PUBLISHED\\\\|APPROVED\\\\|NEEDS_REVISION\" /c/Users/chris_austin/Desktop/social-media-management/src --include=*.js --include=*.jsx --include=*.ts --include=*.tsx)",
+      "Bash(find /c/Users/chris_austin/Desktop/social-media-management/src -name *constant* -o -name *config*)",
+      "Bash(find /c/Users/chris_austin/Desktop/social-media-management/supabase -name *.sql -type f)",
+      "Bash(find c:Userschris_austinDesktopsocial-media-managementsupabase -type f -name *.sql)",
+      "Bash(find c:Userschris_austinDesktopsocial-media-management -name *Transaction* -type f)",
+      "Bash(grep -E \"\\\\.\\(jsx|js|sql\\)$\")",
+      "Bash(find c:Userschris_austinDesktopsocial-media-management -path */node_modules -prune -o -type f -name *.sql -print)"
     ]
   }
 }

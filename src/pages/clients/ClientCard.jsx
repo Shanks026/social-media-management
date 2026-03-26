@@ -32,7 +32,7 @@ const StatItem = ({ count, label, colorClass }) => {
     <div className="flex flex-col gap-2.5">
       <div className="flex items-center gap-1.5">
         <div className={`size-2 rounded-full ${colorClass}`} />
-        <span className="text-[10px] text-muted-foreground leading-none truncate">{label}</span>
+        <span className="text-xs text-muted-foreground leading-none truncate">{label}</span>
       </div>
       <span className="text-sm font-bold text-foreground leading-none">{count}</span>
     </div>
@@ -84,11 +84,10 @@ function ClientCard({ client, onOpen, onDelete }) {
         .slice(0, 2)
     : 'CL'
 
-  const activePipelineCount = [pipeline.drafts, pipeline.pending, pipeline.revisions, pipeline.scheduled].filter(
+  const activePipelineCount = [pipeline.drafts, pipeline.pending, pipeline.revisions, pipeline.approved, pipeline.scheduled].filter(
     (v) => v > 0,
   ).length
   const hasPipelineData = activePipelineCount > 0
-  const pipelineCols = Math.max(activePipelineCount, 3)
 
   const showFinancials = !client.is_internal
   const showCampaigns = !!sub?.campaigns && (client.active_campaigns ?? 0) > 0
@@ -111,7 +110,7 @@ function ClientCard({ client, onOpen, onDelete }) {
         className={cn(
           'group cursor-pointer shadow-none transition-all duration-200 border hover:bg-accent/30 dark:hover:bg-card flex flex-col overflow-hidden py-2',
           client.is_internal
-            ? 'bg-muted/30 dark:bg-card dark:border-border border-dashed'
+            ? 'border-border/70 dark:border-border/60'
             : 'dark:bg-card/70 dark:border-none',
         )}
       >
@@ -151,10 +150,11 @@ function ClientCard({ client, onOpen, onDelete }) {
           {/* Pipeline stats */}
           <div className="pt-4 border-t border-dashed border-border">
             {hasPipelineData ? (
-              <div className={cn('grid', pipelineCols === 4 ? 'grid-cols-4' : 'grid-cols-3')}>
+              <div className="grid grid-cols-5">
                 <StatItem count={pipeline.drafts} label="Drafts" colorClass="bg-blue-500" />
-                <StatItem count={pipeline.pending} label="Submit." colorClass="bg-orange-500" />
-                <StatItem count={pipeline.revisions} label="Needs Rev." colorClass="bg-pink-500" />
+                <StatItem count={pipeline.pending} label="Approval" colorClass="bg-orange-500" />
+                <StatItem count={pipeline.revisions} label="Revision" colorClass="bg-pink-500" />
+                <StatItem count={pipeline.approved} label="Approved" colorClass="bg-green-500" />
                 <StatItem count={pipeline.scheduled} label="Sched." colorClass="bg-purple-500" />
               </div>
             ) : (

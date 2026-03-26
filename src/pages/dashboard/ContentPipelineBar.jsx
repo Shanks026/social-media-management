@@ -19,13 +19,14 @@ import { Button } from '@/components/ui/button'
 import { getPublishState } from '@/lib/helper'
 
 const chartConfig = {
-  'DRAFT':            { label: 'Draft',            color: '#3b82f6' },
-  'PENDING APPROVAL': { label: 'Pending Approval',  color: '#f97316' },
-  'APPROVED':         { label: 'Approved',           color: '#22c55e' },
-  'NEEDS REVISION':   { label: 'Needs Revision',    color: '#ec4899' },
-  'SCHEDULED':        { label: 'Scheduled',          color: '#a855f7' },
-  'DELIVERED':        { label: 'Delivered',          color: '#14b8a6' },
-  'PUBLISHED':        { label: 'Published',          color: '#10b981' },
+  'DRAFT':                { label: 'Draft',               color: '#3b82f6' },
+  'PENDING APPROVAL':     { label: 'Pending Approval',    color: '#f97316' },
+  'APPROVED':             { label: 'Approved',            color: '#22c55e' },
+  'NEEDS REVISION':       { label: 'Needs Revision',      color: '#ec4899' },
+  'SCHEDULED':            { label: 'Scheduled',           color: '#a855f7' },
+  'DELIVERED':            { label: 'Delivered',           color: '#14b8a6' },
+  'PARTIALLY PUBLISHED':  { label: 'Partially Published', color: '#84cc16' },
+  'PUBLISHED':            { label: 'Published',           color: '#10b981' },
 }
 
 const ALLOWED_STATUSES = [
@@ -35,17 +36,19 @@ const ALLOWED_STATUSES = [
   'NEEDS REVISION',
   'SCHEDULED',
   'DELIVERED',
+  'PARTIALLY PUBLISHED',
   'PUBLISHED',
 ]
 
 const STATUS_DISPLAY_MAP = {
-  DRAFT:            'DRAFT',
-  PENDING_APPROVAL: 'PENDING APPROVAL',
-  APPROVED:         'APPROVED',
-  NEEDS_REVISION:   'NEEDS REVISION',
-  SCHEDULED:        'SCHEDULED',
-  DELIVERED:        'DELIVERED',
-  PUBLISHED:        'PUBLISHED',
+  DRAFT:                'DRAFT',
+  PENDING_APPROVAL:     'PENDING APPROVAL',
+  APPROVED:             'APPROVED',
+  NEEDS_REVISION:       'NEEDS REVISION',
+  SCHEDULED:            'SCHEDULED',
+  DELIVERED:            'DELIVERED',
+  PARTIALLY_PUBLISHED:  'PARTIALLY PUBLISHED',
+  PUBLISHED:            'PUBLISHED',
 }
 
 function normalizeStatus(raw) {

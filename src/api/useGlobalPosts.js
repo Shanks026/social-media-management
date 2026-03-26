@@ -143,7 +143,8 @@ export function useGlobalPosts(filters = {}) {
       return posts
     },
     enabled: !!workspaceUserId,
-    staleTime: 1000 * 30, // 30s
+    staleTime: 0,
+    refetchOnWindowFocus: true,
   })
 }
 

@@ -174,7 +174,12 @@ export default function WelcomeCarousel({ open, onOpenChange, user }) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl! p-0 overflow-hidden border-none bg-background shadow-xl">
+      <DialogContent
+        className="max-w-4xl! p-0 overflow-hidden border-none bg-background shadow-xl"
+        onInteractOutside={(e) => e.preventDefault()}
+        onEscapeKeyDown={(e) => e.preventDefault()}
+        showCloseButton={false}
+      >
         <div className="relative p-10 md:p-14 min-h-[580px] flex flex-col justify-between">
 
           {/* Progress dots */}

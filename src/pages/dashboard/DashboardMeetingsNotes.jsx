@@ -25,6 +25,8 @@ import MeetingRow from '@/components/MeetingRow'
 import CreateMeetingDialog from '@/components/CreateMeetingDialog'
 import CreateNoteDialog from '@/components/CreateNoteDialog'
 import { deleteMeeting } from '@/api/meetings'
+import { useSubscription } from '@/api/useSubscription'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 
 // ─── MAIN COMPONENT ───────────────────────────────────────────────────────────
 
@@ -33,6 +35,8 @@ export default function DashboardMeetingsNotes() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { user, workspaceUserId } = useAuth()
+  const { data: sub } = useSubscription()
+  const hasNoExternalClients = (sub?.client_count ?? 1) === 0
 
   const { data: clientsMap = {} } = useQuery({
     queryKey: ['clients-map-for-dashboard', workspaceUserId],
@@ -122,16 +126,25 @@ export default function DashboardMeetingsNotes() {
 
           <div className="flex items-center gap-1">
             {activeTab === 'meetings' ? (
-              <CreateMeetingDialog
-                lockClient={false}
-                onSuccess={() =>
-                  queryClient.refetchQueries({ queryKey: ['meetings', 'dashboard-upcoming'] })
-                }
-              >
-                <Button variant="ghost" size="icon" className="h-8 w-8">
-                  <Plus className="h-4 w-4" />
-                </Button>
-              </CreateMeetingDialog>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span>
+                    <CreateMeetingDialog
+                      lockClient={false}
+                      onSuccess={() =>
+                        queryClient.refetchQueries({ queryKey: ['meetings', 'dashboard-upcoming'] })
+                      }
+                    >
+                      <Button variant="ghost" size="icon" className="h-8 w-8" disabled={hasNoExternalClients}>
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </CreateMeetingDialog>
+                  </span>
+                </TooltipTrigger>
+                {hasNoExternalClients && (
+                  <TooltipContent>Add a client to schedule meetings</TooltipContent>
+                )}
+              </Tooltip>
             ) : (
               <CreateNoteDialog
                 lockClient={false}
@@ -148,7 +161,7 @@ export default function DashboardMeetingsNotes() {
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8 -mr-2 text-muted-foreground hover:text-foreground"
+              className="h-8 w-8 -mr-2"
               onClick={() =>
                 navigate(
                   activeTab === 'meetings'
