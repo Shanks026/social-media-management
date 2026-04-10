@@ -57,6 +57,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import DraftPostForm from '@/pages/posts/DraftPostForm'
 import CalendarReportPDF from './CalendarReportPDF'
 import {
@@ -133,6 +134,7 @@ export default function ContentCalendar({
   const { data: clientsData } = useClients()
   const isInternalClient =
     clientId && String(clientsData?.internalAccount?.id) === String(clientId)
+  const hasNoExternalClients = (subscription?.client_count ?? 1) === 0
 
   const { data: meetings = [], isLoading: isLoadingMeetings } = useQuery({
     queryKey: ['meetings', clientId, format(currentDate, 'yyyy-MM-dd')],
@@ -439,12 +441,20 @@ export default function ContentCalendar({
                 <FileText size={14} /> New Post
               </DropdownMenuItem>
               {!isInternalClient && (
-                <DropdownMenuItem
-                  className="gap-2 text-xs cursor-pointer"
-                  onSelect={() => setMeetingOpen(true)}
-                >
-                  <CalendarDays size={14} /> Schedule Meeting
-                </DropdownMenuItem>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <DropdownMenuItem
+                      className="gap-2 text-xs cursor-pointer"
+                      disabled={hasNoExternalClients}
+                      onSelect={() => !hasNoExternalClients && setMeetingOpen(true)}
+                    >
+                      <CalendarDays size={14} /> Schedule Meeting
+                    </DropdownMenuItem>
+                  </TooltipTrigger>
+                  {hasNoExternalClients && (
+                    <TooltipContent>Add a client to schedule meetings</TooltipContent>
+                  )}
+                </Tooltip>
               )}
               <DropdownMenuItem
                 className="gap-2 text-xs cursor-pointer"

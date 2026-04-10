@@ -1,7 +1,7 @@
 # Tercero — Full Application Research Document
 
 > **Purpose**: Comprehensive product/feature reference for building a client-facing application document for Tercero.
-> **Status**: Updated March 16, 2026 — reflects live codebase including: PlatformIcon/PlatformStack SVG brand icons, updated TierBadge (INTERNAL/VIP/PRO), IndustryBadge SVG paths from industries.js (14 industries), ClientCard redesign with PlatformStack + financial metrics in INR, ClientProfileView 8-tab layout with URL-persisted tab state, ClientHealthGrid health statuses (Healthy/Needs Attention/At Risk/Idle), LifetimeRevenue donut chart with INR compact formatting, Posts page "Partially Published" status tab, Empty component for consistent empty states, MyOrganization 3-state flow, ProposalReview full branding header chain.
+> **Status**: Updated March 26, 2026 — reflects live codebase including: PlatformIcon/PlatformStack SVG brand icons, updated TierBadge (INTERNAL/VIP/PRO), IndustryBadge SVG paths from industries.js (14 industries), ClientCard redesign with PlatformStack + financial metrics in INR, ClientProfileView 8-tab layout with URL-persisted tab state, ClientHealthGrid health statuses (Healthy/Needs Attention/At Risk/Idle), LifetimeRevenue donut chart with INR compact formatting, Posts page "Partially Published" status tab, Empty component for consistent empty states, MyOrganization 3-state flow, ProposalReview full branding header chain, **Prospects CRM module** (pipeline, outreach activity log, CSV import, convert-to-client flow).
 
 ---
 
@@ -29,6 +29,7 @@ Tercero is a **social media agency management SaaS** — an all-in-one operation
 |--------|-------|---------|
 | Dashboard | `/dashboard` | Executive overview — health, pipeline, revenue |
 | Clients | `/clients` | Client management hub |
+| **Prospects** | `/prospects` | **CRM pipeline for leads — outreach tracking, activity log, CSV import, convert to client** |
 | Posts | `/posts` | Global content management |
 | Calendar | `/calendar` | Visual content schedule |
 | Campaigns | `/campaigns` | Group posts into initiatives with analytics (Velocity+) |
@@ -396,7 +397,7 @@ The agency's own subscription to Tercero (separate from client finance).
 
 **Plan Tab** (`SubscriptionTab`):
 - Current plan overview card (plan name, key limits, "Upgrade Plan" button that scrolls to the pricing grid)
-- Three plan cards: **Ignite** (₹2,999/mo), **Velocity** (₹8,999/mo, marked "Recommended"), **Quantum** (₹17,999/mo)
+- Three plan cards: **Ignite** (₹1,999/mo), **Velocity** (₹5,999/mo, marked "Recommended"), **Quantum** (₹12,999/mo)
 - Full feature comparison table
 - **Note**: Automated payment processing is not yet live. Upgrades are handled manually — users click "Contact Team" on a plan card, which opens an upgrade request dialog. The dialog sends a prefilled message to the Tercero team (currently logged to console; to be replaced by a dedicated API).
 - Downgrade is handled the same way via the Contact Team flow.
@@ -606,6 +607,130 @@ ARCHIVED → Manually archived by owner.
 
 ---
 
+### 3.13 PROSPECTS CRM
+
+**What it is**: A lightweight CRM pipeline for tracking leads before they become clients. Agencies log every outreach touchpoint, import leads from Apollo/Apify/Google Maps, and convert a won prospect into a full Tercero client in one click — carrying all the prospect's data across.
+
+**Prospect statuses** (ordered pipeline stages):
+```
+new             → Lead entered; no contact made yet
+contacted       → First outreach sent
+follow_up       → Awaiting follow-up action
+demo_scheduled  → Demo call booked
+proposal_sent   → Proposal shared (auto-updated when a linked proposal is sent)
+won             → Deal closed; Convert to Client becomes available
+lost            → No longer pursuing
+```
+
+**Prospect sources** (how the lead was acquired):
+```
+manual          → Entered by hand
+apollo          → Imported from Apollo CSV export
+apify           → Imported via Apify scrape
+google_maps     → Imported from Google Maps CSV
+referral        → Referred by someone
+cold_outreach   → Proactively reached out
+instagram       → Found/contacted via Instagram
+linkedin        → Found/contacted via LinkedIn
+other           → Any other source
+```
+
+#### Prospects List (`/prospects`)
+- **View modes**: Card grid (3-column) or data table — preference saved to `localStorage` under key `'prospects_view'`
+- **Status tabs**: All + one tab per status with live per-tab counts
+- **Search**: Partial match across business name, contact name, email, and location (300ms debounce)
+- **Table columns**: Business Name + Contact Info, Location, Status badge, Source badge, Follow-Up date (amber "overdue" indicator when past)
+- **Converted badge**: Green "Client →" link badge on prospects that have been converted; clicking navigates to the linked client
+- **New Prospect**: Opens `AddProspectDialog` (single-entry form)
+- **Import Prospects**: Opens `ImportProspectsDialog` (CSV bulk upload — see below)
+
+**Prospect Card** (card view):
+- Business name + contact name
+- `ProspectStatusBadge` — color-coded pill per status
+- `ProspectSourceBadge` — source label
+- Industry badge
+- Follow-up date with overdue highlight
+- Quick-action menu (Edit, Delete)
+
+#### Create / Edit Prospect
+**Prospect record fields**:
+- `business_name` (required)
+- `contact_name`, `email`, `phone`, `website`, `location`, `address`
+- `instagram`, `linkedin` (social links)
+- `industry` (uses same 14 INDUSTRY_OPTIONS as clients)
+- `status`, `source`
+- `last_contacted_at`, `next_followup_at` (datetime pickers)
+- `notes` (free-form)
+
+#### Prospect Detail (`/prospects/:prospectId`)
+Four-tab layout, active tab persisted in `?tab=` URL param (default: `outreach`):
+
+1. **Outreach** (MessageCircle) — Activity log: chronological feed of all logged contacts + auto-logged status changes. Each activity shows type icon, description, logged-at time. Inline "Log Activity" button at top; delete action per activity.
+2. **Proposals** (FileText) — `ProposalTab` component scoped to this prospect; same create/status flow as the client proposals tab.
+3. **Documents** (FolderOpen) — `DocumentsTab` component scoped to this prospect; same upload/collections flow as client documents.
+4. **Overview** (PieChart) — Business profile (name, contact, social links, website, location, notes, industry), pipeline metadata (status, source, follow-up dates).
+
+**Header actions**:
+- Edit (opens `EditProspectDialog`)
+- Convert to Client (only shown when `status === 'won'` — see below)
+- Delete (confirmation dialog)
+
+#### Activity Log (Outreach Tab)
+Manual activity types (all require a description):
+| Type | Icon | Logged as |
+|------|------|-----------|
+| `call` | Phone | "Call" |
+| `email` | Mail | "Email" |
+| `dm` | MessageCircle | "DM" |
+| `meeting` | Video | "Meeting" |
+| `note` | StickyNote | "Note" |
+
+**Automatic activities** — `logStatusChange()` is called by `useUpdateProspect` whenever `status` changes; a `status_change` activity is inserted automatically (not manually selectable) recording the old → new transition.
+
+#### Bulk CSV Import (`ImportProspectsDialog`)
+Accepts CSV exports from Apollo, Apify, Google Maps, and any CSV following the downloadable template.
+
+**Smart header normalisation** — flexible column name detection:
+| Field | Accepted header variants |
+|-------|--------------------------|
+| `business_name` | business name, businessname, company, company name, business |
+| `contact_name` | contact name, contactname, contact, name, first name, full name |
+| `email` | email, email address |
+| `phone` | phone, phone number, mobile, whatsapp |
+| `website` | website, url, web |
+| `location` | location, city, area, region |
+| `address` | address, street address, full address |
+| `instagram` | instagram, instagram url, ig |
+| `linkedin` | linkedin, linkedin url, li |
+
+- File must be `.csv`; parsed client-side
+- User selects source (Apollo / Apify / Google Maps / Other) before import — applied to all rows
+- Shows parsed preview (count of valid rows, any skipped rows)
+- On confirm, bulk-inserts all prospects with the selected source and status `'new'`
+
+#### Convert to Client Flow
+Available when prospect `status === 'won'`. Opens `ConvertToClientDialog`:
+
+1. Dialog shows a clear breakdown of what transfers automatically (business_name, email, phone, industry, website, location, contact_name) vs. what must be filled in on the client form (logo upload, platforms selection, tier)
+2. User confirms → navigates to `/clients/create` with `location.state.fromProspect` containing the prospect's data
+3. `CreateClientPage` detects `fromProspect` state and pre-fills all matching fields
+4. When the client is saved, `converted_client_id` is written back to the prospect record
+5. Prospect history (activities, proposals, documents) remains on the prospect record; a "Client →" link badge appears on the prospect card and detail header
+
+**Prospect API** (`src/api/prospects.js`):
+- `useProspects({ status? })` — React Query hook; query key `['prospects-list', workspaceUserId]`; optional status filter
+- `useProspect(prospectId)` — single prospect detail
+- `useCreateProspect()`, `useUpdateProspect()`, `useDeleteProspect()` — CRUD mutations; `useUpdateProspect` calls `logStatusChange()` when status field changes
+- `fetchActiveCampaignsByProspect()` — used for linked proposals
+
+**Activity API** (`src/api/prospectActivities.js`):
+- `useProspectActivities(prospectId)` — query key `['prospect-activities', prospectId]`
+- `useLogActivity()` — creates a manual activity (call/email/dm/meeting/note)
+- `useDeleteActivity()` — removes an activity
+- `logStatusChange(prospectId, oldStatus, newStatus)` — plain async helper; inserts a `status_change` activity; called internally by `useUpdateProspect`
+
+---
+
 ## 4. USER EXPERIENCE PATTERNS
 
 ### Navigation
@@ -663,6 +788,11 @@ ARCHIVED → Manually archived by owner.
 Agency (user_id / workspaceUserId)
 ├── agency_members — workspace participants (admin = owner row; member = invited teammate)
 │   └── agency_invites — pending invite tokens (7-day expiry; accepted_at set on join)
+├── Prospects (pre-client CRM)
+│   ├── prospect_activities — outreach log (call, email, dm, meeting, note, status_change)
+│   ├── Proposals (scoped to prospect via prospect_id FK)
+│   ├── Documents (scoped to prospect)
+│   └── converted_client_id → FK to clients (set when "Convert to Client" is used)
 ├── Internal Account (is_internal = true) — agency's own workspace
 └── Real Clients (is_internal = false)
     ├── Posts
@@ -729,9 +859,9 @@ Each agency has an `agency_subscriptions` row (single row per user) that control
 | Plan | Price | Clients | Storage |
 |------|-------|---------|---------|
 | **Trial** | Free (14 days) | 5 | 20 GB |
-| **Ignite** | ₹2,999/mo | 5 | 20 GB |
-| **Velocity** | ₹8,999/mo | 15 | 100 GB |
-| **Quantum** | ₹17,999/mo | 35 | 500 GB |
+| **Ignite** | ₹1,999/mo | 5 | 20 GB |
+| **Velocity** | ₹5,999/mo | 15 | 50 GB |
+| **Quantum** | ₹12,999/mo | 30 | 100 GB |
 
 ### Feature Flags (boolean columns on `agency_subscriptions`)
 | Flag | Ignite | Velocity | Quantum | Controls |
@@ -842,22 +972,28 @@ Four Supabase Edge Functions handle transactional email (all use Resend, sent fr
 ## 10. KEY DIFFERENTIATORS (For Landing Page Copywriting)
 
 ### 1. Everything in one place
-Replaces: Notion/Asana (tasks), Google Sheets (finances), email (approvals), Calendly (meetings tracking)
+Replaces: Notion/Asana (tasks), Google Sheets (finances), email (approvals), Calendly (meetings tracking), and separate CRM tools for leads.
 
-### 2. Content versioning
+### 2. Full-funnel from lead to invoice
+Tercero covers the complete agency lifecycle: prospect a lead → send a proposal → win the deal → convert to client → create content → invoice. No switching tools between stages.
+
+### 3. Content versioning
 Every post revision is preserved. Never lose track of what changed, when, and why. Full audit trail from first draft to published content.
 
-### 3. Zero-friction client approvals
+### 4. Zero-friction client approvals
 Clients approve content via a shareable link — no login required, no new account to set up.
 
-### 4. Pipeline visibility at a glance
+### 5. Pipeline visibility at a glance
 See every client's content health in one screen: how many drafts are stuck, what's pending approval, what's overdue.
 
-### 5. Financial integration
+### 6. Financial integration
 Invoice clients, track expenses, and see profit per client — all connected to the same client records.
 
-### 6. Built for agencies, not freelancers
+### 7. Built for agencies, not freelancers
 Multi-client architecture from the ground up. Internal workspace for agency's own content separate from client work.
+
+### 8. Prospects CRM built in
+Track every lead through your pipeline — log calls, emails, and demos, import from Apollo/Apify/Google Maps in bulk, and convert won prospects to clients with one click — carrying all their data across.
 
 ---
 
@@ -945,7 +1081,22 @@ src/components/proposals/ProposalDialog.jsx  — Create/edit proposal form with 
 src/components/proposals/ProposalPreview.jsx — Live HTML preview of a proposal (mirrors PDF layout)
 src/components/proposals/ProposalPDF.jsx     — @react-pdf/renderer document component for proposal PDF export
 src/components/proposals/ProposalTab.jsx     — Reusable proposals tab (clientId prop = scoped; no prop = global); same "Build/Upload" dropdown as ProposalsPage
-src/components/proposals/UploadProposalDialog.jsx   — NEW: Upload Existing File modal (Zod-validated, PDF-only, 20 MB, three-step create→upload→update, navigates to detail page on success)
+src/components/proposals/UploadProposalDialog.jsx   — Upload Existing File modal (Zod-validated, PDF-only, 20 MB, three-step create→upload→update, navigates to detail page on success)
 src/components/proposals/ProposalsUpgradePrompt.jsx — Upgrade dialog shown when proposal limit is reached
+src/api/prospects.js                — Prospect CRUD hooks (useProspects, useProspect, useCreateProspect, useUpdateProspect, useDeleteProspect); auto-calls logStatusChange on status field change
+src/api/prospectActivities.js       — Activity log hooks (useProspectActivities, useLogActivity, useDeleteActivity); logStatusChange() plain async helper
+src/pages/prospects/ProspectsPage.jsx        — Prospect list (card + table views; status tabs; search; CSV import button)
+src/pages/prospects/ProspectDetailPage.jsx   — Prospect detail with 4 tabs (Outreach, Proposals, Documents, Overview); Convert to Client header action
+src/pages/prospects/prospectSections/ProspectOutreachTab.jsx   — Activity log with log/delete actions
+src/pages/prospects/prospectSections/ProspectProposalsTab.jsx  — ProposalTab scoped to prospect
+src/pages/prospects/prospectSections/ProspectDocumentsTab.jsx  — DocumentsTab scoped to prospect
+src/pages/prospects/prospectSections/ProspectOverviewTab.jsx   — Business info + pipeline metadata
+src/components/prospects/AddProspectDialog.jsx      — Single prospect entry form (Zod validated)
+src/components/prospects/EditProspectDialog.jsx     — Edit all prospect fields
+src/components/prospects/ImportProspectsDialog.jsx  — Bulk CSV import with flexible header normalisation (Apollo/Apify/Google Maps/Other)
+src/components/prospects/ConvertToClientDialog.jsx  — Convert won prospect to client (shows field transfer breakdown; navigates to /clients/create with fromProspect state)
+src/components/prospects/ProspectStatusBadge.jsx    — Color-coded status pill
+src/components/prospects/ProspectSourceBadge.jsx    — Source label badge
+src/components/prospects/ProspectCard.jsx           — Prospect summary card (card view grid)
 supabase/functions/send-campaign-review-email/index.ts — Campaign review email edge function
 ```

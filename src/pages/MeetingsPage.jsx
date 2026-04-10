@@ -564,6 +564,8 @@ export default function MeetingsPage() {
     return clientsData.realClients || []
   }, [clientsData])
 
+  const hasNoExternalClients = !isLoadingClients && allClients.length === 0
+
   const clientMap = useMemo(
     () => Object.fromEntries(allClients.map((c) => [c.id, c])),
     [allClients],
@@ -677,17 +679,29 @@ export default function MeetingsPage() {
           </p>
         </div>
 
-        <CreateMeetingDialog
-          onSuccess={() => {
-            queryClient.invalidateQueries({ queryKey: ['global-meetings'] })
-            queryClient.invalidateQueries({ queryKey: ['meetings'] })
-          }}
-        >
-          <Button className="w-full sm:w-auto gap-2 h-9">
-            <Plus size={16} />
-            Schedule Meeting
-          </Button>
-        </CreateMeetingDialog>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span>
+              <CreateMeetingDialog
+                onSuccess={() => {
+                  queryClient.invalidateQueries({ queryKey: ['global-meetings'] })
+                  queryClient.invalidateQueries({ queryKey: ['meetings'] })
+                }}
+              >
+                <Button
+                  className="w-full sm:w-auto gap-2 h-9"
+                  disabled={hasNoExternalClients}
+                >
+                  <Plus size={16} />
+                  Schedule Meeting
+                </Button>
+              </CreateMeetingDialog>
+            </span>
+          </TooltipTrigger>
+          {hasNoExternalClients && (
+            <TooltipContent>Add a client to schedule meetings</TooltipContent>
+          )}
+        </Tooltip>
       </div>
 
       {/* ── Controls Row ── */}
@@ -850,19 +864,28 @@ export default function MeetingsPage() {
                 Clear all filters
               </Button>
             ) : (
-              <CreateMeetingDialog
-                onSuccess={() => {
-                  queryClient.invalidateQueries({
-                    queryKey: ['global-meetings'],
-                  })
-                  queryClient.invalidateQueries({ queryKey: ['meetings'] })
-                }}
-              >
-                <Button variant="outline" size="sm">
-                  <Plus className="size-4 mr-2" />
-                  Schedule a Meeting
-                </Button>
-              </CreateMeetingDialog>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span>
+                    <CreateMeetingDialog
+                      onSuccess={() => {
+                        queryClient.invalidateQueries({
+                          queryKey: ['global-meetings'],
+                        })
+                        queryClient.invalidateQueries({ queryKey: ['meetings'] })
+                      }}
+                    >
+                      <Button variant="outline" size="sm" disabled={hasNoExternalClients}>
+                        <Plus className="size-4 mr-2" />
+                        Schedule a Meeting
+                      </Button>
+                    </CreateMeetingDialog>
+                  </span>
+                </TooltipTrigger>
+                {hasNoExternalClients && (
+                  <TooltipContent>Add a client to schedule meetings</TooltipContent>
+                )}
+              </Tooltip>
             )}
           </EmptyContent>
         </Empty>

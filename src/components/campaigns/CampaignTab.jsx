@@ -203,7 +203,7 @@ function CampaignTabContent({ clientId, isCreateOpen, setIsCreateOpen }) {
           ))}
         </div>
       ) : filtered.length > 0 ? (
-        <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-[repeat(auto-fill,minmax(420px,1fr))]">
+        <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
           {filtered.map((campaign) => (
             <CampaignCard
               key={campaign.id}

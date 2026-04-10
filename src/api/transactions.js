@@ -113,6 +113,7 @@ export function useCreateTransaction() {
         description: formData.description,
         status: formData.status || 'PAID',
         client_id: sanitizedClientId,
+        campaign_id: formData.campaign_id && formData.campaign_id !== 'none' ? formData.campaign_id : null,
       }
 
       const { data, error } = await supabase
@@ -126,6 +127,7 @@ export function useCreateTransaction() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: transactionKeys.all })
+      queryClient.invalidateQueries({ queryKey: ['campaign-transactions'] })
     },
   })
 }
@@ -156,6 +158,7 @@ export function useUpdateTransaction() {
         description: updates.description,
         status: updates.status,
         client_id: sanitizedClientId,
+        campaign_id: updates.campaign_id && updates.campaign_id !== 'none' ? updates.campaign_id : null,
       }
 
       const { data, error } = await supabase
@@ -171,11 +174,31 @@ export function useUpdateTransaction() {
     onSuccess: () => {
       // Invalidate everything under 'transactions' to refresh Ledger and Overview
       queryClient.invalidateQueries({ queryKey: transactionKeys.all })
+      queryClient.invalidateQueries({ queryKey: ['campaign-transactions'] })
     },
   })
 }
 
-// --- 5. DELETE TRANSACTION ---
+// --- 5. FETCH TRANSACTIONS BY CAMPAIGN ---
+export function useCampaignTransactions(campaignId) {
+  return useQuery({
+    queryKey: ['campaign-transactions', campaignId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('transactions')
+        .select('*')
+        .eq('campaign_id', campaignId)
+        .order('date', { ascending: false })
+      if (error) throw error
+      return data ?? []
+    },
+    enabled: !!campaignId,
+    staleTime: 30000,
+    retry: 1,
+  })
+}
+
+// --- 6. DELETE TRANSACTION ---
 export function useDeleteTransaction() {
   const queryClient = useQueryClient()
 
@@ -191,6 +214,7 @@ export function useDeleteTransaction() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: transactionKeys.all })
+      queryClient.invalidateQueries({ queryKey: ['campaign-transactions'] })
     },
   })
 }

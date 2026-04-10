@@ -29,7 +29,7 @@ export function useCampaign(campaignId) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('campaigns')
-        .select('*, clients ( id, name, email, logo_url )')
+        .select('*, clients ( id, name, email, logo_url, is_internal )')
         .eq('id', campaignId)
         .single()
       if (error) throw error

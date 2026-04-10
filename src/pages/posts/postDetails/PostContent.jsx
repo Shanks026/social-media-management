@@ -395,23 +395,7 @@ export default function PostContent({
               </Button>
             ))}
 
-          {/* SCHEDULED — Publish Now + optional New Version for internal */}
-          {post.status === 'SCHEDULED' && isInternal && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onCreateRevision}
-              disabled={isRevisionPending}
-              className="hidden sm:inline-flex gap-1.5 font-semibold"
-            >
-              {isRevisionPending ? (
-                <Loader2 size={13} className="animate-spin" />
-              ) : (
-                <Plus size={13} />
-              )}
-              New Version
-            </Button>
-          )}
+          {/* SCHEDULED — Publish Now */}
           {post.status === 'SCHEDULED' && !post.platform_schedules && isSocialPost && (
             <Button
               size="sm"
@@ -462,24 +446,6 @@ export default function PostContent({
             </Button>
           )}
 
-          {/* PUBLISHED — internal can start a new version */}
-          {post.status === 'PUBLISHED' && isInternal && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onCreateRevision}
-              disabled={isRevisionPending}
-              className="hidden sm:inline-flex gap-1.5 font-semibold"
-            >
-              {isRevisionPending ? (
-                <Loader2 size={13} className="animate-spin" />
-              ) : (
-                <Plus size={13} />
-              )}
-              New Version
-            </Button>
-          )}
-
           {/* More Actions dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -513,23 +479,9 @@ export default function PostContent({
                       Approval
                     </DropdownMenuItem>
                   ))}
-                {post.status === 'SCHEDULED' && (
-                  <>
-                    {!post.platform_schedules && isSocialPost && (
-                      <DropdownMenuItem onClick={onPublish}>
-                        <Play size={14} className="mr-2" /> Publish Now
-                      </DropdownMenuItem>
-                    )}
-                    {isInternal && (
-                      <DropdownMenuItem onClick={onCreateRevision}>
-                        <Plus size={14} className="mr-2" /> New Version
-                      </DropdownMenuItem>
-                    )}
-                  </>
-                )}
-                {post.status === 'PUBLISHED' && isInternal && (
-                  <DropdownMenuItem onClick={onCreateRevision}>
-                    <Plus size={14} className="mr-2" /> New Version
+                {post.status === 'SCHEDULED' && !post.platform_schedules && isSocialPost && (
+                  <DropdownMenuItem onClick={onPublish}>
+                    <Play size={14} className="mr-2" /> Publish Now
                   </DropdownMenuItem>
                 )}
                 {post.status === 'APPROVED' && (

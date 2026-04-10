@@ -16,7 +16,7 @@ import { Eye } from 'lucide-react'
 export function MediaPreview({ urls, isOpen, onOpenChange, initialIndex = 0 }) {
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl bg-black/90 border-none p-0 overflow-hidden">
+      <DialogContent className="sm:max-w-4xl bg-black/90 border-none p-0 overflow-hidden">
         <DialogHeader className="sr-only">
           <DialogTitle>Media Preview</DialogTitle>
         </DialogHeader>

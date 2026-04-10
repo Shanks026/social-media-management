@@ -153,7 +153,7 @@ const PlatformIcon = ({ name }) => {
   )
 }
 
-export default function DraftPostList({ clientId, onCreatePost }) {
+export default function DraftPostList({ clientId, onCreatePost, statusFilter = 'ALL' }) {
   const queryClient = useQueryClient()
   const navigate = useNavigate()
   const { user } = useAuth()
@@ -191,6 +191,8 @@ export default function DraftPostList({ clientId, onCreatePost }) {
   const { data = [], isLoading } = useQuery({
     queryKey: ['draft-posts', clientId],
     queryFn: () => fetchAllPostsByClient(clientId),
+    staleTime: 0,
+    refetchOnWindowFocus: true,
   })
 
   const deleteMutation = useMutation({
@@ -271,6 +273,10 @@ export default function DraftPostList({ clientId, onCreatePost }) {
     )
   }
 
+  const filteredData = statusFilter === 'ALL'
+    ? data
+    : data.filter((p) => getPublishState(p) === statusFilter)
+
   if (isLoading)
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -280,20 +286,22 @@ export default function DraftPostList({ clientId, onCreatePost }) {
       </div>
     )
 
-  if (data.length === 0)
+  if (filteredData.length === 0)
     return (
       <Empty className="py-20 border border-dashed rounded-2xl bg-muted/5">
         <EmptyContent>
           <div className="text-4xl leading-none select-none mb-2">📝</div>
           <EmptyHeader>
             <EmptyTitle className="font-normal text-xl">
-              No deliverables yet
+              {statusFilter === 'ALL' ? 'No deliverables yet' : 'No deliverables found'}
             </EmptyTitle>
             <EmptyDescription className="font-normal">
-              Create your first draft to start building content for this client.
+              {statusFilter === 'ALL'
+                ? 'Create your first draft to start building content for this client.'
+                : 'No deliverables match this status filter.'}
             </EmptyDescription>
           </EmptyHeader>
-          {onCreatePost && (
+          {statusFilter === 'ALL' && onCreatePost && (
             <Button onClick={onCreatePost} variant="outline" className="mt-2">
               <Plus className="size-4" />
               Create Deliverable
@@ -306,7 +314,7 @@ export default function DraftPostList({ clientId, onCreatePost }) {
   return (
     <TooltipProvider>
       <div className="grid gap-6 grid-cols-[repeat(auto-fill,minmax(350px,1fr))]">
-        {data.map((post) => {
+        {filteredData.map((post) => {
           const platformsArr = Array.isArray(post.platform)
             ? post.platform
             : [post.platform]

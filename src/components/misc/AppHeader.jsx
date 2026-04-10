@@ -60,6 +60,50 @@ function TrialStatusPill({ phase, daysRemaining, endsAt }) {
   )
 }
 
+function SubStatusPill({ phase, daysRemaining, endsAt }) {
+  const navigate = useNavigate()
+
+  const colorClass = {
+    warning:  'bg-amber-100 text-amber-700 hover:bg-amber-200 dark:bg-amber-950 dark:text-amber-400 dark:hover:bg-amber-900',
+    critical: 'bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-950 dark:text-red-400 dark:hover:bg-red-900',
+    grace:    'bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-950 dark:text-red-400 dark:hover:bg-red-900',
+  }[phase] ?? 'bg-muted text-muted-foreground'
+
+  const endDateStr = endsAt ? formatDate(endsAt) : null
+
+  let desktopText
+  let mobileText
+  if (phase === 'grace') {
+    desktopText = 'Subscription expired · Grace Period'
+    mobileText = 'Sub exp.'
+  } else if (phase === 'critical' && daysRemaining === 0) {
+    desktopText = 'Subscription · expires today'
+    mobileText = 'Exp. today'
+  } else if (phase === 'critical' && daysRemaining === 1) {
+    desktopText = 'Subscription · expires tomorrow'
+    mobileText = 'Exp. tmrw'
+  } else {
+    desktopText = `Renews in ${daysRemaining} day${daysRemaining !== 1 ? 's' : ''}`
+    mobileText = `${daysRemaining}d left`
+  }
+
+  return (
+    <button
+      onClick={() => navigate('/billing')}
+      className={cn(
+        'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition-colors cursor-pointer border-0 outline-none focus-visible:ring-2 focus-visible:ring-ring',
+        colorClass,
+      )}
+    >
+      <span className="hidden sm:inline">{desktopText}</span>
+      <span className="sm:hidden">{mobileText}</span>
+      {endDateStr && phase !== 'grace' && (
+        <span className="hidden sm:inline opacity-60">· {endDateStr}</span>
+      )}
+    </button>
+  )
+}
+
 function UrgencyAlertIndicator() {
   const navigate = useNavigate()
   const { data: urgentClients = [] } = useUrgentClients()
@@ -209,6 +253,9 @@ export function AppHeader({ agencySettings }) {
       <div className="ml-auto flex items-center gap-2">
         {sub?.trial_phase && (
           <TrialStatusPill phase={sub.trial_phase} daysRemaining={sub.trial_days_remaining} endsAt={sub.trial_ends_at} />
+        )}
+        {!sub?.is_trial && sub?.sub_phase && sub.sub_phase !== 'active' && (
+          <SubStatusPill phase={sub.sub_phase} daysRemaining={sub.sub_days_remaining} endsAt={sub.subscription_ends_at} />
         )}
         {header.actions}
         <UrgencyAlertIndicator />
