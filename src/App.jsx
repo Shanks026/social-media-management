@@ -33,6 +33,7 @@ import ProposalsPage from './pages/proposals/ProposalsPage'
 import ProposalDetailPage from './pages/proposals/ProposalDetailPage'
 import ProposalReview from './pages/proposals/ProposalReview'
 import TrialExpired from './pages/TrialExpired'
+import SubscriptionExpired from './pages/SubscriptionExpired'
 import NotFound from './pages/NotFound'
 
 function PublicOnlyRoute({ children }) {
@@ -46,6 +47,7 @@ function TrialGuardedShell({ user }) {
   const { data: sub, isLoading } = useSubscription()
   if (!workspaceUserId || isLoading) return null
   if (sub?.is_trial_locked) return <Navigate to="/trial-expired" replace />
+  if (sub?.is_sub_locked) return <Navigate to="/subscription-expired" replace />
   return <AppShell user={user} />
 }
 
@@ -72,6 +74,7 @@ function AppRoutes() {
         <>
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/trial-expired" element={<TrialExpired />} />
+          <Route path="/subscription-expired" element={<SubscriptionExpired />} />
           <Route element={<TrialGuardedShell user={user} />}>
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/clients" element={<Clients />} />

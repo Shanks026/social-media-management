@@ -95,7 +95,9 @@
       "Bash(find c:Userschris_austinDesktopsocial-media-managementsupabase -type f -name *.sql)",
       "Bash(find c:Userschris_austinDesktopsocial-media-management -name *Transaction* -type f)",
       "Bash(grep -E \"\\\\.\\(jsx|js|sql\\)$\")",
-      "Bash(find c:Userschris_austinDesktopsocial-media-management -path */node_modules -prune -o -type f -name *.sql -print)"
+      "Bash(find c:Userschris_austinDesktopsocial-media-management -path */node_modules -prune -o -type f -name *.sql -print)",
+      "Bash(find c:Userschris_austinDesktopsocial-media-management -type f -name *.sql)",
+      "Bash(find \"c:\\\\Users\\\\chris_austin\\\\Desktop\\\\social-media-management\\\\src\" -name \"*query\\\\|*queries\\\\|*hook*\" -type f)"
     ]
   }
 }

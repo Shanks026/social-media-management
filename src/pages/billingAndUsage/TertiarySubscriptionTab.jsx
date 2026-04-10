@@ -23,6 +23,9 @@ import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
+import { supabase } from '@/lib/supabase'
+import { useAuth } from '@/context/AuthContext'
+import { useSubscription } from '@/api/useSubscription'
 import { PlanOverview } from './PlanOverview'
 
 // ── Plan data ──
@@ -95,48 +98,49 @@ export const UpgradeRequestDialog = ({
   onOpenChange,
   targetPlan,
   currentPlanName,
+  requestType = 'upgrade',  // 'upgrade' | 'renewal'
 }) => {
+  const { user } = useAuth()
+  const { data: sub } = useSubscription()
   const [additionalNotes, setAdditionalNotes] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  if (!targetPlan) return null
+  const isRenewal = requestType === 'renewal'
 
-  const prefilledMessage = `Dear Tercero Admin,
+  if (!isRenewal && !targetPlan) return null
 
-I would like to request a plan upgrade for my agency account.
+  const prefilledMessage = isRenewal
+    ? `Dear Tercero Admin,\n\nI would like to renew my ${currentPlanName} subscription.\n\nKindly process this renewal at your earliest convenience. I understand that the team will review and update my account access shortly.\n\nThank you.`
+    : `Dear Tercero Admin,\n\nI would like to request a plan upgrade for my agency account.\n\nCurrent Plan: ${currentPlanName}\nRequested Plan: ${targetPlan.name} (₹${targetPlan.price}/mo)\n\nKindly process this upgrade at your earliest convenience. I understand that the team will review and apply the changes to my account.\n\nThank you.`
 
-Current Plan: ${currentPlanName}
-Requested Plan: ${targetPlan.name} (₹${targetPlan.price}/mo)
-
-Kindly process this upgrade at your earliest convenience. I understand that the team will review and apply the changes to my account.
-
-Thank you.`
-
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     setIsSubmitting(true)
-
-    const payload = {
-      requestType: 'plan_upgrade',
-      currentPlan: currentPlanName,
-      requestedPlan: targetPlan.name,
-      requestedPlanPrice: targetPlan.price,
-      message: prefilledMessage,
-      additionalNotes: additionalNotes.trim() || null,
-      timestamp: new Date().toISOString(),
-    }
-
-    // Log for now — will be replaced by a dedicated API later
-    console.log('[Upgrade Request]', payload)
-
-    setTimeout(() => {
-      setIsSubmitting(false)
+    try {
+      const { error } = await supabase.functions.invoke('send-renewal-request', {
+        body: {
+          requestType: isRenewal ? 'renewal' : 'upgrade',
+          agencyName: sub?.agency_name || 'Unknown Agency',
+          agencyEmail: user?.email || '',
+          currentPlan: currentPlanName,
+          requestedPlan: isRenewal ? undefined : targetPlan.name,
+          additionalNotes: additionalNotes.trim() || null,
+        },
+      })
+      if (error) throw error
       setAdditionalNotes('')
       onOpenChange(false)
-      toast.success('Your request has been received', {
-        description:
-          'Your plan will be upgraded shortly. Our team will reach out if any additional information is needed.',
+      toast.success(isRenewal ? 'Renewal request sent' : 'Upgrade request sent', {
+        description: isRenewal
+          ? 'Our team will process your renewal and update your account shortly.'
+          : 'Your plan will be upgraded shortly. Our team will reach out if any additional information is needed.',
       })
-    }, 600)
+    } catch (err) {
+      toast.error('Failed to send request', {
+        description: err?.message || 'Please try again or contact support.',
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -144,14 +148,26 @@ Thank you.`
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <targetPlan.icon className={cn('size-5', targetPlan.accent.text)} />
-            Upgrade to {targetPlan.name}
+            {!isRenewal && targetPlan && (
+              <targetPlan.icon className={cn('size-5', targetPlan.accent.text)} />
+            )}
+            {isRenewal ? `Renew ${currentPlanName}` : `Upgrade to ${targetPlan.name}`}
           </DialogTitle>
           <DialogDescription>
-            Review the message below and submit your upgrade request. Our team
-            will process it shortly.
+            {isRenewal
+              ? 'Submit your renewal request and our team will reactivate your account shortly.'
+              : `Submit your upgrade request to move from ${currentPlanName} to ${targetPlan.name}. Our team will apply the change shortly.`}
           </DialogDescription>
         </DialogHeader>
+
+        <div className="flex items-start gap-2.5 rounded-lg border border-blue-100 bg-blue-50/60 dark:bg-blue-950/20 dark:border-blue-900/30 px-3.5 py-3">
+          <Send className="size-3.5 text-blue-500 shrink-0 mt-0.5" />
+          <p className="text-xs text-blue-700 dark:text-blue-400 leading-relaxed">
+            {isRenewal
+              ? 'Your request will be sent to the Tercero team via email. They will manually process the renewal and update your account access.'
+              : 'Your request will be sent to the Tercero team via email. They will manually process the upgrade and update your account access.'}
+          </p>
+        </div>
 
         <div className="space-y-4 py-2">
           {/* Pre-filled message — read only */}
@@ -260,31 +276,36 @@ export const PlanCard = ({ plan, isCurrentPlan, onContactTeam }) => {
         cardClasses,
       )}
     >
-      {/* Header with Recommended Tag */}
-      <div className="mb-4 flex items-center justify-between">
+      {/* Recommended badge — top center overlay */}
+      {isPopular && (
+        <div className="absolute -top-3.5 left-0 right-0 flex justify-center">
+          <span className="bg-background text-foreground text-xs font-medium tracking-wider px-3 py-1 rounded-full shadow-sm border border-border/10">
+            Recommended
+          </span>
+        </div>
+      )}
+
+      {/* Header */}
+      <div className="mb-6 space-y-1">
         <div className="text-xl font-normal flex items-center gap-2">
           <plan.icon className={cn('size-4', plan.accent.text)} />
           {plan.name}
         </div>
-        {isPopular && (
-          <span className="bg-background text-foreground text-xs font-medium tracking-wider px-3 py-1 rounded-full shadow-sm">
-            Recommended
-          </span>
-        )}
+        <p className={cn('text-sm font-normal', descClasses)}>
+          For {plan.bestFor.toLowerCase()}
+        </p>
       </div>
 
       {/* Price */}
-      <div className="mb-2 flex items-baseline gap-1">
-        <span className="text-5xl font-normal tracking-tight">
-          ₹{plan.price}
-        </span>
-        <span className={cn('text-sm font-normal', descClasses)}>/ mo</span>
-        <span className={cn('text-sm font-normal ml-1', descClasses)}>· +₹499 / client</span>
+      <div className="mb-8 space-y-0.5">
+        <div className="flex items-baseline gap-1">
+          <span className="text-5xl font-normal tracking-tight">
+            ₹{plan.price}
+          </span>
+          <span className={cn('text-sm font-normal', descClasses)}>/ mo</span>
+        </div>
+        <p className={cn('text-xs font-normal', descClasses)}>+₹499 per additional client</p>
       </div>
-
-      <p className={cn('text-sm font-normal mb-8', descClasses)}>
-        For {plan.bestFor.toLowerCase()}
-      </p>
 
       {/* Divider */}
       <div className={cn('w-full h-px mb-8', dividerClasses)} />
@@ -534,7 +555,7 @@ export const SubscriptionTab = ({ sub, isLoading }) => {
                 },
                 {
                   label: 'Extra Client Add-on',
-                  values: ['₹499 / mo', '₹499 / mo', '₹499 / mo'],
+                  values: ['₹499 / client', '₹499 / client', '₹499 / client'],
                 },
               ].map((row) => (
                 <tr
