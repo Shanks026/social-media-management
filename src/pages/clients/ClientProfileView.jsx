@@ -41,6 +41,12 @@ import { CampaignTab } from '@/components/campaigns/CampaignTab'
 import { ProposalTab } from '@/components/proposals/ProposalTab'
 
 export default function ClientProfileView({ client }) {
+  const [searchParams, setSearchParams] = useSearchParams()
+  const [createPostOpen, setCreatePostOpen] = useState(false)
+  const [createInvoiceOpen, setCreateInvoiceOpen] = useState(false)
+  const [createTransactionOpen, setCreateTransactionOpen] = useState(false)
+  const [invoicePrefill, setInvoicePrefill] = useState(null)
+
   if (!client) return null
 
   const initials = client.name
@@ -51,12 +57,6 @@ export default function ClientProfileView({ client }) {
         .toUpperCase()
         .slice(0, 2)
     : 'CL'
-
-  const [searchParams, setSearchParams] = useSearchParams()
-  const [createPostOpen, setCreatePostOpen] = useState(false)
-  const [createInvoiceOpen, setCreateInvoiceOpen] = useState(false)
-  const [createTransactionOpen, setCreateTransactionOpen] = useState(false)
-  const [invoicePrefill, setInvoicePrefill] = useState(null)
 
   // Get active tab from URL or default to 'overview'
   const activeTab = searchParams.get('tab') || 'overview'
@@ -121,9 +121,9 @@ export default function ClientProfileView({ client }) {
           {/* Quick Actions */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button size="sm" className="h-8 gap-1.5 shrink-0">
+              <Button variant="secondary" size="sm" className="h-8 gap-1.5 shrink-0">
                 Quick Actions
-                <ChevronDown className="size-3.5 text-muted-foreground" />
+                <ChevronDown className="size-3.5" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-44">

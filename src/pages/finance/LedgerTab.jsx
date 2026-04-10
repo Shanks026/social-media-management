@@ -291,7 +291,22 @@ export default function LedgerTab({ clientId, subTabs }) {
           <Card className="rounded-2xl border-none bg-card/50 shadow-sm ring-1 ring-border/50 dark:bg-card/20">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                Total Income
+                Net Profit
+              </CardTitle>
+              <Scale className="h-4 w-4 text-primary" />
+            </CardHeader>
+            <CardContent>
+              <div className={`text-2xl font-bold tracking-tight ${kpis.net >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
+                {kpis.net >= 0 ? '+' : ''}{formatCurrency(kpis.net)}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">Income minus expenses</p>
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-2xl border-none bg-card/50 shadow-sm ring-1 ring-border/50 dark:bg-card/20">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                Revenue
               </CardTitle>
               <TrendingUp className="h-4 w-4 text-emerald-500" />
             </CardHeader>
@@ -306,7 +321,7 @@ export default function LedgerTab({ clientId, subTabs }) {
           <Card className="rounded-2xl border-none bg-card/50 shadow-sm ring-1 ring-border/50 dark:bg-card/20">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                Total Expenses
+                Expenses
               </CardTitle>
               <TrendingDown className="h-4 w-4 text-rose-500" />
             </CardHeader>
@@ -315,21 +330,6 @@ export default function LedgerTab({ clientId, subTabs }) {
                 {formatCurrency(kpis.expenses)}
               </div>
               <p className="text-xs text-muted-foreground mt-1">All expense entries</p>
-            </CardContent>
-          </Card>
-
-          <Card className="rounded-2xl border-none bg-card/50 shadow-sm ring-1 ring-border/50 dark:bg-card/20">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                Net Profit
-              </CardTitle>
-              <Scale className="h-4 w-4 text-primary" />
-            </CardHeader>
-            <CardContent>
-              <div className={`text-2xl font-bold tracking-tight ${kpis.net >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
-                {kpis.net >= 0 ? '+' : ''}{formatCurrency(kpis.net)}
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">Income minus expenses</p>
             </CardContent>
           </Card>
 

@@ -309,7 +309,7 @@ export default function Clients() {
             </EmptyContent>
           </Empty>
         ) : (
-          <div className="grid gap-6 grid-cols-[repeat(auto-fill,minmax(420px,1fr))]">
+          <div className="grid gap-6 grid-cols-1 md:grid-cols-2">
             {sortedClients.map((client) => (
               <ClientCard
                 key={client.id}

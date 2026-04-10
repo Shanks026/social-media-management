@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
@@ -8,7 +8,6 @@ import {
   ArrowUpCircle,
   ArrowDownCircle,
   Building2,
-  User,
   FileText,
   AlertCircle,
 } from 'lucide-react'
@@ -16,6 +15,8 @@ import {
 // API
 import { useCreateTransaction, useUpdateTransaction } from '@/api/transactions'
 import { useClients } from '@/api/clients'
+import { useSubscription } from '@/api/useSubscription'
+import { fetchActiveCampaignsByClient } from '@/api/campaigns'
 import { cn } from '@/lib/utils'
 
 // Constants
@@ -67,6 +68,7 @@ const transactionSchema = z.object({
     }),
   date: z.date(),
   client_id: z.string().optional().nullable(),
+  campaign_id: z.string().optional().nullable(),
   category: z.string().min(1, 'Required'),
   description: z.string().min(2, 'Required'),
   status: z.enum(['PAID', 'PENDING', 'OVERDUE']),
@@ -77,6 +79,7 @@ export function AddTransactionDialog({
   onOpenChange,
   editingData = null,
   defaultClientId = null,
+  defaultCampaignId = null,
   // Called when user chooses "Create Invoice instead".
   // Receives prefill: { clientId, category, amount, description }
   onCreateInvoice = null,
@@ -84,6 +87,9 @@ export function AddTransactionDialog({
   const { data: clientData, isLoading: isLoadingClients } = useClients()
   const clients = clientData?.realClients || []
   const internalAccount = clientData?.internalAccount
+  const { data: sub } = useSubscription()
+
+  const [availableCampaigns, setAvailableCampaigns] = useState([])
 
   const { mutate: createTransaction, isPending: isCreating } =
     useCreateTransaction()
@@ -97,6 +103,7 @@ export function AddTransactionDialog({
       amount: '',
       date: new Date(),
       client_id: '',
+      campaign_id: '',
       category: '',
       description: '',
       status: 'PAID',
@@ -111,6 +118,7 @@ export function AddTransactionDialog({
         amount: editingData.amount.toString(),
         date: new Date(editingData.date),
         client_id: editingData.client_id || '',
+        campaign_id: editingData.campaign_id || 'none',
         category: editingData.category,
         description: editingData.description,
         status: editingData.status,
@@ -121,16 +129,30 @@ export function AddTransactionDialog({
         amount: '',
         date: new Date(),
         client_id: defaultClientId || '',
+        campaign_id: defaultCampaignId || '',
         category: '',
         description: '',
         status: 'PAID',
       })
     }
-  }, [editingData, form, open, defaultClientId])
+  }, [editingData, form, open, defaultClientId, defaultCampaignId])
 
   const type = form.watch('type')
   const clientId = form.watch('client_id')
   const selectedCategory = form.watch('category')
+
+  // Load campaigns when client changes (gated by subscription)
+  useEffect(() => {
+    if (!clientId || clientId === 'agency' || !sub?.campaigns) {
+      setAvailableCampaigns([])
+      if (!defaultCampaignId) form.setValue('campaign_id', '')
+      return
+    }
+    fetchActiveCampaignsByClient(clientId)
+      .then(setAvailableCampaigns)
+      .catch(() => setAvailableCampaigns([]))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clientId, sub?.campaigns])
 
   // Determine if currently selected client is internal
   const isInternalClient = useMemo(
@@ -401,6 +423,39 @@ export function AddTransactionDialog({
                   )}
                 />
               </div>
+
+              {/* Campaign selector — shown when client has active campaigns */}
+              {availableCampaigns.length > 0 && (
+                <FormField
+                  control={form.control}
+                  name="campaign_id"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Campaign</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value || ''}
+                        disabled={!!defaultCampaignId}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="No campaign (optional)" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="none">No campaign</SelectItem>
+                          {availableCampaigns.map((c) => (
+                            <SelectItem key={c.id} value={c.id}>
+                              {c.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
 
               <FormField
                 control={form.control}

@@ -57,7 +57,7 @@ export default function DocumentPreviewModal({ doc, onOpenChange }) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl w-full h-[90vh] flex flex-col p-0 gap-0">
+      <DialogContent className="sm:max-w-4xl w-full h-[90vh] flex flex-col p-0 gap-0">
         {/* ── Header ── */}
         <DialogHeader className="flex-row items-start justify-between gap-3 px-6 py-4 border-b border-border shrink-0">
           <div className="flex flex-col gap-1 min-w-0">

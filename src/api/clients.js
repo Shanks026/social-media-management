@@ -100,6 +100,7 @@ export async function fetchClients(filters = {}) {
       drafts: Number(c.drafts),
       pending: Number(c.pending),
       revisions: Number(c.revisions),
+      approved: Number(c.approved),
       scheduled: Number(c.scheduled),
       next_post_at: c.next_scheduled,
     },

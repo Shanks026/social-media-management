@@ -38,7 +38,11 @@ export function AppSidebarHeader({ agencySettings }) {
       : sub.trial_phase === 'expired'
         ? 'Trial · expired'
         : `Trial · ${sub.trial_days_remaining}d left`
-    : basePlan
+    : sub?.sub_phase === 'grace'
+      ? `${basePlan} · Grace Period`
+      : sub?.sub_phase === 'critical' || sub?.sub_phase === 'warning'
+        ? `${basePlan} · ${sub.sub_days_remaining}d left`
+        : basePlan
 
   // Use the feature flag — not the name — to decide if agency branding is shown
   const showAgencyBranding = sub?.branding_agency_sidebar ?? false

@@ -7,6 +7,11 @@ import { useAuth } from '@/context/AuthContext'
 // Set to null for production.
 const TRIAL_DAY_OVERRIDE = null // e.g. TRIAL_DAY_OVERRIDE = 8
 
+// ── TESTING ONLY: set to a number to simulate days until subscription expiry.
+// Positive = days remaining, 0 = expires today, negative = days past expiry.
+// Set to null for production.
+const SUB_DAY_OVERRIDE = null // e.g. SUB_DAY_OVERRIDE = 2
+
 export function useSubscription() {
   const { workspaceUserId } = useAuth()
 
@@ -88,6 +93,30 @@ export function useSubscription() {
         else                               trialPhase = 'expired'
       }
 
+      // ── Subscription expiry state (paid plans only) ───────────────────────
+      const isPaidPlan = !isTrial
+      let subPhase = null
+      let subDaysRemaining = null
+
+      if (isPaidPlan && sub.subscription_ends_at) {
+        let daysUntilSubExpiry
+
+        if (SUB_DAY_OVERRIDE !== null) {
+          daysUntilSubExpiry = SUB_DAY_OVERRIDE
+        } else {
+          const msUntil = new Date(sub.subscription_ends_at) - new Date()
+          daysUntilSubExpiry = Math.ceil(msUntil / (1000 * 60 * 60 * 24))
+        }
+
+        subDaysRemaining = Math.max(daysUntilSubExpiry, 0)
+
+        if (daysUntilSubExpiry > 7)          subPhase = 'active'
+        else if (daysUntilSubExpiry >= 3)    subPhase = 'warning'
+        else if (daysUntilSubExpiry >= 0)    subPhase = 'critical'
+        else if (daysUntilSubExpiry >= -3)   subPhase = 'grace'
+        else                                 subPhase = 'expired'
+      }
+
       return {
         agency_name: sub.agency_name || 'Tercero',
         logo_url: sub.logo_url,
@@ -116,6 +145,10 @@ export function useSubscription() {
         trial_days_remaining: trialDaysRemaining,
         trial_ends_at: sub.trial_ends_at ?? null,
         is_trial_locked: trialPhase === 'expired',
+        sub_phase: subPhase,
+        sub_days_remaining: subDaysRemaining,
+        subscription_ends_at: sub.subscription_ends_at ?? null,
+        is_sub_locked: subPhase === 'expired',
 
         storage_display: {
           usage_value: usageVal,

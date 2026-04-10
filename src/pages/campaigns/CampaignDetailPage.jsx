@@ -22,6 +22,7 @@ import {
   RefreshCw,
   ExternalLink,
   ArrowUpRight,
+  ArrowDownRight,
   User,
   FileText,
   CalendarDays,
@@ -38,9 +39,11 @@ import {
 } from '@/api/campaigns'
 import { useGlobalPosts } from '@/api/useGlobalPosts'
 import { useSubscription } from '@/api/useSubscription'
+import { useCampaignTransactions } from '@/api/transactions'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { fetchCampaignMeetings, deleteMeeting } from '@/api/meetings'
 import { fetchCampaignNotes, updateNoteStatus } from '@/api/notes'
+import { AddTransactionDialog } from '@/pages/finance/AddTransactionDialog'
 import DraftPostForm from '@/pages/posts/DraftPostForm'
 import { LinkPostsToCampaignDialog } from '@/components/campaigns/LinkPostsToCampaignDialog'
 import { CampaignDialog } from '@/components/campaigns/CampaignDialog'
@@ -171,6 +174,7 @@ export default function CampaignDetailPage() {
   const [shareDialogUrl, setShareDialogUrl] = useState('')
   const [sendingEmail, setSendingEmail] = useState(false)
   const [createInvoiceOpen, setCreateInvoiceOpen] = useState(false)
+  const [addTransactionOpen, setAddTransactionOpen] = useState(false)
   const [editingMeeting, setEditingMeeting] = useState(null)
 
   const { data: campaign, isLoading: campaignLoading } = useCampaign(campaignId)
@@ -180,8 +184,13 @@ export default function CampaignDetailPage() {
     campaignId,
   })
   const { data: sub } = useSubscription()
+  const isInternalClient = campaign?.clients?.is_internal ?? false
+
   const { data: invoices = [], isLoading: invoicesLoading } =
-    useCampaignInvoices(campaignId)
+    useCampaignInvoices(isInternalClient ? null : campaignId)
+
+  const { data: campaignTransactions = [], isLoading: transactionsLoading } =
+    useCampaignTransactions(isInternalClient ? campaignId : null)
   const regenerateToken = useRegenerateCampaignReviewToken()
   const markReviewSent = useMarkReviewSent()
 
@@ -270,6 +279,13 @@ export default function CampaignDetailPage() {
     analytics?.budget != null
       ? analytics.budget - analytics.total_invoiced
       : null
+
+  const totalSpent = campaignTransactions
+    .filter((t) => t.type === 'EXPENSE')
+    .reduce((sum, t) => sum + Number(t.amount), 0)
+
+  const remainingBudget =
+    analytics?.budget != null ? analytics.budget - totalSpent : null
 
   const formatCurrency = (val) =>
     new Intl.NumberFormat('en-IN', {
@@ -705,196 +721,342 @@ export default function CampaignDetailPage() {
 
           {/* ── Finance tab ── */}
           <TabsContent value="finance" className="mt-0">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              {/* Budget card */}
-              <Card className="rounded-2xl border-none bg-card/50 shadow-sm ring-1 ring-border/50">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-lg font-medium">Budget</CardTitle>
-                  <CardDescription>Campaign spend tracking</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {analytics ? (
-                    <>
-                      <div className="flex justify-between text-sm py-1.5 border-b border-border/40">
-                        <span className="text-muted-foreground">
-                          Total Budget
-                        </span>
-                        {analytics.budget != null ? (
-                          <span className="font-semibold tabular-nums">
-                            {formatCurrency(analytics.budget)}
-                          </span>
-                        ) : (
-                          <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
-                            Uncapped
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex justify-between text-sm py-1.5 border-b border-border/40">
-                        <span className="text-muted-foreground">Invoiced</span>
-                        <span className="tabular-nums font-medium">
-                          {formatCurrency(analytics.total_invoiced)}
-                        </span>
-                      </div>
-                      <div className="flex justify-between text-sm py-1.5 border-b border-border/40">
-                        <span className="text-muted-foreground">Collected</span>
-                        <span className="tabular-nums font-medium">
-                          {formatCurrency(analytics.total_collected)}
-                        </span>
-                      </div>
-                      {analytics.budget != null && (
-                        <div className="flex justify-between text-sm pt-1 font-semibold">
-                          <span>Remaining</span>
-                          <span
-                            className={cn(
-                              'tabular-nums',
-                              remaining != null && remaining < 0
-                                ? 'text-destructive'
-                                : 'text-emerald-600',
-                            )}
-                          >
-                            {formatCurrency(remaining)}
-                          </span>
-                        </div>
-                      )}
-                      {analytics.budget != null && (
-                        <div className="pt-2">
-                          <div className="h-2 bg-muted rounded-full overflow-hidden">
-                            <div
-                              className={cn(
-                                'h-full rounded-full transition-all',
-                                remaining != null && remaining < 0
-                                  ? 'bg-destructive'
-                                  : 'bg-primary',
-                              )}
-                              style={{
-                                width: `${Math.min(100, (analytics.total_invoiced / analytics.budget) * 100)}%`,
-                              }}
-                            />
-                          </div>
-                          <p className="text-xs text-muted-foreground mt-1.5">
-                            {Math.round(
-                              (analytics.total_invoiced / analytics.budget) *
-                                100,
-                            )}
-                            % of budget invoiced
-                          </p>
-                        </div>
-                      )}
-                    </>
-                  ) : (
-                    <div className="space-y-3">
-                      <Skeleton className="h-5 w-full" />
-                      <Skeleton className="h-5 w-full" />
-                      <Skeleton className="h-5 w-full" />
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Linked invoices */}
-              <Card className="border-none bg-card/50 shadow-sm ring-1 ring-border/50 flex flex-col">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 shrink-0">
-                  <div>
-                    <CardTitle className="text-lg font-medium">
-                      Linked Invoices
-                    </CardTitle>
-                    <CardDescription>
-                      {invoices.length} invoice
-                      {invoices.length !== 1 ? 's' : ''} linked
-                    </CardDescription>
-                  </div>
-                  <div className="flex items-center">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={() => setCreateInvoiceOpen(true)}
-                    >
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 -mr-2 text-muted-foreground hover:text-foreground"
-                      onClick={() => navigate('/finance/invoices')}
-                    >
-                      <ArrowUpRight className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent className="min-h-[320px] p-0 flex flex-col">
-                  {invoicesLoading ? (
-                    <div>
-                      {[...Array(3)].map((_, i) => (
-                        <div key={i}>
-                          <div className="flex items-center gap-4 px-6 py-3">
-                            <Skeleton className="w-10 h-10 rounded-lg shrink-0" />
-                            <div className="flex-1 space-y-2">
-                              <Skeleton className="h-4 w-1/3" />
-                              <Skeleton className="h-3 w-1/4" />
-                            </div>
-                            <Skeleton className="h-6 w-20 rounded-full" />
-                          </div>
-                          {i < 2 && (
-                            <hr className="border-t border-dashed border-border/50 mx-6" />
+            {isInternalClient ? (
+              /* ── Internal campaign: budget vs expense transactions ── */
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {/* Budget card */}
+                <Card className="rounded-2xl border-none bg-card/50 shadow-sm ring-1 ring-border/50">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-lg font-medium">Budget</CardTitle>
+                    <CardDescription>Internal cost tracking</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {analytics ? (
+                      <>
+                        <div className="flex justify-between text-sm py-1.5 border-b border-border/40">
+                          <span className="text-muted-foreground">Total Budget</span>
+                          {analytics.budget != null ? (
+                            <span className="font-semibold tabular-nums">
+                              {formatCurrency(analytics.budget)}
+                            </span>
+                          ) : (
+                            <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+                              Uncapped
+                            </span>
                           )}
                         </div>
-                      ))}
-                    </div>
-                  ) : invoices.length === 0 ? (
-                    <div className="flex-1 flex flex-col items-center justify-center text-center py-16 gap-2">
-                      {/* <div className="h-10 w-10 border border-dashed rounded-full flex items-center justify-center text-muted-foreground">
-                        <Receipt className="h-4 w-4 opacity-50" />
-                      </div> */}
-                      <p className="text-sm text-muted-foreground">
-                        No invoices linked yet
-                      </p>
-                      <p className="text-xs text-muted-foreground/70">
-                        Create one to start tracking campaign spend
-                      </p>
-                    </div>
-                  ) : (
+                        <div className="flex justify-between text-sm py-1.5 border-b border-border/40">
+                          <span className="text-muted-foreground">Total Spent</span>
+                          <span className="tabular-nums font-medium">
+                            {formatCurrency(totalSpent)}
+                          </span>
+                        </div>
+                        {analytics.budget != null && (
+                          <div className="flex justify-between text-sm pt-1 font-semibold">
+                            <span>Remaining</span>
+                            <span
+                              className={cn(
+                                'tabular-nums',
+                                remainingBudget != null && remainingBudget < 0
+                                  ? 'text-destructive'
+                                  : 'text-emerald-600',
+                              )}
+                            >
+                              {formatCurrency(remainingBudget)}
+                            </span>
+                          </div>
+                        )}
+                        {analytics.budget != null && analytics.budget > 0 && (
+                          <div className="pt-2">
+                            <div className="h-2 bg-muted rounded-full overflow-hidden">
+                              <div
+                                className={cn(
+                                  'h-full rounded-full transition-all',
+                                  remainingBudget != null && remainingBudget < 0
+                                    ? 'bg-destructive'
+                                    : 'bg-primary',
+                                )}
+                                style={{
+                                  width: `${Math.min(100, (totalSpent / analytics.budget) * 100)}%`,
+                                }}
+                              />
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-1.5">
+                              {Math.round((totalSpent / analytics.budget) * 100)}% of budget spent
+                            </p>
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <div className="space-y-3">
+                        <Skeleton className="h-5 w-full" />
+                        <Skeleton className="h-5 w-full" />
+                        <Skeleton className="h-5 w-full" />
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Linked transactions */}
+                <Card className="border-none bg-card/50 shadow-sm ring-1 ring-border/50 flex flex-col">
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 shrink-0">
                     <div>
-                      {invoices.map((inv, idx) => (
-                        <div key={inv.id}>
-                          <div
-                            className="flex items-center gap-4 px-6 py-3 hover:bg-muted/40 transition-colors cursor-pointer group/row"
-                            onClick={() =>
-                              navigate(`/finance?invoice=${inv.id}`)
-                            }
-                          >
-                            <div className="min-w-0 flex-1">
-                              <p className="text-base font-medium truncate text-foreground leading-tight">
-                                {inv.invoice_number}
-                              </p>
-                              <p className="text-xs text-muted-foreground mt-1">
-                                {inv.due_date
-                                  ? `Due · ${format(parseISO(inv.due_date), 'MMM d, yyyy')}`
-                                  : 'No due date'}
+                      <CardTitle className="text-lg font-medium">Expenses</CardTitle>
+                      <CardDescription>
+                        {campaignTransactions.filter((t) => t.type === 'EXPENSE').length} transaction
+                        {campaignTransactions.filter((t) => t.type === 'EXPENSE').length !== 1 ? 's' : ''} logged
+                      </CardDescription>
+                    </div>
+                    <div className="flex items-center">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => setAddTransactionOpen(true)}
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 -mr-2 text-muted-foreground hover:text-foreground"
+                        onClick={() => navigate('/finance/ledger')}
+                      >
+                        <ArrowUpRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="min-h-[320px] p-0 flex flex-col">
+                    {transactionsLoading ? (
+                      <div>
+                        {[...Array(3)].map((_, i) => (
+                          <div key={i}>
+                            <div className="flex items-center gap-4 px-6 py-3">
+                              <Skeleton className="w-10 h-10 rounded-lg shrink-0" />
+                              <div className="flex-1 space-y-2">
+                                <Skeleton className="h-4 w-1/3" />
+                                <Skeleton className="h-3 w-1/4" />
+                              </div>
+                              <Skeleton className="h-6 w-20 rounded-full" />
+                            </div>
+                            {i < 2 && <hr className="border-t border-dashed border-border/50 mx-6" />}
+                          </div>
+                        ))}
+                      </div>
+                    ) : campaignTransactions.filter((t) => t.type === 'EXPENSE').length === 0 ? (
+                      <div className="flex-1 flex flex-col items-center justify-center text-center py-16 gap-2">
+                        <p className="text-sm text-muted-foreground">No expenses logged yet</p>
+                        <p className="text-xs text-muted-foreground/70">
+                          Add an expense transaction to track internal costs
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="px-6 py-2 space-y-1">
+                        {campaignTransactions
+                          .filter((t) => t.type === 'EXPENSE')
+                          .map((tx) => (
+                            <div
+                              key={tx.id}
+                              className="flex items-center justify-between py-1 group"
+                            >
+                              <div className="flex items-center gap-3 overflow-hidden">
+                                <div className="h-8 w-8 rounded-full flex items-center justify-center shrink-0 bg-rose-500/10 text-rose-600 dark:text-rose-500">
+                                  <ArrowDownRight className="h-4 w-4" />
+                                </div>
+                                <div className="min-w-0 pr-2">
+                                  <p className="font-medium text-[13px] group-hover:text-primary transition-colors truncate">
+                                    {tx.description || tx.category}
+                                  </p>
+                                  <p className="text-[11px] text-muted-foreground mt-0.5">
+                                    {tx.category} · {format(new Date(tx.date), 'MMM d, yyyy')}
+                                  </p>
+                                </div>
+                              </div>
+                              <p className="text-sm tracking-tight font-medium shrink-0 text-rose-600 dark:text-rose-500">
+                                -{formatCurrency(tx.amount)}
                               </p>
                             </div>
-                            <div className="shrink-0 flex items-center gap-3">
-                              <div className="flex flex-col items-end gap-1.5">
-                                <StatusBadge
-                                  status={inv.status?.toUpperCase()}
-                                  className="text-sm px-3 py-1.5"
-                                />
-                                <p className="text-sm font-semibold tabular-nums text-foreground">
-                                  {formatCurrency(inv.total)}
+                          ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            ) : (
+              /* ── External campaign: budget vs invoices ── */
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {/* Budget card */}
+                <Card className="rounded-2xl border-none bg-card/50 shadow-sm ring-1 ring-border/50">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-lg font-medium">Budget</CardTitle>
+                    <CardDescription>Campaign spend tracking</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {analytics ? (
+                      <>
+                        <div className="flex justify-between text-sm py-1.5 border-b border-border/40">
+                          <span className="text-muted-foreground">Total Budget</span>
+                          {analytics.budget != null ? (
+                            <span className="font-semibold tabular-nums">
+                              {formatCurrency(analytics.budget)}
+                            </span>
+                          ) : (
+                            <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+                              Uncapped
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex justify-between text-sm py-1.5 border-b border-border/40">
+                          <span className="text-muted-foreground">Invoiced</span>
+                          <span className="tabular-nums font-medium">
+                            {formatCurrency(analytics.total_invoiced)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-sm py-1.5 border-b border-border/40">
+                          <span className="text-muted-foreground">Collected</span>
+                          <span className="tabular-nums font-medium">
+                            {formatCurrency(analytics.total_collected)}
+                          </span>
+                        </div>
+                        {analytics.budget != null && (
+                          <div className="flex justify-between text-sm pt-1 font-semibold">
+                            <span>Remaining</span>
+                            <span
+                              className={cn(
+                                'tabular-nums',
+                                remaining != null && remaining < 0
+                                  ? 'text-destructive'
+                                  : 'text-emerald-600',
+                              )}
+                            >
+                              {formatCurrency(remaining)}
+                            </span>
+                          </div>
+                        )}
+                        {analytics.budget != null && (
+                          <div className="pt-2">
+                            <div className="h-2 bg-muted rounded-full overflow-hidden">
+                              <div
+                                className={cn(
+                                  'h-full rounded-full transition-all',
+                                  remaining != null && remaining < 0
+                                    ? 'bg-destructive'
+                                    : 'bg-primary',
+                                )}
+                                style={{
+                                  width: `${Math.min(100, (analytics.total_invoiced / analytics.budget) * 100)}%`,
+                                }}
+                              />
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-1.5">
+                              {Math.round((analytics.total_invoiced / analytics.budget) * 100)}% of budget invoiced
+                            </p>
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <div className="space-y-3">
+                        <Skeleton className="h-5 w-full" />
+                        <Skeleton className="h-5 w-full" />
+                        <Skeleton className="h-5 w-full" />
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Linked invoices */}
+                <Card className="border-none bg-card/50 shadow-sm ring-1 ring-border/50 flex flex-col">
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 shrink-0">
+                    <div>
+                      <CardTitle className="text-lg font-medium">Linked Invoices</CardTitle>
+                      <CardDescription>
+                        {invoices.length} invoice{invoices.length !== 1 ? 's' : ''} linked
+                      </CardDescription>
+                    </div>
+                    <div className="flex items-center">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => setCreateInvoiceOpen(true)}
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 -mr-2 text-muted-foreground hover:text-foreground"
+                        onClick={() => navigate('/finance/invoices')}
+                      >
+                        <ArrowUpRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="min-h-[320px] p-0 flex flex-col">
+                    {invoicesLoading ? (
+                      <div>
+                        {[...Array(3)].map((_, i) => (
+                          <div key={i}>
+                            <div className="flex items-center gap-4 px-6 py-3">
+                              <Skeleton className="w-10 h-10 rounded-lg shrink-0" />
+                              <div className="flex-1 space-y-2">
+                                <Skeleton className="h-4 w-1/3" />
+                                <Skeleton className="h-3 w-1/4" />
+                              </div>
+                              <Skeleton className="h-6 w-20 rounded-full" />
+                            </div>
+                            {i < 2 && <hr className="border-t border-dashed border-border/50 mx-6" />}
+                          </div>
+                        ))}
+                      </div>
+                    ) : invoices.length === 0 ? (
+                      <div className="flex-1 flex flex-col items-center justify-center text-center py-16 gap-2">
+                        <p className="text-sm text-muted-foreground">No invoices linked yet</p>
+                        <p className="text-xs text-muted-foreground/70">
+                          Create one to start tracking campaign revenue
+                        </p>
+                      </div>
+                    ) : (
+                      <div>
+                        {invoices.map((inv, idx) => (
+                          <div key={inv.id}>
+                            <div
+                              className="flex items-center gap-4 px-6 py-3 hover:bg-muted/40 transition-colors cursor-pointer group/row"
+                              onClick={() => navigate(`/finance?invoice=${inv.id}`)}
+                            >
+                              <div className="min-w-0 flex-1">
+                                <p className="text-base font-medium truncate text-foreground leading-tight">
+                                  {inv.invoice_number}
+                                </p>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  {inv.due_date
+                                    ? `Due · ${format(parseISO(inv.due_date), 'MMM d, yyyy')}`
+                                    : 'No due date'}
                                 </p>
                               </div>
+                              <div className="shrink-0 flex items-center gap-3">
+                                <div className="flex flex-col items-end gap-1.5">
+                                  <StatusBadge
+                                    status={inv.status?.toUpperCase()}
+                                    className="text-sm px-3 py-1.5"
+                                  />
+                                  <p className="text-sm font-semibold tabular-nums text-foreground">
+                                    {formatCurrency(inv.total)}
+                                  </p>
+                                </div>
+                              </div>
                             </div>
+                            {idx < invoices.length - 1 && (
+                              <hr className="border-t border-dashed border-border/50 mx-6" />
+                            )}
                           </div>
-                          {idx < invoices.length - 1 && (
-                            <hr className="border-t border-dashed border-border/50 mx-6" />
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            )}
           </TabsContent>
 
           {/* ── Activity tab ── */}
@@ -1118,6 +1280,13 @@ export default function CampaignDetailPage() {
           onOpenChange={setCreateInvoiceOpen}
           preselectedClientId={campaign.client_id}
           preselectedCampaignId={campaignId}
+        />
+
+        <AddTransactionDialog
+          open={addTransactionOpen}
+          onOpenChange={setAddTransactionOpen}
+          defaultClientId={campaign.client_id}
+          defaultCampaignId={campaignId}
         />
 
         <DraftPostForm

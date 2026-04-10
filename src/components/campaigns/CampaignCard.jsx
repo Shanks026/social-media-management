@@ -20,25 +20,21 @@ const STATUS_STYLES = {
 
 const PIPELINE_COLORS = {
   draft_count: 'bg-blue-600',
-  revision_count: 'bg-pink-600',
   pending_count: 'bg-orange-600',
+  revision_count: 'bg-pink-600',
+  approved_count: 'bg-green-600',
   scheduled_count: 'bg-purple-600',
-  published_count: 'bg-emerald-600',
 }
 
 const StatItem = ({ count, label, colorClass }) => {
   if (!count || count < 1) return null
   return (
-    <div className="flex items-center gap-2 shrink-0">
-      <div className={`size-2 rounded-full ${colorClass}`} />
-      <div className="flex items-baseline gap-1.5">
-        <span className="text-sm font-bold text-foreground leading-none">
-          {count}
-        </span>
-        <span className="text-xs text-muted-foreground font-medium">
-          {label}
-        </span>
+    <div className="flex flex-col gap-2.5">
+      <div className="flex items-center gap-1.5">
+        <div className={`size-2 rounded-full ${colorClass}`} />
+        <span className="text-xs text-muted-foreground leading-none truncate">{label}</span>
       </div>
+      <span className="text-sm font-bold text-foreground leading-none">{count}</span>
     </div>
   )
 }
@@ -110,6 +106,7 @@ export function CampaignCard({
     draft_count,
     pending_count,
     revision_count,
+    approved_count,
     scheduled_count,
     published_count,
     client_name,
@@ -122,17 +119,17 @@ export function CampaignCard({
 
   const pipelineCounts = [
     { key: 'draft_count', value: draft_count, label: 'Drafts' },
-    { key: 'revision_count', value: revision_count, label: 'Rev.' },
-    { key: 'pending_count', value: pending_count, label: 'Pend.' },
+    { key: 'pending_count', value: pending_count, label: 'Approval' },
+    { key: 'revision_count', value: revision_count, label: 'Revision' },
+    { key: 'approved_count', value: approved_count, label: 'Approved' },
     { key: 'scheduled_count', value: scheduled_count, label: 'Sched.' },
-    { key: 'published_count', value: published_count, label: 'Pub.' },
   ].filter((c) => c.value > 0)
 
   const hasPipelineData = pipelineCounts.length > 0 || published_count > 0
 
   return (
     <Card
-      className="rounded-2xl border border-border/60 py-0 bg-card/50 h-full hover:border-border cursor-pointer shadow-sm flex flex-col"
+      className="rounded-2xl border border-border/60 py-0 bg-card/50 h-full hover:border-border cursor-pointer shadow-none flex flex-col"
       onClick={() => navigate(`/campaigns/${id}`)}
     >
     <CardContent className="p-6 flex flex-col flex-1 min-w-0">
@@ -213,7 +210,7 @@ export function CampaignCard({
       {/* Pipeline Stats */}
       <div className="min-w-0 mb-5">
         {hasPipelineData ? (
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+          <div className="grid grid-cols-5">
             {pipelineCounts.map((c) => (
               <StatItem
                 key={c.key}

@@ -11,6 +11,7 @@ import {
   ArrowDownRight,
   CircleDollarSign,
 } from 'lucide-react'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import {
   Card,
   CardContent,
@@ -66,13 +67,14 @@ const platformChartConfig = {
 
 // Chart config — keyed by display name, matching post_status enum
 const chartConfig = {
-  'DRAFT':            { label: 'Draft',            color: '#3b82f6' },
-  'PENDING APPROVAL': { label: 'Pending Approval',  color: '#f97316' },
-  'APPROVED':         { label: 'Approved',           color: '#22c55e' },
-  'NEEDS REVISION':   { label: 'Needs Revision',    color: '#ec4899' },
-  'SCHEDULED':        { label: 'Scheduled',          color: '#a855f7' },
-  'DELIVERED':        { label: 'Delivered',          color: '#14b8a6' },
-  'PUBLISHED':        { label: 'Published',          color: '#10b981' },
+  'DRAFT':                { label: 'Draft',               color: '#3b82f6' },
+  'PENDING APPROVAL':     { label: 'Pending Approval',    color: '#f97316' },
+  'APPROVED':             { label: 'Approved',            color: '#22c55e' },
+  'NEEDS REVISION':       { label: 'Needs Revision',      color: '#ec4899' },
+  'SCHEDULED':            { label: 'Scheduled',           color: '#a855f7' },
+  'DELIVERED':            { label: 'Delivered',           color: '#14b8a6' },
+  'PARTIALLY PUBLISHED':  { label: 'Partially Published', color: '#84cc16' },
+  'PUBLISHED':            { label: 'Published',           color: '#10b981' },
 }
 
 const ALLOWED_STATUSES = [
@@ -82,18 +84,20 @@ const ALLOWED_STATUSES = [
   'NEEDS REVISION',
   'SCHEDULED',
   'DELIVERED',
+  'PARTIALLY PUBLISHED',
   'PUBLISHED',
 ]
 
 // Maps DB enum values → display names (ARCHIVED excluded from chart)
 const STATUS_DISPLAY_MAP = {
-  DRAFT:            'DRAFT',
-  PENDING_APPROVAL: 'PENDING APPROVAL',
-  APPROVED:         'APPROVED',
-  NEEDS_REVISION:   'NEEDS REVISION',
-  SCHEDULED:        'SCHEDULED',
-  DELIVERED:        'DELIVERED',
-  PUBLISHED:        'PUBLISHED',
+  DRAFT:                'DRAFT',
+  PENDING_APPROVAL:     'PENDING APPROVAL',
+  APPROVED:             'APPROVED',
+  NEEDS_REVISION:       'NEEDS REVISION',
+  SCHEDULED:            'SCHEDULED',
+  DELIVERED:            'DELIVERED',
+  PARTIALLY_PUBLISHED:  'PARTIALLY PUBLISHED',
+  PUBLISHED:            'PUBLISHED',
 }
 
 function normalizeStatus(raw) {
@@ -224,19 +228,24 @@ export default function OverviewTab({ client }) {
   // --- Calculations ---
 
   // 1. Workflow Health
-  const postCounts = ALLOWED_STATUSES.reduce((acc, status) => {
+  const INTERNAL_EXCLUDED = ['PENDING APPROVAL', 'NEEDS REVISION']
+  const visibleStatuses = client.is_internal
+    ? ALLOWED_STATUSES.filter((s) => !INTERNAL_EXCLUDED.includes(s))
+    : ALLOWED_STATUSES
+
+  const postCounts = visibleStatuses.reduce((acc, status) => {
     acc[status] = 0
     return acc
   }, {})
 
   posts.forEach((post) => {
     const status = normalizeStatus(getPublishState(post))
-    if (ALLOWED_STATUSES.includes(status)) {
+    if (visibleStatuses.includes(status)) {
       postCounts[status] += 1
     }
   })
 
-  const chartData = ALLOWED_STATUSES.map((name) => ({
+  const chartData = visibleStatuses.map((name) => ({
     name,
     value: postCounts[name],
     fill: chartConfig[name].color,
@@ -247,7 +256,7 @@ export default function OverviewTab({ client }) {
 
   const totalPosts = posts.filter((post) => {
     const status = normalizeStatus(getPublishState(post))
-    return ALLOWED_STATUSES.includes(status)
+    return visibleStatuses.includes(status)
   }).length
 
   const needsRevisionCount = postCounts['NEEDS REVISION'] || 0
@@ -298,14 +307,23 @@ export default function OverviewTab({ client }) {
               </TabsList>
               <div className="flex items-center gap-1">
                 {activeEngagementTab === 'meetings' ? (
-                  <CreateMeetingDialog
-                    defaultClientId={client.id}
-                    lockClient={true}
-                  >
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </CreateMeetingDialog>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span>
+                        <CreateMeetingDialog
+                          defaultClientId={client.id}
+                          lockClient={true}
+                        >
+                          <Button variant="ghost" size="icon" className="h-8 w-8" disabled={client.is_internal}>
+                            <Plus className="h-4 w-4" />
+                          </Button>
+                        </CreateMeetingDialog>
+                      </span>
+                    </TooltipTrigger>
+                    {client.is_internal && (
+                      <TooltipContent>Meetings are not available for internal accounts</TooltipContent>
+                    )}
+                  </Tooltip>
                 ) : (
                   <CreateNoteDialog clientId={client.id} lockClient={true}>
                     <Button variant="ghost" size="icon" className="h-8 w-8">

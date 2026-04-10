@@ -155,6 +155,7 @@ export default function Posts() {
   const navigate = useNavigate()
   const { setHeader } = useHeader()
 
+
   // View mode
   const [viewMode, setViewMode] = useState('card') // 'card' | 'table'
 
