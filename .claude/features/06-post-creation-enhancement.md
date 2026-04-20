@@ -15,6 +15,71 @@ Tercero currently supports a single `target_date` for all platforms on a post. T
 
 ---
 
+## Full Post Lifecycle & Workflow
+
+This section documents the end-to-end lifecycle of a post from creation to publishing, including versioning and email notifications triggered at each stage.
+
+### 1. Creation (`DRAFT`)
+- **Action**: Agency user creates a new post via `DraftPostForm.jsx`.
+- **Backend Flow**: Calls the `create_post_draft_v3` RPC. This atomically creates a parent `posts` record (with `current_version_id`) and the first `post_versions` child record with `status = 'DRAFT'`, `version_number = 1`.
+- **Emails**: None.
+
+### 2. Submission for Review (`PENDING_APPROVAL`)
+- **Action**: Agency user submits the draft post for client review.
+- **Backend Flow**: The `post_versions.status` is updated to `PENDING_APPROVAL` (or `PENDING`).
+- **Emails**: 
+  - **Edge Function**: `send-approval-email` (invoked via database webhook on status change).
+  - **Recipient**: The **Client**.
+  - **Content**: "Action Required: Review '[Post Title]'" with a magic link to the Public Review page.
+
+### 3. Client Review & Revisions (`NEEDS_REVISION` / `REVISIONS`)
+- **Action**: The client views the Public Review page and clicks "Request Changes", providing feedback.
+- **Backend Flow**: The `post_versions.status` is updated to `NEEDS_REVISION` (or `REVISIONS`).
+- **Emails**:
+  - **Edge Function**: `send-approval-email`.
+  - **Recipient**: The **Agency Creator** of the post.
+  - **Content**: "Revision Requested by [Client Name]: '[Post Title]'" including the client's notes/feedback.
+
+### 4. Creating a Revision (Back to `DRAFT`)
+- **Action**: The agency edits the post to address the client's feedback.
+- **Backend Flow**: Calls the `create_revision_version` RPC (or `createPostRevision` API). 
+  - The previous version's status is updated to `ARCHIVED`.
+  - A new `post_versions` record is created (copying data + `platform_schedules` forward) with `status = 'DRAFT'`, `version_number += 1`.
+  - The parent `posts.current_version_id` is updated to point to the new version.
+- **Emails**: None.
+
+### 5. Approval & Scheduling (`SCHEDULED`)
+- **Action**: The client signs off on the content (and optionally schedule) via the Public Review page.
+- **Backend Flow**: The `post_versions.status` is updated to `SCHEDULED`.
+- **Emails**:
+  - **Edge Function**: `send-approval-email`.
+  - **Recipient**: The **Agency Creator** (unless it's an internal client, which is skipped to avoid noise).
+  - **Content**: "Approved & Scheduled by [Client Name]: '[Post Title]'" notifying the agency that the post is locked and ready.
+
+### 6. Publishing
+
+**Scenario A: Single Target Date (Legacy / Single-Platform Mode)**
+- **Action**: The scheduled date arrives, or the agency clicks "Publish Now" in the UI.
+- **Backend Flow**: `post_versions.status` is updated to `PUBLISHED` and `published_at` timestamp is set.
+- **Emails**:
+  - **Edge Function**: `send-approval-email`.
+  - **Recipient**: The **Client**.
+  - **Content**: "Your post is live: '[Post Title]'" confirming it's active.
+
+**Scenario B: Per-Platform Scheduling (Enhancement Mode)**
+- **Action**: Agency publishes individual platforms one by one using the per-platform grid in `PostContent.jsx`.
+- **Backend Flow**: 
+  - Frontend invokes `markPlatformAsPublishedMutation`, setting the `published_at` timestamp for that specific platform inside the `platform_schedules` JSONB.
+  - The post stays `SCHEDULED` in the DB but shows as `PARTIALLY_PUBLISHED` in the UI until all are done.
+  - When the *last* platform is published, the mutation also transitions the main `post_versions.status` to `PUBLISHED`.
+- **Emails**:
+  - **Edge Function**: `send-platform-published-email` (invoked directly from frontend mutation `onSuccess`).
+  - **Recipient**: The **Client** (skipped for internal agencies).
+  - **Partial Publish**: "Your [Platform] post is live" (e.g. Instagram is live, others pending).
+  - **Final Publish (`all_published = true`)**: "All posts are now live" across all scheduled platforms.
+
+---
+
 ## Design Decisions
 
 ### JSONB additive approach (not new table)
