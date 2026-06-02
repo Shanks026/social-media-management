@@ -163,7 +163,7 @@ export default function ProfileSettings() {
     avatarUrl !== (user?.user_metadata?.avatar_url || '')
 
   return (
-    <div className="w-full space-y-14">
+    <div className="max-w-5xl space-y-14 mx-auto">
       {/* ── Section: Avatar & Identity ── */}
       <section className="space-y-8">
         <div className="space-y-1">

@@ -99,7 +99,8 @@
       "Bash(find c:Userschris_austinDesktopsocial-media-management -type f -name *.sql)",
       "Bash(find \"c:\\\\Users\\\\chris_austin\\\\Desktop\\\\social-media-management\\\\src\" -name \"*query\\\\|*queries\\\\|*hook*\" -type f)",
       "Bash(xargs -I {} sh -c 'echo \"=== {} ===\" && head -30 \"{}\"')",
-      "Bash(find /c/Users/chris_austin/Desktop/social-media-management/src/api -name \"*.js\" -exec echo \"=== {} ===\" \\\\; -exec head -5 {} \\\\;)"
+      "Bash(find /c/Users/chris_austin/Desktop/social-media-management/src/api -name \"*.js\" -exec echo \"=== {} ===\" \\\\; -exec head -5 {} \\\\;)",
+      "mcp__supabase__get_logs"
     ]
   }
 }

@@ -9,6 +9,7 @@ export const PlanOverview = ({ sub, currentPlan, onUpgradeClick, isFree }) => {
   const planName = currentPlan?.name || sub?.plan_name || 'Ignite'
   const bestFor = currentPlan?.bestFor?.toLowerCase() || 'growing businesses'
   const iconColor = currentPlan?.accent?.text || 'text-primary'
+  const iconBg = currentPlan?.accent?.bg || 'bg-primary/10'
 
   if (isFree) {
     return (
@@ -62,7 +63,8 @@ export const PlanOverview = ({ sub, currentPlan, onUpgradeClick, isFree }) => {
         <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
           <div
             className={cn(
-              'p-4 rounded-2xl border border-border/50 bg-muted/40 shadow-sm',
+              'p-4 rounded-2xl',
+              iconBg,
               iconColor,
             )}
           >
