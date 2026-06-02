@@ -1,7 +1,9 @@
 # Tercero — Full Application Research Document
 
 > **Purpose**: Comprehensive product/feature reference for building a client-facing application document for Tercero.
-> **Status**: Updated March 26, 2026 — reflects live codebase including: PlatformIcon/PlatformStack SVG brand icons, updated TierBadge (INTERNAL/VIP/PRO), IndustryBadge SVG paths from industries.js (14 industries), ClientCard redesign with PlatformStack + financial metrics in INR, ClientProfileView 8-tab layout with URL-persisted tab state, ClientHealthGrid health statuses (Healthy/Needs Attention/At Risk/Idle), LifetimeRevenue donut chart with INR compact formatting, Posts page "Partially Published" status tab, Empty component for consistent empty states, MyOrganization 3-state flow, ProposalReview full branding header chain, **Prospects CRM module** (pipeline, outreach activity log, CSV import, convert-to-client flow).
+> **Status**: Updated April 10, 2026 — **Phase 1 Complete. Ready for beta rollout.** Full feature set reflects live codebase as of beta launch.
+>
+> **Phase 1 additions since last update**: Campaigns module (internal client finance via transactions, campaign review flow), subscription expiry system (30-day billing cycle, grace period, blockout page, renewal/upgrade email flow via edge function), sidebar collapsed popover navigation, pipeline status accuracy fixes (APPROVED added, PUBLISHED removed from card stats), document preview modal sizing, ledger KPI reorder, plan card pricing layout redesign, per-plan next renewal date display in Billing & Usage.
 
 ---
 
@@ -394,17 +396,34 @@ The agency's own subscription to Tercero (separate from client finance).
 - Client count vs. max clients on current plan
 - Visual progress bars with percentage
 - Remaining storage shown as a pre-calculated label (e.g., "500 MB remaining")
+- Team member seats used vs. plan limit
 
-**Plan Tab** (`SubscriptionTab`):
-- Current plan overview card (plan name, key limits, "Upgrade Plan" button that scrolls to the pricing grid)
-- Three plan cards: **Ignite** (₹1,999/mo), **Velocity** (₹5,999/mo, marked "Recommended"), **Quantum** (₹12,999/mo)
-- Full feature comparison table
-- **Note**: Automated payment processing is not yet live. Upgrades are handled manually — users click "Contact Team" on a plan card, which opens an upgrade request dialog. The dialog sends a prefilled message to the Tercero team (currently logged to console; to be replaced by a dedicated API).
-- Downgrade is handled the same way via the Contact Team flow.
+**Subscription Tab** (`SubscriptionTab`):
+- Current plan overview card (plan name, tagline, "Upgrade Plan" button scrolls to pricing grid)
+- **Next renewal date** displayed under plan description with a calendar icon
+- Contextual renewal badge: amber "Renews in X days" (warning), red "Expires today/tomorrow" (critical), red "Expired · Grace Period" (grace)
+- Three plan cards: **Ignite** (₹1,999/mo), **Velocity** (₹5,999/mo, "Recommended" badge overlaid at top center), **Quantum** (₹12,999/mo)
+- Plan card layout: plan name + description → price (₹X,XXX / mo) → "+₹499 per additional client" subtext → divider → feature list → CTA
+- Full feature comparison table at the bottom
+- **Subscription Lifecycle**: Tercero operates on a 30-day billing cycle. Subscription status phases:
+  - `active` (> 7 days remaining) — no alerts
+  - `warning` (3–7 days) — amber pill in header "Renews in X days"
+  - `critical` (0–2 days) — red pill in header + dashboard banner
+  - `grace` (-1 to -3 days) — red pill + banner; app still accessible
+  - `expired` (< -3 days) — blocked; redirected to `/subscription-expired`
+- **Renewal flow**: "Contact Team" sends a request via the `send-renewal-request` Supabase Edge Function (Resend) to the super admin email. Handles both `renewal` and `upgrade` request types. Dialog shows a blue info banner confirming the email delivery mechanism.
 
 **Invoices Tab**:
 - History of charges from Tercero to the agency
 - Download invoices
+
+**Subscription Expired Page** (`/subscription-expired`):
+- Standalone blockout page, no app shell
+- Shows 🔒 emoji, plan name, expiry message, and two CTAs:
+  - "Renew [Plan]" — opens renewal dialog, sends renewal request email
+  - "Upgrade Plan" — scrolls to plan cards → opens upgrade dialog, sends upgrade request email
+- Same `UpgradeRequestDialog` used for both, differentiated by `requestType` prop (`'renewal'` | `'upgrade'`)
+- Redirects to `/dashboard` if `is_sub_locked` is false (i.e., accessed early)
 
 ---
 
@@ -897,11 +916,25 @@ Defaults are defensive (most-restricted) except `branding_powered_by` which defa
 - ₹500/mo per extra client on Ignite and Velocity
 - ₹450/mo per extra client on Quantum
 
-### Upgrade Flow
+### Subscription Expiry System (Phase 1)
+- 30-day billing cycle tracked via `subscription_ends_at` column on `agency_subscriptions`
+- `useSubscription()` returns `sub_phase`, `sub_days_remaining`, `subscription_ends_at`, `is_sub_locked`
+- Testing override: `SUB_DAY_OVERRIDE` constant in `useSubscription.js` (set to null for production)
+- Phase thresholds: `active` (>7d), `warning` (3–7d), `critical` (0–2d), `grace` (-1 to -3d), `expired` (<-3d)
+- Header pill: shown for warning/critical/grace; hidden when active
+- Dashboard banner: shown for critical/grace only
+- Sidebar plan label: `Ignite · 5d left` / `Ignite · Grace Period`
+- Blockout page at `/subscription-expired` with Renew + Upgrade CTAs
+- Renewal/upgrade requests sent via `send-renewal-request` edge function
+
+### Upgrade / Renewal Flow
 - No automated payment processing currently
-- Users request upgrades via "Contact Team" dialog on the Billing page
-- Tercero team manually processes the request and updates the account
-- `trial_ends_at` controls trial expiry; expired trials redirect to `/billing`
+- Users request upgrades via "Contact Team" on plan cards, or "Renew" on the blockout/expiry pages
+- `UpgradeRequestDialog` accepts `requestType: 'upgrade' | 'renewal'` prop
+- Dialog shows a blue info banner explaining the email delivery mechanism
+- Request sent via `send-renewal-request` edge function to `SUPER_ADMIN_EMAIL`
+- Tercero team manually processes and updates the account
+- Trial expiry: `trial_ends_at` controls; expired trials redirect to `/trial-expired`
 
 ---
 
@@ -939,7 +972,7 @@ The agency workspace management hub. Three states based on data:
 
 ## 8. EDGE FUNCTIONS (Email Notifications)
 
-Four Supabase Edge Functions handle transactional email (all use Resend, sent from `notifications@tercerospace.com`):
+Supabase Edge Functions handle transactional email (all use Resend, sent from `notifications@tercerospace.com`):
 
 | Function | Trigger | Email sent |
 |----------|---------|-----------|
@@ -947,6 +980,7 @@ Four Supabase Edge Functions handle transactional email (all use Resend, sent fr
 | `send-client-welcome` | New client created | Welcome email to client |
 | `send-password-update-email` | Password changed | Confirmation to user |
 | `send-campaign-review-email` | Agency clicks "Send Email" in Share Review Link dialog | Campaign review link to client; `verify_jwt: false`; subject: "Action Required: Review posts for [campaign_name]" |
+| `send-renewal-request` | User submits renewal or upgrade request | Email to `SUPER_ADMIN_EMAIL`; `verify_jwt: false`; handles `requestType: 'renewal' \| 'upgrade'`; includes agencyName, agencyEmail, currentPlan, requestedPlan (upgrade only), additionalNotes |
 
 ---
 
@@ -1004,6 +1038,90 @@ Track every lead through your pipeline — log calls, emails, and demos, import 
 - Voice: Confident, direct, no fluff — built for operators who value efficiency
 - Design style: shadcn/ui new-york (rounded corners, clean cards, clear hierarchy)
 - Color system: CSS variables, dark mode first
+
+---
+
+## 12. PHASE 1 COMPLETION — BETA LAUNCH SUMMARY
+
+> **Status as of April 10, 2026**: Phase 1 is complete. Tercero is ready for beta testing.
+
+### What's Live and Tested
+
+| Module | Status |
+|--------|--------|
+| Client Management (full CRUD, pipeline, 8-tab detail) | ✅ Live |
+| Prospects CRM (pipeline, activity log, CSV import, convert-to-client) | ✅ Live |
+| Proposals (built + uploaded, public review, accept/decline, PDF export) | ✅ Live |
+| Content Management (versioning, approval workflow, platform previews) | ✅ Live |
+| Content Calendar (month/week view, PDF export on Velocity+) | ✅ Live |
+| Campaigns (Velocity+ — post grouping, analytics, budget, review link) | ✅ Live |
+| Finance (invoices, recurring, ledger, subscriptions, overview) | ✅ Live |
+| Documents (per-client storage, collections on Velocity+) | ✅ Live |
+| Meetings & Notes | ✅ Live |
+| Team Management (invite links, real-time roster, seat limits) | ✅ Live |
+| My Organization / Internal Workspace | ✅ Live |
+| Dashboard (health bar, pipeline, finance snapshot, client health grid) | ✅ Live |
+| Billing & Usage (plan overview, next renewal date, usage tracking) | ✅ Live |
+| Subscription Expiry System (phases, grace period, blockout page) | ✅ Live |
+| Renewal / Upgrade Request Flow (email to admin via edge function) | ✅ Live |
+| Public Review Pages (post, campaign, proposal) | ✅ Live |
+| Email Notifications (5 edge functions via Resend) | ✅ Live |
+| Dark / Light Mode | ✅ Live |
+
+### Pricing (Beta Offering)
+
+| Plan | Price | Clients | Storage | Team Seats |
+|------|-------|---------|---------|------------|
+| **Ignite** | ₹1,999 / mo | 5 | 20 GB | 2 |
+| **Velocity** | ₹5,999 / mo | 15 | 50 GB | 5 |
+| **Quantum** | ₹12,999 / mo | 30 | 100 GB | Unlimited |
+
+- **+₹499 per additional client** on all plans
+- **14-day free trial** — all core features, 5 clients, 20 GB
+- Payments processed manually (no self-serve checkout yet)
+
+### What's NOT in Phase 1 (Known Gaps for Beta Testers)
+- No automated payment gateway (upgrade/renew via manual request)
+- No native mobile app
+- No direct social media publishing integration (Tercero manages the workflow; actual publishing is manual)
+- No AI-assisted content generation
+- Campaign budget tracking for internal clients uses expense transactions (not invoices)
+- Proposal file upload (uploaded type) uses public bucket URLs
+
+### Beta Testing Focus Areas
+Beta testers should exercise:
+1. **Onboarding** — signup, agency setup, internal workspace creation
+2. **Full client lifecycle** — create prospect → convert to client → create content → approve → invoice
+3. **Campaign review flow** — create campaign, add posts, share review link, client approval
+4. **Finance workflow** — invoice creation, mark as paid, ledger entry auto-creation
+5. **Team collaboration** — invite a teammate, verify shared workspace access
+6. **Subscription expiry** — (use `SUB_DAY_OVERRIDE` in `useSubscription.js` to simulate phases)
+7. **Public review pages** — share post/campaign/proposal link and action it as a client (no login)
+
+---
+
+## 13. BETA OUTREACH — KEY FACTS TO INCLUDE IN DMs / EMAILS
+
+> Use this section to draft cold DMs or emails to potential beta testers. Keep it under 150 words.
+
+**Who to target**: Social media agency owners managing 3–15 clients. They are currently using a mix of Notion, spreadsheets, WhatsApp approvals, and separate invoicing tools.
+
+**Core hook** (lead with this):
+> "I built a tool that replaces the entire fragmented stack agencies use — client management, content approvals, proposals, invoices, and CRM — in one workspace. It's called Tercero. I'm looking for agency owners to beta test it and give early feedback."
+
+**What to mention**:
+- One tool for the full funnel: prospect → proposal → client → content → invoice
+- Clients approve posts via a shareable link (no account needed)
+- 14-day free trial, no card required
+- ₹1,999/mo after trial (Ignite plan — up to 5 clients)
+- Campaigns, recurring billing, calendar PDF export on higher plans
+- Built specifically for social media agencies, not general project management
+
+**What NOT to mention in initial outreach**:
+- Tech stack (React, Supabase — irrelevant to agency owners)
+- Manual payment processing (bring it up if asked)
+- Internal workspace / multi-tenant architecture concepts
+- Any features that are not yet live
 
 ---
 
