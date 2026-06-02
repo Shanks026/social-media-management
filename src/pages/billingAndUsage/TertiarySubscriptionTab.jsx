@@ -4,6 +4,7 @@ import {
   Zap,
   Rocket,
   Atom,
+  Sparkles,
   Check,
   X,
   ArrowRight,
@@ -30,6 +31,15 @@ import { PlanOverview } from './PlanOverview'
 
 // ── Plan data ──
 
+// Includes trial — used only for resolving the current plan overview card.
+// The purchasable plans grid uses `plans` below (no trial entry there).
+const allPlanMeta = {
+  trial:    { name: 'Trial',    icon: Sparkles, bestFor: 'Evaluating Tercero',          accent: { text: 'text-sky-500',    bg: 'bg-sky-500/10'    } },
+  ignite:   { name: 'Ignite',   icon: Zap,      bestFor: 'Freelancers & Solopreneurs',   accent: { text: 'text-amber-500',  bg: 'bg-amber-500/10'  } },
+  velocity: { name: 'Velocity', icon: Rocket,   bestFor: 'Boutique Agencies',            accent: { text: 'text-lime-500',   bg: 'bg-lime-500/10'   } },
+  quantum:  { name: 'Quantum',  icon: Atom,     bestFor: 'Scaling Firms & Enterprises',  accent: { text: 'text-violet-500', bg: 'bg-violet-500/10' } },
+}
+
 export const plans = [
   {
     id: 'ignite',
@@ -37,7 +47,7 @@ export const plans = [
     icon: Zap,
     bestFor: 'Freelancers & Solopreneurs',
     price: '1,999',
-    accent: { text: 'text-amber-500' },
+    accent: { text: 'text-amber-500', bg: 'bg-amber-500/10' },
     features: [
       { value: 'Up to 5 clients', included: true },
       { value: '20 GB storage', included: true },
@@ -56,10 +66,10 @@ export const plans = [
     name: 'Velocity',
     icon: Rocket,
     bestFor: 'Boutique Agencies',
-    price: '5,999',
+    price: '4,999',
     popular: true,
     includesBase: 'Ignite',
-    accent: { text: 'text-lime-500' },
+    accent: { text: 'text-lime-500', bg: 'bg-lime-500/10' },
     features: [
       { value: 'Up to 15 clients', included: true },
       { value: '50 GB storage', included: true },
@@ -80,10 +90,10 @@ export const plans = [
     bestFor: 'Scaling Firms & Enterprises',
     price: '12,999',
     includesBase: 'Velocity',
-    accent: { text: 'text-violet-500' },
+    accent: { text: 'text-violet-500', bg: 'bg-violet-500/10' },
     features: [
-      { value: 'Up to 30 clients', included: true },
-      { value: '100 GB storage', included: true },
+      { value: 'Up to 35 clients', included: true },
+      { value: '500 GB storage', included: true },
       { value: 'Unlimited team seats', included: true },
       { value: 'Full whitelabel — no Tercero branding', included: true },
       { value: 'VIP Concierge support', included: true },
@@ -304,7 +314,7 @@ export const PlanCard = ({ plan, isCurrentPlan, onContactTeam }) => {
           </span>
           <span className={cn('text-sm font-normal', descClasses)}>/ mo</span>
         </div>
-        <p className={cn('text-xs font-normal', descClasses)}>+₹499 per additional client</p>
+        <p className={cn('text-xs font-normal', descClasses)}>+₹500 per additional client</p>
       </div>
 
       {/* Divider */}
@@ -409,9 +419,8 @@ export const SubscriptionTab = ({ sub, isLoading }) => {
 
   const currentPlanName = sub.plan_name?.toLowerCase() || 'ignite'
 
-  // Find the exact plan data object to pass to the overview card
-  const currentPlan =
-    plans.find((p) => p.name.toLowerCase() === currentPlanName) || plans[0]
+  // Resolve plan meta (includes trial); falls back to ignite for unknowns
+  const currentPlan = allPlanMeta[currentPlanName] || allPlanMeta.ignite
 
   const handleContactTeam = (plan) => {
     setSelectedPlan(plan)
@@ -499,7 +508,7 @@ export const SubscriptionTab = ({ sub, isLoading }) => {
                 },
                 {
                   label: 'Storage',
-                  values: ['20 GB', '50 GB', '100 GB'],
+                  values: ['20 GB', '50 GB', '500 GB'],
                 },
                 {
                   label: 'Team Seats',
@@ -555,7 +564,7 @@ export const SubscriptionTab = ({ sub, isLoading }) => {
                 },
                 {
                   label: 'Extra Client Add-on',
-                  values: ['₹499 / client', '₹499 / client', '₹499 / client'],
+                  values: ['₹500 / client', '₹500 / client', '₹500 / client'],
                 },
               ].map((row) => (
                 <tr

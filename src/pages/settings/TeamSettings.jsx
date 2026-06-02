@@ -254,7 +254,7 @@ export default function TeamSettings() {
   }
 
   return (
-    <div className="w-full space-y-14">
+    <div className="max-w-5xl space-y-14 mx-auto">
       {/* ── Section: Team Members ── */}
       <section className="space-y-8">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
