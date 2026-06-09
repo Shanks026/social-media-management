@@ -259,7 +259,7 @@ export default function TeamSettings() {
       <section className="space-y-8">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="space-y-1">
-            <h2 className="text-2xl font-normal tracking-tight">
+            <h2 className="text-2xl font-normal tracking-tight bricolage">
               Team Members
             </h2>
             <p className="text-sm text-muted-foreground font-normal">
@@ -381,7 +381,7 @@ export default function TeamSettings() {
 
           <section className="space-y-8">
             <div className="space-y-1">
-              <h2 className="text-2xl font-normal tracking-tight">
+              <h2 className="text-2xl font-normal tracking-tight bricolage">
                 Pending Invites
               </h2>
               <p className="text-sm text-muted-foreground font-normal">
@@ -449,7 +449,7 @@ export default function TeamSettings() {
 
           <section className="space-y-8">
             <div className="space-y-1">
-              <h2 className="text-2xl font-normal tracking-tight">
+              <h2 className="text-2xl font-normal tracking-tight bricolage">
                 Removed Members
               </h2>
               <p className="text-sm text-muted-foreground font-normal">

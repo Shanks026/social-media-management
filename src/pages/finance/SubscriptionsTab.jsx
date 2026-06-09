@@ -253,7 +253,7 @@ export default function SubscriptionsTab({ clientId, subTabs }) {
         {subTabs ? (
           subTabs
         ) : (
-          <h2 className="text-3xl font-normal">Subscriptions</h2>
+          <h2 className="text-3xl font-normal bricolage">Subscriptions</h2>
         )}
         <div className="flex items-center gap-3">
           {!clientId && (
@@ -296,7 +296,7 @@ export default function SubscriptionsTab({ clientId, subTabs }) {
             <TrendingUp className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-medium tracking-tight">
+            <div className="text-3xl font-medium tracking-tight bricolage">
               {formatCurrency(metrics.monthlyBurn)}
               <span className="text-sm font-normal text-muted-foreground ml-1">
                 / mo
@@ -320,7 +320,7 @@ export default function SubscriptionsTab({ clientId, subTabs }) {
           <CardContent>
             {metrics.nextBill ? (
               <>
-                <div className="text-3xl font-medium tracking-tight truncate">
+                <div className="text-3xl font-medium tracking-tight truncate bricolage">
                   {metrics.nextBill.name}
                 </div>
                 <div className="flex items-center gap-2 mt-3">
@@ -336,7 +336,7 @@ export default function SubscriptionsTab({ clientId, subTabs }) {
                 </div>
               </>
             ) : (
-              <div className="text-2xl font-normal text-muted-foreground">
+              <div className="text-2xl font-normal text-muted-foreground bricolage">
                 No upcoming bills
               </div>
             )}

@@ -152,7 +152,7 @@ export default function MyOrganization() {
       <div className="px-8 pt-8 pb-20 space-y-8 max-w-[1400px] mx-auto">
         {/* PAGE HEADER */}
         <div className="space-y-1">
-          <h1 className="text-3xl font-normal tracking-tight text-foreground">
+          <h1 className="text-3xl font-normal tracking-tight text-foreground bricolage">
             Organization
           </h1>
           <p className="text-sm text-muted-foreground font-normal">
@@ -170,7 +170,7 @@ export default function MyOrganization() {
                     <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-primary/5 border border-primary/10 text-primary text-[10px] font-semibold uppercase tracking-wider">
                       <Zap size={12} fill="currentColor" /> Ready to Deploy
                     </div>
-                    <h2 className="text-3xl font-normal tracking-tight">
+                    <h2 className="text-3xl font-normal tracking-tight bricolage">
                       Initialize your{' '}
                       <span className="font-normal italic">Workspace.</span>
                     </h2>
@@ -223,7 +223,7 @@ export default function MyOrganization() {
           /* PATH C: Zero Data - Choice Architecture */
           <div className="space-y-8 animate-in fade-in slide-in-from-bottom-6 duration-1000">
             <div className="text-center space-y-2">
-              <h2 className="text-3xl font-normal tracking-tight">
+              <h2 className="text-3xl font-normal tracking-tight bricolage">
                 Get Started
               </h2>
               <p className="text-muted-foreground text-sm font-normal">

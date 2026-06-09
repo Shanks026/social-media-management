@@ -82,7 +82,7 @@ export default function DashboardSocialMediaUsage() {
     <Card className="border-none shadow-sm ring-1 ring-border/50 bg-card/50 dark:bg-card/30 h-full flex flex-col">
       <CardHeader className="flex flex-row items-center justify-between pb-0 shrink-0">
         <div>
-          <CardTitle className="text-lg font-medium">
+          <CardTitle className="text-lg font-medium bricolage">
             Social Media Usage
           </CardTitle>
           <CardDescription>Deliverable distribution across platforms</CardDescription>

@@ -86,7 +86,7 @@ export default function LifetimeRevenue() {
       <CardHeader className="items-center pb-0">
         <div className="flex items-start justify-between">
           <div>
-            <CardTitle className="text-lg font-medium">
+            <CardTitle className="text-lg font-medium bricolage">
               Lifetime Revenue
             </CardTitle>
             <CardDescription>Total revenue vs expenses</CardDescription>

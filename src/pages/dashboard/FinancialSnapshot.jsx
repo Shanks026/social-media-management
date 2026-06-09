@@ -89,7 +89,7 @@ export default function FinancialSnapshot() {
       <CardHeader className="pb-2 shrink-0">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <CardTitle className="text-lg font-medium tracking-normal text-foreground">
+            <CardTitle className="text-lg font-medium tracking-normal text-foreground bricolage">
               Profitability Trend
             </CardTitle>
             <p className="text-sm text-muted-foreground font-normal">

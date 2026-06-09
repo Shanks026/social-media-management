@@ -452,7 +452,7 @@ export const SubscriptionTab = ({ sub, isLoading }) => {
           </div>
         </div>
         <div className="space-y-2">
-          <h3 className="text-2xl font-normal tracking-tight">
+          <h3 className="text-2xl font-normal tracking-tight bricolage">
             Choose your plan
           </h3>
           <p className="text-sm text-muted-foreground font-normal">
@@ -475,7 +475,7 @@ export const SubscriptionTab = ({ sub, isLoading }) => {
       {/* Comparison Table */}
       <div className="pt-8 border-t border-border/30">
         <div className="mb-6">
-          <h3 className="text-lg font-medium tracking-tight">
+          <h3 className="text-lg font-medium tracking-tight bricolage">
             Full Feature Comparison
           </h3>
         </div>

@@ -167,7 +167,7 @@ export default function ProfileSettings() {
       {/* ── Section: Avatar & Identity ── */}
       <section className="space-y-8">
         <div className="space-y-1">
-          <h2 className="text-2xl font-normal tracking-tight">Profile</h2>
+          <h2 className="text-2xl font-normal tracking-tight bricolage">Profile</h2>
           <p className="text-sm text-muted-foreground font-normal">
             Your personal identity and avatar.
           </p>
@@ -302,7 +302,7 @@ export default function ProfileSettings() {
       {/* ── Section: Subscription ── */}
       <section className="space-y-6">
         <div className="space-y-1">
-          <h2 className="text-lg font-medium tracking-tight">Subscription</h2>
+          <h2 className="text-lg font-medium tracking-tight bricolage">Subscription</h2>
           <p className="text-sm text-muted-foreground font-normal">
             Manage your agency&apos;s billing and feature access.
           </p>
@@ -324,7 +324,7 @@ export default function ProfileSettings() {
       {/* ── Section: Security ── */}
       <section className="space-y-6">
         <div className="space-y-1">
-          <h2 className="text-lg font-medium tracking-tight">Security</h2>
+          <h2 className="text-lg font-medium tracking-tight bricolage">Security</h2>
           <p className="text-sm text-muted-foreground font-normal">
             Manage your password and authentication settings.
           </p>
@@ -354,7 +354,7 @@ export default function ProfileSettings() {
       {/* ── Section: Danger Zone ── */}
       <section className="space-y-6">
         <div className="space-y-1">
-          <h2 className="text-lg font-medium text-destructive tracking-tight">
+          <h2 className="text-lg font-medium text-destructive tracking-tight bricolage">
             Danger Zone
           </h2>
           <p className="text-sm text-muted-foreground font-normal">

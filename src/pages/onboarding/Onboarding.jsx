@@ -23,7 +23,7 @@ export default function OnboardingPage({ user, onComplete, onSkip }) {
       <div className="w-full min-h-screen bg-background flex flex-col items-center justify-center p-4">
         <div className="max-w-4xl w-full space-y-8 animate-in fade-in zoom-in-95 duration-500">
           <div className="space-y-1.5 text-center">
-            <h1 className="text-3xl font-medium tracking-tight">
+            <h1 className="text-3xl font-medium tracking-tight bricolage">
               Welcome to Tercero
             </h1>
             <p className="text-sm text-muted-foreground">

@@ -18,7 +18,7 @@ export default function LoginPage() {
 
           {/* Welcome heading */}
           <div className="space-y-2">
-            <h1 className="text-3xl font-normal tracking-tight">
+            <h1 className="text-3xl font-normal tracking-tight bricolage">
               Welcome to Tercero
             </h1>
             <p className="text-sm text-muted-foreground font-normal">

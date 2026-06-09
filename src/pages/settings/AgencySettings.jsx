@@ -588,7 +588,7 @@ export default function AgencySettings() {
         {/* Section: Platforms */}
         <section className="space-y-6">
           <div className="space-y-1">
-            <h2 className="text-2xl font-normal tracking-tight">Platforms</h2>
+            <h2 className="text-2xl font-normal tracking-tight bricolage">Platforms</h2>
             <p className="text-sm text-muted-foreground font-normal">
               Social platforms linked to your agency workspace.
             </p>
@@ -629,7 +629,7 @@ export default function AgencySettings() {
         {/* Section: Danger Zone */}
         <section className="space-y-6">
           <div className="space-y-1">
-            <h2 className="text-lg font-medium text-destructive tracking-tight">
+            <h2 className="text-lg font-medium text-destructive tracking-tight bricolage">
               Danger Zone
             </h2>
             <p className="text-sm text-muted-foreground font-normal">
@@ -712,7 +712,7 @@ export default function AgencySettings() {
           <section className="space-y-8">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="space-y-1">
-                <h2 className="text-2xl font-normal tracking-tight">
+                <h2 className="text-2xl font-normal tracking-tight bricolage">
                   Agency Profile
                 </h2>
                 <p className="text-sm text-muted-foreground font-normal">
@@ -881,7 +881,7 @@ export default function AgencySettings() {
           {/* Section: Platforms */}
           <section className="space-y-6">
             <div className="space-y-1">
-              <h2 className="text-2xl font-normal tracking-tight">Platforms</h2>
+              <h2 className="text-2xl font-normal tracking-tight bricolage">Platforms</h2>
               <p className="text-sm text-muted-foreground font-normal">
                 Social platforms linked to your agency workspace.
               </p>
@@ -933,7 +933,7 @@ export default function AgencySettings() {
   return (
     <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-6 duration-1000">
       <div className="text-center space-y-2">
-        <h2 className="text-2xl font-normal tracking-tight">Get Started</h2>
+        <h2 className="text-2xl font-normal tracking-tight bricolage">Get Started</h2>
         <p className="text-muted-foreground text-sm font-normal">
           Choose how you want to initialize your agency profile.
         </p>

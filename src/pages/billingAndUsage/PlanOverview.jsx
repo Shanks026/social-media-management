@@ -20,7 +20,7 @@ export const PlanOverview = ({ sub, currentPlan, onUpgradeClick, isFree }) => {
               <Zap className="size-8" />
             </div>
             <div className="space-y-2 text-center sm:text-left">
-              <h2 className="text-3xl font-normal tracking-tight flex items-center justify-center sm:justify-start gap-2 text-muted-foreground">
+              <h2 className="text-3xl font-normal tracking-tight flex items-center justify-center sm:justify-start gap-2 text-muted-foreground bricolage">
                 Free
                 <span className="font-normal italic text-muted-foreground/40 text-3xl">
                   Subscription.
@@ -72,7 +72,7 @@ export const PlanOverview = ({ sub, currentPlan, onUpgradeClick, isFree }) => {
           </div>
 
           <div className="space-y-2 text-center sm:text-left">
-            <h2 className="text-3xl font-normal tracking-tight flex items-center justify-center sm:justify-start gap-2">
+            <h2 className="text-3xl font-normal tracking-tight flex items-center justify-center sm:justify-start gap-2 bricolage">
               {planName}
               <span className="font-normal italic text-muted-foreground/50 text-3xl">
                 Subscription.

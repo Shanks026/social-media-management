@@ -170,7 +170,7 @@ export default function ProspectsPage() {
         {/* ── Header ─────────────────────────────────────────────────────── */}
         <div className="flex items-end justify-between gap-4">
           <div className="space-y-1">
-            <h1 className="text-3xl font-normal tracking-tight text-foreground">
+            <h1 className="text-3xl font-normal tracking-tight text-foreground bricolage">
               Prospects{' '}
               {!isLoading && prospects.length > 0 && (
                 <span className="text-muted-foreground/50 ml-2 font-extralight">

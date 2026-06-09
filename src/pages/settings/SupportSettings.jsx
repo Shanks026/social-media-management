@@ -622,7 +622,7 @@ export default function SupportSettings() {
   return (
     <div className="w-full space-y-8">
       <div className="space-y-1">
-        <h2 className="text-2xl font-normal tracking-tight">Support</h2>
+        <h2 className="text-2xl font-normal tracking-tight bricolage">Support</h2>
         <p className="text-sm text-muted-foreground font-normal">
           Report a bug or share an idea — we read everything.
         </p>
@@ -646,7 +646,7 @@ export default function SupportSettings() {
         >
           <section className="space-y-8">
             <div className="space-y-1">
-              <h2 className="text-2xl font-normal tracking-tight">
+              <h2 className="text-2xl font-normal tracking-tight bricolage">
                 Report a Bug
               </h2>
               <p className="text-sm text-muted-foreground font-normal">
@@ -659,7 +659,7 @@ export default function SupportSettings() {
 
           <section className="space-y-6">
             <div className="space-y-1">
-              <h2 className="text-2xl font-normal tracking-tight">
+              <h2 className="text-2xl font-normal tracking-tight bricolage">
                 Your past reports
               </h2>
               <p className="text-sm text-muted-foreground font-normal">
@@ -676,7 +676,7 @@ export default function SupportSettings() {
         >
           <section className="space-y-8">
             <div className="space-y-1">
-              <h2 className="text-2xl font-normal tracking-tight">
+              <h2 className="text-2xl font-normal tracking-tight bricolage">
                 Share Feedback
               </h2>
               <p className="text-sm text-muted-foreground font-normal">
@@ -688,7 +688,7 @@ export default function SupportSettings() {
 
           <section className="space-y-6">
             <div className="space-y-1">
-              <h2 className="text-2xl font-normal tracking-tight">
+              <h2 className="text-2xl font-normal tracking-tight bricolage">
                 Your past suggestions
               </h2>
               <p className="text-sm text-muted-foreground font-normal">
