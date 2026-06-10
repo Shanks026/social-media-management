@@ -27,7 +27,14 @@ export function useSubscription() {
         .eq('user_id', workspaceUserId)
         .single()
 
-      if (subError) throw subError
+      if (subError) {
+        // PGRST116 = no rows returned by .single() — subscription record missing.
+        // This means the account was deleted while the user was logged in.
+        if (subError.code === 'PGRST116' || subError.status === 406) {
+          await supabase.auth.signOut()
+        }
+        throw subError
+      }
 
       const { count } = await supabase
         .from('clients')
@@ -162,5 +169,10 @@ export function useSubscription() {
       }
     },
     staleTime: 1000 * 60 * 5,
+    retry: (failureCount, error) => {
+      // Don't retry if the subscription record doesn't exist or auth is invalid
+      if (error?.code === 'PGRST116' || error?.status === 406 || error?.status === 401) return false
+      return failureCount < 1
+    },
   })
 }
