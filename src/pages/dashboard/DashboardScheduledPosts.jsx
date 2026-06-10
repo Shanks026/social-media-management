@@ -103,7 +103,7 @@ export default function DashboardScheduledPosts() {
   return (
     <Card className="border-none shadow-sm ring-1 ring-border/50 bg-card/50 dark:bg-card/30 flex flex-col gap-2 h-full">
       <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
-        <CardTitle className="text-lg font-medium">Upcoming Deliverables</CardTitle>
+        <CardTitle className="text-lg font-medium bricolage">Upcoming Deliverables</CardTitle>
         <Button variant="ghost" size="icon" className="h-8 w-8 -mr-2" onClick={() => navigate('/posts')}>
            <ArrowUpRight className="h-4 w-4" />
         </Button>

@@ -447,7 +447,7 @@ export default function OverviewTab({ client }) {
         {/* COLUMN 1: WORKFLOW HEALTH (moved to center) */}
         <Card className="border-none shadow-sm ring-1 ring-border/50 bg-card/50 flex flex-col h-auto">
           <CardHeader className="pb-2">
-            <CardTitle className="text-lg font-medium">Workflow Health</CardTitle>
+            <CardTitle className="text-lg font-medium bricolage">Workflow Health</CardTitle>
             <CardDescription>
               Pipeline distribution across statuses
             </CardDescription>
@@ -593,7 +593,7 @@ export default function OverviewTab({ client }) {
         ) : (
           <Card className="border-none shadow-sm ring-1 ring-border/50 bg-card/50 flex flex-col gap-2 h-full">
             <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
-              <CardTitle className="text-lg font-medium">
+              <CardTitle className="text-lg font-medium bricolage">
                 Recent Transactions
               </CardTitle>
               <Button
@@ -684,7 +684,7 @@ export default function OverviewTab({ client }) {
         <div className="grid gap-4" style={{ gridTemplateColumns: '50% 1fr' }}>
           <Card className="border-none shadow-sm ring-1 ring-border/50 bg-card/50 flex flex-col">
             <CardHeader>
-              <CardTitle className="text-lg font-medium">
+              <CardTitle className="text-lg font-medium bricolage">
                 Social Media Usage
               </CardTitle>
               <CardDescription>
@@ -739,7 +739,7 @@ export default function OverviewTab({ client }) {
 
           <Card className="border-none shadow-sm ring-1 ring-border/50 bg-card/50 flex flex-col gap-2">
             <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
-              <CardTitle className="text-lg font-medium">
+              <CardTitle className="text-lg font-medium bricolage">
                 Recent Transactions
               </CardTitle>
               <Button
@@ -834,7 +834,7 @@ export default function OverviewTab({ client }) {
       ) : (
         <Card className="border-none shadow-sm ring-1 ring-border/50 bg-card/50 flex flex-col">
           <CardHeader>
-            <CardTitle className="text-lg font-medium">
+            <CardTitle className="text-lg font-medium bricolage">
               Social Media Usage
             </CardTitle>
             <CardDescription>

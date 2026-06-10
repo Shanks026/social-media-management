@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams } from 'react-router-dom'
 import { format } from 'date-fns'
-import { CheckCircle2, XCircle, Loader2, AlertTriangle, Clock } from 'lucide-react'
+import { CheckCircle2, XCircle, Loader2, AlertTriangle, Clock, ExternalLink, Download } from 'lucide-react'
 import { toast } from 'sonner'
 
 import {
@@ -70,6 +70,7 @@ function BrandingHeader({ data }) {
           <span className="text-sm text-muted-foreground truncate">{data.title}</span>
         </>
       )}
+
     </div>
   )
 }
@@ -304,86 +305,137 @@ export default function ProposalReview() {
     proposal.client_name || proposal.prospect_name || null
   const agencyName = proposal.agency_name || 'the agency'
 
+  const fileUrl = proposal.proposal_type === 'uploaded' ? proposal.file_url : null
+  const showAgencyBranding = proposal.branding_agency_sidebar ?? false
+
   return (
     <div className="min-h-screen w-full">
-      <BrandingHeader data={proposal} />
+      <div className="max-w-5xl mx-auto px-6 lg:px-16 py-10 space-y-8">
 
-      <div className="max-w-5xl mx-auto px-6 lg:px-16 py-10">
-        {/* ── Proposal document ── */}
-        {proposal.proposal_type === 'uploaded' && proposal.file_url ? (
-          <div className="space-y-2">
-            <iframe
-              src={proposal.file_url}
-              className="w-full rounded-xl border border-border/50"
-              style={{ minHeight: '75vh' }}
-              title="Proposal PDF"
+        {/* ── Logo ── */}
+        <div className="flex items-center justify-between gap-4">
+          {/* Left: agency logo (Velocity/Quantum) or Tercero (Ignite) */}
+          {showAgencyBranding ? (
+            proposal.logo_horizontal_url ? (
+              <img
+                src={proposal.logo_horizontal_url}
+                alt={proposal.agency_name}
+                className="h-10 w-auto object-contain"
+                onError={(e) => (e.target.style.display = 'none')}
+              />
+            ) : proposal.logo_url ? (
+              <img
+                src={proposal.logo_url}
+                alt={proposal.agency_name}
+                className="h-10 w-10 object-contain rounded-md"
+                onError={(e) => (e.target.style.display = 'none')}
+              />
+            ) : (
+              <span className="text-lg font-semibold text-foreground">{proposal.agency_name}</span>
+            )
+          ) : (
+            <div
+              className="h-6 w-24 bg-foreground"
+              style={{
+                WebkitMaskImage: 'url(/TerceroLand.svg)',
+                WebkitMaskRepeat: 'no-repeat',
+                WebkitMaskSize: 'contain',
+                maskImage: 'url(/TerceroLand.svg)',
+                maskRepeat: 'no-repeat',
+                maskSize: 'contain',
+              }}
             />
-            <p className="text-center text-xs text-muted-foreground">
-              Can&apos;t see the PDF?{' '}
-              <a
-                href={proposal.file_url}
-                download
-                target="_blank"
-                rel="noreferrer"
-                className="underline underline-offset-2 hover:text-foreground"
-              >
-                Download it
-              </a>
-            </p>
+          )}
+
+          {/* Right: Tercero logo for Velocity (agency + Tercero co-brand) */}
+          {showAgencyBranding && showPoweredBy && (
+            <div
+              className="h-5 w-28 bg-foreground"
+              style={{
+                WebkitMaskImage: 'url(/TerceroLand.svg)',
+                WebkitMaskRepeat: 'no-repeat',
+                WebkitMaskSize: 'contain',
+                maskImage: 'url(/TerceroLand.svg)',
+                maskRepeat: 'no-repeat',
+                maskSize: 'contain',
+              }}
+            />
+          )}
+        </div>
+
+        {/* ── Title ── */}
+        <h1 className="text-3xl font-bold tracking-tight bricolage leading-tight">
+          {proposal.title}
+        </h1>
+
+        {/* ── Action bar ── */}
+        {actionState === 'accepted' ? (
+          <div className="flex items-start gap-4 rounded-2xl bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-900 px-6 py-5 animate-in fade-in zoom-in-95 duration-300">
+            <CheckCircle2 className="size-6 text-green-500 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-semibold text-green-800 dark:text-green-200">Proposal Accepted</p>
+              <p className="text-sm text-green-700 dark:text-green-300 mt-0.5">
+                {recipientName ? `Thank you, ${recipientName}. ` : 'Thank you. '}
+                {agencyName} will be in touch shortly.
+              </p>
+            </div>
+          </div>
+        ) : actionState === 'declined' ? (
+          <div className="flex items-start gap-4 rounded-2xl bg-muted/40 border border-border px-6 py-5 animate-in fade-in zoom-in-95 duration-300">
+            <XCircle className="size-6 text-muted-foreground/50 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-semibold text-foreground">Proposal Declined</p>
+              <p className="text-sm text-muted-foreground mt-0.5">
+                If you'd like to discuss further, please reach out to {agencyName} directly.
+              </p>
+            </div>
           </div>
         ) : (
-          <ProposalPreview proposal={previewProposal} agency={agencyForPreview} />
-        )}
-
-        {/* ── Action area ── */}
-        <div className="mt-10 pt-8 border-t border-border/50">
-          {actionState === 'accepted' ? (
-            <div className="flex items-start gap-4 rounded-2xl bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-900 px-6 py-5 animate-in fade-in zoom-in-95 duration-300">
-              <CheckCircle2 className="size-6 text-green-500 shrink-0 mt-0.5" />
-              <div>
-                <p className="text-sm font-semibold text-green-800 dark:text-green-200">Proposal Accepted</p>
-                <p className="text-sm text-green-700 dark:text-green-300 mt-0.5">
-                  {recipientName ? `Thank you, ${recipientName}. ` : 'Thank you. '}
-                  {agencyName} will be in touch shortly.
-                </p>
-              </div>
-            </div>
-          ) : actionState === 'declined' ? (
-            <div className="flex items-start gap-4 rounded-2xl bg-muted/40 border border-border px-6 py-5 animate-in fade-in zoom-in-95 duration-300">
-              <XCircle className="size-6 text-muted-foreground/50 shrink-0 mt-0.5" />
-              <div>
-                <p className="text-sm font-semibold text-foreground">Proposal Declined</p>
-                <p className="text-sm text-muted-foreground mt-0.5">
-                  If you'd like to discuss further, please reach out to {agencyName} directly.
-                </p>
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-4 flex flex-col items-center text-center">
-              <p className="text-sm text-muted-foreground max-w-sm">
-                By accepting, you confirm your agreement to the terms and scope outlined in this proposal.
-              </p>
-              <div className="flex flex-col sm:flex-row items-center gap-3">
-                <Button
-                  size="lg"
-                  className="gap-2 bg-green-600 hover:bg-green-700 text-white w-full sm:w-auto"
-                  onClick={() => setAcceptDialogOpen(true)}
-                >
-                  <CheckCircle2 className="size-4" />
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              By accepting, you confirm your agreement to the terms and scope outlined in this proposal.
+            </p>
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-2">
+                <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setAcceptDialogOpen(true)}>
+                  <CheckCircle2 className="size-3.5 text-emerald-500" />
                   Accept Proposal
                 </Button>
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="gap-2 w-full sm:w-auto"
-                  onClick={() => setDeclineDialogOpen(true)}
-                >
+                <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setDeclineDialogOpen(true)}>
                   Decline
                 </Button>
               </div>
+              {fileUrl && (
+                <div className="flex items-center gap-2">
+                  <a href={fileUrl} target="_blank" rel="noreferrer">
+                    <Button variant="outline" size="sm" className="gap-1.5">
+                      <ExternalLink className="size-3.5" />
+                      Open
+                    </Button>
+                  </a>
+                  <a href={fileUrl} download>
+                    <Button variant="outline" size="sm" className="gap-1.5">
+                      <Download className="size-3.5" />
+                      Download
+                    </Button>
+                  </a>
+                </div>
+              )}
             </div>
-          )}
-        </div>
+          </div>
+        )}
+
+        {/* ── Proposal document ── */}
+        {fileUrl ? (
+          <iframe
+            src={fileUrl}
+            className="w-full rounded-xl border border-border/50"
+            style={{ minHeight: '80vh' }}
+            title="Proposal PDF"
+          />
+        ) : (
+          <ProposalPreview proposal={previewProposal} agency={agencyForPreview} />
+        )}
       </div>
 
       <PoweredByFooter show={showPoweredBy} />

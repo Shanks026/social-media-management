@@ -16,7 +16,7 @@ export const UsageCard = ({
 }) => (
   <Card
     className={cn(
-      'border border-border/50 bg-card/30 shadow-sm rounded-2xl py-2 overflow-hidden transition-all',
+      'border rounded-2xl py-2 overflow-hidden transition-all shadow-none',
       status.border,
     )}
   >

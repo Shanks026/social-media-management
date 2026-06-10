@@ -65,12 +65,12 @@ export default function NotFound() {
       {/* Hero section */}
       <div className="flex flex-col items-center justify-center text-center px-8 py-20 min-h-[calc(100vh-65px)]">
         <div className="max-w-lg space-y-6">
-          <p className="text-8xl font-semibold tracking-tight text-muted-foreground/30">
+          <p className="text-8xl font-semibold tracking-tight text-muted-foreground/30 bricolage">
             404
           </p>
 
           <div className="space-y-3">
-            <h1 className="text-4xl font-semibold tracking-tight">
+            <h1 className="text-4xl font-semibold tracking-tight bricolage">
               Page not found.
               <br />
               <span className="font-normal text-muted-foreground">

@@ -6,8 +6,8 @@ import { useAuth } from '@/context/AuthContext'
 import { useSubscription } from '@/api/useSubscription'
 import { Button } from '@/components/ui/button'
 import { ChevronDown, LogOut } from 'lucide-react'
+import { plans } from '@/pages/billingAndUsage/planMeta'
 import {
-  plans,
   PlanCard,
   UpgradeRequestDialog,
 } from '@/pages/billingAndUsage/TertiarySubscriptionTab'

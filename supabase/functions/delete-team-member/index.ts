@@ -27,7 +27,7 @@ serve(async (req) => {
       { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
     )
 
-    // Admin client for deleting the auth user
+    // Admin client (service role) for bypassing RLS
     const adminClient = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
@@ -64,19 +64,16 @@ serve(async (req) => {
       })
     }
 
-    const memberUserId = member.member_user_id
-
-    // Delete the agency_members row first
+    // Delete the agency_members row — this is the only record we remove.
+    // The member's auth account is intentionally left intact so that any
+    // content they created (posts, notes, meetings, etc.) is preserved.
+    // Without an agency_members row they have no access to any workspace.
     const { error: deleteRowError } = await adminClient
       .from('agency_members')
       .delete()
       .eq('id', memberId)
 
     if (deleteRowError) throw deleteRowError
-
-    // Delete the auth user entirely
-    const { error: deleteAuthError } = await adminClient.auth.admin.deleteUser(memberUserId)
-    if (deleteAuthError) throw deleteAuthError
 
     return new Response(JSON.stringify({ success: true }), {
       status: 200,

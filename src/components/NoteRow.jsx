@@ -13,7 +13,11 @@ import {
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -84,6 +88,11 @@ export default function NoteRow({
       queryKey: ['client-notes', note.client_id],
     })
     queryClient.invalidateQueries({ queryKey: ['notes', 'week-timeline'] })
+    if (note.campaign_id) {
+      queryClient.invalidateQueries({
+        queryKey: ['campaign-notes', note.campaign_id],
+      })
+    }
   }
 
   const STATUS_TOASTS = {
@@ -130,9 +139,9 @@ export default function NoteRow({
   if (isCard) {
     return (
       <>
-        <div className="@container group bg-white dark:bg-card/50 rounded-2xl shadow-sm ring-1 ring-border/50 overflow-hidden">
+        <div className="@container group bg-white dark:bg-card/50 rounded-xl shadow-sm ring-1 ring-border/50 overflow-hidden flex flex-col h-full">
           {/* Main content */}
-          <div className="px-5 pt-5 pb-4">
+          <div className="px-5 pt-5 pb-4 flex flex-col flex-1">
             {/* Title row */}
             <div className="flex items-start gap-3 mb-1">
               {note.status !== 'ARCHIVED' ? (
@@ -167,6 +176,9 @@ export default function NoteRow({
                 {note.content}
               </p>
             )}
+
+            {/* Spacer pushes footer to bottom */}
+            <div className="flex-1" />
 
             {/* Divider */}
             <div className="border-t border-dashed border-border/60 mt-4 mb-3" />
@@ -297,7 +309,9 @@ export default function NoteRow({
                             <RotateCcw className="size-3.5" />
                           </Button>
                         </TooltipTrigger>
-                        <TooltipContent side="top" className="text-xs">Restore</TooltipContent>
+                        <TooltipContent side="top" className="text-xs">
+                          Restore
+                        </TooltipContent>
                       </Tooltip>
                     ) : (
                       <Tooltip delayDuration={400}>
@@ -312,7 +326,9 @@ export default function NoteRow({
                             <Archive className="size-3.5" />
                           </Button>
                         </TooltipTrigger>
-                        <TooltipContent side="top" className="text-xs">Archive</TooltipContent>
+                        <TooltipContent side="top" className="text-xs">
+                          Archive
+                        </TooltipContent>
                       </Tooltip>
                     )}
                     {note.status !== 'ARCHIVED' && (
@@ -328,7 +344,9 @@ export default function NoteRow({
                             <Pencil className="size-3.5" />
                           </Button>
                         </TooltipTrigger>
-                        <TooltipContent side="top" className="text-xs">Edit</TooltipContent>
+                        <TooltipContent side="top" className="text-xs">
+                          Edit
+                        </TooltipContent>
                       </Tooltip>
                     )}
                   </div>
@@ -344,7 +362,9 @@ export default function NoteRow({
                         <Trash2 className="size-3.5" />
                       </Button>
                     </TooltipTrigger>
-                    <TooltipContent side="top" className="text-xs">Delete</TooltipContent>
+                    <TooltipContent side="top" className="text-xs">
+                      Delete
+                    </TooltipContent>
                   </Tooltip>
                 </div>
               </div>

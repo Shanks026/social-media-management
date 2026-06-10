@@ -12,9 +12,23 @@ import { getDocumentSignedUrl } from '@/api/documents'
 import { formatDate, formatFileSize } from '@/lib/helper'
 import DocumentCategoryBadge from './DocumentCategoryBadge'
 
+const OFFICE_MIME_TYPES = [
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-powerpoint',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+]
+
 function isPreviewable(mimeType) {
   if (!mimeType) return false
-  return mimeType === 'application/pdf' || mimeType.startsWith('image/')
+  return (
+    mimeType === 'application/pdf' ||
+    mimeType.startsWith('image/') ||
+    mimeType.startsWith('video/') ||
+    OFFICE_MIME_TYPES.includes(mimeType)
+  )
 }
 
 /**
@@ -54,6 +68,8 @@ export default function DocumentPreviewModal({ doc, onOpenChange }) {
   const canPreview = doc ? isPreviewable(doc.mime_type) : false
   const isPdf = doc?.mime_type === 'application/pdf'
   const isImage = doc?.mime_type?.startsWith('image/')
+  const isVideo = doc?.mime_type?.startsWith('video/')
+  const isOffice = OFFICE_MIME_TYPES.includes(doc?.mime_type)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -104,7 +120,7 @@ export default function DocumentPreviewModal({ doc, onOpenChange }) {
             </div>
           )}
 
-          {signedUrl && canPreview && isPdf && (
+          {signedUrl && isPdf && (
             <iframe
               src={signedUrl}
               title={doc.display_name}
@@ -112,7 +128,7 @@ export default function DocumentPreviewModal({ doc, onOpenChange }) {
             />
           )}
 
-          {signedUrl && canPreview && isImage && (
+          {signedUrl && isImage && (
             <div className="absolute inset-0 flex items-center justify-center p-6">
               <img
                 src={signedUrl}
@@ -120,6 +136,24 @@ export default function DocumentPreviewModal({ doc, onOpenChange }) {
                 className="max-w-full max-h-full object-contain rounded-lg shadow-md"
               />
             </div>
+          )}
+
+          {signedUrl && isVideo && (
+            <div className="absolute inset-0 flex items-center justify-center p-6">
+              <video
+                src={signedUrl}
+                controls
+                className="max-w-full max-h-full rounded-lg shadow-md"
+              />
+            </div>
+          )}
+
+          {signedUrl && isOffice && (
+            <iframe
+              src={`https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(signedUrl)}`}
+              title={doc.display_name}
+              className="w-full h-full border-0"
+            />
           )}
 
           {signedUrl && !canPreview && (

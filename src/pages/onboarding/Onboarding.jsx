@@ -23,7 +23,7 @@ export default function OnboardingPage({ user, onComplete, onSkip }) {
       <div className="w-full min-h-screen bg-background flex flex-col items-center justify-center p-4">
         <div className="max-w-4xl w-full space-y-8 animate-in fade-in zoom-in-95 duration-500">
           <div className="space-y-1.5 text-center">
-            <h1 className="text-3xl font-medium tracking-tight">
+            <h1 className="text-3xl font-medium tracking-tight bricolage">
               Welcome to Tercero
             </h1>
             <p className="text-sm text-muted-foreground">
@@ -40,7 +40,7 @@ export default function OnboardingPage({ user, onComplete, onSkip }) {
                 <ShieldCheck className="size-4 text-primary" />
               </div>
               <div className="space-y-1.5 flex-1">
-                <h3 className="text-xl font-medium">Full setup</h3>
+                <h3 className="text-xl font-medium bricolage">Full setup</h3>
                 <p className="text-sm leading-relaxed text-muted-foreground">
                   Brand your workspace and create a free agency account for your own content. Recommended.
                 </p>
@@ -58,7 +58,7 @@ export default function OnboardingPage({ user, onComplete, onSkip }) {
                 <Sparkles className="size-4 text-muted-foreground" />
               </div>
               <div className="space-y-1.5 flex-1">
-                <h3 className="text-xl font-medium">Visual identity</h3>
+                <h3 className="text-xl font-medium bricolage">Visual identity</h3>
                 <p className="text-sm leading-relaxed text-muted-foreground">
                   Update the logo and name in your sidebar. You can set up your internal account later.
                 </p>
@@ -76,7 +76,7 @@ export default function OnboardingPage({ user, onComplete, onSkip }) {
                 <Rocket className="size-4 text-muted-foreground" />
               </div>
               <div className="space-y-1.5 flex-1">
-                <h3 className="text-xl font-medium">Explore first</h3>
+                <h3 className="text-xl font-medium bricolage">Explore first</h3>
                 <p className="text-sm leading-relaxed text-muted-foreground">
                   Head straight to your dashboard. You can customize your branding anytime from settings.
                 </p>

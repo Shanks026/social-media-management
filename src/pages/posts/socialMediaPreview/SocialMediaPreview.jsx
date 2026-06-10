@@ -41,7 +41,7 @@ export default function SocialMediaPreview({
         {/* Header */}
         <div className="px-6 py-4 border-b bg-background shrink-0 space-y-3">
           <div className="space-y-0.5">
-            <h2 className="text-lg font-medium tracking-tight text-foreground">
+            <h2 className="text-lg font-medium tracking-tight text-foreground bricolage">
               Social Media Preview
             </h2>
             <p className="text-xs font-medium text-muted-foreground tracking-wider">

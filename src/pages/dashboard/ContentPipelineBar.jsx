@@ -96,7 +96,7 @@ export default function ContentPipelineBar() {
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between">
           <div>
-            <CardTitle className="text-lg font-medium">
+            <CardTitle className="text-lg font-medium bricolage">
               Workflow Health
             </CardTitle>
             <CardDescription>
@@ -175,7 +175,7 @@ export default function ContentPipelineBar() {
                     </>
                   ) : (
                     <>
-                      <span className="text-3xl font-bold">{totalPosts}</span>
+                      <span className="text-3xl font-bold text-primary">{totalPosts}</span>
                       <span className="text-[11px] mt-1 text-muted-foreground font-medium uppercase tracking-wider">
                         Deliverables
                       </span>

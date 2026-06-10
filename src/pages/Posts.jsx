@@ -365,7 +365,7 @@ export default function Posts() {
       {/* ── Header ─────────────────────── */}
       <div className="flex items-center justify-between">
         <div className="space-y-1">
-          <h1 className="text-3xl font-normal tracking-tight text-foreground">
+          <h1 className="text-3xl font-normal tracking-tight text-foreground bricolage">
             Deliverables{' '}
             {filteredPosts.length > 0 && (
               <span className="text-muted-foreground/50 ml-2 font-extralight">
@@ -605,13 +605,9 @@ export default function Posts() {
           ) : filteredPosts.length === 0 ? (
             <Empty className="py-20 border border-dashed rounded-2xl bg-muted/5">
               <EmptyContent>
-                <EmptyMedia variant="icon">
-                  {hasActiveFilters ? (
-                    <Search className="size-6 text-muted-foreground/60" />
-                  ) : (
-                    <Newspaper className="size-6 text-muted-foreground/60" />
-                  )}
-                </EmptyMedia>
+                <div className="text-4xl leading-none select-none mb-2">
+                  {hasActiveFilters ? '🔍' : '📝'}
+                </div>
                 <EmptyHeader>
                   <EmptyTitle className="font-normal text-xl">
                     {hasActiveFilters

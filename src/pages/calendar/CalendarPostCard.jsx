@@ -19,6 +19,7 @@ import {
   FolderOpen,
   Megaphone,
   Plus,
+  FileText,
 } from 'lucide-react'
 import {
   Tooltip,
@@ -29,7 +30,7 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import { getUrgencyStatus } from '@/lib/client-helpers'
-import { getPublishState, renderCaption } from '@/lib/helper'
+import { getPublishState, renderCaption, isDocumentUrl, getDocumentExtension, getDocumentPreviewUrl } from '@/lib/helper'
 import StatusBadge from '@/components/StatusBadge'
 import {
   Dialog,
@@ -92,10 +93,34 @@ const isVideoSource = (url) => {
 }
 
 /**
- * Reusable Media Item to handle Video vs Image rendering
+ * Reusable Media Item to handle Video vs Image vs Document rendering
  */
 const MediaItem = ({ url, className, isPreview = false }) => {
   const isVideo = isVideoSource(url)
+  const isDoc = isDocumentUrl(url)
+
+  if (isDoc) {
+    if (isPreview) {
+      const previewUrl = getDocumentPreviewUrl(url)
+      if (previewUrl) {
+        return <iframe src={previewUrl} title="Document preview" className="w-full h-full border-0" />
+      }
+      return (
+        <div className="flex flex-col items-center justify-center h-full gap-3 text-white/70">
+          <FileText className="size-12 opacity-40" />
+          <p className="text-sm opacity-60">Preview not available</p>
+          <a href={url} target="_blank" rel="noopener noreferrer" className="text-xs underline opacity-70 hover:opacity-100">Open file</a>
+        </div>
+      )
+    }
+    const ext = getDocumentExtension(url)
+    return (
+      <div className={cn('h-full w-full flex flex-col items-center justify-center gap-1.5 bg-muted/60 p-2', className)}>
+        <FileText className="h-7 w-7 text-muted-foreground shrink-0" />
+        <p className="text-[10px] font-medium text-muted-foreground uppercase">{ext}</p>
+      </div>
+    )
+  }
 
   if (isVideo) {
     return (
@@ -341,29 +366,38 @@ export function CalendarPostCard({ post }) {
       )
     }
 
-    if (count === 1) return <MediaItem url={media[0]} />
+    if (count === 1)
+      return (
+        <div className="absolute inset-0">
+          <MediaItem url={media[0]} className="w-full h-full" />
+        </div>
+      )
 
     if (count === 2)
       return (
-        <div className="grid grid-cols-2 gap-0.5 w-full h-full">
+        <div className="absolute inset-0 grid grid-cols-2 gap-0.5">
           {media.map((url, i) => (
-            <MediaItem key={i} url={url} />
+            <div key={i} className="relative overflow-hidden">
+              <MediaItem url={url} className="absolute inset-0 w-full h-full" />
+            </div>
           ))}
         </div>
       )
 
     return (
-      <div className="grid grid-cols-2 gap-0.5 w-full h-full">
-        <MediaItem url={media[0]} />
-        <div className="grid grid-rows-2 gap-0.5 h-full overflow-hidden">
-          <MediaItem url={media[1]} />
-          <div className="relative h-full w-full">
-            <MediaItem url={media[2]} />
+      <div className="absolute inset-0 grid grid-cols-2 gap-0.5">
+        <div className="relative overflow-hidden">
+          <MediaItem url={media[0]} className="absolute inset-0 w-full h-full" />
+        </div>
+        <div className="grid grid-rows-2 gap-0.5">
+          <div className="relative overflow-hidden">
+            <MediaItem url={media[1]} className="absolute inset-0 w-full h-full" />
+          </div>
+          <div className="relative overflow-hidden">
+            <MediaItem url={media[2]} className="absolute inset-0 w-full h-full" />
             {count > 3 && (
               <div className="absolute inset-0 bg-black/60 flex items-center justify-center pointer-events-none">
-                <span className="text-white font-bold text-sm">
-                  +{count - 3}
-                </span>
+                <span className="text-white font-bold text-sm">+{count - 3}</span>
               </div>
             )}
           </div>

@@ -30,7 +30,7 @@ export default function VersionSidebar({
   return (
     <aside className="w-full lg:w-96 border-t lg:border-t-0 lg:border-l bg-muted/20 dark:bg-card/30 p-6 shrink-0 overflow-y-auto">
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-lg font-bold text-foreground">Version History</h2>
+        <h2 className="text-lg font-bold text-foreground bricolage">Version History</h2>
 
         <Button
           variant="ghost"

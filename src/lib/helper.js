@@ -54,6 +54,31 @@ export function renderCaption(text) {
   )
 }
 
+const DOCUMENT_EXTENSIONS = ['.pdf', '.doc', '.docx', '.ppt', '.pptx', '.xls', '.xlsx', '.zip', '.txt', '.fig', '.sketch', '.ai', '.eps']
+const OFFICE_EXTENSIONS = ['doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx']
+
+export function isDocumentUrl(url) {
+  if (!url || typeof url !== 'string') return false
+  const lower = url.toLowerCase().split('?')[0]
+  return DOCUMENT_EXTENSIONS.some((ext) => lower.endsWith(ext))
+}
+
+export function getDocumentExtension(url) {
+  if (!url) return 'FILE'
+  const lower = url.toLowerCase().split('?')[0]
+  const ext = DOCUMENT_EXTENSIONS.find((e) => lower.endsWith(e))
+  return ext ? ext.replace('.', '').toUpperCase() : 'FILE'
+}
+
+export function getDocumentPreviewUrl(url) {
+  if (!url) return null
+  const ext = getDocumentExtension(url).toLowerCase()
+  if (ext === 'pdf') return url
+  if (OFFICE_EXTENSIONS.includes(ext))
+    return `https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(url)}`
+  return null
+}
+
 /**
  * Format a date string into: 2 Jan, 2026
  */

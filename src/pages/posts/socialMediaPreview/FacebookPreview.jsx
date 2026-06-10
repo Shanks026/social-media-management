@@ -185,7 +185,7 @@ export default function FacebookPreview({ post, client }) {
   const timestamp = `${format(new Date(), 'EEEE')} at ${format(new Date(), 'h:mm a')}`
 
   return (
-    <div className="w-full max-w-[420px] mx-auto rounded-xl overflow-hidden bg-white dark:bg-[#242526] border border-zinc-200 dark:border-zinc-700 shadow-xl">
+    <div className="w-full max-w-[420px] mx-auto rounded-xl overflow-hidden bg-white dark:bg-[#242526] border border-zinc-200 dark:border-zinc-700">
 
       {/* Header */}
       <div className="flex items-start justify-between px-3 pt-3 pb-2">

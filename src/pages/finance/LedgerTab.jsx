@@ -238,7 +238,7 @@ export default function LedgerTab({ clientId, subTabs }) {
         {subTabs ? (
           subTabs
         ) : (
-          <span className="text-3xl font-normal">Ledger - Transactions</span>
+          <span className="text-2xl font-normal bricolage">Ledger - Transactions</span>
         )}
 
         <div className="flex items-center gap-3 w-full md:w-auto">

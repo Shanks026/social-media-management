@@ -13,7 +13,7 @@ import {
   FileText,
 } from 'lucide-react'
 
-import { createDraftPost, updatePost } from '@/api/posts'
+import { createDraftPost, updatePost, cleanupRemovedMedia } from '@/api/posts'
 import { uploadPostImage } from '@/api/storage'
 import { fetchClientById } from '@/api/clients'
 import { fetchActiveCampaignsByClient } from '@/api/campaigns'
@@ -63,7 +63,6 @@ import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { format, setHours, setMinutes } from 'date-fns'
 import { useAuth } from '@/context/AuthContext'
-import { supabase } from '@/lib/supabase'
 import { useSubscription } from '@/api/useSubscription'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -239,6 +238,7 @@ export default function DraftPostForm({
   const isStorageFull = subscription?.storage_display?.percent >= 100
 
   const [isSocialMode, setIsSocialMode] = useState(false)
+  const hasNonMediaFiles = previews.some((p) => p.type === 'document')
   const [perPlatformMode, setPerPlatformMode] = useState(false)
   // { [platformId]: { date: Date | null, time: '09:00' } }
   const [platformSchedulesState, setPlatformSchedulesState] = useState({})
@@ -411,6 +411,12 @@ export default function DraftPostForm({
     }
   }
 
+  useEffect(() => {
+    if (hasNonMediaFiles && isSocialMode) {
+      handleSocialModeToggle(false)
+    }
+  }, [hasNonMediaFiles]) // eslint-disable-line react-hooks/exhaustive-deps
+
   function handlePerPlatformToggle(checked) {
     if (checked) {
       const currentDate = form.getValues('target_date')
@@ -485,15 +491,7 @@ export default function DraftPostForm({
         const urlsToRemove = initialUrls.filter(
           (url) => !currentUrls.includes(url),
         )
-
-        if (urlsToRemove.length > 0) {
-          const pathsToRemove = urlsToRemove
-            .map((url) => url.split('/post-media/')[1])
-            .filter(Boolean)
-          if (pathsToRemove.length > 0) {
-            await supabase.storage.from('post-media').remove(pathsToRemove)
-          }
-        }
+        await cleanupRemovedMedia(urlsToRemove)
       }
 
       const uploadPromises = (values.images || []).map((file) =>
@@ -644,14 +642,14 @@ export default function DraftPostForm({
       open={open}
       onOpenChange={(val) => (!val ? resetAndClose() : onOpenChange(val))}
     >
-      <DialogContent className="sm:max-w-none w-[70vw] max-h-[80vh] h-[80vh] flex flex-col p-0 overflow-hidden">
+      <DialogContent className="sm:max-w-none w-[70vw] max-h-[90vh] h-[90vh] flex flex-col p-0 overflow-hidden">
         <Form {...form}>
           <form
             onSubmit={form.handleSubmit(onSubmit)}
             className="flex flex-1 min-h-0"
           >
             {/* ===== LEFT PANEL: Add Media ===== */}
-            <div className="w-[50%] shrink-0 border-r flex flex-col p-8 gap-6 overflow-y-auto bg-muted/20">
+            <div className="w-[50%] shrink-0 border-r flex flex-col p-6 gap-4 overflow-y-auto bg-muted/20">
               <div className="flex items-center justify-between">
                 <h2 className="text-base font-semibold tracking-tight">
                   Add Media
@@ -669,7 +667,7 @@ export default function DraftPostForm({
               {/* Drop Zone */}
               <div
                 className={cn(
-                  'flex-1 min-h-[200px] border-2 border-dashed rounded-2xl flex flex-col items-center justify-center gap-4 p-10 cursor-pointer transition-all',
+                  'h-[180px] shrink-0 border-2 border-dashed rounded-xl flex flex-col items-center justify-center gap-3 p-6 cursor-pointer transition-all',
                   isDragging
                     ? 'border-primary bg-primary/5'
                     : 'border-border hover:border-primary/40 hover:bg-accent/40',
@@ -696,9 +694,9 @@ export default function DraftPostForm({
                 onDragLeave={() => setIsDragging(false)}
                 onDrop={handleDrop}
               >
-                <div className="rounded-full border bg-background p-4 shadow-sm">
-                  <Upload className="h-7 w-7 text-muted-foreground" />
-                </div>
+                {/* <div className="rounded-full border bg-background p-3 shadow-sm">
+                  <Upload className="h-5 w-5 text-muted-foreground" />
+                </div> */}
                 <div className="text-center space-y-1.5">
                   <p className="text-sm font-medium text-foreground">
                     {previews.length >= (isYoutubeSelected ? 1 : MAX_FILES)
@@ -746,7 +744,7 @@ export default function DraftPostForm({
               {previews.length > 0 && (
                 <div className="space-y-3">
                   <p className="text-sm font-medium">Uploaded Media</p>
-                  <div className="grid grid-cols-3 gap-3">
+                  <div className="grid grid-cols-2 gap-3">
                     {previews.map((item, index) => (
                       <div
                         key={item.url}
@@ -796,9 +794,7 @@ export default function DraftPostForm({
                 accept={
                   isYoutubeSelected
                     ? 'video/*'
-                    : isSocialMode
-                      ? 'image/*,video/*'
-                      : 'image/*,video/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/zip,.docx,.pptx,.xlsx,.fig,.sketch,.ai,.eps'
+                    : 'image/*,video/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,.docx,.pptx,.xlsx,.doc,.xls,.txt,.zip'
                 }
                 className="hidden"
                 ref={fileInputRef}
@@ -809,7 +805,7 @@ export default function DraftPostForm({
             {/* ===== RIGHT PANEL: Form ===== */}
             <div className="flex-1 flex flex-col min-h-0">
               <DialogHeader className="px-8 py-6 shrink-0 border-b gap-1">
-                <DialogTitle className="text-lg">
+                <DialogTitle className="text-lg bricolage">
                   {isEditMode ? 'Edit Deliverable' : 'Create a Deliverable'}
                 </DialogTitle>
                 {!isEditMode && (
@@ -982,14 +978,22 @@ export default function DraftPostForm({
                     <Checkbox
                       id="social-mode"
                       checked={isSocialMode}
+                      disabled={hasNonMediaFiles}
                       onCheckedChange={handleSocialModeToggle}
                     />
-                    <label
-                      htmlFor="social-mode"
-                      className="text-sm font-medium cursor-pointer select-none"
-                    >
-                      Schedule for a social platform
-                    </label>
+                    <div className="flex flex-col gap-0.5">
+                      <label
+                        htmlFor="social-mode"
+                        className={cn('text-sm font-medium select-none', hasNonMediaFiles ? 'cursor-not-allowed text-muted-foreground' : 'cursor-pointer')}
+                      >
+                        Schedule for a social platform
+                      </label>
+                      {hasNonMediaFiles && (
+                        <p className="text-xs text-muted-foreground">
+                          Remove non-media files to enable social scheduling.
+                        </p>
+                      )}
+                    </div>
                   </div>
 
                   {/* ── General deliverable fields (no platform) ── */}

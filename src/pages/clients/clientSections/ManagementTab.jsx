@@ -84,13 +84,13 @@ export default function ManagementTab({ client }) {
   const platforms = client.platforms || []
 
   return (
-    <div className="max-w-4xl mx-auto space-y-14 py-4 animate-in fade-in slide-in-from-bottom-4 duration-700">
+    <div className="max-w-4xl mx-auto space-y-8 py-4 animate-in fade-in slide-in-from-bottom-4 duration-700">
       {/* 1. Client Profile Row */}
       <section className="space-y-8">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="space-y-1">
-            <h2 className="text-2xl font-normal tracking-tight">
-              Client Profile
+            <h2 className="text-2xl font-normal tracking-tight bricolage">
+              {client.is_internal ? 'Agency Settings' : 'Client Profile'}
             </h2>
             <p className="text-sm text-muted-foreground font-normal">
               {client.description ||
@@ -128,7 +128,7 @@ export default function ManagementTab({ client }) {
         {/* Row 2: Details */}
         <div className="space-y-6">
           <div className="space-y-1">
-            <h3 className="text-xl font-medium tracking-tight">
+            <h3 className="text-xl font-medium tracking-tight bricolage">
               {client.name}
             </h3>
             <p className="text-sm text-muted-foreground">
@@ -239,7 +239,7 @@ export default function ManagementTab({ client }) {
       {/* 2. Platforms */}
       <section className="space-y-6">
         <div className="space-y-1">
-          <h2 className="text-2xl font-normal tracking-tight">Platforms</h2>
+          <h2 className="text-2xl font-normal tracking-tight bricolage">Platforms</h2>
           <p className="text-sm text-muted-foreground font-normal">
             Social platforms linked to this workspace.
           </p>
@@ -279,7 +279,7 @@ export default function ManagementTab({ client }) {
       {/* 3. Danger Zone */}
       <section className="space-y-6">
         <div className="space-y-1">
-          <h2 className="text-lg font-medium text-destructive tracking-tight">
+          <h2 className="text-2xl font-medium text-destructive tracking-tight bricolage">
             Danger Zone
           </h2>
           <p className="text-sm text-muted-foreground font-normal">

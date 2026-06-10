@@ -24,17 +24,20 @@ export default function BillingUsage() {
   useEffect(() => {
     setHeader({
       title: 'Billing & Usage',
-      breadcrumbs: [{ label: 'Billing & Usage' }],
+      breadcrumbs: [
+        { label: 'Settings', href: '/settings' },
+        { label: 'Billing & Usage' },
+      ],
     })
   }, [setHeader])
 
   return (
     <div className="h-full bg-background overflow-y-auto overflow-x-hidden selection:bg-primary/10 [scrollbar-gutter:stable]">
       <div className="overflow-hidden">
-        <div className="px-8 pt-8 pb-20 space-y-8 max-w-[1400px] mx-auto animate-in fade-in slide-in-from-bottom-4 duration-700 fill-mode-both">
+        <div className="px-8 pt-8 pb-20 space-y-8 max-w-[1400px] mx-auto animate-in fade-in duration-700 fill-mode-both">
           {/* PAGE HEADER */}
           <div className="space-y-1">
-            <h1 className="text-3xl font-normal tracking-tight text-foreground">
+            <h1 className="text-3xl font-normal tracking-tight text-foreground bricolage">
               Billing & Usage
             </h1>
             <p className="text-sm text-muted-foreground font-normal">
@@ -47,7 +50,7 @@ export default function BillingUsage() {
             onValueChange={handleTabChange}
             className="space-y-10"
           >
-            <TabsList className="bg-transparent border-b border-white/5 rounded-none p-0 h-auto gap-8 w-full justify-start">
+            <TabsList className="bg-transparent border-b border-border/40 rounded-none p-0 h-auto gap-8 w-full justify-start">
               {[
                 { value: 'usage', icon: BarChart3, label: 'Usage' },
                 { value: 'subscription', icon: CreditCard, label: 'Subscription' },

@@ -54,8 +54,8 @@ export default function MeetingRow({
 
   if (isCard) {
     return (
-      <div className="@container group bg-white dark:bg-card/50 rounded-2xl shadow-sm ring-1 ring-border/50 overflow-hidden">
-        <div className="px-5 pt-5 pb-4">
+      <div className="@container group bg-white dark:bg-card/50 rounded-xl shadow-sm ring-1 ring-border/50 overflow-hidden flex flex-col h-full">
+        <div className="px-5 pt-5 pb-4 flex flex-col flex-1">
           {/* Header: date block + title + badge */}
           <div className="flex items-start gap-4 mb-2">
             <div className="flex flex-col items-center justify-center w-12 h-12 shrink-0 rounded-xl border border-border bg-muted/40 mt-0.5">
@@ -91,7 +91,7 @@ export default function MeetingRow({
           </div>
 
           {/* Notes */}
-          <div className="mt-2 pl-16">
+          <div className="mt-2 pl-16 flex-1">
             {meeting.notes ? (
               <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
                 {meeting.notes}
@@ -133,6 +133,7 @@ export default function MeetingRow({
                   editMeeting={meeting}
                   defaultClientId={meeting.client_id}
                   lockClient={true}
+                  campaignId={meeting.campaign_id ?? null}
                 >
                   <Button
                     variant="ghost"

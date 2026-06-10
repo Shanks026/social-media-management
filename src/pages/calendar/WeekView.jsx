@@ -90,7 +90,7 @@ export default function WeekView({ currentMonth, postsByDate, clientId }) {
             </p>
             <span
               className={cn(
-                'text-md font-extrabold px-2 py-0.5 rounded-lg',
+                'text-md font-medium px-2 py-0.5 rounded-lg',
                 isToday(day)
                   ? 'bg-primary text-primary-foreground'
                   : 'text-foreground',
