@@ -42,13 +42,15 @@ import {
 function FeatureChip({ icon: Icon, label, accent = false }) {
   return (
     <Badge
-      variant="secondary"
+      variant="outline"
       className={cn(
-        'gap-2 rounded-full px-4 py-2 text-sm font-medium',
-        accent ? 'bg-primary/10 text-primary hover:bg-primary/10' : 'bg-muted text-foreground/80 hover:bg-muted',
+        'gap-2 rounded-full px-4 py-2 text-sm font-medium transition-opacity hover:opacity-75',
+        accent
+          ? 'bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-200'
+          : 'bg-gray-100 dark:bg-gray-800 border-none text-gray-600 dark:text-gray-400',
       )}
     >
-      <Icon className="size-5 shrink-0" />
+      <Icon className="size-4 shrink-0" />
       {label}
     </Badge>
   )
@@ -76,11 +78,11 @@ export default function WelcomeCarousel({ open, onOpenChange, user }) {
       emoji: '🎯',
       buttonText: 'Continue',
       chips: [
-        { icon: Target,         label: 'Prospect pipeline',    accent: true },
-        { icon: TrendingUp,     label: 'Status tracking' },
-        { icon: FileText,       label: 'Proposals to prospects' },
-        { icon: UserRoundPlus,  label: 'Convert to client',    accent: true },
-        { icon: Handshake,      label: 'Engagement types' },
+        { icon: Target,        label: 'Prospect pipeline',    color: 'violet', accent: true },
+        { icon: TrendingUp,    label: 'Status tracking',      color: 'sky' },
+        { icon: FileText,      label: 'Proposals to prospects', color: 'amber' },
+        { icon: UserRoundPlus, label: 'Convert to client',    color: 'emerald', accent: true },
+        { icon: Handshake,     label: 'Engagement types',     color: 'teal' },
       ],
     },
     {
@@ -90,11 +92,11 @@ export default function WelcomeCarousel({ open, onOpenChange, user }) {
       emoji: '🤝',
       buttonText: 'Continue',
       chips: [
-        { icon: BarChart3,    label: 'Pipeline health' },
-        { icon: Clock,        label: 'Urgency indicators' },
-        { icon: Tag,          label: 'Tiers & industries' },
-        { icon: Building2,    label: 'Internal account' },
-        { icon: Archive,      label: 'Archive & restore' },
+        { icon: BarChart3,  label: 'Pipeline health',    color: 'violet' },
+        { icon: Clock,      label: 'Urgency indicators', color: 'amber' },
+        { icon: Tag,        label: 'Tiers & industries', color: 'sky' },
+        { icon: Building2,  label: 'Internal account',   color: 'teal' },
+        { icon: Archive,    label: 'Archive & restore',  color: 'rose' },
       ],
     },
     {
@@ -104,11 +106,11 @@ export default function WelcomeCarousel({ open, onOpenChange, user }) {
       emoji: '✍️',
       buttonText: 'Continue',
       chips: [
-        { icon: GitBranch,    label: 'Post versioning' },
-        { icon: CalendarCheck,label: 'Status lifecycle' },
-        { icon: Globe,        label: 'Platform targeting' },
-        { icon: Image,        label: 'Media uploads' },
-        { icon: RefreshCw,    label: 'Revision tracking' },
+        { icon: GitBranch,     label: 'Post versioning',     color: 'violet' },
+        { icon: CalendarCheck, label: 'Status lifecycle',    color: 'sky' },
+        { icon: Globe,         label: 'Platform targeting',  color: 'teal' },
+        { icon: Image,         label: 'Media uploads',       color: 'amber' },
+        { icon: RefreshCw,     label: 'Revision tracking',   color: 'rose' },
       ],
     },
     {
@@ -118,10 +120,10 @@ export default function WelcomeCarousel({ open, onOpenChange, user }) {
       emoji: '✅',
       buttonText: 'Continue',
       chips: [
-        { icon: MousePointer2, label: 'Magic review link',    accent: true },
-        { icon: CheckSquare,   label: 'One-click approve' },
-        { icon: Send,          label: 'Campaign review link', accent: true },
-        { icon: ShieldCheck,   label: 'Per-post tokens' },
+        { icon: MousePointer2, label: 'Magic review link',    color: 'violet', accent: true },
+        { icon: CheckSquare,   label: 'One-click approve',    color: 'emerald' },
+        { icon: Send,          label: 'Campaign review link', color: 'sky', accent: true },
+        { icon: ShieldCheck,   label: 'Per-post tokens',      color: 'amber' },
       ],
     },
     {
@@ -131,12 +133,12 @@ export default function WelcomeCarousel({ open, onOpenChange, user }) {
       emoji: '📣',
       buttonText: 'Continue',
       chips: [
-        { icon: Megaphone,    label: 'Campaign grouping' },
-        { icon: BarChart3,    label: 'KPI dashboard' },
-        { icon: Banknote,     label: 'Budget tracker' },
-        { icon: PieChart,     label: 'Platform distribution' },
-        { icon: Calendar,     label: 'Content calendar' },
-        { icon: FileDown,     label: 'PDF calendar export',  accent: true },
+        { icon: Megaphone, label: 'Campaign grouping',      color: 'violet' },
+        { icon: BarChart3, label: 'KPI dashboard',          color: 'sky' },
+        { icon: Banknote,  label: 'Budget tracker',         color: 'emerald' },
+        { icon: PieChart,  label: 'Platform distribution',  color: 'teal' },
+        { icon: Calendar,  label: 'Content calendar',       color: 'amber' },
+        { icon: FileDown,  label: 'PDF calendar export',    color: 'rose', accent: true },
       ],
     },
     {
@@ -146,12 +148,12 @@ export default function WelcomeCarousel({ open, onOpenChange, user }) {
       emoji: '💰',
       buttonText: 'Continue',
       chips: [
-        { icon: FileText,     label: 'Proposals',             accent: true },
-        { icon: Globe,        label: 'Public proposal link' },
-        { icon: Receipt,      label: 'PDF invoices',          accent: true },
-        { icon: CreditCard,   label: 'Expense tracking' },
-        { icon: List,         label: 'Transaction ledger' },
-        { icon: RefreshCw,    label: 'Recurring templates' },
+        { icon: FileText,   label: 'Proposals',             color: 'violet', accent: true },
+        { icon: Globe,      label: 'Public proposal link',  color: 'sky' },
+        { icon: Receipt,    label: 'PDF invoices',          color: 'emerald', accent: true },
+        { icon: CreditCard, label: 'Expense tracking',      color: 'amber' },
+        { icon: List,       label: 'Transaction ledger',    color: 'teal' },
+        { icon: RefreshCw,  label: 'Recurring templates',   color: 'rose' },
       ],
     },
     {
@@ -161,10 +163,10 @@ export default function WelcomeCarousel({ open, onOpenChange, user }) {
       emoji: '🎉',
       buttonText: 'Get started',
       chips: [
-        { icon: Users,        label: 'Team workspace' },
-        { icon: FolderOpen,   label: 'Document storage' },
-        { icon: Bell,         label: 'Notes & reminders' },
-        { icon: Calendar,     label: 'Meetings' },
+        { icon: Users,      label: 'Team workspace',     color: 'violet' },
+        { icon: FolderOpen, label: 'Document storage',   color: 'sky' },
+        { icon: Bell,       label: 'Notes & reminders',  color: 'amber' },
+        { icon: Calendar,   label: 'Meetings',           color: 'emerald' },
       ],
     },
   ]
@@ -234,6 +236,7 @@ export default function WelcomeCarousel({ open, onOpenChange, user }) {
                       key={chip.label}
                       icon={chip.icon}
                       label={chip.label}
+                      color={chip.color}
                       accent={chip.accent ?? false}
                     />
                   ))}

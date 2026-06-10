@@ -18,12 +18,28 @@ export default function OnboardingPage({ user, onComplete, onSkip }) {
     }
   }
 
+  // Derive the user's display name
+  const firstName = (() => {
+    const fullName = user?.user_metadata?.full_name
+    if (fullName) return fullName.split(' ')[0]
+    const emailUser = user?.email?.split('@')[0]
+    if (emailUser) return emailUser.charAt(0).toUpperCase() + emailUser.slice(1)
+    return null
+  })()
+
   // CHOICE VIEW
   if (!mode) {
     return (
       <div className="w-full min-h-screen bg-background flex flex-col items-center justify-center p-4">
-        <div className="max-w-4xl w-full space-y-8 animate-in fade-in zoom-in-95 duration-500">
-          <div className="space-y-2 text-center">
+        <div className="max-w-4xl w-full space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="space-y-3 text-center">
+            {firstName && (
+              <p className="text-sm font-medium text-muted-foreground tracking-wide animate-in fade-in slide-in-from-bottom-2 duration-700">
+                Hey,{' '}
+                <span className="text-foreground font-semibold">{firstName}</span>
+                {' '}👋
+              </p>
+            )}
             <h1 className="text-4xl font-semibold tracking-tight bricolage">
               The command center for your agency.
             </h1>

@@ -685,7 +685,7 @@ export default function CreateClientPage({
                 </Label>
                 <Input
                   {...form.register('contact_name')}
-                  placeholder="e.g. Priya Sharma"
+                  placeholder="e.g. Jacob Brown"
                 />
               </div>
 
@@ -707,7 +707,7 @@ export default function CreateClientPage({
                 </Label>
                 <Input
                   {...form.register('location')}
-                  placeholder="e.g. Mumbai"
+                  placeholder="e.g. Chennai"
                 />
               </div>
             </div>
