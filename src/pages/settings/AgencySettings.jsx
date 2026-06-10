@@ -674,13 +674,13 @@ export default function AgencySettings() {
       <>
         <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in duration-700">
           {/* Compact workspace banner */}
-          <div className="rounded-xl border border-primary/20 bg-muted/30 px-6 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/40 px-6 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="space-y-0.5">
-              <p className="text-sm font-semibold text-foreground flex items-center gap-2">
-                <Zap size={13} className="text-primary" fill="currentColor" />
+              <p className="text-sm font-semibold text-amber-800 dark:text-amber-300 flex items-center gap-2">
+                <Zap size={13} fill="currentColor" />
                 Workspace not initialized
               </p>
-              <p className="text-xs text-muted-foreground font-normal">
+              <p className="text-xs text-amber-700/70 dark:text-amber-400/70 font-normal">
                 Activate your operational workspace to manage your agency&apos;s
                 social media.
               </p>
