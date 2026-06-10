@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 
 const AuthContext = createContext({
@@ -7,6 +7,7 @@ const AuthContext = createContext({
   loading: true,
   workspaceUserId: null,
   userRole: null,
+  signOut: async () => {},
 })
 
 export const AuthProvider = ({ children }) => {
@@ -15,6 +16,18 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true)
   const [workspaceUserId, setWorkspaceUserId] = useState(null)
   const [userRole, setUserRole] = useState(null)
+
+  const clearAuthState = useCallback(() => {
+    setSession(null)
+    setUser(null)
+    setWorkspaceUserId(null)
+    setUserRole(null)
+  }, [])
+
+  const signOut = useCallback(async () => {
+    await supabase.auth.signOut()
+    clearAuthState()
+  }, [clearAuthState])
 
   const resolveWorkspace = async (uid) => {
     if (!uid) {
@@ -34,7 +47,7 @@ export const AuthProvider = ({ children }) => {
       setWorkspaceUserId(data.agency_user_id)
       setUserRole(data.system_role)
     } else {
-      // Fallback: treat as their own workspace (e.g. before agency_members row exists)
+      // Workspace owner: no agency_members row yet
       setWorkspaceUserId(uid)
       setUserRole('admin')
     }
@@ -54,17 +67,25 @@ export const AuthProvider = ({ children }) => {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session)
-      setUser(session?.user ?? null)
-      resolveWorkspace(session?.user?.id ?? null)
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_OUT') {
+        clearAuthState()
+      } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        setSession(session)
+        setUser(session?.user ?? null)
+        resolveWorkspace(session?.user?.id ?? null)
+      } else {
+        setSession(session)
+        setUser(session?.user ?? null)
+        if (session?.user?.id) resolveWorkspace(session.user.id)
+      }
     })
 
     return () => subscription.unsubscribe()
   }, [])
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, workspaceUserId, userRole, refreshWorkspace }}>
+    <AuthContext.Provider value={{ user, session, loading, workspaceUserId, userRole, refreshWorkspace, signOut }}>
       {!loading && children}
     </AuthContext.Provider>
   )

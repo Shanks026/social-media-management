@@ -47,8 +47,11 @@ function PublicOnlyRoute({ children }) {
 
 function TrialGuardedShell({ user }) {
   const { workspaceUserId } = useAuth()
-  const { data: sub, isLoading } = useSubscription()
+  const { data: sub, isLoading, error } = useSubscription()
   if (!workspaceUserId || isLoading) return null
+  // If subscription fetch fails (e.g. account deleted), signOut was already called in
+  // useSubscription — just return null and let the auth state change redirect to /login.
+  if (error) return null
   if (sub?.is_trial_locked) return <Navigate to="/trial-expired" replace />
   if (sub?.is_sub_locked) return <Navigate to="/subscription-expired" replace />
   return <AppShell user={user} />

@@ -38,8 +38,6 @@ import {
   Zap,
   HardDrive,
   Layout,
-  Palette,
-  Rocket,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -167,7 +165,7 @@ export default function MyOrganization() {
               <div className="p-8 lg:p-12 grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
                 <div className="lg:col-span-7 space-y-6">
                   <div className="space-y-3">
-                    <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-primary/5 border border-primary/10 text-primary text-[10px] font-semibold uppercase tracking-wider">
+                    <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-green-100 dark:bg-green-950/60 text-green-700 dark:text-green-400 text-[10px] font-semibold uppercase tracking-wider">
                       <Zap size={12} fill="currentColor" /> Ready to Deploy
                     </div>
                     <h2 className="text-3xl font-normal tracking-tight bricolage">
@@ -234,7 +232,7 @@ export default function MyOrganization() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
               {/* Option 1: Branding Only */}
               <ChoiceCard
-                icon={<Palette className="size-4" />}
+                icon="🎨"
                 title="Identity Branding"
                 description="Set your agency name and logo. Perfect if you just want to white-label your reports and portal."
                 onClick={() => handleOpenSetup('branding')}
@@ -242,7 +240,7 @@ export default function MyOrganization() {
 
               {/* Option 2: Full Setup */}
               <ChoiceCard
-                icon={<Rocket className="size-4" />}
+                icon="🚀"
                 title="Operational Workspace"
                 description="Full identity setup plus a dedicated internal account for managing your own agency's social media."
                 highlight
@@ -313,16 +311,7 @@ function ChoiceCard({ icon, title, description, onClick, highlight = false }) {
           : 'border-border/60 bg-muted/30 hover:bg-muted/50 hover:border-border',
       )}
     >
-      <div
-        className={cn(
-          'size-9 rounded-lg flex items-center justify-center',
-          highlight
-            ? 'bg-primary/10 text-primary'
-            : 'bg-muted text-muted-foreground',
-        )}
-      >
-        {icon}
-      </div>
+      <span className="text-3xl">{icon}</span>
       <div className="space-y-1.5 flex-1">
         <h3 className="text-xl font-medium">{title}</h3>
         <p className="text-sm text-muted-foreground leading-relaxed">
