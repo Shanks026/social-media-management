@@ -49,6 +49,8 @@ import {
   Rocket,
   Ban,
   X,
+  Mail,
+  Phone,
 } from 'lucide-react'
 
 // ─── Schemas ───────────────────────────────────────────────────────────────────
@@ -620,15 +622,36 @@ function SuggestionForm() {
 
 export default function SupportSettings() {
   return (
-    <div className="w-full space-y-8">
-      <div className="space-y-1">
-        <h2 className="text-2xl font-normal tracking-tight">Support</h2>
-        <p className="text-sm text-muted-foreground font-normal">
-          Report a bug or share an idea — we read everything.
-        </p>
-      </div>
+    <div className="max-w-4xl mx-auto space-y-12 animate-in fade-in duration-700">
+      <section className="space-y-4">
+        <div className="space-y-1">
+          <h2 className="text-2xl font-normal tracking-tight bricolage">Contact Us</h2>
+          <p className="text-sm text-muted-foreground font-normal">
+            Reach out directly and we'll get back to you as soon as possible.
+          </p>
+        </div>
+        <div className="flex flex-row gap-12">
+          <a
+            href="mailto:chrisaustin2001@gmail.com"
+            className="group w-fit space-y-0.5"
+          >
+            <p className="flex items-center gap-1.5 text-xs text-muted-foreground font-normal">
+              <Mail className="size-3" />
+              Email
+            </p>
+            <p className="text-sm font-medium group-hover:text-primary transition-colors">chrisaustin2001@gmail.com</p>
+          </a>
+          <div className="space-y-0.5">
+            <p className="flex items-center gap-1.5 text-xs text-muted-foreground font-normal">
+              <Phone className="size-3" />
+              Phone
+            </p>
+            <p className="text-sm font-medium">+1 (000) 000-0000</p>
+          </div>
+        </div>
+      </section>
 
-      <Tabs defaultValue="bug" className="space-y-10">
+      <Tabs defaultValue="bug" className="space-y-6">
         <TabsList className="grid grid-cols-2 h-8 w-full sm:max-w-xs text-xs">
           <TabsTrigger value="bug" className="gap-1.5 text-xs">
             <Bug className="size-3" />
@@ -646,7 +669,7 @@ export default function SupportSettings() {
         >
           <section className="space-y-8">
             <div className="space-y-1">
-              <h2 className="text-2xl font-normal tracking-tight">
+              <h2 className="text-2xl font-normal tracking-tight bricolage">
                 Report a Bug
               </h2>
               <p className="text-sm text-muted-foreground font-normal">
@@ -659,7 +682,7 @@ export default function SupportSettings() {
 
           <section className="space-y-6">
             <div className="space-y-1">
-              <h2 className="text-2xl font-normal tracking-tight">
+              <h2 className="text-2xl font-normal tracking-tight bricolage">
                 Your past reports
               </h2>
               <p className="text-sm text-muted-foreground font-normal">
@@ -676,7 +699,7 @@ export default function SupportSettings() {
         >
           <section className="space-y-8">
             <div className="space-y-1">
-              <h2 className="text-2xl font-normal tracking-tight">
+              <h2 className="text-2xl font-normal tracking-tight bricolage">
                 Share Feedback
               </h2>
               <p className="text-sm text-muted-foreground font-normal">
@@ -688,7 +711,7 @@ export default function SupportSettings() {
 
           <section className="space-y-6">
             <div className="space-y-1">
-              <h2 className="text-2xl font-normal tracking-tight">
+              <h2 className="text-2xl font-normal tracking-tight bricolage">
                 Your past suggestions
               </h2>
               <p className="text-sm text-muted-foreground font-normal">

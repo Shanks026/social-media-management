@@ -6,7 +6,7 @@ import { toast } from 'sonner'
 import { format } from 'date-fns'
 import { useSubscription } from '@/api/useSubscription'
 import { PlanOverview } from '../billingAndUsage/PlanOverview'
-import { plans } from '../billingAndUsage/TertiarySubscriptionTab'
+import { allPlanMeta } from '../billingAndUsage/planMeta'
 
 // UI
 import { Button } from '@/components/ui/button'
@@ -54,8 +54,7 @@ export default function ProfileSettings() {
   const { data: sub, isLoading } = useSubscription()
 
   const currentPlanName = sub?.plan_name?.toLowerCase() || 'ignite'
-  const currentPlan =
-    plans.find((p) => p.name.toLowerCase() === currentPlanName) || plans[0]
+  const currentPlan = allPlanMeta[currentPlanName] || allPlanMeta.ignite
 
   const handleUpgradeClick = () => {
     navigate('/billing?tab=subscription&scroll=true')
@@ -163,11 +162,11 @@ export default function ProfileSettings() {
     avatarUrl !== (user?.user_metadata?.avatar_url || '')
 
   return (
-    <div className="max-w-5xl space-y-14 mx-auto">
+    <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in duration-700">
       {/* ── Section: Avatar & Identity ── */}
       <section className="space-y-8">
         <div className="space-y-1">
-          <h2 className="text-2xl font-normal tracking-tight">Profile</h2>
+          <h2 className="text-2xl font-normal tracking-tight bricolage">Profile</h2>
           <p className="text-sm text-muted-foreground font-normal">
             Your personal identity and avatar.
           </p>
@@ -302,7 +301,7 @@ export default function ProfileSettings() {
       {/* ── Section: Subscription ── */}
       <section className="space-y-6">
         <div className="space-y-1">
-          <h2 className="text-lg font-medium tracking-tight">Subscription</h2>
+          <h2 className="text-2xl font-normal tracking-tight bricolage">Subscription</h2>
           <p className="text-sm text-muted-foreground font-normal">
             Manage your agency&apos;s billing and feature access.
           </p>
@@ -324,7 +323,7 @@ export default function ProfileSettings() {
       {/* ── Section: Security ── */}
       <section className="space-y-6">
         <div className="space-y-1">
-          <h2 className="text-lg font-medium tracking-tight">Security</h2>
+          <h2 className="text-2xl font-normal tracking-tight bricolage">Security</h2>
           <p className="text-sm text-muted-foreground font-normal">
             Manage your password and authentication settings.
           </p>
@@ -354,7 +353,7 @@ export default function ProfileSettings() {
       {/* ── Section: Danger Zone ── */}
       <section className="space-y-6">
         <div className="space-y-1">
-          <h2 className="text-lg font-medium text-destructive tracking-tight">
+          <h2 className="text-2xl font-normal text-destructive tracking-tight bricolage">
             Danger Zone
           </h2>
           <p className="text-sm text-muted-foreground font-normal">

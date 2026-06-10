@@ -119,7 +119,7 @@ export default function DashboardWelcomeMessage() {
   return (
     <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-2">
       <div className="space-y-1">
-        <h1 className="text-3xl font-medium tracking-tight text-foreground">
+        <h1 className="text-3xl font-medium tracking-tight text-foreground bricolage">
           {greeting}
         </h1>
         <p className="text-muted-foreground font-medium text-sm">

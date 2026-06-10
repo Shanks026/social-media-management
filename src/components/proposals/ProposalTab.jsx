@@ -314,14 +314,16 @@ export function ProposalTab({ clientId, prospectId, prospectName, prospectEmail 
               </EmptyDescription>
             </EmptyHeader>
             {!search && activeTab === 'all' && (
-              <Button
-                onClick={openNewDialog}
-                variant="outline"
-                className="mt-2"
-              >
-                <Plus className="size-4 mr-2" />
-                New Proposal
-              </Button>
+              <div className="flex items-center gap-2 mt-2">
+                <Button onClick={openUploadDialog}>
+                  <Upload className="size-4 mr-2" />
+                  Upload Existing File
+                </Button>
+                <Button onClick={openNewDialog} variant="outline">
+                  <PenLine className="size-4 mr-2" />
+                  Build in Tercero
+                </Button>
+              </div>
             )}
           </EmptyContent>
         </Empty>

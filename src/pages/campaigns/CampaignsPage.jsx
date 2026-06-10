@@ -2,8 +2,8 @@ import { useHeader } from '@/components/misc/header-context'
 import { useSubscription } from '@/api/useSubscription'
 import { useCampaigns } from '@/api/campaigns'
 import { CampaignTab } from '@/components/campaigns/CampaignTab'
-import { CampaignUpgradePrompt } from '@/components/campaigns/CampaignUpgradePrompt'
 import { Button } from '@/components/ui/button'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { Plus } from 'lucide-react'
 import { useState, useEffect } from 'react'
 
@@ -16,18 +16,11 @@ export default function CampaignsPage() {
   const { data: campaigns = [], isLoading: campaignsLoading } = useCampaigns()
   const [isCreateOpen, setIsCreateOpen] = useState(false)
 
-  const canCampaigns = sub?.campaigns ?? false
   const campaignCount = campaigns.length
+  const campaignsLimit = sub?.campaigns_limit ?? null
+  const atLimit = campaignsLimit !== null && campaignCount >= campaignsLimit
 
   if (subLoading) return null
-
-  if (!canCampaigns) {
-    return (
-      <div className="p-6 text-center">
-        <CampaignUpgradePrompt />
-      </div>
-    )
-  }
 
   return (
     <div className="min-h-full bg-background selection:bg-primary/10">
@@ -35,7 +28,7 @@ export default function CampaignsPage() {
         {/* --- SECTION 1: HEADER --- */}
         <div className="flex items-end justify-between">
           <div className="space-y-1">
-            <h1 className="text-3xl font-normal tracking-tight text-foreground">
+            <h1 className="text-3xl font-normal tracking-tight text-foreground bricolage">
               Campaigns{' '}
               {!campaignsLoading && campaignCount > 0 && (
                 <span className="text-muted-foreground/50 ml-2 font-extralight">
@@ -49,10 +42,32 @@ export default function CampaignsPage() {
             </p>
           </div>
 
-          <Button onClick={() => setIsCreateOpen(true)} className="gap-2 h-9">
-            <Plus size={16} />
-            New Campaign
-          </Button>
+          <div className="flex items-center gap-3">
+            {campaignsLimit !== null && !campaignsLoading && (
+              <span className="text-xs text-muted-foreground">
+                {campaignCount} / {campaignsLimit} campaigns
+              </span>
+            )}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span>
+                  <Button
+                    onClick={() => !atLimit && setIsCreateOpen(true)}
+                    className="gap-2 h-9"
+                    disabled={atLimit}
+                  >
+                    <Plus size={16} />
+                    New Campaign
+                  </Button>
+                </span>
+              </TooltipTrigger>
+              {atLimit && (
+                <TooltipContent>
+                  Campaign limit reached. Upgrade to Velocity for unlimited campaigns.
+                </TooltipContent>
+              )}
+            </Tooltip>
+          </div>
         </div>
 
         {/* --- SECTION 2: THE CONTENT --- */}

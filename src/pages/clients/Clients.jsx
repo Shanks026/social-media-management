@@ -193,7 +193,7 @@ export default function Clients() {
         {/* --- SECTION 1: HEADER & PRIMARY ACTION --- */}
         <div className="flex items-end justify-between">
           <div className="space-y-1">
-            <h1 className="text-3xl font-normal tracking-tight text-foreground">
+            <h1 className="text-3xl font-normal tracking-tight text-foreground bricolage">
               Clients{' '}
               {realClientCount > 0 && (
                 <span className="text-muted-foreground/50 ml-2 font-extralight">

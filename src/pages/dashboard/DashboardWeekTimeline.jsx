@@ -167,7 +167,7 @@ export default function DashboardWeekTimeline() {
     <Card className="border-none shadow-sm ring-1 ring-border/50 bg-card/50 dark:bg-card/30 flex flex-col gap-2 group h-full">
       <CardHeader className="pb-3 flex flex-row items-center justify-between space-y-0">
         <div>
-          <CardTitle className="text-lg font-medium">Week Ahead</CardTitle>
+          <CardTitle className="text-lg font-medium bricolage">Week Ahead</CardTitle>
           {!isLoading && (
             <p className="text-xs text-muted-foreground mt-0.5">
               {totalPosts} deliverable{totalPosts !== 1 && 's'} · {totalMeetings}{' '}
@@ -249,7 +249,7 @@ export default function DashboardWeekTimeline() {
                       <div
                         className={`size-2 rounded-full ring-2 ring-card ${
                           isCurrentDay
-                            ? 'bg-emerald-500 ring-emerald-500/30'
+                            ? 'bg-primary ring-primary/30'
                             : 'bg-gray-300 dark:bg-gray-500'
                         }`}
                       />
@@ -260,8 +260,8 @@ export default function DashboardWeekTimeline() {
                       {/* Day label */}
                       <div className="flex items-baseline gap-1.5 mb-2">
                         <p
-                          className={`text-sm leading-none text-foreground ${
-                            isCurrentDay ? 'font-bold' : 'font-semibold'
+                          className={`text-sm leading-none ${
+                            isCurrentDay ? 'font-bold text-primary' : 'font-semibold text-foreground'
                           }`}
                         >
                           {isCurrentDay

@@ -214,6 +214,8 @@ export function useCreateInvoice() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: invoiceKeys.all })
+      queryClient.invalidateQueries({ queryKey: ['campaigns', 'invoices'] })
+      queryClient.invalidateQueries({ queryKey: ['campaigns', 'analytics'] })
     },
   })
 }
@@ -325,6 +327,8 @@ export function useUpdateInvoice() {
     onSuccess: (updatedInvoice) => {
       queryClient.invalidateQueries({ queryKey: invoiceKeys.all })
       queryClient.invalidateQueries({ queryKey: transactionKeys.all })
+      queryClient.invalidateQueries({ queryKey: ['campaigns', 'invoices'] })
+      queryClient.invalidateQueries({ queryKey: ['campaigns', 'analytics'] })
       queryClient.invalidateQueries({ queryKey: ['clients-list', workspaceUserId] })
       if (updatedInvoice?.client_id) {
         queryClient.invalidateQueries({ queryKey: ['client', updatedInvoice.client_id] })
@@ -348,8 +352,9 @@ export function useDeleteInvoice() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: invoiceKeys.all })
-      // Also invalidate transactions since a linked transaction may have been cascade-deleted
       queryClient.invalidateQueries({ queryKey: transactionKeys.all })
+      queryClient.invalidateQueries({ queryKey: ['campaigns', 'invoices'] })
+      queryClient.invalidateQueries({ queryKey: ['campaigns', 'analytics'] })
     },
   })
 }

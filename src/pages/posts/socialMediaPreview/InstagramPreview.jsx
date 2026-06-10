@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   Heart,
   MessageCircle,
@@ -49,24 +49,27 @@ const isVideoSource = (url) => {
 export default function InstagramPreview({ post, client }) {
   const [isExpanded, setIsExpanded] = useState(false)
   const [isLiked, setIsLiked] = useState(false)
-  const [currentSlide] = useState(0)
+  const [currentSlide, setCurrentSlide] = useState(0)
   const [aspectRatio, setAspectRatio] = useState(1 / 1)
   const [isReel, setIsReel] = useState(false)
+  const touchStartX = useRef(null)
 
   const mediaUrls = post?.media_urls || []
   const content = post?.content || ''
-  const currentMedia = mediaUrls[currentSlide]
+  const slideCount = mediaUrls.length
+  const safeSlide = Math.min(currentSlide, Math.max(0, slideCount - 1))
+  const safeCurrent = mediaUrls[safeSlide]
 
   const handle = client?.social_links?.instagram?.handle || 'username'
   const logo = client?.logo_url
   const location = client?.industry || 'Location'
 
   useEffect(() => {
-    if (!currentMedia) return
+    if (!safeCurrent) return
 
-    if (isVideoSource(currentMedia)) {
+    if (isVideoSource(safeCurrent)) {
       const video = document.createElement('video')
-      video.src = currentMedia
+      video.src = safeCurrent
       video.onloadedmetadata = () => {
         const ratio = video.videoWidth / video.videoHeight
         setAspectRatio(ratio)
@@ -75,13 +78,34 @@ export default function InstagramPreview({ post, client }) {
       }
     } else {
       const img = new Image()
-      img.src = currentMedia
+      img.src = safeCurrent
       img.onload = () => {
         setAspectRatio(img.naturalWidth / img.naturalHeight)
         setIsReel(false)
       }
     }
-  }, [currentMedia])
+  }, [safeCurrent])
+
+  const goPrev = (e) => {
+    e?.stopPropagation()
+    setCurrentSlide((s) => (s === 0 ? slideCount - 1 : s - 1))
+  }
+
+  const goNext = (e) => {
+    e?.stopPropagation()
+    setCurrentSlide((s) => (s === slideCount - 1 ? 0 : s + 1))
+  }
+
+  const onTouchStart = (e) => {
+    touchStartX.current = e.touches[0].clientX
+  }
+
+  const onTouchEnd = (e) => {
+    if (touchStartX.current === null) return
+    const delta = touchStartX.current - e.changedTouches[0].clientX
+    if (Math.abs(delta) > 40) delta > 0 ? goNext() : goPrev()
+    touchStartX.current = null
+  }
 
   const toggleLike = (e) => {
     e.stopPropagation()
@@ -105,7 +129,7 @@ export default function InstagramPreview({ post, client }) {
           id="mode"
           checked={isReel}
           onCheckedChange={setIsReel}
-          disabled={!isVideoSource(currentMedia)}
+          disabled={!isVideoSource(safeCurrent)}
         />
         <Label
           htmlFor="mode"
@@ -120,10 +144,10 @@ export default function InstagramPreview({ post, client }) {
 
       {isReel ? (
         /* --- SLEEK REEL UI --- */
-        <div className="relative w-full aspect-[9/16] bg-black rounded-[2.5rem] overflow-hidden shadow-2xl border border-zinc-200 dark:border-zinc-800">
-          {currentMedia && (
+        <div className="relative w-full aspect-[9/16] bg-black rounded-[2.5rem] overflow-hidden border border-zinc-200 dark:border-zinc-800">
+          {safeCurrent && (
             <video
-              src={currentMedia}
+              src={safeCurrent}
               className="absolute inset-0 w-full h-full object-cover"
               autoPlay
               muted
@@ -229,7 +253,7 @@ export default function InstagramPreview({ post, client }) {
         </div>
       ) : (
         /* --- REFINED FEED POST UI --- */
-        <div className="w-full bg-white dark:bg-zinc-950 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-xl overflow-hidden">
+        <div className="w-full bg-white dark:bg-zinc-950 rounded-xl border border-zinc-200 dark:border-zinc-800 overflow-hidden">
           {/* Header */}
           <div className="flex items-center justify-between p-3">
             <div className="flex items-center gap-3">
@@ -255,12 +279,16 @@ export default function InstagramPreview({ post, client }) {
           </div>
 
           {/* Media Area */}
-          <div className="relative w-full bg-zinc-50 dark:bg-zinc-900 overflow-hidden">
+          <div
+            className="relative w-full bg-zinc-50 dark:bg-zinc-900 overflow-hidden"
+            onTouchStart={onTouchStart}
+            onTouchEnd={onTouchEnd}
+          >
             <AspectRatio ratio={aspectRatio}>
-              {currentMedia ? (
-                isVideoSource(currentMedia) ? (
+              {safeCurrent ? (
+                isVideoSource(safeCurrent) ? (
                   <video
-                    src={currentMedia}
+                    src={safeCurrent}
                     className="w-full h-full object-contain bg-black"
                     autoPlay
                     muted
@@ -269,7 +297,7 @@ export default function InstagramPreview({ post, client }) {
                   />
                 ) : (
                   <img
-                    src={currentMedia}
+                    src={safeCurrent}
                     alt="Post"
                     className="w-full h-full object-contain"
                   />
@@ -278,6 +306,45 @@ export default function InstagramPreview({ post, client }) {
                 <div className="flex items-center justify-center h-full text-muted-foreground italic text-xs">
                   No media selected
                 </div>
+              )}
+
+              {/* Carousel arrows */}
+              {slideCount > 1 && (
+                <>
+                  <button
+                    onClick={goPrev}
+                    className="absolute left-2 top-1/2 -translate-y-1/2 z-10 bg-white/80 dark:bg-black/60 rounded-full p-1 shadow hover:bg-white transition-colors"
+                  >
+                    <ChevronLeft size={16} className="text-zinc-800 dark:text-zinc-200" />
+                  </button>
+                  <button
+                    onClick={goNext}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 z-10 bg-white/80 dark:bg-black/60 rounded-full p-1 shadow hover:bg-white transition-colors"
+                  >
+                    <ChevronRight size={16} className="text-zinc-800 dark:text-zinc-200" />
+                  </button>
+
+                  {/* Dot indicators */}
+                  <div className="absolute bottom-2.5 left-1/2 -translate-x-1/2 flex items-center gap-1 z-10">
+                    {mediaUrls.map((_, i) => (
+                      <button
+                        key={i}
+                        onClick={(e) => { e.stopPropagation(); setCurrentSlide(i) }}
+                        className={cn(
+                          'rounded-full transition-all duration-200',
+                          i === safeSlide
+                            ? 'bg-[#0095f6] w-1.5 h-1.5'
+                            : 'bg-white/70 w-1 h-1'
+                        )}
+                      />
+                    ))}
+                  </div>
+
+                  {/* Slide counter */}
+                  <div className="absolute top-2.5 right-2.5 z-10 bg-black/40 backdrop-blur-sm text-white text-[10px] font-semibold px-1.5 py-0.5 rounded-full">
+                    {safeSlide + 1}/{slideCount}
+                  </div>
+                </>
               )}
             </AspectRatio>
           </div>

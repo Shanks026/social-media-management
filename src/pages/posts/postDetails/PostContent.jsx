@@ -9,6 +9,7 @@ import {
   Plus,
   Pencil,
   AlertCircle,
+  FileText,
   ChevronLeft,
   ChevronRight,
   Eye,
@@ -43,7 +44,7 @@ import {
 
 // Custom Components & API
 import { deleteIndividualMedia } from '@/api/posts'
-import { getPublishState, renderCaption } from '@/lib/helper'
+import { getPublishState, renderCaption, isDocumentUrl, getDocumentExtension, getDocumentPreviewUrl } from '@/lib/helper'
 import StatusBadge from '@/components/StatusBadge'
 import ClientNotes from './ClientNotes'
 import { cn } from '@/lib/utils'
@@ -94,13 +95,39 @@ const PlatformIcon = ({ name, size = 'md' }) => {
  */
 const MediaItem = ({ url, className, isPreview = false }) => {
   const isVideo = isVideoSource(url)
+  const isDoc = isDocumentUrl(url)
+
+  if (isDoc) {
+    if (isPreview) {
+      const previewUrl = getDocumentPreviewUrl(url)
+      if (previewUrl) {
+        return <iframe src={previewUrl} title="Document preview" className="w-full h-full border-0" />
+      }
+      return (
+        <div className="flex flex-col items-center justify-center h-full gap-3 text-white/70">
+          <FileText className="size-12 opacity-40" />
+          <p className="text-sm opacity-60">Preview not available</p>
+          <a href={url} target="_blank" rel="noopener noreferrer" className="text-xs underline opacity-70 hover:opacity-100">
+            Open file
+          </a>
+        </div>
+      )
+    }
+    const ext = getDocumentExtension(url)
+    return (
+      <div className={cn('h-full w-full flex flex-col items-center justify-center gap-1.5 bg-muted/60 p-2', className)}>
+        <FileText className="h-7 w-7 text-muted-foreground shrink-0" />
+        <p className="text-[10px] font-medium text-muted-foreground uppercase">{ext}</p>
+      </div>
+    )
+  }
 
   if (isVideo) {
     return (
       <div
         className={cn(
           'relative bg-black flex items-center justify-center',
-          'h-full w-full', // Always full height/width to contain the media properly
+          'h-full w-full',
           className,
         )}
       >
@@ -108,7 +135,7 @@ const MediaItem = ({ url, className, isPreview = false }) => {
           src={url}
           className={cn(
             'h-full w-full',
-            isPreview ? 'object-contain' : 'object-cover', // scales huge while keeping aspect ratio
+            isPreview ? 'object-contain' : 'object-cover',
           )}
           muted={!isPreview}
           controls={isPreview}
@@ -132,7 +159,7 @@ const MediaItem = ({ url, className, isPreview = false }) => {
       alt="Media Asset"
       className={cn(
         'h-full w-full',
-        isPreview ? 'object-contain' : 'object-cover', // scales huge while keeping aspect ratio
+        isPreview ? 'object-contain' : 'object-cover',
         className,
       )}
     />
@@ -222,7 +249,7 @@ export default function PostContent({
 
           <div className="space-y-4">
             <div className="flex flex-row items-center gap-3">
-              <h1 className="text-4xl font-semibold tracking-tight">
+              <h1 className="text-3xl font-semibold tracking-tight bricolage">
                 {post.title}
               </h1>
               <Badge

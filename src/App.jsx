@@ -35,6 +35,9 @@ import ProposalReview from './pages/proposals/ProposalReview'
 import TrialExpired from './pages/TrialExpired'
 import SubscriptionExpired from './pages/SubscriptionExpired'
 import NotFound from './pages/NotFound'
+import HelpPage from './pages/help/HelpPage'
+import PoliciesPage from './pages/help/PoliciesPage'
+import TeamPage from './pages/TeamPage'
 
 function PublicOnlyRoute({ children }) {
   const { session } = useAuth()
@@ -63,6 +66,7 @@ function AppRoutes() {
 
   return (
     <Routes>
+      <Route path="/policies" element={<PoliciesPage />} />
       <Route path="/review/:token" element={<PublicReview />} />
       <Route path="/campaign-review/:token" element={<CampaignReview />} />
       <Route path="/proposal/:token" element={<ProposalReview />} />
@@ -111,6 +115,8 @@ function AppRoutes() {
           </Route>
           <Route path="/billing" element={<BillingUsage />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/team" element={<TeamPage />} />
+          <Route path="/help" element={<HelpPage />} />
         </Route>
         <Route path="*" element={<NotFound />} />
         </>

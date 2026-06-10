@@ -18,7 +18,7 @@ export default function LoginPage() {
 
           {/* Welcome heading */}
           <div className="space-y-2">
-            <h1 className="text-3xl font-normal tracking-tight">
+            <h1 className="text-3xl font-normal tracking-tight bricolage">
               Welcome to Tercero
             </h1>
             <p className="text-sm text-muted-foreground font-normal">
@@ -38,19 +38,13 @@ export default function LoginPage() {
           {/* Policy */}
           <p className="text-xs text-muted-foreground font-normal leading-relaxed">
             By logging in, you agree to our{' '}
-            <a
-              href="#"
+            <Link
+              to="/policies"
+              target="_blank"
               className="text-foreground underline underline-offset-4 hover:text-muted-foreground transition-colors"
             >
-              Terms of Service
-            </a>{' '}
-            and{' '}
-            <a
-              href="#"
-              className="text-foreground underline underline-offset-4 hover:text-muted-foreground transition-colors"
-            >
-              Privacy Policy
-            </a>
+              policies
+            </Link>
             .
           </p>
         </div>

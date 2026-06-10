@@ -82,7 +82,7 @@ export default function MonthView({
               <div className="mb-2 flex justify-between items-center">
                 <span
                   className={cn(
-                    'text-sm font-black px-1.5 py-0.5 rounded-md inline-block',
+                    'text-sm font-medium px-1.5 py-0.5 rounded-md inline-block',
                     isToday(day)
                       ? 'bg-primary text-primary-foreground'
                       : isCurrentMonth

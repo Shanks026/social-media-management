@@ -20,6 +20,7 @@ import { useProspect, useDeleteProspect, useUpdateProspect, PROSPECT_STATUSES } 
 import { useHeader } from '@/components/misc/header-context'
 import { ProspectStatusBadge, PROSPECT_STATUS_CONFIG } from '@/components/prospects/ProspectStatusBadge'
 import { ProspectSourceBadge } from '@/components/prospects/ProspectSourceBadge'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
@@ -203,17 +204,17 @@ export default function ProspectDetailPage() {
         {/* ── Header ───────────────────────────────────────────────────────── */}
         <div className="flex items-start gap-5">
           {/* Avatar */}
-          <div className="size-16 shrink-0 rounded-2xl bg-muted/30 border border-border/40 flex items-center justify-center shadow-sm">
-            <span className="text-xl font-bold text-muted-foreground/70 tracking-tighter select-none">
+          <Avatar className="size-16 rounded-2xl">
+            <AvatarFallback className="rounded-2xl text-xl font-bold tracking-tighter">
               {initials}
-            </span>
-          </div>
+            </AvatarFallback>
+          </Avatar>
 
           {/* Name + meta */}
           <div className="flex-1 min-w-0 space-y-1.5">
             {/* Title row with source badge inline */}
             <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-2xl font-medium tracking-normal text-foreground truncate">
+              <h1 className="text-2xl font-medium tracking-tight text-foreground truncate bricolage">
                 {prospect.business_name}
               </h1>
               <ProspectSourceBadge source={prospect.source} />
