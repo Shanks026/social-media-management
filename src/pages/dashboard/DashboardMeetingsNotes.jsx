@@ -204,7 +204,6 @@ export default function DashboardMeetingsNotes() {
                       markMeetingDone={markMeetingDone}
                       isCompletingMeeting={isCompletingMeeting}
                       variant="dashboard-card"
-                      alwaysShowActions
                     />
                   ))}
                 </div>
