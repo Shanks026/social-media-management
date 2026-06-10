@@ -620,7 +620,7 @@ function SuggestionForm() {
 
 export default function SupportSettings() {
   return (
-    <div className="w-full space-y-8">
+    <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in duration-700">
       <div className="space-y-1">
         <h2 className="text-2xl font-normal tracking-tight bricolage">Support</h2>
         <p className="text-sm text-muted-foreground font-normal">
@@ -628,7 +628,7 @@ export default function SupportSettings() {
         </p>
       </div>
 
-      <Tabs defaultValue="bug" className="space-y-10">
+      <Tabs defaultValue="bug" className="space-y-6">
         <TabsList className="grid grid-cols-2 h-8 w-full sm:max-w-xs text-xs">
           <TabsTrigger value="bug" className="gap-1.5 text-xs">
             <Bug className="size-3" />

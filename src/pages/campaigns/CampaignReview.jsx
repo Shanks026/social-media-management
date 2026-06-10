@@ -10,6 +10,7 @@ import {
   Play,
   Calendar,
   AlertTriangle,
+  FileText,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -18,6 +19,7 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
+import { isDocumentUrl, getDocumentExtension, getDocumentPreviewUrl } from '@/lib/helper'
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -116,6 +118,11 @@ function PostRow({ post, isSelected, isApproved, isRevised, onClick }) {
             <div className="h-full w-full bg-black/80 flex items-center justify-center">
               <Play className="size-4 text-white fill-white" />
             </div>
+          ) : isDocumentUrl(firstMedia) ? (
+            <div className="h-full w-full flex flex-col items-center justify-center gap-0.5 bg-muted/60">
+              <FileText className="size-4 text-muted-foreground" />
+              <p className="text-[8px] font-medium text-muted-foreground uppercase">{getDocumentExtension(firstMedia)}</p>
+            </div>
           ) : (
             <img
               src={firstMedia}
@@ -170,6 +177,19 @@ function MediaGallery({ mediaUrls }) {
           <div className="aspect-video bg-black/90 flex items-center justify-center">
             <Play className="size-8 text-white fill-white opacity-80" />
           </div>
+        ) : isDocumentUrl(url) ? (
+          (() => {
+            const previewUrl = getDocumentPreviewUrl(url)
+            return previewUrl ? (
+              <iframe src={previewUrl} title="Document preview" className="w-full h-64 border-0" />
+            ) : (
+              <div className="flex flex-col items-center justify-center gap-3 py-10 text-muted-foreground">
+                <FileText className="size-10 opacity-40" />
+                <p className="text-sm opacity-60">{getDocumentExtension(url)} file</p>
+                <a href={url} target="_blank" rel="noopener noreferrer" className="text-xs underline">Open file</a>
+              </div>
+            )
+          })()
         ) : (
           <BrokenableImage src={url} className="w-full object-cover max-h-80" />
         )}
@@ -186,6 +206,11 @@ function MediaGallery({ mediaUrls }) {
             {isVideo(url) ? (
               <div className="h-full w-full bg-black/90 flex items-center justify-center">
                 <Play className="size-6 text-white fill-white opacity-80" />
+              </div>
+            ) : isDocumentUrl(url) ? (
+              <div className="h-full w-full flex flex-col items-center justify-center gap-1 bg-muted/60">
+                <FileText className="size-6 text-muted-foreground" />
+                <p className="text-[10px] font-medium text-muted-foreground uppercase">{getDocumentExtension(url)}</p>
               </div>
             ) : (
               <BrokenableImage src={url} className="h-full w-full object-cover" />

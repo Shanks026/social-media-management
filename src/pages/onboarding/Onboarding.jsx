@@ -40,7 +40,7 @@ export default function OnboardingPage({ user, onComplete, onSkip }) {
                 <ShieldCheck className="size-4 text-primary" />
               </div>
               <div className="space-y-1.5 flex-1">
-                <h3 className="text-xl font-medium">Full setup</h3>
+                <h3 className="text-xl font-medium bricolage">Full setup</h3>
                 <p className="text-sm leading-relaxed text-muted-foreground">
                   Brand your workspace and create a free agency account for your own content. Recommended.
                 </p>
@@ -58,7 +58,7 @@ export default function OnboardingPage({ user, onComplete, onSkip }) {
                 <Sparkles className="size-4 text-muted-foreground" />
               </div>
               <div className="space-y-1.5 flex-1">
-                <h3 className="text-xl font-medium">Visual identity</h3>
+                <h3 className="text-xl font-medium bricolage">Visual identity</h3>
                 <p className="text-sm leading-relaxed text-muted-foreground">
                   Update the logo and name in your sidebar. You can set up your internal account later.
                 </p>
@@ -76,7 +76,7 @@ export default function OnboardingPage({ user, onComplete, onSkip }) {
                 <Rocket className="size-4 text-muted-foreground" />
               </div>
               <div className="space-y-1.5 flex-1">
-                <h3 className="text-xl font-medium">Explore first</h3>
+                <h3 className="text-xl font-medium bricolage">Explore first</h3>
                 <p className="text-sm leading-relaxed text-muted-foreground">
                   Head straight to your dashboard. You can customize your branding anytime from settings.
                 </p>

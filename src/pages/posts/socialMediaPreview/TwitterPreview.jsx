@@ -25,12 +25,12 @@ export default function TwitterPreview({ post, client }) {
 
   const mediaUrls = post?.media_urls || []
   const content = post?.content || ''
-  const handle = client?.social_links?.twitter?.handle || 'username'
   const displayName = client?.name || 'Display Name'
+  const handle = (client?.social_links?.twitter?.handle || 'username').replace('@', '')
   const logo = client?.logo_url
 
   return (
-    <div className="mx-auto w-full max-w-[420px] overflow-hidden rounded-xl border border-zinc-200 bg-white p-4 shadow-xl dark:border-zinc-800 dark:bg-black transition-colors duration-200">
+    <div className="mx-auto w-full max-w-[420px] overflow-hidden rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-black transition-colors duration-200">
       {/* 1. Header */}
       <div className="flex items-start justify-between">
         <div className="flex gap-3">

@@ -254,7 +254,7 @@ export default function TeamSettings() {
   }
 
   return (
-    <div className="max-w-5xl space-y-14 mx-auto">
+    <div className="max-w-4xl space-y-8 mx-auto animate-in fade-in duration-700">
       {/* ── Section: Team Members ── */}
       <section className="space-y-8">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">

@@ -1,23 +1,19 @@
-/**
- * Returns Tailwind class config based on a usage percentage.
- * Used by UsageCard to colour text, progress bar, and border.
- */
 export const getStatusConfig = (percent) => {
   if (percent >= 100)
     return {
       text: 'text-destructive',
+      bg: 'bg-destructive/10',
       progress: 'bg-destructive',
-      border: 'border-l-4 border-l-destructive',
     }
   if (percent >= 80)
     return {
       text: 'text-amber-500',
+      bg: 'bg-amber-500/10',
       progress: 'bg-amber-500',
-      border: 'border-l-4 border-l-amber-500',
     }
   return {
     text: 'text-primary',
+    bg: 'bg-primary/10',
     progress: 'bg-primary',
-    border: 'border-none',
   }
 }

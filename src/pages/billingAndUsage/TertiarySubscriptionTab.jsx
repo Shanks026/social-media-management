@@ -297,7 +297,7 @@ export const PlanCard = ({ plan, isCurrentPlan, onContactTeam }) => {
 
       {/* Header */}
       <div className="mb-6 space-y-1">
-        <div className="text-xl font-normal flex items-center gap-2">
+        <div className="text-xl font-normal flex items-center gap-2 bricolage">
           <plan.icon className={cn('size-4', plan.accent.text)} />
           {plan.name}
         </div>
@@ -473,9 +473,9 @@ export const SubscriptionTab = ({ sub, isLoading }) => {
       </div>
 
       {/* Comparison Table */}
-      <div className="pt-8 border-t border-border/30">
+      <div className="border-border/30">
         <div className="mb-6">
-          <h3 className="text-lg font-medium tracking-tight bricolage">
+          <h3 className="text-2xl font-normal tracking-tight bricolage">
             Full Feature Comparison
           </h3>
         </div>

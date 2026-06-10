@@ -9,7 +9,7 @@ import {
   FileText,
   Megaphone,
   Layers,
-  Newspaper,
+  Send,
   Bell,
   Video,
   FolderOpen,
@@ -18,6 +18,8 @@ import {
   PieChart,
   CreditCard,
   ListOrdered,
+  TrendingUp,
+  Rocket,
 } from 'lucide-react'
 import { NavLink, useLocation } from 'react-router-dom'
 import {
@@ -52,16 +54,29 @@ import {
 const BASE_NAV_ITEMS = [
   { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
   { title: 'My Organization', url: '/myorganization', icon: Building2 },
+  {
+    title: 'Outreach',
+    url: '/outreach',
+    icon: Rocket,
+    items: [
+      { title: 'Prospects', url: '/prospects', icon: Target },
+      { title: 'Proposals', url: '/proposals', icon: FileText },
+    ],
+  },
   { title: 'Clients', url: '/clients', icon: UserStar },
-  { title: 'Prospects', url: '/prospects', icon: Target },
-  { title: 'Proposals', url: '/proposals', icon: FileText },
-  { title: 'Campaigns', url: '/campaigns', icon: Megaphone, requiresFlag: 'campaigns' },
+
+  { title: 'Deliverables', url: '/posts', icon: Send },
+  {
+    title: 'Campaigns',
+    url: '/campaigns',
+    icon: Megaphone,
+    requiresFlag: 'campaigns',
+  },
   {
     title: 'Operations',
     url: '/operations',
     icon: Layers,
     items: [
-      { title: 'Deliverables', url: '/posts', icon: Newspaper },
       { title: 'Notes & Reminders', url: '/operations/notes', icon: Bell },
       { title: 'Meetings', url: '/operations/meetings', icon: Video },
       { title: 'Documents', url: '/documents', icon: FolderOpen },
@@ -74,7 +89,12 @@ const BASE_NAV_ITEMS = [
     icon: Banknote,
     items: [
       { title: 'Overview', url: '/finance/overview', icon: PieChart },
-      { title: 'Subscriptions', url: '/finance/subscriptions', icon: CreditCard, requiresFlag: 'finance_subscriptions' },
+      {
+        title: 'Subscriptions',
+        url: '/finance/subscriptions',
+        icon: CreditCard,
+        requiresFlag: 'finance_subscriptions',
+      },
       { title: 'Ledger', url: '/finance/ledger', icon: ListOrdered },
       { title: 'Invoices', url: '/finance/invoices', icon: FileText },
     ],
@@ -85,14 +105,17 @@ function SubItemsList({ items, sub, isLoading, onNavigate }) {
   return (
     <>
       {items.map((subItem) => {
-        const isLocked = subItem.requiresFlag && !isLoading && !sub?.[subItem.requiresFlag]
+        const isLocked =
+          subItem.requiresFlag && !isLoading && !sub?.[subItem.requiresFlag]
 
         if (isLocked) {
           return (
             <Tooltip key={subItem.title}>
               <TooltipTrigger asChild>
                 <div className="flex items-center gap-2 px-3 py-1.5 text-sm rounded-md cursor-not-allowed opacity-40 select-none">
-                  {subItem.icon && <subItem.icon className="size-3.5 shrink-0" />}
+                  {subItem.icon && (
+                    <subItem.icon className="size-3.5 shrink-0" />
+                  )}
                   <span>{subItem.title}</span>
                   <Lock className="ml-auto size-3 shrink-0" />
                 </div>
@@ -138,9 +161,7 @@ export function NavMain() {
 
   return (
     <SidebarGroup>
-      {!isCollapsed && (
-        <SidebarGroupLabel>Navigation</SidebarGroupLabel>
-      )}
+      {!isCollapsed && <SidebarGroupLabel>Navigation</SidebarGroupLabel>}
       <SidebarGroupContent>
         <SidebarMenu>
           {navItems.map((item) => {
@@ -148,7 +169,8 @@ export function NavMain() {
               (child) => location.pathname === child.url,
             )
             const isMainActive = location.pathname === item.url || isChildActive
-            const isTopLocked = item.requiresFlag && !isLoading && !sub?.[item.requiresFlag]
+            const isTopLocked =
+              item.requiresFlag && !isLoading && !sub?.[item.requiresFlag]
 
             if (item.items && item.items.length > 0) {
               // ── Collapsed: icon button + popover ──
@@ -157,9 +179,18 @@ export function NavMain() {
                   <SidebarMenuItem key={item.title}>
                     <Popover
                       open={openPopover === item.title}
-                      onOpenChange={(open) => setOpenPopover(open ? item.title : null)}
+                      onOpenChange={(open) =>
+                        setOpenPopover(open ? item.title : null)
+                      }
                     >
-                      <Tooltip open={openPopover === item.title || suppressedTooltip === item.title ? false : undefined}>
+                      <Tooltip
+                        open={
+                          openPopover === item.title ||
+                          suppressedTooltip === item.title
+                            ? false
+                            : undefined
+                        }
+                      >
                         <TooltipTrigger asChild>
                           <PopoverTrigger asChild>
                             <SidebarMenuButton
@@ -187,7 +218,10 @@ export function NavMain() {
                           items={item.items}
                           sub={sub}
                           isLoading={isLoading}
-                          onNavigate={() => { setOpenPopover(null); setSuppressedTooltip(item.title) }}
+                          onNavigate={() => {
+                            setOpenPopover(null)
+                            setSuppressedTooltip(item.title)
+                          }}
                         />
                       </PopoverContent>
                     </Popover>
@@ -228,10 +262,10 @@ export function NavMain() {
                               <SidebarMenuSubItem key={subItem.title}>
                                 <Tooltip>
                                   <TooltipTrigger asChild>
-                                    <SidebarMenuSubButton
-                                      className="cursor-not-allowed opacity-40 hover:bg-transparent hover:text-inherit"
-                                    >
-                                      {subItem.icon && <subItem.icon className="size-3.5 me-0.5 opacity-70" />}
+                                    <SidebarMenuSubButton className="cursor-not-allowed opacity-40 hover:bg-transparent hover:text-inherit">
+                                      {subItem.icon && (
+                                        <subItem.icon className="size-3.5 me-0.5 opacity-70" />
+                                      )}
                                       <span>{subItem.title}</span>
                                       <Lock className="ml-auto size-3 shrink-0" />
                                     </SidebarMenuSubButton>
@@ -251,7 +285,9 @@ export function NavMain() {
                                 isActive={location.pathname === subItem.url}
                               >
                                 <NavLink to={subItem.url}>
-                                  {subItem.icon && <subItem.icon className="size-3.5 me-0.5 opacity-70" />}
+                                  {subItem.icon && (
+                                    <subItem.icon className="size-3.5 me-0.5 opacity-70" />
+                                  )}
                                   <span>{subItem.title}</span>
                                 </NavLink>
                               </SidebarMenuSubButton>

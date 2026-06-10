@@ -1,19 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
-const PlatformIcon = ({ name }) => {
-  const fileName = name === 'google_business' ? 'google_busines' : name
-  return (
-    <div className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-card bg-white dark:bg-zinc-900 shadow-sm overflow-hidden">
-      <img
-        src={`/platformIcons/${fileName}.png`}
-        alt={name}
-        className="size-5 object-contain"
-        onError={(e) => (e.target.style.display = 'none')}
-      />
-    </div>
-  )
-}
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import {
@@ -26,7 +13,6 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog'
 import {
-  Loader2,
   Info,
   Check,
   PencilLine,
@@ -36,9 +22,45 @@ import {
   ChevronLeft,
   ChevronRight,
   X,
+  FileText,
+  Smartphone,
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { Badge } from '@/components/ui/badge'
+import { isDocumentUrl, getDocumentExtension, getDocumentPreviewUrl } from '@/lib/helper'
+import { cn } from '@/lib/utils'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet'
+import InstagramPreview from '@/pages/posts/socialMediaPreview/InstagramPreview'
+import TwitterPreview from '@/pages/posts/socialMediaPreview/TwitterPreview'
+import LinkedInPreview from '@/pages/posts/socialMediaPreview/LinkedInPreview'
+import FacebookPreview from '@/pages/posts/socialMediaPreview/FacebookPreview'
+import YouTubePreview from '@/pages/posts/socialMediaPreview/YouTubePreview'
+
+const PlatformIcon = ({ name }) => {
+  const fileName = name === 'google_business' ? 'google_busines' : name
+  return (
+    <div className="flex h-6 w-6 items-center justify-center rounded-full overflow-hidden p-0.5">
+      <img
+        src={`/platformIcons/${fileName}.png`}
+        alt={name}
+        className="w-full h-full object-contain"
+        onError={(e) => (e.target.style.display = 'none')}
+      />
+    </div>
+  )
+}
 
 // Detect if a URL is a video
 function isVideo(url = '') {
@@ -57,6 +79,14 @@ export default function PublicReview() {
   // Full-screen Preview States
   const [isPreviewOpen, setIsPreviewOpen] = useState(false)
   const [activeIndex, setActiveIndex] = useState(0)
+
+  // Right panel view: 'media' | 'preview'
+  const [rightView, setRightView] = useState('media')
+  const [previewPlatform, setPreviewPlatform] = useState(() => null)
+
+  // Mobile preview sheet
+  const [mobileSheetOpen, setMobileSheetOpen] = useState(false)
+  const [mobileSheetPlatform, setMobileSheetPlatform] = useState(null)
 
   useEffect(() => {
     async function fetchPost() {
@@ -142,9 +172,31 @@ export default function PublicReview() {
 
   // Determine branding
   const showAgencyBranding = agencySub?.branding_agency_sidebar ?? false
-
-  // Show "Powered by Tercero" footer on Ignite and Velocity; hidden on Quantum (branding_powered_by = false)
   const showPoweredBy = agencySub?.branding_powered_by ?? true
+
+  // Adapt post + client shape for preview components
+  const previewPost = post ? { ...post, platforms: post.platform } : null
+  const previewClient = post
+    ? {
+        name: post.client_name,
+        logo_url: post.client_logo_url,
+        industry: post.client_industry,
+        social_links: post.client_social_links ?? {},
+      }
+    : null
+
+  const activePlatform = previewPlatform ?? post?.platform?.[0] ?? null
+
+  const renderPlatformPreview = (platform) => {
+    if (!platform || !previewPost) return null
+    const props = { post: previewPost, client: previewClient }
+    if (platform === 'instagram') return <InstagramPreview {...props} />
+    if (platform === 'twitter') return <TwitterPreview {...props} />
+    if (platform === 'linkedin') return <LinkedInPreview {...props} />
+    if (platform === 'facebook') return <FacebookPreview {...props} />
+    if (platform === 'youtube') return <YouTubePreview {...props} />
+    return null
+  }
 
   if (loading)
     return (
@@ -159,7 +211,7 @@ export default function PublicReview() {
   if (statusUpdated) {
     return (
       <div className="flex h-screen w-full flex-col items-center justify-center bg-background p-6 text-center">
-        <div className="animate-in zoom-in-50 fade-in duration-500 mb-6 flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+        <div className="animate-in zoom-in-50 fade-in duration-500 mb-6 flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-green-100 dark:bg-green-500/10 text-green-600 dark:text-green-400">
           <Check size={32} strokeWidth={2.5} />
         </div>
         <h2 className="animate-in fade-in slide-in-from-bottom-3 duration-500 delay-150 fill-mode-both text-2xl font-bold tracking-tight text-foreground">
@@ -196,359 +248,396 @@ export default function PublicReview() {
 
   // ── Main Review Page ─────────────────────────────────────────
   return (
-    <div className="min-h-screen w-full bg-background font-sans text-foreground flex flex-col">
-      <div className="mx-auto max-w-7xl p-6 lg:p-16 w-full flex-1">
-        {/* Header Branding */}
-        <div className="mb-10 flex flex-col items-start gap-1">
-          {!showAgencyBranding ? (
-            <div
-              className="h-7 w-28 bg-foreground"
-              style={{
-                maskImage: 'url(/TerceroLand.svg)',
-                maskRepeat: 'no-repeat',
-                maskPosition: 'center left',
-                maskSize: 'contain',
-                WebkitMaskImage: 'url(/TerceroLand.svg)',
-                WebkitMaskRepeat: 'no-repeat',
-                WebkitMaskPosition: 'center left',
-                WebkitMaskSize: 'contain',
-              }}
-            />
-          ) : (
-            <div className="flex items-center gap-4">
-              {agencySub.logo_horizontal_url || agencySub.logo_url ? (
-                <img
-                  src={agencySub.logo_horizontal_url || agencySub.logo_url}
-                  alt={agencySub.agency_name}
-                  className="h-12 w-auto object-contain rounded-lg"
-                  onError={(e) => (e.target.style.display = 'none')}
-                />
+    <div className="h-screen w-full bg-background font-sans text-foreground overflow-hidden flex justify-center">
+      <div className="w-full max-w-7xl flex flex-col lg:flex-row overflow-hidden">
+
+        {/* LEFT: Content — scrollable */}
+        <div className="lg:w-[55%] overflow-y-auto px-8 lg:px-14 py-10 flex flex-col gap-6">
+
+          {/* Branding */}
+          <div className="mb-2">
+            {!showAgencyBranding ? (
+              <div
+                className="h-6 w-24 bg-foreground"
+                style={{
+                  maskImage: 'url(/TerceroLand.svg)',
+                  maskRepeat: 'no-repeat',
+                  maskPosition: 'center left',
+                  maskSize: 'contain',
+                  WebkitMaskImage: 'url(/TerceroLand.svg)',
+                  WebkitMaskRepeat: 'no-repeat',
+                  WebkitMaskPosition: 'center left',
+                  WebkitMaskSize: 'contain',
+                }}
+              />
+            ) : agencySub?.logo_horizontal_url || agencySub?.logo_url ? (
+              <img
+                src={agencySub.logo_horizontal_url || agencySub.logo_url}
+                alt={agencySub.agency_name}
+                className="h-10 w-auto object-contain rounded-md"
+                onError={(e) => (e.target.style.display = 'none')}
+              />
+            ) : (
+              <span className="text-lg font-bold tracking-tight">{agencySub?.agency_name || 'Agency'}</span>
+            )}
+          </div>
+
+          {/* Platform badges + version */}
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex flex-wrap gap-1.5">
+              {post.platform.map((p) => (
+                <div
+                  key={p}
+                  className="flex items-center gap-1 px-1.5 py-1 rounded-full border text-xs font-medium text-muted-foreground"
+                >
+                  <PlatformIcon name={p} />
+                  <span className="capitalize">{p.replace('_', ' ')}</span>
+                </div>
+              ))}
+            </div>
+            <Badge variant="outline" className="font-mono text-xs text-muted-foreground shrink-0">
+              v{post.version_number}.0
+            </Badge>
+          </div>
+
+          {/* Title */}
+          <h1 className="text-3xl font-extrabold tracking-tight bricolage leading-tight">
+            {post.title}
+          </h1>
+
+          {/* Meta */}
+          <div className="flex flex-col gap-2 text-sm text-muted-foreground border-y border-border/40 py-3">
+            <div className="flex items-center gap-1.5">
+              <CalendarIcon size={13} />
+              <span>Created {format(new Date(post.created_at), 'MMM dd, yyyy')}</span>
+            </div>
+            {post.platform_schedules ? (
+              <div className="flex flex-wrap gap-x-4 gap-y-1.5">
+                {Object.entries(post.platform_schedules).map(([platform, { scheduled_at }]) => (
+                  <div key={platform} className="flex items-center gap-1.5 font-medium text-foreground">
+                    <PlatformIcon name={platform} />
+                    <span>{format(new Date(scheduled_at), 'MMM dd @ p')}</span>
+                  </div>
+                ))}
+              </div>
+            ) : post.target_date ? (
+              <div className="flex items-center gap-1.5 font-medium text-primary">
+                <Clock size={13} />
+                <span>Scheduled {format(new Date(post.target_date), 'MMM dd @ p')}</span>
+              </div>
+            ) : null}
+          </div>
+
+          {/* Caption */}
+          <div className="space-y-2">
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/50">
+              Caption
+            </p>
+            <p className="text-sm leading-relaxed whitespace-pre-wrap text-foreground/80">
+              {post.content}
+            </p>
+          </div>
+
+          {/* Mobile: media thumbnails + preview trigger */}
+          <div className="lg:hidden space-y-3">
+            {post.media_urls?.length > 0 && (
+              <div className="grid grid-cols-2 gap-2">
+                {post.media_urls.map((url, i) => (
+                  <MediaThumbnail key={i} url={url} onClick={() => openPreview(i)} />
+                ))}
+              </div>
+            )}
+            {post.platform?.length > 0 && (
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => {
+                  setMobileSheetPlatform(post.platform[0])
+                  setMobileSheetOpen(true)
+                }}
+              >
+                <Smartphone className="mr-2 h-4 w-4" />
+                Preview on platform
+              </Button>
+            )}
+          </div>
+
+          {/* ACTION BUTTONS */}
+          <div className="flex items-center gap-3 pt-2">
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button>
+                  <Check className="mr-2 h-4 w-4" />
+                  {post.platform?.length > 0 ? 'Approve & Schedule' : 'Approve'}
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-lg">
+                <DialogHeader>
+                  <DialogTitle className="text-lg">
+                    {post.platform?.length > 0 ? 'Approve & Schedule' : 'Approve Deliverable'}
+                  </DialogTitle>
+                  <DialogDescription className="text-sm">
+                    {post.platform?.length > 0
+                      ? "You're confirming this content is ready for publication."
+                      : "You're confirming this deliverable is accepted and ready for delivery."}
+                  </DialogDescription>
+                </DialogHeader>
+
+                <div className="rounded-xl border border-border bg-muted/30 px-4 py-3 text-sm space-y-1.5 my-4">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/60">Approving</p>
+                  <p className="font-semibold text-foreground">{post.title}</p>
+                  {post.platform_schedules ? (
+                    <div className="space-y-0.5">
+                      {Object.entries(post.platform_schedules).map(([platform, { scheduled_at }]) => (
+                        <p key={platform} className="text-muted-foreground text-xs">
+                          <span className="capitalize font-medium">{platform.replace('_', ' ')}</span>
+                          {' · '}{format(new Date(scheduled_at), 'MMM d, yyyy @ p')}
+                        </p>
+                      ))}
+                    </div>
+                  ) : post.platform?.length > 0 ? (
+                    <p className="text-muted-foreground">
+                      {post.platform.join(', ')}
+                      {post.target_date ? ` · ${format(new Date(post.target_date), 'MMM d, yyyy')}` : ''}
+                    </p>
+                  ) : post.target_date ? (
+                    <p className="text-muted-foreground">Target date: {format(new Date(post.target_date), 'MMM d, yyyy')}</p>
+                  ) : null}
+                </div>
+
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/60">What happens next</p>
+                  <ul className="space-y-2">
+                    {(post.platform?.length > 0
+                      ? [
+                          'This version is locked — no further edits can be made to it.',
+                          'Your team will be notified immediately to begin scheduling.',
+                          'The post will be published on the platform(s) listed above.',
+                          'You will receive a confirmation email once it goes live.',
+                        ]
+                      : [
+                          'This version is locked — no further edits can be made to it.',
+                          'Your team will be notified to proceed with delivery.',
+                          'You will receive a confirmation once the deliverable has been sent.',
+                        ]
+                    ).map((step, i) => (
+                      <li key={i} className="flex items-start gap-3 text-sm text-muted-foreground">
+                        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-green-100 dark:bg-green-500/20 text-green-700 dark:text-green-400 text-[11px] font-bold mt-0.5">
+                          {i + 1}
+                        </span>
+                        <span>{step}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                <DialogFooter className="mt-6">
+                  <Button className="w-full" onClick={() => handleStatusUpdate('APPROVED')} disabled={isSubmitting}>
+                    {isSubmitting ? 'Processing...' : 'Confirm Approval'}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button variant="outline">
+                  <PencilLine className="mr-2 h-4 w-4" /> Request Revisions
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-lg">
+                <DialogHeader>
+                  <DialogTitle className="text-lg">Request Revisions</DialogTitle>
+                  <DialogDescription className="text-sm">
+                    Let the team know what needs to be changed before you can approve.
+                  </DialogDescription>
+                </DialogHeader>
+
+                <div className="my-4 space-y-2">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/60">Your Feedback</p>
+                  <Textarea
+                    placeholder='Be as specific as possible — e.g., "Change the opening line to something more casual," or "Replace the second image with a product shot."'
+                    value={feedback}
+                    onChange={(e) => setFeedback(e.target.value)}
+                    className="min-h-35 bg-muted/30 text-sm leading-relaxed"
+                  />
+                  <p className="text-xs text-muted-foreground/60">Clear, detailed feedback helps the team respond faster.</p>
+                </div>
+
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/60">What happens next</p>
+                  <ul className="space-y-2">
+                    {[
+                      'Your feedback is sent directly to the content team.',
+                      'A revised version will be submitted for your review.',
+                      'You will receive a new review link once the update is ready.',
+                    ].map((step, i) => (
+                      <li key={i} className="flex items-start gap-3 text-sm text-muted-foreground">
+                        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-green-100 dark:bg-green-500/20 text-green-700 dark:text-green-400 text-[11px] font-bold mt-0.5">
+                          {i + 1}
+                        </span>
+                        <span>{step}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                <DialogFooter className="mt-6">
+                  <Button
+                    className="w-full"
+                    disabled={!feedback || isSubmitting}
+                    onClick={() => handleStatusUpdate('NEEDS_REVISION')}
+                  >
+                    {isSubmitting ? 'Sending Feedback...' : 'Submit Revision Request'}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
+
+          {/* Notice */}
+          <p className="text-xs text-muted-foreground/50 leading-relaxed">
+            {post.platform?.length > 0
+              ? 'Approval locks this version and schedules it for publication.'
+              : 'Approval locks this version and notifies the team to proceed.'}
+          </p>
+
+          {/* Powered by */}
+          {showPoweredBy && (
+            <div className="mt-auto pt-6 flex">
+              {!showAgencyBranding ? (
+                <p className="text-xs text-muted-foreground/40 font-medium">Tercero 2026</p>
               ) : (
-                <h2 className="text-2xl font-bold tracking-tight">
-                  {agencySub.agency_name || 'Agency'}
-                </h2>
+                <div
+                  className="h-4 w-14 bg-muted-foreground/30"
+                  style={{
+                    maskImage: 'url(/TerceroLand.svg)',
+                    maskRepeat: 'no-repeat',
+                    maskPosition: 'center left',
+                    maskSize: 'contain',
+                    WebkitMaskImage: 'url(/TerceroLand.svg)',
+                    WebkitMaskRepeat: 'no-repeat',
+                    WebkitMaskPosition: 'center left',
+                    WebkitMaskSize: 'contain',
+                  }}
+                />
               )}
             </div>
           )}
+
+          {/* Mobile preview sheet */}
+          <Sheet open={mobileSheetOpen} onOpenChange={setMobileSheetOpen}>
+            <SheetContent side="bottom" className="h-[90vh] flex flex-col p-0">
+              <SheetHeader className="shrink-0 px-5 pt-5 pb-3 border-b border-border/40">
+                <SheetTitle className="text-sm font-medium">Platform Preview</SheetTitle>
+                <div className="pt-1">
+                  <Select
+                    value={mobileSheetPlatform ?? ''}
+                    onValueChange={setMobileSheetPlatform}
+                  >
+                    <SelectTrigger className="h-8 text-xs w-full">
+                      <SelectValue placeholder="Select platform" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {post.platform?.map((p) => (
+                        <SelectItem key={p} value={p} className="text-xs">
+                          <div className="flex items-center gap-2">
+                            <PlatformIcon name={p} />
+                            <span className="capitalize">{p.replace('_', ' ')}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </SheetHeader>
+              <div className="flex-1 overflow-y-auto px-5 py-5">
+                {renderPlatformPreview(mobileSheetPlatform ?? post.platform?.[0])}
+              </div>
+            </SheetContent>
+          </Sheet>
         </div>
 
-        <div className="grid grid-cols-1 gap-12 lg:grid-cols-12">
-          {/* LEFT SECTION */}
-          <div className="lg:col-span-7 space-y-8 order-1">
-            <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  {post.platform.map((p) => (
-                    <PlatformIcon key={p} name={p} />
+        {/* Divider */}
+        <div className="hidden lg:block w-px bg-border/30 shrink-0" />
+
+        {/* RIGHT: desktop only */}
+        <div className="hidden lg:flex lg:w-[45%] flex-col overflow-hidden px-8 lg:px-10 pt-10 pb-6 gap-6">
+
+          {/* Container 1: Toggle + Select — never scrolls */}
+          <div className="shrink-0 flex items-center gap-2 justify-between">
+            <div className="flex items-center gap-0.5 p-1 bg-muted rounded-lg shrink-0">
+              <button
+                onClick={() => setRightView('media')}
+                className={cn(
+                  'px-3 py-1 text-xs font-medium rounded-md transition-colors',
+                  rightView === 'media'
+                    ? 'bg-background text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
+                )}
+              >
+                Media
+              </button>
+              {post.platform?.length > 0 && (
+                <button
+                  onClick={() => {
+                    setRightView('preview')
+                    setPreviewPlatform(post.platform[0])
+                  }}
+                  className={cn(
+                    'px-3 py-1 text-xs font-medium rounded-md transition-colors',
+                    rightView === 'preview'
+                      ? 'bg-background text-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground'
+                  )}
+                >
+                  Preview
+                </button>
+              )}
+            </div>
+
+            <Select
+              value={rightView === 'preview' ? (activePlatform ?? '') : ''}
+              onValueChange={(val) => { setPreviewPlatform(val); setRightView('preview') }}
+              disabled={rightView === 'media' || !post.platform?.length}
+            >
+              <SelectTrigger className="h-8 text-xs w-fit">
+                <SelectValue placeholder="Preview platform" />
+              </SelectTrigger>
+              <SelectContent>
+                {post.platform?.map((p) => (
+                  <SelectItem key={p} value={p} className="text-xs">
+                    <div className="flex items-center gap-2">
+                      <PlatformIcon name={p} />
+                      <span className="capitalize">{p.replace('_', ' ')}</span>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Container 2: Media / Preview content — only this scrolls */}
+          <div className="flex-1 overflow-y-auto pb-4">
+            {rightView === 'media' ? (
+              post.media_urls.length > 0 ? (
+                <div className="grid grid-cols-2 gap-3">
+                  {post.media_urls.map((url, i) => (
+                    <MediaThumbnail key={i} url={url} onClick={() => openPreview(i)} />
                   ))}
                 </div>
-                <Badge variant="secondary" className="font-mono">
-                  v{post.version_number}.0
-                </Badge>
-              </div>
-
-              <h1 className="text-3xl font-extrabold tracking-tight lg:text-4xl">
-                {post.title}
-              </h1>
-
-              <div className="flex flex-wrap items-center gap-y-2 gap-x-4 border-y border-border/50 py-4 text-sm text-muted-foreground">
-                <div className="flex items-center gap-2">
-                  <CalendarIcon size={14} />
-                  <span>
-                    Created {format(new Date(post.created_at), 'MMM dd, yyyy')}
-                  </span>
+              ) : (
+                <div className="h-40 rounded-xl border-2 border-dashed border-border flex items-center justify-center text-muted-foreground text-sm">
+                  No media attached
                 </div>
-                {post.platform_schedules ? (
-                  <div className="space-y-1.5">
-                    <p className="text-xs font-semibold text-muted-foreground/60 uppercase tracking-wider">
-                      Planned Schedule
-                    </p>
-                    {Object.entries(post.platform_schedules).map(([platform, { scheduled_at }]) => (
-                      <div key={platform} className="flex items-center gap-2 text-sm font-semibold text-primary">
-                        <Clock size={13} />
-                        <span className="capitalize">{platform.replace('_', ' ')}:</span>
-                        <span>{format(new Date(scheduled_at), 'MMM dd @ p')}</span>
-                      </div>
-                    ))}
-                  </div>
-                ) : post.target_date ? (
-                  <div className="flex items-center gap-2 font-semibold text-primary">
-                    <Clock size={14} />
-                    <span>
-                      Schedule:{' '}
-                      {format(new Date(post.target_date), 'MMM dd @ p')}
-                    </span>
-                  </div>
-                ) : null}
-              </div>
-
-              <div className="space-y-3">
-                <h3 className="text-xs font-semibold text-muted-foreground/60">
-                  Caption
-                </h3>
-                <p className="text-sm leading-relaxed whitespace-pre-wrap text-foreground/90">
-                  {post.content}
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-4 rounded-2xl bg-secondary/20 p-6 text-sm border border-border/40">
-              <Info size={20} className="mt-0.5 text-primary shrink-0" />
-              <div className="space-y-1">
-                <p className="font-bold">Final Review Notice</p>
-                <p className="text-muted-foreground">
-                  {post.platform?.length > 0
-                    ? 'Approval will lock this version and notify the team to schedule for publication.'
-                    : 'Approval will lock this version and notify the team to proceed with delivery.'}
-                </p>
-              </div>
-            </div>
-
-            {/* ACTION BUTTONS */}
-            <div className="flex flex-col sm:flex-row items-center gap-4 pt-4">
-              <Dialog>
-                <DialogTrigger asChild>
-                  <Button className="w-full sm:w-auto">
-                    <Check className="mr-2 h-5 w-5" />
-                    {post.platform?.length > 0 ? 'Approve & Schedule' : 'Approve'}
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-lg">
-                  {/* Approve Dialog Header */}
-                  <div className="flex items-center gap-4 mb-2">
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                      <Check size={24} strokeWidth={2.5} />
-                    </div>
-                    <div>
-                      <DialogTitle className="text-lg">
-                        {post.platform?.length > 0 ? 'Approve & Schedule' : 'Approve Deliverable'}
-                      </DialogTitle>
-                      <DialogDescription className="text-sm">
-                        {post.platform?.length > 0
-                          ? "You're confirming this content is ready for publication."
-                          : "You're confirming this deliverable is accepted and ready for delivery."}
-                      </DialogDescription>
-                    </div>
-                  </div>
-
-                  {/* Post summary */}
-                  <div className="rounded-xl border border-border bg-muted/30 px-4 py-3 text-sm space-y-1.5 my-4">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/60">
-                      Approving
-                    </p>
-                    <p className="font-semibold text-foreground">
-                      {post.title}
-                    </p>
-                    {post.platform_schedules ? (
-                      <div className="space-y-0.5">
-                        {Object.entries(post.platform_schedules).map(([platform, { scheduled_at }]) => (
-                          <p key={platform} className="text-muted-foreground text-xs">
-                            <span className="capitalize font-medium">{platform.replace('_', ' ')}</span>
-                            {' · '}{format(new Date(scheduled_at), 'MMM d, yyyy @ p')}
-                          </p>
-                        ))}
-                      </div>
-                    ) : post.platform?.length > 0 ? (
-                      <p className="text-muted-foreground">
-                        {post.platform.join(', ')}
-                        {post.target_date
-                          ? ` · ${format(new Date(post.target_date), 'MMM d, yyyy')}`
-                          : ''}
-                      </p>
-                    ) : post.target_date ? (
-                      <p className="text-muted-foreground">
-                        Target date: {format(new Date(post.target_date), 'MMM d, yyyy')}
-                      </p>
-                    ) : null}
-                  </div>
-
-                  {/* What happens next */}
-                  <div className="space-y-2">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/60">
-                      What happens next
-                    </p>
-                    <ul className="space-y-2">
-                      {(post.platform?.length > 0
-                        ? [
-                            'This version is locked — no further edits can be made to it.',
-                            'Your team will be notified immediately to begin scheduling.',
-                            'The post will be published on the platform(s) listed above.',
-                            'You will receive a confirmation email once it goes live.',
-                          ]
-                        : [
-                            'This version is locked — no further edits can be made to it.',
-                            'Your team will be notified to proceed with delivery.',
-                            'You will receive a confirmation once the deliverable has been sent.',
-                          ]
-                      ).map((step, i) => (
-                        <li
-                          key={i}
-                          className="flex items-start gap-3 text-sm text-muted-foreground"
-                        >
-                          <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-[11px] font-bold mt-0.5">
-                            {i + 1}
-                          </span>
-                          <span>{step}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-
-                  <DialogFooter className="mt-6">
-                    <Button
-                      className="w-full"
-                      onClick={() => handleStatusUpdate('APPROVED')}
-                      disabled={isSubmitting}
-                    >
-                      {isSubmitting ? 'Processing...' : 'Confirm Approval'}
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
-
-              <Dialog>
-                <DialogTrigger asChild>
-                  <Button variant="outline" className="w-full sm:w-auto">
-                    <PencilLine className="mr-2 h-5 w-5" /> Request Revisions
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-lg">
-                  {/* Revision Dialog Header */}
-                  <div className="flex items-center gap-4 mb-2">
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-muted text-muted-foreground">
-                      <PencilLine size={22} strokeWidth={2} />
-                    </div>
-                    <div>
-                      <DialogTitle className="text-lg">
-                        Request Revisions
-                      </DialogTitle>
-                      <DialogDescription className="text-sm">
-                        Let the team know what needs to be changed before you
-                        can approve.
-                      </DialogDescription>
-                    </div>
-                  </div>
-
-                  {/* Feedback field */}
-                  <div className="my-4 space-y-2">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/60">
-                      Your Feedback
-                    </p>
-                    <Textarea
-                      placeholder='Be as specific as possible — e.g., "Change the opening line to something more casual," or "Replace the second image with a product shot."'
-                      value={feedback}
-                      onChange={(e) => setFeedback(e.target.value)}
-                      className="min-h-[140px] bg-muted/30 text-sm leading-relaxed"
-                    />
-                    <p className="text-xs text-muted-foreground/60">
-                      Clear, detailed feedback helps the team respond faster.
-                    </p>
-                  </div>
-
-                  {/* What happens next */}
-                  <div className="space-y-2">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/60">
-                      What happens next
-                    </p>
-                    <ul className="space-y-2">
-                      {[
-                        'Your feedback is sent directly to the content team.',
-                        'A revised version will be submitted for your review.',
-                        'You will receive a new review link once the update is ready.',
-                      ].map((step, i) => (
-                        <li
-                          key={i}
-                          className="flex items-start gap-3 text-sm text-muted-foreground"
-                        >
-                          <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-muted text-foreground text-[11px] font-bold mt-0.5">
-                            {i + 1}
-                          </span>
-                          <span>{step}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-
-                  <DialogFooter className="mt-6">
-                    <Button
-                      variant="outline"
-                      className="w-full"
-                      disabled={!feedback || isSubmitting}
-                      onClick={() => handleStatusUpdate('NEEDS_REVISION')}
-                    >
-                      {isSubmitting
-                        ? 'Sending Feedback...'
-                        : 'Submit Revision Request'}
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
-            </div>
-
-            {/* MOBILE: Media Grid */}
-            <div className="block lg:hidden pt-8 space-y-4">
-              <h3 className="text-sm font-bold uppercase tracking-widest text-muted-foreground/60 text-center">
-                Media Assets ({post.media_urls.length})
-              </h3>
-              <div className="grid grid-cols-2 gap-3">
-                {post.media_urls.map((url, i) => (
-                  <MediaThumbnail
-                    key={i}
-                    url={url}
-                    onClick={() => openPreview(i)}
-                  />
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* RIGHT SECTION: DESKTOP MEDIA GRID */}
-          <div className="hidden lg:block lg:col-span-5 border-l border-border/50 pl-12 order-2">
-            <div className="sticky top-12 space-y-6">
-              <h3 className="text-sm font-semibold text-muted-foreground/60">
-                Media Assets
-              </h3>
-              <div className="grid grid-cols-2 gap-4 max-h-[80vh] overflow-y-auto pr-1 scrollbar-hide">
-                {post.media_urls.map((url, i) => (
-                  <MediaThumbnail
-                    key={i}
-                    url={url}
-                    onClick={() => openPreview(i)}
-                  />
-                ))}
-                {post.media_urls.length === 0 && (
-                  <div className="col-span-2 h-48 rounded-2xl border-2 border-dashed border-border flex items-center justify-center text-muted-foreground italic text-sm">
-                    No media attached
-                  </div>
-                )}
-              </div>
-            </div>
+              )
+            ) : (
+              renderPlatformPreview(activePlatform)
+            )}
           </div>
         </div>
-      </div>
 
-      {/* FOOTER */}
-      <footer className="w-full py-6 mt-auto border-t border-border/40 flex items-center justify-center">
-        {!showAgencyBranding ? (
-          <p className="text-sm text-muted-foreground/60 font-medium tracking-wide">
-            Tercero 2026
-          </p>
-        ) : showPoweredBy ? (
-          <div
-            className="h-5 w-20 bg-muted-foreground/50"
-            style={{
-              maskImage: 'url(/TerceroLand.svg)',
-              maskRepeat: 'no-repeat',
-              maskPosition: 'center',
-              maskSize: 'contain',
-              WebkitMaskImage: 'url(/TerceroLand.svg)',
-              WebkitMaskRepeat: 'no-repeat',
-              WebkitMaskPosition: 'center',
-              WebkitMaskSize: 'contain',
-            }}
-          />
-        ) : null}
-      </footer>
+        </div>
 
       {/* FULL-SCREEN LIGHTBOX */}
       {isPreviewOpen && (
@@ -586,6 +675,19 @@ export default function PublicReview() {
                 autoPlay
                 className="max-w-[90vw] max-h-[85vh] rounded-xl object-contain"
               />
+            ) : isDocumentUrl(post.media_urls[activeIndex]) ? (
+              (() => {
+                const previewUrl = getDocumentPreviewUrl(post.media_urls[activeIndex])
+                return previewUrl ? (
+                  <iframe src={previewUrl} title="Document preview" className="w-[85vw] h-[85vh] rounded-xl border-0" />
+                ) : (
+                  <div className="flex flex-col items-center justify-center gap-4 text-white/70 p-12">
+                    <FileText className="size-16 opacity-40" />
+                    <p className="text-sm opacity-60">Preview not available</p>
+                    <a href={post.media_urls[activeIndex]} target="_blank" rel="noopener noreferrer" className="text-sm underline">Open file</a>
+                  </div>
+                )
+              })()
             ) : (
               <img
                 src={post.media_urls[activeIndex]}
@@ -643,6 +745,7 @@ export default function PublicReview() {
 // ── Media Thumbnail Component ─────────────────────────────────
 function MediaThumbnail({ url, onClick }) {
   const video = isVideo(url)
+  const isDoc = isDocumentUrl(url)
   return (
     <div
       onClick={onClick}
@@ -650,18 +753,14 @@ function MediaThumbnail({ url, onClick }) {
       style={{ aspectRatio: '1 / 1' }}
     >
       {video ? (
-        <video
-          src={url}
-          muted
-          playsInline
-          className="w-full h-full object-cover"
-        />
+        <video src={url} muted playsInline className="w-full h-full object-cover" />
+      ) : isDoc ? (
+        <div className="flex flex-col items-center justify-center h-full gap-1.5 bg-muted/60 p-2">
+          <FileText className="h-7 w-7 text-muted-foreground shrink-0" />
+          <p className="text-[10px] font-medium text-muted-foreground uppercase">{getDocumentExtension(url)}</p>
+        </div>
       ) : (
-        <img
-          src={url}
-          alt=""
-          className="w-full h-full object-cover transition duration-300 group-hover:brightness-75"
-        />
+        <img src={url} alt="" className="w-full h-full object-cover transition duration-300 group-hover:brightness-75" />
       )}
       <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
         <div className="p-2.5 bg-black/30 backdrop-blur-sm rounded-full border border-white/20 text-white">

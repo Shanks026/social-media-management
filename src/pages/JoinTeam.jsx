@@ -225,7 +225,7 @@ export default function JoinTeam() {
             </div>
 
             <div className="space-y-1">
-              <h1 className="text-3xl font-normal tracking-tight">
+              <h1 className="text-3xl font-normal tracking-tight bricolage">
                 You&apos;re invited
               </h1>
               <p className="text-muted-foreground font-normal">
@@ -240,7 +240,7 @@ export default function JoinTeam() {
 
           {/* ── Section: Account Details ── */}
           <section className="space-y-8">
-            <h2 className="text-2xl font-normal">Account Details</h2>
+            <h2 className="text-2xl font-normal bricolage">Account Details</h2>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
@@ -322,7 +322,7 @@ export default function JoinTeam() {
           {/* ── Section: Your Role ── */}
           <section className="space-y-8">
             <div className="space-y-1">
-              <h2 className="text-2xl font-normal">Your Role</h2>
+              <h2 className="text-2xl font-normal bricolage">Your Role</h2>
               <p className="text-muted-foreground font-normal text-sm">
                 Optional — helps your team know what you do.
               </p>

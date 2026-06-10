@@ -33,7 +33,7 @@ export default function Settings() {
   return (
     <div className="h-full bg-background overflow-y-auto overflow-x-hidden selection:bg-primary/10 [scrollbar-gutter:stable]">
       <div className="overflow-hidden">
-        <div className="px-8 pt-8 pb-20 space-y-8 max-w-[1400px] mx-auto animate-in fade-in slide-in-from-bottom-4 duration-700 fill-mode-both">
+        <div className="px-8 pt-8 pb-20 space-y-8 max-w-[1400px] mx-auto animate-in fade-in duration-700 fill-mode-both">
           {/* PAGE HEADER */}
           <div className="space-y-1">
             <h1 className="text-3xl font-normal tracking-tight text-foreground bricolage">
@@ -47,7 +47,7 @@ export default function Settings() {
           <Tabs
             value={tab}
             onValueChange={handleTabChange}
-            className="space-y-10"
+            className="space-y-6"
           >
             <TabsList className="bg-transparent border-b border-white/5 rounded-none p-0 h-auto gap-8 w-full justify-start">
               {[
@@ -83,28 +83,28 @@ export default function Settings() {
 
             <TabsContent
               value="profile"
-              className="pt-4 focus-visible:outline-none"
+              className="focus-visible:outline-none"
             >
               <ProfileSettings />
             </TabsContent>
 
             <TabsContent
               value="agency"
-              className="pt-4 focus-visible:outline-none"
+              className="focus-visible:outline-none"
             >
               <AgencySettings />
             </TabsContent>
 
             <TabsContent
               value="team"
-              className="pt-4 focus-visible:outline-none"
+              className="focus-visible:outline-none"
             >
               <TeamSettings />
             </TabsContent>
 
             <TabsContent
               value="support"
-              className="pt-4 focus-visible:outline-none"
+              className="focus-visible:outline-none"
             >
               <SupportSettings />
             </TabsContent>

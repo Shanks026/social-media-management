@@ -214,7 +214,7 @@ export default function WelcomeCarousel({ open, onOpenChange, user }) {
               </div>
 
               <div className="space-y-3">
-                <h2 className="text-3xl font-medium tracking-tight text-foreground">
+                <h2 className="text-3xl font-medium tracking-tight text-foreground bricolage">
                   {slide.title}
                 </h2>
                 {slide.subtitle && (

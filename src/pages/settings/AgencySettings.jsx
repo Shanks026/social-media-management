@@ -273,7 +273,7 @@ export default function AgencySettings() {
   // ── Full-screen setup form ──
   if (isSetupModalOpen) {
     return (
-      <div className="h-full bg-background overflow-y-auto selection:bg-primary/10 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="h-full bg-background overflow-y-auto selection:bg-primary/10 animate-in fade-in duration-500">
         <CreateClientPage
           standalone
           customSubmit={async (data) => {
@@ -329,12 +329,12 @@ export default function AgencySettings() {
     const platforms = internalClient.platforms || []
 
     return (
-      <div className="max-w-5xl space-y-14 mx-auto">
+      <div className="max-w-4xl space-y-8 mx-auto animate-in fade-in duration-700">
         {/* Section: Branding & Identity */}
         <section className="space-y-8">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="space-y-1">
-              <h2 className="text-2xl font-normal tracking-tight">
+              <h2 className="text-2xl font-normal tracking-tight bricolage">
                 Agency Profile
               </h2>
               <p className="text-sm text-muted-foreground font-normal">
@@ -629,7 +629,7 @@ export default function AgencySettings() {
         {/* Section: Danger Zone */}
         <section className="space-y-6">
           <div className="space-y-1">
-            <h2 className="text-lg font-medium text-destructive tracking-tight bricolage">
+            <h2 className="text-xl font-normal text-destructive tracking-tight bricolage">
               Danger Zone
             </h2>
             <p className="text-sm text-muted-foreground font-normal">
@@ -672,7 +672,7 @@ export default function AgencySettings() {
 
     return (
       <>
-        <div className="max-w-4xl mx-auto space-y-14 animate-in fade-in slide-in-from-bottom-4 duration-700">
+        <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in duration-700">
           {/* Compact workspace banner */}
           <div className="rounded-xl border border-primary/20 bg-muted/30 px-6 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="space-y-0.5">
@@ -931,7 +931,7 @@ export default function AgencySettings() {
 
   // ── PATH C: Nothing set up ──
   return (
-    <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-6 duration-1000">
+    <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in duration-1000">
       <div className="text-center space-y-2">
         <h2 className="text-2xl font-normal tracking-tight bricolage">Get Started</h2>
         <p className="text-muted-foreground text-sm font-normal">
@@ -939,7 +939,7 @@ export default function AgencySettings() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-5xl mx-auto">
         <ChoiceCard
           icon={<Palette className="size-6" />}
           title="Identity Branding"

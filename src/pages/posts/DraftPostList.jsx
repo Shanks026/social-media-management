@@ -9,12 +9,12 @@ import {
   Trash2,
   ChevronLeft,
   ChevronRight,
-  AlertTriangle,
   Play,
   FolderOpen,
   Megaphone,
   LayoutGrid,
   Plus,
+  FileText,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -26,14 +26,17 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { Dialog, DialogContent } from '@/components/ui/dialog'
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from '@/components/ui/dialog'
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import {
   Tooltip,
   TooltipTrigger,
@@ -56,7 +59,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
 import { cn } from '@/lib/utils'
 import { getUrgencyStatus } from '@/lib/client-helpers'
-import { getPublishState, renderCaption } from '@/lib/helper'
+import { getPublishState, renderCaption, isDocumentUrl, getDocumentExtension, getDocumentPreviewUrl } from '@/lib/helper'
 
 const DELIVERABLE_TYPE_LABELS = {
   reel_short_video: 'Reel',
@@ -91,6 +94,33 @@ const isVideoSource = (url) => {
 
 const MediaItem = ({ url, className, isPreview = false }) => {
   const isVideo = isVideoSource(url)
+  const isDoc = isDocumentUrl(url)
+
+  if (isDoc) {
+    if (isPreview) {
+      const previewUrl = getDocumentPreviewUrl(url)
+      if (previewUrl) {
+        return <iframe src={previewUrl} title="Document preview" className="w-full h-full border-0" />
+      }
+      return (
+        <div className="flex flex-col items-center justify-center h-full gap-3 text-white/70">
+          <FileText className="size-12 opacity-40" />
+          <p className="text-sm opacity-60">Preview not available</p>
+          <a href={url} target="_blank" rel="noopener noreferrer" className="text-xs underline opacity-70 hover:opacity-100">
+            Open file
+          </a>
+        </div>
+      )
+    }
+    const ext = getDocumentExtension(url)
+    return (
+      <div className={cn('h-full w-full flex flex-col items-center justify-center gap-1.5 bg-muted/60 p-2', className)}>
+        <FileText className="h-7 w-7 text-muted-foreground shrink-0" />
+        <p className="text-[10px] font-medium text-muted-foreground uppercase">{ext}</p>
+      </div>
+    )
+  }
+
   if (isVideo) {
     return (
       <div
@@ -170,8 +200,6 @@ export default function DraftPostList({ clientId, onCreatePost, statusFilter = '
     ['DRAFT', 'PENDING_APPROVAL'].includes(postStatus)
   // NEEDS_REVISION creates a new version
   const canCreateNewVersion = (postStatus) => postStatus === 'NEEDS_REVISION'
-  // Delete is allowed for everything except PUBLISHED
-  const canDelete = (postStatus) => postStatus !== 'PUBLISHED'
 
   const createRevisionMutation = useMutation({
     mutationFn: (post) => createRevision(post.version_id, user?.id),
@@ -244,27 +272,36 @@ export default function DraftPostList({ clientId, onCreatePost, statusFilter = '
           No Media
         </div>
       )
-    if (count === 1) return <MediaItem url={media[0]} />
+    if (count === 1)
+      return (
+        <div className="absolute inset-0">
+          <MediaItem url={media[0]} className="w-full h-full" />
+        </div>
+      )
     if (count === 2)
       return (
-        <div className="grid grid-cols-2 gap-0.5 w-full h-full">
+        <div className="absolute inset-0 grid grid-cols-2 gap-0.5">
           {media.map((url, i) => (
-            <MediaItem key={i} url={url} />
+            <div key={i} className="relative overflow-hidden">
+              <MediaItem url={url} className="absolute inset-0 w-full h-full" />
+            </div>
           ))}
         </div>
       )
     return (
-      <div className="grid grid-cols-2 gap-0.5 w-full h-full">
-        <MediaItem url={media[0]} />
-        <div className="grid grid-rows-2 gap-0.5 h-full overflow-hidden">
-          <MediaItem url={media[1]} />
-          <div className="relative h-full w-full">
-            <MediaItem url={media[2]} />
+      <div className="absolute inset-0 grid grid-cols-2 gap-0.5">
+        <div className="relative overflow-hidden">
+          <MediaItem url={media[0]} className="absolute inset-0 w-full h-full" />
+        </div>
+        <div className="grid grid-rows-2 gap-0.5">
+          <div className="relative overflow-hidden">
+            <MediaItem url={media[1]} className="absolute inset-0 w-full h-full" />
+          </div>
+          <div className="relative overflow-hidden">
+            <MediaItem url={media[2]} className="absolute inset-0 w-full h-full" />
             {count > 3 && (
               <div className="absolute inset-0 bg-black/60 flex items-center justify-center pointer-events-none">
-                <span className="text-white font-bold text-sm">
-                  +{count - 3}
-                </span>
+                <span className="text-white font-bold text-sm">+{count - 3}</span>
               </div>
             )}
           </div>
@@ -415,7 +452,7 @@ export default function DraftPostList({ clientId, onCreatePost, statusFilter = '
                       )}
 
                       <DropdownMenuItem
-                        disabled={!canDelete(post.status || 'DRAFT')}
+                        disabled={false}
                         className="cursor-pointer font-medium text-destructive focus:bg-destructive/10 focus:text-destructive py-2"
                         onClick={(e) => {
                           e.stopPropagation()
@@ -431,7 +468,7 @@ export default function DraftPostList({ clientId, onCreatePost, statusFilter = '
 
               {/* Title + version */}
               <div className="flex items-center gap-2 mb-6 min-w-0">
-                <h3 className="text-lg font-medium tracking-tight text-foreground line-clamp-1 min-w-0">
+                <h3 className="text-lg font-medium tracking-tight text-foreground line-clamp-1 min-w-0 bricolage">
                   {post.title || 'Untitled Draft'}
                 </h3>
                 <Badge
@@ -563,40 +600,26 @@ export default function DraftPostList({ clientId, onCreatePost, statusFilter = '
       </Dialog>
 
       {/* Delete Confirmation Dialog */}
-      <Dialog
+      <AlertDialog
         open={!!postToDelete}
-        onOpenChange={(open) => !open && setPostToDelete(null)}
+        onOpenChange={(open) => !open && !deleteMutation.isPending && setPostToDelete(null)}
       >
-        <DialogContent
-          className="sm:max-w-[425px] rounded-2xl"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <DialogHeader>
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-red-100 dark:bg-red-900/30 rounded-full">
-                <AlertTriangle className="h-6 w-6 text-red-600 dark:text-red-400" />
-              </div>
-              <DialogTitle className="text-xl">Delete Post</DialogTitle>
-            </div>
-            <DialogDescription className="pt-4 text-base">
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Post</AlertDialogTitle>
+            <AlertDialogDescription>
               Are you sure you want to delete{' '}
-              <span className="font-semibold text-foreground">
+              <span className="font-medium text-foreground">
                 "{postToDelete?.title || 'Untitled Draft'}"
               </span>
-              ? This action cannot be undone and all media will be permanently
-              deleted.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="gap-2 sm:gap-0 mt-6">
-            <Button
-              variant="outline"
-              onClick={() => setPostToDelete(null)}
-              disabled={deleteMutation.isPending}
-              className="rounded-xl w-full sm:w-auto"
-            >
+              ? This action cannot be undone and all media will be permanently deleted.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteMutation.isPending}>
               Cancel
-            </Button>
-            <Button
+            </AlertDialogCancel>
+            <AlertDialogAction
               variant="destructive"
               onClick={() =>
                 deleteMutation.mutate(
@@ -604,13 +627,12 @@ export default function DraftPostList({ clientId, onCreatePost, statusFilter = '
                 )
               }
               disabled={deleteMutation.isPending}
-              className="rounded-xl w-full sm:w-auto font-medium"
             >
               {deleteMutation.isPending ? 'Deleting...' : 'Delete Post'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AssignCampaignDialog
         open={assignCampaignOpen}

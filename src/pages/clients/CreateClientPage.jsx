@@ -24,6 +24,7 @@ import {
   ImagePlus,
   AlertTriangle,
   ArrowRight,
+  X,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Link } from 'react-router-dom'
@@ -373,7 +374,7 @@ export default function CreateClientPage({
           {/* --- TOP NAVIGATION & TITLE --- */}
           <div className="space-y-6">
             <div className="space-y-1">
-              <h1 className="text-3xl font-normal tracking-tight">
+              <h1 className="text-3xl font-normal tracking-tight bricolage">
                 {standalone
                   ? 'Make it yours'
                   : isEditMode
@@ -419,7 +420,7 @@ export default function CreateClientPage({
 
           {/* SECTION: Branding */}
           <section className="space-y-8">
-            <h2 className="text-2xl font-normal">Branding & Identity</h2>
+            <h2 className="text-2xl font-normal bricolage">Branding & Identity</h2>
 
             <div className="flex flex-col md:flex-row gap-8 items-center md:items-start">
               <div className="shrink-0">
@@ -432,23 +433,25 @@ export default function CreateClientPage({
                   )}
                 >
                   {previewUrl ? (
-                    <div className="relative size-full overflow-hidden rounded-full border-2 border-border bg-background shadow-sm">
-                      <img
-                        src={previewUrl}
-                        alt="Preview"
-                        className="size-full object-cover transition-transform group-hover:scale-110"
-                      />
-                      <div className="absolute inset-0 flex items-center justify-center bg-black/20 opacity-0 transition-opacity group-hover:opacity-100">
-                        <Camera className="size-6 text-white" />
+                    <>
+                      <div className="relative size-full overflow-hidden rounded-full border-2 border-border bg-background shadow-sm">
+                        <img
+                          src={previewUrl}
+                          alt="Preview"
+                          className="size-full object-cover transition-transform group-hover:scale-110"
+                        />
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/20 opacity-0 transition-opacity group-hover:opacity-100">
+                          <Camera className="size-6 text-white" />
+                        </div>
                       </div>
                       <button
                         type="button"
                         onClick={removeLogo}
-                        className="absolute right-0 top-0 z-10 translate-x-[-10%] translate-y-[10%] rounded-full bg-destructive p-1.5 text-white shadow-lg"
+                        className="absolute -right-1 -top-1 z-20 rounded-full bg-destructive p-1 text-white shadow-lg"
                       >
-                        <ImagePlus className="size-3" />
+                        <X className="size-3" />
                       </button>
-                    </div>
+                    </>
                   ) : (
                     <div className="flex flex-col items-center gap-1 text-muted-foreground transition-colors group-hover:text-foreground">
                       {isUploading ? (
@@ -478,11 +481,11 @@ export default function CreateClientPage({
               <div className="flex-1 w-full space-y-6">
                 <div className="space-y-2">
                   <Label>
-                    Client Name <span className="text-destructive">*</span>
+                    {isInternalContext ? 'Agency Name' : 'Client Name'} <span className="text-destructive">*</span>
                   </Label>
                   <Input
                     {...form.register('name')}
-                    placeholder="e.g. Acme Corp"
+                    placeholder={isInternalContext ? 'e.g. Acme Agency' : 'e.g. Acme Corp'}
                   />
                   {errors.name && (
                     <p className="text-xs text-destructive">
@@ -621,7 +624,7 @@ export default function CreateClientPage({
 
           {/* SECTION: Socials */}
           <section className="space-y-8">
-            <h2 className="text-2xl font-normal">Social Platforms</h2>
+            <h2 className="text-2xl font-normal bricolage">Social Platforms</h2>
             <div className="py-2">
               <Controller
                 name="platforms"
@@ -647,7 +650,7 @@ export default function CreateClientPage({
 
           {/* SECTION: Contact Details */}
           <section className="space-y-8">
-            <h2 className="text-2xl font-normal">Contact & Communication</h2>
+            <h2 className="text-2xl font-normal bricolage">Contact & Communication</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <Label>

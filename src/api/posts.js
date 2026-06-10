@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase'
 import { startOfMonth, endOfMonth, startOfWeek, endOfWeek } from 'date-fns'
+import { resolveWorkspace } from '@/lib/workspace'
 
 /**
  * Fetches all posts for a client, joining the current version data.
@@ -59,14 +60,22 @@ export async function fetchAllPostsByClient(clientId) {
  */
 const getPathFromUrl = (url) => {
   if (!url) return null
-
-  // This looks for the public URL pattern and snips everything before the bucket name
-  // Pattern: .../public/post-media/YOUR_FILE_PATH
   const bucketSegment = '/public/post-media/'
   if (url.includes(bucketSegment)) {
     return url.split(bucketSegment)[1]
   }
   return null
+}
+
+// Queries the storage API for a file's byte size before deletion
+const getFileSize = async (path) => {
+  const parts = path.split('/')
+  const folder = parts.slice(0, -1).join('/')
+  const filename = parts[parts.length - 1]
+  const { data } = await supabase.storage
+    .from('post-media')
+    .list(folder, { search: filename })
+  return data?.[0]?.metadata?.size ?? 0
 }
 
 /**
@@ -183,17 +192,34 @@ export const deletePost = async (postId) => {
 
     // api/posts.js -> inside deletePost function
     if (uniquePaths.length > 0) {
-      // We MUST destructure { data, error } here
-      const { data, error: storageError } = await supabase.storage
+      // Get total size for storage tracking before deletion
+      let totalBytes = 0
+      try {
+        const sizes = await Promise.all(uniquePaths.map(getFileSize))
+        totalBytes = sizes.reduce((sum, s) => sum + s, 0)
+      } catch {
+        // non-fatal
+      }
+
+      const { error: storageError } = await supabase.storage
         .from('post-media')
         .remove(uniquePaths)
-
-      // Now 'data' is defined and can be logged
-      console.log('Supabase storage removal response:', data)
 
       if (storageError) {
         console.error('Storage cleanup failed:', storageError)
         throw storageError
+      }
+
+      if (totalBytes > 0) {
+        try {
+          const { workspaceUserId } = await resolveWorkspace()
+          await supabase.rpc('decrement_storage_used', {
+            p_user_id: workspaceUserId,
+            p_bytes: totalBytes,
+          })
+        } catch {
+          // non-fatal
+        }
       }
     }
 
@@ -343,21 +369,85 @@ export async function deleteIndividualMedia(
     .select('*', { count: 'exact', head: true })
     .contains('media_urls', [urlToDelete])
 
-  // 3. Only delete from storage if count is 0
+  // 3. Only delete from storage if count is 0 (no other version references it)
   if (count === 0) {
-    const { data, error: storageError } = await supabase.storage
+    let sizeBytes = 0
+    try {
+      sizeBytes = await getFileSize(path)
+    } catch {
+      // non-fatal
+    }
+
+    const { error: storageError } = await supabase.storage
       .from('post-media')
       .remove([path])
 
     if (storageError) console.error('Storage cleanup failed:', storageError)
-    console.log('File deleted from bucket as it is no longer referenced:', data)
-  } else {
-    console.log(
-      `File kept in bucket: ${count} other versions still reference it.`,
-    )
+
+    if (sizeBytes > 0) {
+      try {
+        const { workspaceUserId } = await resolveWorkspace()
+        await supabase.rpc('decrement_storage_used', {
+          p_user_id: workspaceUserId,
+          p_bytes: sizeBytes,
+        })
+      } catch {
+        // non-fatal
+      }
+    }
   }
 
   return updatedUrls
+}
+
+/**
+ * Called from DraftPostForm (edit mode) before updatePost.
+ * Checks each removed URL — if only the current version references it (count <= 1),
+ * deletes from the bucket and decrements the storage counter.
+ */
+export async function cleanupRemovedMedia(urlsToRemove) {
+  if (!urlsToRemove.length) return
+
+  let totalFreedBytes = 0
+  const pathsToDelete = []
+
+  for (const url of urlsToRemove) {
+    const path = getPathFromUrl(url)
+    if (!path) continue
+
+    // At this point the URL is still in the DB for the current version being edited.
+    // count === 1 means only this version uses it → safe to delete from bucket.
+    const { count } = await supabase
+      .from('post_versions')
+      .select('*', { count: 'exact', head: true })
+      .contains('media_urls', [url])
+
+    if (count <= 1) {
+      try {
+        const sizeBytes = await getFileSize(path)
+        totalFreedBytes += sizeBytes
+      } catch {
+        // non-fatal
+      }
+      pathsToDelete.push(path)
+    }
+  }
+
+  if (pathsToDelete.length > 0) {
+    await supabase.storage.from('post-media').remove(pathsToDelete)
+
+    if (totalFreedBytes > 0) {
+      try {
+        const { workspaceUserId } = await resolveWorkspace()
+        await supabase.rpc('decrement_storage_used', {
+          p_user_id: workspaceUserId,
+          p_bytes: totalFreedBytes,
+        })
+      } catch {
+        // non-fatal
+      }
+    }
+  }
 }
 
 export async function fetchGlobalCalendar({ userId, currentMonth }) {

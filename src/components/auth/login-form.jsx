@@ -29,7 +29,16 @@ export function LoginForm({ className, ...props }) {
     setLoading(false)
 
     if (error) {
-      setError(error.message)
+      if (error.code === 'invalid_credentials') {
+        const { data: exists } = await supabase.rpc('check_email_exists', { p_email: email })
+        setError(
+          exists
+            ? 'Incorrect password. Please try again or reset your password.'
+            : 'No account found with this email address. Please sign up.'
+        )
+      } else {
+        setError(error.message)
+      }
     } else if (data?.session) {
       navigate('/dashboard')
     }
