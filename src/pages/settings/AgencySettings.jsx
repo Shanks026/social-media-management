@@ -499,7 +499,7 @@ export default function AgencySettings() {
           {/* Row 2: Details */}
           <div className="space-y-6">
             <div className="space-y-1">
-              <h3 className="text-xl font-medium tracking-tight">
+              <h3 className="text-xl font-medium tracking-tight bricolage">
                 {internalClient.name}
               </h3>
               <p className="text-sm text-muted-foreground">
@@ -629,7 +629,7 @@ export default function AgencySettings() {
         {/* Section: Danger Zone */}
         <section className="space-y-6">
           <div className="space-y-1">
-            <h2 className="text-xl font-normal text-destructive tracking-tight bricolage">
+            <h2 className="text-2xl font-normal text-destructive tracking-tight bricolage">
               Danger Zone
             </h2>
             <p className="text-sm text-muted-foreground font-normal">
@@ -841,7 +841,7 @@ export default function AgencySettings() {
             {/* Row 2: Details */}
             <div className="space-y-6">
               <div className="space-y-1">
-                <h3 className="text-xl font-medium tracking-tight">
+                <h3 className="text-2xl font-normal tracking-tight bricolage">
                   {agencySettings.agency_name}
                 </h3>
                 <p className="text-sm text-muted-foreground">
@@ -1000,7 +1000,7 @@ function ChoiceCard({ icon, title, description, onClick, highlight = false }) {
         {icon}
       </div>
       <div className="space-y-2">
-        <h3 className="text-xl font-medium tracking-tight">{title}</h3>
+        <h3 className="text-xl font-medium tracking-tight bricolage">{title}</h3>
         <p className="text-sm text-muted-foreground font-normal leading-relaxed line-clamp-3">
           {description}
         </p>

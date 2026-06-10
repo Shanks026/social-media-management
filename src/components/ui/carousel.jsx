@@ -108,7 +108,7 @@ function CarouselContent({
   return (
     <div
       ref={carouselRef}
-      className="overflow-hidden"
+      className="overflow-hidden px-1 py-2"
       data-slot="carousel-content">
       <div
         className={cn(

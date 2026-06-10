@@ -82,6 +82,9 @@ export default function EditNoteDialog({
         queryKey: ['client-notes', selectedClientId],
       })
       queryClient.invalidateQueries({ queryKey: ['notes', 'week-timeline'] })
+      if (note?.campaign_id) {
+        queryClient.invalidateQueries({ queryKey: ['campaign-notes', note.campaign_id] })
+      }
       toast.success('Note updated successfully')
       onOpenChange(false)
       onSuccess?.()

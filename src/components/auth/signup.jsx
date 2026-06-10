@@ -38,19 +38,13 @@ export default function SignupPage() {
           {/* Policy */}
           <p className="text-xs text-muted-foreground font-normal leading-relaxed">
             By signing up, you agree to our{' '}
-            <a
-              href="#"
+            <Link
+              to="/policies"
+              target="_blank"
               className="text-foreground underline underline-offset-4 hover:text-muted-foreground transition-colors"
             >
-              Terms of Service
-            </a>{' '}
-            and{' '}
-            <a
-              href="#"
-              className="text-foreground underline underline-offset-4 hover:text-muted-foreground transition-colors"
-            >
-              Privacy Policy
-            </a>
+              policies
+            </Link>
             .
           </p>
         </div>

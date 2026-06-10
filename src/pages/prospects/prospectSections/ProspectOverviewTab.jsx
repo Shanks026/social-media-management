@@ -65,13 +65,13 @@ export default function ProspectOverviewTab({ prospect, onEdit, onDelete }) {
   const locationDisplay = [prospect.address, prospect.location].filter(Boolean).join(', ') || null
 
   return (
-    <div className="max-w-4xl mx-auto space-y-14 py-4 animate-in fade-in slide-in-from-bottom-4 duration-700">
+    <div className="max-w-4xl mx-auto space-y-8 py-4 animate-in fade-in duration-700">
 
       {/* ── Contact Info ─────────────────────────────────────────────────── */}
       <section className="space-y-8">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="space-y-1">
-            <h2 className="text-2xl font-normal tracking-tight">Contact Info</h2>
+            <h2 className="text-2xl font-normal tracking-tight bricolage">Contact Info</h2>
             <p className="text-sm text-muted-foreground font-normal">
               Business details and contact information.
             </p>
@@ -173,7 +173,7 @@ export default function ProspectOverviewTab({ prospect, onEdit, onDelete }) {
       {/* ── Pipeline ─────────────────────────────────────────────────────── */}
       <section className="space-y-8">
         <div className="space-y-1">
-          <h2 className="text-2xl font-normal tracking-tight">Pipeline</h2>
+          <h2 className="text-2xl font-normal tracking-tight bricolage">Pipeline</h2>
           <p className="text-sm text-muted-foreground font-normal">
             Lead status, source, and follow-up schedule.
           </p>
@@ -202,7 +202,7 @@ export default function ProspectOverviewTab({ prospect, onEdit, onDelete }) {
           <Separator className="opacity-50" />
           <section className="space-y-6">
             <div className="space-y-1">
-              <h2 className="text-2xl font-normal tracking-tight">Notes</h2>
+              <h2 className="text-2xl font-normal tracking-tight bricolage">Notes</h2>
               <p className="text-sm text-muted-foreground font-normal">
                 Internal notes about this prospect.
               </p>
@@ -219,7 +219,7 @@ export default function ProspectOverviewTab({ prospect, onEdit, onDelete }) {
       {/* ── Danger Zone ──────────────────────────────────────────────────── */}
       <section className="space-y-6">
         <div className="space-y-1">
-          <h2 className="text-lg font-medium text-destructive tracking-tight">Danger Zone</h2>
+          <h2 className="text-2xl font-medium text-destructive tracking-tight bricolage">Danger Zone</h2>
           <p className="text-sm text-muted-foreground font-normal">
             Irreversible actions. Please proceed with caution.
           </p>

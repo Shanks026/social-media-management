@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Plus, Search, Megaphone } from 'lucide-react'
+import { Plus, Search } from 'lucide-react'
 import { toast } from 'sonner'
 
 import {
@@ -10,7 +10,6 @@ import {
 import { useSubscription } from '@/api/useSubscription'
 import { CampaignCard } from './CampaignCard'
 import { CampaignDialog } from './CampaignDialog'
-import { CampaignUpgradePrompt } from './CampaignUpgradePrompt'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -20,6 +19,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -70,24 +74,26 @@ export function CampaignTab({
       ? externalSetIsCreateOpen
       : setLocalIsCreateOpen
 
-  const canCampaigns = sub?.campaigns ?? false
+  const campaignsLimit = sub?.campaigns_limit ?? null
 
   if (subLoading) return null
-  if (!canCampaigns) return <CampaignUpgradePrompt />
 
   return (
     <CampaignTabContent
       clientId={clientId}
       isCreateOpen={isCreateOpen}
       setIsCreateOpen={setIsCreateOpen}
+      campaignsLimit={campaignsLimit}
     />
   )
 }
 
-function CampaignTabContent({ clientId, isCreateOpen, setIsCreateOpen }) {
+function CampaignTabContent({ clientId, isCreateOpen, setIsCreateOpen, campaignsLimit }) {
   const { data: campaigns = [], isLoading } = useCampaigns({ clientId })
   const deleteCampaign = useDeleteCampaign()
   const updateCampaign = useUpdateCampaign()
+
+  const atLimit = campaignsLimit !== null && campaigns.length >= campaignsLimit
 
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('All')
@@ -182,15 +188,33 @@ function CampaignTabContent({ clientId, isCreateOpen, setIsCreateOpen }) {
             </Button>
           )}
 
+          {campaignsLimit !== null && !isLoading && (
+            <span className="text-xs text-muted-foreground">
+              {campaigns.length} / {campaignsLimit} campaigns
+            </span>
+          )}
+
           {clientId && (
-            <Button
-              onClick={() => setIsCreateOpen(true)}
-              size="default"
-              className="gap-2 h-9"
-            >
-              <Plus className="size-4" />
-              <span>New Campaign</span>
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span>
+                  <Button
+                    onClick={() => !atLimit && setIsCreateOpen(true)}
+                    size="default"
+                    className="gap-2 h-9"
+                    disabled={atLimit}
+                  >
+                    <Plus className="size-4" />
+                    <span>New Campaign</span>
+                  </Button>
+                </span>
+              </TooltipTrigger>
+              {atLimit && (
+                <TooltipContent>
+                  Campaign limit reached. Upgrade to Velocity for unlimited campaigns.
+                </TooltipContent>
+              )}
+            </Tooltip>
           )}
         </div>
       </div>

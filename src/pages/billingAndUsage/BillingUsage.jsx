@@ -24,7 +24,10 @@ export default function BillingUsage() {
   useEffect(() => {
     setHeader({
       title: 'Billing & Usage',
-      breadcrumbs: [{ label: 'Billing & Usage' }],
+      breadcrumbs: [
+        { label: 'Settings', href: '/settings' },
+        { label: 'Billing & Usage' },
+      ],
     })
   }, [setHeader])
 
@@ -47,7 +50,7 @@ export default function BillingUsage() {
             onValueChange={handleTabChange}
             className="space-y-10"
           >
-            <TabsList className="bg-transparent border-b border-white/5 rounded-none p-0 h-auto gap-8 w-full justify-start">
+            <TabsList className="bg-transparent border-b border-border/40 rounded-none p-0 h-auto gap-8 w-full justify-start">
               {[
                 { value: 'usage', icon: BarChart3, label: 'Usage' },
                 { value: 'subscription', icon: CreditCard, label: 'Subscription' },

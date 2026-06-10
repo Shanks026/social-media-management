@@ -4,8 +4,8 @@ import { useSubscription } from '@/api/useSubscription'
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { ChevronDown, LogOut, RefreshCw, ArrowRight } from 'lucide-react'
+import { plans } from '@/pages/billingAndUsage/planMeta'
 import {
-  plans,
   PlanCard,
   UpgradeRequestDialog,
 } from '@/pages/billingAndUsage/TertiarySubscriptionTab'

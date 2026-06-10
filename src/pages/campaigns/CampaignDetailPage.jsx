@@ -26,6 +26,8 @@ import {
   User,
   FileText,
   CalendarDays,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react'
 
 import { supabase } from '@/lib/supabase'
@@ -42,12 +44,11 @@ import { useSubscription } from '@/api/useSubscription'
 import { useCampaignTransactions } from '@/api/transactions'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { fetchCampaignMeetings, deleteMeeting } from '@/api/meetings'
-import { fetchCampaignNotes, updateNoteStatus } from '@/api/notes'
+import { fetchCampaignNotes } from '@/api/notes'
 import { AddTransactionDialog } from '@/pages/finance/AddTransactionDialog'
 import DraftPostForm from '@/pages/posts/DraftPostForm'
 import { LinkPostsToCampaignDialog } from '@/components/campaigns/LinkPostsToCampaignDialog'
 import { CampaignDialog } from '@/components/campaigns/CampaignDialog'
-import { CampaignUpgradePrompt } from '@/components/campaigns/CampaignUpgradePrompt'
 import { CreateInvoiceDialog } from '@/pages/finance/CreateInvoiceDialog'
 import CampaignReportPDF from '@/components/campaigns/CampaignReportPDF'
 import MeetingRow from '@/components/MeetingRow'
@@ -74,6 +75,11 @@ import {
   CardDescription,
 } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+} from '@/components/ui/carousel'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { SUPPORTED_PLATFORMS } from '@/lib/platforms'
@@ -176,6 +182,8 @@ export default function CampaignDetailPage() {
   const [createInvoiceOpen, setCreateInvoiceOpen] = useState(false)
   const [addTransactionOpen, setAddTransactionOpen] = useState(false)
   const [editingMeeting, setEditingMeeting] = useState(null)
+  const [notesCarouselApi, setNotesCarouselApi] = useState(null)
+  const [meetingsCarouselApi, setMeetingsCarouselApi] = useState(null)
 
   const { data: campaign, isLoading: campaignLoading } = useCampaign(campaignId)
   const { data: analytics, isLoading: analyticsLoading } =
@@ -222,17 +230,6 @@ export default function CampaignDetailPage() {
       },
     })
 
-  const { mutate: toggleNoteStatus } = useMutation({
-    mutationFn: ({ noteId, newStatus }) => updateNoteStatus(noteId, newStatus),
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ['campaign-notes', campaignId],
-      })
-    },
-    onError: (error) => {
-      toast.error('Failed to update note: ' + error.message)
-    },
-  })
 
   const { setHeader } = useHeader()
   useEffect(() => {
@@ -265,11 +262,11 @@ export default function CampaignDetailPage() {
       },
     )
 
-    return SUPPORTED_PLATFORMS.filter((sp) => counts[sp.id] > 0)
+    return SUPPORTED_PLATFORMS
       .map((sp) => ({
         platform: sp.id,
         label: sp.label,
-        posts: counts[sp.id],
+        posts: counts[sp.id] ?? 0,
         fill: `var(--color-${sp.id})`,
       }))
       .sort((a, b) => b.posts - a.posts)
@@ -277,7 +274,7 @@ export default function CampaignDetailPage() {
 
   const remaining =
     analytics?.budget != null
-      ? analytics.budget - analytics.total_invoiced
+      ? analytics.budget - analytics.total_collected
       : null
 
   const totalSpent = campaignTransactions
@@ -296,13 +293,6 @@ export default function CampaignDetailPage() {
     }).format(val ?? 0)
 
   if (!sub && !isLoading) return null
-  if (sub && !sub.campaigns) {
-    return (
-      <div className="p-6 text-center">
-        <CampaignUpgradePrompt />
-      </div>
-    )
-  }
 
   async function handleExportPdf() {
     if (!campaign || !analytics) return
@@ -410,14 +400,6 @@ export default function CampaignDetailPage() {
     return <div className="p-6 text-muted-foreground">Campaign not found.</div>
   }
 
-  const visibleMeetings = campaignMeetings.slice(0, 5)
-  const extraMeetings = campaignMeetings.length - 5
-  const visibleNotes = campaignNotes
-    .filter((n) => n.status !== 'ARCHIVED')
-    .slice(0, 5)
-  const extraNotes =
-    campaignNotes.filter((n) => n.status !== 'ARCHIVED').length - 5
-
   return (
     <div className="min-h-full bg-background selection:bg-primary/10">
       <div className="px-8 pt-8 pb-20 space-y-4 max-w-[1400px] mx-auto">
@@ -426,7 +408,7 @@ export default function CampaignDetailPage() {
           <div className="flex items-center gap-3 min-w-0">
             <div className="min-w-0">
               <div className="flex items-center gap-3 flex-wrap">
-                <h1 className="text-2xl font-medium tracking-normal text-foreground truncate">
+                <h1 className="text-2xl font-medium tracking-tight text-foreground truncate bricolage">
                   {campaign.name}
                 </h1>
                 <span
@@ -531,20 +513,22 @@ export default function CampaignDetailPage() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="pt-2">
-          <TabsList className="h-10 mb-4">
-            <TabsTrigger value="posts" className="gap-1.5 text-sm px-5">
-              <Activity className="size-3.5" />
-              Deliverables
-            </TabsTrigger>
-            <TabsTrigger value="finance" className="gap-1.5 text-sm px-5">
-              <Receipt className="size-3.5" />
-              Finance
-            </TabsTrigger>
-            <TabsTrigger value="activity" className="gap-1.5 text-sm px-5">
-              <CalendarDays className="size-3.5" />
-              Activity
-            </TabsTrigger>
-          </TabsList>
+          <div className="flex items-center justify-between mb-4">
+            {/* <span className="text-xl font-medium bricolage text-foreground">
+              {{ posts: 'Deliverables', finance: 'Finance', activity: 'Activity' }[activeTab]}
+            </span> */}
+            <TabsList className="h-9">
+              <TabsTrigger value="posts" className="text-sm px-3 gap-1.5">
+                <Activity className="size-3.5" />Deliverables
+              </TabsTrigger>
+              <TabsTrigger value="finance" className="text-sm px-3 gap-1.5">
+                <Receipt className="size-3.5" />Finance
+              </TabsTrigger>
+              <TabsTrigger value="activity" className="text-sm px-3 gap-1.5">
+                <CalendarDays className="size-3.5" />Activity
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
           {/* ── Posts tab ── */}
           <TabsContent value="posts" className="mt-0">
@@ -553,7 +537,7 @@ export default function CampaignDetailPage() {
               <Card className="border-none shadow-sm ring-1 ring-border/50 bg-card/50 flex flex-col h-full gap-4">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 shrink-0">
                   <div>
-                    <CardTitle className="text-lg font-medium">
+                    <CardTitle className="text-lg font-medium bricolage">
                       Deliverables
                     </CardTitle>
                     <CardDescription>
@@ -727,7 +711,7 @@ export default function CampaignDetailPage() {
                 {/* Budget card */}
                 <Card className="rounded-2xl border-none bg-card/50 shadow-sm ring-1 ring-border/50">
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-lg font-medium">Budget</CardTitle>
+                    <CardTitle className="text-lg font-medium bricolage">Budget</CardTitle>
                     <CardDescription>Internal cost tracking</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-3">
@@ -888,7 +872,7 @@ export default function CampaignDetailPage() {
                 {/* Budget card */}
                 <Card className="rounded-2xl border-none bg-card/50 shadow-sm ring-1 ring-border/50">
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-lg font-medium">Budget</CardTitle>
+                    <CardTitle className="text-lg font-medium bricolage">Budget</CardTitle>
                     <CardDescription>Campaign spend tracking</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-3">
@@ -944,12 +928,12 @@ export default function CampaignDetailPage() {
                                     : 'bg-primary',
                                 )}
                                 style={{
-                                  width: `${Math.min(100, (analytics.total_invoiced / analytics.budget) * 100)}%`,
+                                  width: `${Math.min(100, (analytics.total_collected / analytics.budget) * 100)}%`,
                                 }}
                               />
                             </div>
                             <p className="text-xs text-muted-foreground mt-1.5">
-                              {Math.round((analytics.total_invoiced / analytics.budget) * 100)}% of budget invoiced
+                              {Math.round((analytics.total_collected / analytics.budget) * 100)}% of budget collected
                             </p>
                           </div>
                         )}
@@ -968,7 +952,7 @@ export default function CampaignDetailPage() {
                 <Card className="border-none bg-card/50 shadow-sm ring-1 ring-border/50 flex flex-col">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 shrink-0">
                     <div>
-                      <CardTitle className="text-lg font-medium">Linked Invoices</CardTitle>
+                      <CardTitle className="text-lg font-medium bricolage">Linked Invoices</CardTitle>
                       <CardDescription>
                         {invoices.length} invoice{invoices.length !== 1 ? 's' : ''} linked
                       </CardDescription>
@@ -1022,7 +1006,7 @@ export default function CampaignDetailPage() {
                           <div key={inv.id}>
                             <div
                               className="flex items-center gap-4 px-6 py-3 hover:bg-muted/40 transition-colors cursor-pointer group/row"
-                              onClick={() => navigate(`/finance?invoice=${inv.id}`)}
+                              onClick={() => navigate('/finance/invoices')}
                             >
                               <div className="min-w-0 flex-1">
                                 <p className="text-base font-medium truncate text-foreground leading-tight">
@@ -1062,156 +1046,126 @@ export default function CampaignDetailPage() {
           {/* ── Activity tab ── */}
           <TabsContent value="activity" className="mt-0">
             <div className="flex flex-col gap-6">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                {/* Notes column */}
-                <Card className="border-none shadow-sm ring-1 ring-border/50 bg-card/50 flex flex-col">
-                  <CardHeader className="pb-3 flex flex-row items-center justify-between space-y-0 shrink-0">
-                    <div className="flex items-center gap-2">
-                      <FileText className="size-4 text-muted-foreground" />
-                      <CardTitle className="text-base font-medium">
-                        Notes
-                      </CardTitle>
-                    </div>
-                    <CreateNoteDialog
-                      clientId={campaign.client_id}
-                      lockClient={true}
-                      campaignId={campaignId}
-                      campaignName={campaign.name}
-                    >
+              {/* Notes section */}
+              <Card className="border-none bg-card/50 shadow-sm ring-1 ring-border/50 gap-0">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+                  <div className="flex items-center gap-2">
+                    <CardTitle className="text-lg font-medium bricolage">Notes</CardTitle>
+                    {!notesLoading && (
+                      <span className="text-lg text-muted-foreground tabular-nums">
+                        {campaignNotes.filter((n) => n.status !== 'ARCHIVED').length}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-0.5">
+                    <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground" onClick={() => notesCarouselApi?.scrollPrev()}>
+                      <ChevronLeft className="size-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground" onClick={() => notesCarouselApi?.scrollNext()}>
+                      <ChevronRight className="size-4" />
+                    </Button>
+                    <CreateNoteDialog clientId={campaign.client_id} lockClient={true} campaignId={campaignId} campaignName={campaign.name}>
                       <Button variant="ghost" size="icon" className="h-8 w-8">
                         <Plus className="h-4 w-4" />
                       </Button>
                     </CreateNoteDialog>
-                  </CardHeader>
-                  <CardContent className="flex-1 flex flex-col pt-0">
-                    {notesLoading ? (
-                      <div className="space-y-3">
-                        {[1, 2, 3].map((i) => (
-                          <div key={i} className="flex items-start gap-3 py-1">
-                            <Skeleton className="h-5 w-5 rounded-full shrink-0" />
-                            <div className="flex-1 space-y-2">
-                              <Skeleton className="h-4 w-3/4" />
-                              <Skeleton className="h-3 w-1/2" />
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : visibleNotes.length === 0 ? (
-                      <div className="flex-1 flex flex-col items-center justify-center text-center py-10 gap-2">
-                        <div className="h-10 w-10 border border-dashed rounded-full flex items-center justify-center text-muted-foreground">
-                          <FileText className="h-4 w-4 opacity-50" />
-                        </div>
-                        <p className="text-sm text-muted-foreground">
-                          No notes yet
-                        </p>
-                        <p className="text-xs text-muted-foreground/70">
-                          Use the + button to add one
-                        </p>
-                      </div>
-                    ) : (
-                      <div className="flex flex-col gap-3">
-                        {visibleNotes.map((note) => (
-                          <NoteRow
-                            key={note.id}
-                            note={note}
-                            variant="client-card"
-                          />
-                        ))}
-                        {extraNotes > 0 && (
-                          <p className="text-xs text-muted-foreground pt-1">
-                            +{extraNotes} more —{' '}
-                            <button
-                              className="underline underline-offset-2 hover:text-foreground transition-colors"
-                              onClick={() => navigate('/operations/notes')}
-                            >
-                              view all
-                            </button>
-                          </p>
-                        )}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-
-                {/* Meetings column */}
-                <Card className="border-none shadow-sm ring-1 ring-border/50 bg-card/50 flex flex-col">
-                  <CardHeader className="pb-3 flex flex-row items-center justify-between space-y-0 shrink-0">
-                    <div className="flex items-center gap-2">
-                      <CalendarDays className="size-4 text-muted-foreground" />
-                      <CardTitle className="text-base font-medium">
-                        Meetings
-                      </CardTitle>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" onClick={() => navigate('/operations/notes')}>
+                      <ArrowUpRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  {notesLoading ? (
+                    <div className="flex gap-3">
+                      {[1, 2, 3].map((i) => <Skeleton key={i} className="w-80 h-44 rounded-xl shrink-0" />)}
                     </div>
-                    <CreateMeetingDialog
-                      defaultClientId={campaign.client_id}
-                      lockClient={true}
-                      campaignId={campaignId}
-                      campaignName={campaign.name}
-                      editMeeting={editingMeeting}
-                      onSuccess={() => setEditingMeeting(null)}
-                    >
+                  ) : campaignNotes.filter((n) => n.status !== 'ARCHIVED').length === 0 ? (
+                    <div className="flex flex-col items-center justify-center text-center py-10 gap-2 rounded-xl border border-dashed border-border/50">
+                      <div className="h-10 w-10 border border-dashed rounded-full flex items-center justify-center text-muted-foreground">
+                        <FileText className="h-4 w-4 opacity-50" />
+                      </div>
+                      <p className="text-sm text-muted-foreground">No notes yet</p>
+                      <p className="text-xs text-muted-foreground/70">Use the + button to add one</p>
+                    </div>
+                  ) : (
+                    <Carousel setApi={setNotesCarouselApi} opts={{ align: 'start', dragFree: true }}>
+                      <CarouselContent>
+                        {campaignNotes.filter((n) => n.status !== 'ARCHIVED').map((note) => (
+                          <CarouselItem key={note.id} className="basis-[340px]">
+                            <NoteRow note={note} variant="client-card" />
+                          </CarouselItem>
+                        ))}
+                      </CarouselContent>
+                    </Carousel>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Meetings section */}
+              <Card className="border-none bg-card/50 shadow-sm ring-1 ring-border/50 gap-0">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+                  <div className="flex items-center gap-2">
+                    <CardTitle className="text-lg font-medium bricolage">Meetings</CardTitle>
+                    {!meetingsLoading && (
+                      <span className="text-lg text-muted-foreground tabular-nums">
+                        {campaignMeetings.length}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-0.5">
+                    <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground" onClick={() => meetingsCarouselApi?.scrollPrev()}>
+                      <ChevronLeft className="size-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground" onClick={() => meetingsCarouselApi?.scrollNext()}>
+                      <ChevronRight className="size-4" />
+                    </Button>
+                    <CreateMeetingDialog defaultClientId={campaign.client_id} lockClient={true} campaignId={campaignId} campaignName={campaign.name} editMeeting={editingMeeting} onSuccess={() => setEditingMeeting(null)}>
                       <Button variant="ghost" size="icon" className="h-8 w-8">
                         <Plus className="h-4 w-4" />
                       </Button>
                     </CreateMeetingDialog>
-                  </CardHeader>
-                  <CardContent className="flex-1 flex flex-col pt-0">
-                    {meetingsLoading ? (
-                      <div className="space-y-4 py-2">
-                        <Skeleton className="h-12 w-full" />
-                        <Skeleton className="h-12 w-full" />
-                        <Skeleton className="h-12 w-full" />
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" onClick={() => navigate('/operations/meetings')}>
+                      <ArrowUpRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  {meetingsLoading ? (
+                    <div className="flex gap-3">
+                      {[1, 2, 3].map((i) => <Skeleton key={i} className="w-80 h-44 rounded-xl shrink-0" />)}
+                    </div>
+                  ) : campaignMeetings.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center text-center py-10 gap-2 rounded-xl border border-dashed border-border/50">
+                      <div className="h-10 w-10 border border-dashed rounded-full flex items-center justify-center text-muted-foreground">
+                        <CalendarDays className="h-4 w-4" />
                       </div>
-                    ) : visibleMeetings.length === 0 ? (
-                      <div className="flex-1 flex flex-col items-center justify-center text-center py-10 gap-2">
-                        <div className="h-10 w-10 border border-dashed rounded-full flex items-center justify-center text-muted-foreground">
-                          <CalendarDays className="h-4 w-4" />
-                        </div>
-                        <p className="text-sm text-muted-foreground">
-                          No meetings yet
-                        </p>
-                        <p className="text-xs text-muted-foreground/70">
-                          Use the + button to schedule one
-                        </p>
-                      </div>
-                    ) : (
-                      <div className="space-y-3">
-                        {visibleMeetings.map((meeting) => (
-                          <MeetingRow
-                            key={meeting.id}
-                            meeting={meeting}
-                            markMeetingDone={markMeetingDone}
-                            isCompletingMeeting={isCompletingMeeting}
-                            variant="client-card"
-                          />
+                      <p className="text-sm text-muted-foreground">No meetings yet</p>
+                      <p className="text-xs text-muted-foreground/70">Use the + button to schedule one</p>
+                    </div>
+                  ) : (
+                    <Carousel setApi={setMeetingsCarouselApi} opts={{ align: 'start', dragFree: true }}>
+                      <CarouselContent>
+                        {campaignMeetings.map((meeting) => (
+                          <CarouselItem key={meeting.id} className="basis-[340px]">
+                            <MeetingRow meeting={meeting} markMeetingDone={markMeetingDone} isCompletingMeeting={isCompletingMeeting} variant="client-card" />
+                          </CarouselItem>
                         ))}
-                        {extraMeetings > 0 && (
-                          <p className="text-xs text-muted-foreground pt-1">
-                            +{extraMeetings} more —{' '}
-                            <button
-                              className="underline underline-offset-2 hover:text-foreground transition-colors"
-                              onClick={() => navigate('/operations/meetings')}
-                            >
-                              view all
-                            </button>
-                          </p>
-                        )}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
+                      </CarouselContent>
+                    </Carousel>
+                  )}
+                </CardContent>
+              </Card>
 
               {/* Platform distribution — full row below */}
               <Card className="border-none shadow-sm ring-1 ring-border/50 bg-card/50">
                 <CardHeader className="pb-3 shrink-0">
-                  <CardTitle className="text-base font-medium">
+                  <CardTitle className="text-lg font-medium bricolage">
                     Platform Distribution
                   </CardTitle>
                   <CardDescription>Posts across platforms</CardDescription>
                 </CardHeader>
                 <CardContent className="pt-0">
-                  {platformData.length === 0 ? (
+                  {!analytics ? (
                     <div className="flex flex-col items-center justify-center text-center py-10 gap-2">
                       <div className="h-10 w-10 border border-dashed rounded-full flex items-center justify-center text-muted-foreground">
                         <Activity className="h-4 w-4 opacity-50" />
@@ -1223,7 +1177,7 @@ export default function CampaignDetailPage() {
                   ) : (
                     <ChartContainer
                       config={platformChartConfig}
-                      className="h-[220px] w-full"
+                      className="h-[260px] w-full"
                     >
                       <BarChart
                         data={platformData}

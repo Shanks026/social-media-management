@@ -23,6 +23,7 @@ import {
   useDeleteActivity,
   ACTIVITY_TYPES,
 } from '@/api/prospectActivities'
+import { PROSPECT_STATUS_CONFIG } from '@/components/prospects/ProspectStatusBadge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -105,7 +106,7 @@ const TYPE_CONFIG = {
   status_change: {
     icon:  ArrowRightLeft,
     label: 'Status Change',
-    color: 'text-muted-foreground',
+    color: 'text-foreground',
     bg:    'bg-muted/60',
   },
 }
@@ -132,6 +133,16 @@ const logSchema = z.object({
   occurred_at: z.string().optional(),
 })
 
+// ── Status label → badge className lookup ─────────────────────────────────────
+
+const STATUS_LABEL_MAP = Object.fromEntries(
+  Object.values(PROSPECT_STATUS_CONFIG).map((s) => [s.label.toLowerCase(), s.className])
+)
+
+function statusBadgeClass(label) {
+  return STATUS_LABEL_MAP[label?.toLowerCase()] ?? 'bg-muted text-muted-foreground'
+}
+
 // ── Activity card ─────────────────────────────────────────────────────────────
 
 function ActivityCard({ activity, onDelete }) {
@@ -139,46 +150,56 @@ function ActivityCard({ activity, onDelete }) {
   const Icon   = config.icon
   const isStatusChange = activity.type === 'status_change'
 
+  const statusMatch = isStatusChange && activity.body?.match(/from (.+?) to (.+)/)
+  const toStatus    = statusMatch?.[2]
+
+  if (isStatusChange) {
+    return (
+      <div className="flex items-center gap-2 px-5 py-3">
+        <span className="text-xs text-muted-foreground">Status changed to</span>
+        <span className={cn('px-2 py-0.5 rounded-md text-xs font-medium', statusBadgeClass(toStatus))}>
+          {toStatus}
+        </span>
+        <span className="text-xs text-muted-foreground">·</span>
+        <span className="text-xs text-muted-foreground shrink-0">
+          {formatActivityDate(activity.occurred_at)}
+        </span>
+      </div>
+    )
+  }
+
   return (
-    <div className={cn(
-      'flex gap-3 px-4 py-3.5 group',
-      isStatusChange && 'opacity-70'
-    )}>
+    <div className="flex gap-4 px-5 py-5 group relative">
+      {/* Left accent bar */}
+      <div className={cn('absolute left-0 top-3 bottom-3 w-0.75 rounded-full', config.bg)} />
+
       {/* Icon */}
-      <div className={cn('size-7 rounded-full flex items-center justify-center shrink-0 mt-0.5', config.bg)}>
-        <Icon className={cn('size-3.5', config.color)} />
+      <div className={cn('size-9 rounded-xl flex items-center justify-center shrink-0', config.bg)}>
+        <Icon className={cn('size-4', config.color)} />
       </div>
 
       {/* Content */}
-      <div className="flex-1 min-w-0 space-y-0.5">
-        <div className="flex items-center gap-2">
-          <span className={cn('text-[11px] font-medium uppercase tracking-wider', config.color)}>
+      <div className="flex-1 min-w-0 space-y-1.5">
+        <div className="flex items-baseline justify-between gap-2">
+          <span className={cn('text-sm font-semibold', config.color)}>
             {config.label}
           </span>
-          <span className="text-[11px] text-muted-foreground">
+          <span className="text-xs text-muted-foreground shrink-0">
             {formatActivityDate(activity.occurred_at)}
           </span>
         </div>
         {activity.body && (
-          <p className={cn(
-            'text-sm leading-relaxed',
-            isStatusChange ? 'text-muted-foreground italic' : 'text-foreground'
-          )}>
-            {activity.body}
-          </p>
+          <p className="text-sm leading-relaxed text-foreground">{activity.body}</p>
         )}
       </div>
 
-      {/* Delete (manual entries only) */}
-      {!isStatusChange && (
-        <button
-          onClick={() => onDelete(activity)}
-          className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0 mt-1 text-muted-foreground hover:text-destructive"
-          title="Delete entry"
-        >
-          <Trash2 className="size-3.5" />
-        </button>
-      )}
+      <button
+        onClick={() => onDelete(activity)}
+        className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0 text-muted-foreground hover:text-destructive"
+        title="Delete entry"
+      >
+        <Trash2 className="size-3.5" />
+      </button>
     </div>
   )
 }

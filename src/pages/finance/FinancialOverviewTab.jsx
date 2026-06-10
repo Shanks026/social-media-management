@@ -197,7 +197,7 @@ export default function OverviewPage({ clientId, client, subTabs }) {
           {subTabs ? (
             subTabs
           ) : (
-            <span className="text-3xl font-normal bricolage">Performance Metrics</span>
+            <span className="text-2xl font-normal bricolage">Performance Metrics</span>
           )}
         </div>
 

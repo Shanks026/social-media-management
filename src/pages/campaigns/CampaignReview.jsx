@@ -375,7 +375,7 @@ function CentredState({ icon, title, subtitle, action }) {
         {icon}
       </div>
       <div>
-        <p className="font-semibold text-foreground text-lg">{title}</p>
+        <p className="font-semibold text-foreground text-lg bricolage">{title}</p>
         {subtitle && (
           <p className="text-sm text-muted-foreground mt-1 max-w-xs mx-auto">{subtitle}</p>
         )}

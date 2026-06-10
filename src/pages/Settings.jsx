@@ -1,15 +1,13 @@
 import { useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useHeader } from '../components/misc/header-context'
-import { User, Building2, Users, LifeBuoy } from 'lucide-react'
+import { User, Building2 } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 import ProfileSettings from './settings/ProfileSettings'
 import AgencySettings from './settings/AgencySettings'
-import TeamSettings from './settings/TeamSettings'
-import SupportSettings from './settings/SupportSettings'
 
-const VALID_TABS = ['profile', 'agency', 'team', 'support']
+const VALID_TABS = ['profile', 'agency']
 
 export default function Settings() {
   const { setHeader } = useHeader()
@@ -22,7 +20,10 @@ export default function Settings() {
   useEffect(() => {
     setHeader({
       title: 'Settings',
-      breadcrumbs: [{ label: 'Settings' }],
+      breadcrumbs: [
+        { label: 'Settings', href: '/settings' },
+        { label: 'General Settings' },
+      ],
     })
   }, [setHeader])
 
@@ -37,7 +38,7 @@ export default function Settings() {
           {/* PAGE HEADER */}
           <div className="space-y-1">
             <h1 className="text-3xl font-normal tracking-tight text-foreground bricolage">
-              Settings
+              General Settings
             </h1>
             <p className="text-sm text-muted-foreground font-normal">
               Manage your profile and agency workspace.
@@ -49,12 +50,10 @@ export default function Settings() {
             onValueChange={handleTabChange}
             className="space-y-6"
           >
-            <TabsList className="bg-transparent border-b border-white/5 rounded-none p-0 h-auto gap-8 w-full justify-start">
+            <TabsList className="bg-transparent border-b border-border/40 rounded-none p-0 h-auto gap-8 w-full justify-start">
               {[
                 { value: 'profile', icon: User, label: 'Profile' },
                 { value: 'agency', icon: Building2, label: 'Agency' },
-                { value: 'team', icon: Users, label: 'Team' },
-                { value: 'support', icon: LifeBuoy, label: 'Support' },
               ].map((tab) => (
                 <TabsTrigger
                   key={tab.value}
@@ -95,19 +94,6 @@ export default function Settings() {
               <AgencySettings />
             </TabsContent>
 
-            <TabsContent
-              value="team"
-              className="focus-visible:outline-none"
-            >
-              <TeamSettings />
-            </TabsContent>
-
-            <TabsContent
-              value="support"
-              className="focus-visible:outline-none"
-            >
-              <SupportSettings />
-            </TabsContent>
           </Tabs>
         </div>
       </div>

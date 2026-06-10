@@ -243,7 +243,7 @@ export function NavMain() {
                         tooltip={item.title}
                         isActive={isMainActive}
                       >
-                        <item.icon className="size-4 me-0.5 shrink-0" />
+                        <item.icon className="size-4 shrink-0" />
                         <span>{item.title}</span>
                         <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
                       </SidebarMenuButton>

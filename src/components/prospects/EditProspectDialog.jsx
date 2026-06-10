@@ -12,6 +12,7 @@ import { Textarea } from '@/components/ui/textarea'
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
@@ -135,20 +136,16 @@ export default function EditProspectDialog({ prospect, open, onOpenChange }) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl sm:max-w-3xl p-0 gap-0">
+      <DialogContent className="max-w-3xl sm:max-w-3xl max-h-[90vh] p-0 gap-0 flex flex-col">
 
-        {/* Inner flex column — owns the height constraint and scroll */}
-        <div style={{ display: 'flex', flexDirection: 'column', maxHeight: '88vh' }}>
+        <DialogHeader className="px-6 pt-6 pb-4 border-b shrink-0">
+          <DialogTitle>Edit Prospect</DialogTitle>
+          <DialogDescription>Update the details for this prospect.</DialogDescription>
+        </DialogHeader>
 
-          {/* Header */}
-          <DialogHeader className="px-6 pt-6 pb-4 border-b border-border/40 shrink-0">
-            <DialogTitle>Edit Prospect</DialogTitle>
-          </DialogHeader>
-
-          {/* Scrollable body */}
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
-              <div className="overflow-y-auto px-6 py-5 space-y-5" style={{ flex: 1 }}>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col flex-1 min-h-0">
+            <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
 
                 {/* ── Contact Info ────────────────────────────────────── */}
                 <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Contact Info</p>
@@ -316,26 +313,22 @@ export default function EditProspectDialog({ prospect, open, onOpenChange }) {
                   </FormItem>
                 )} />
 
-              </div>
+            </div>
 
-              {/* Fixed footer */}
-              <DialogFooter className="px-6 py-4 border-t border-border/40 shrink-0">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={() => onOpenChange(false)}
-                  className="text-muted-foreground"
-                >
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={updateProspect.isPending}>
-                  {updateProspect.isPending ? 'Saving...' : 'Save Changes'}
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
-
-        </div>
+            <DialogFooter className="px-6 py-4 border-t shrink-0">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={updateProspect.isPending}>
+                {updateProspect.isPending ? 'Saving...' : 'Save Changes'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </Form>
       </DialogContent>
     </Dialog>
   )

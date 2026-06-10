@@ -63,7 +63,7 @@ import {
 
 // ─── Invite Dialog ─────────────────────────────────────────────────────────────
 
-function InviteDialog({ open, onOpenChange }) {
+export function InviteDialog({ open, onOpenChange }) {
   const [inviteUrl, setInviteUrl] = useState(null)
   const [copied, setCopied] = useState(false)
   const generateInvite = useGenerateInvite()
@@ -174,7 +174,7 @@ function MemberAvatar({ name, email, avatarUrl }) {
 
 // ─── Main Component ─────────────────────────────────────────────────────────────
 
-export default function TeamSettings() {
+export default function TeamSettings({ onInviteClick = () => {} }) {
   const { user, userRole } = useAuth()
   const isAdmin = userRole === 'admin'
 
@@ -186,7 +186,6 @@ export default function TeamSettings() {
   const restoreMember = useRestoreMember()
   const deleteMemberPermanently = useDeleteMemberPermanently()
 
-  const [inviteOpen, setInviteOpen] = useState(false)
   const [removingMember, setRemovingMember] = useState(null)
   const [deletingMember, setDeletingMember] = useState(null)
 
@@ -257,29 +256,6 @@ export default function TeamSettings() {
     <div className="max-w-4xl space-y-8 mx-auto animate-in fade-in duration-700">
       {/* ── Section: Team Members ── */}
       <section className="space-y-8">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="space-y-1">
-            <h2 className="text-2xl font-normal tracking-tight bricolage">
-              Team Members
-            </h2>
-            <p className="text-sm text-muted-foreground font-normal">
-              {members.length} {members.length === 1 ? 'member' : 'members'}{' '}
-              with access to your workspace.
-            </p>
-          </div>
-          {isAdmin && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setInviteOpen(true)}
-              className="gap-2 w-fit shrink-0"
-            >
-              <UserPlus size={14} />
-              Invite Team Member
-            </Button>
-          )}
-        </div>
-
         {members.length === 0 ? (
           <Empty className="py-16 border border-dashed rounded-2xl bg-muted/5">
             <EmptyContent>
@@ -297,7 +273,7 @@ export default function TeamSettings() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setInviteOpen(true)}
+                  onClick={onInviteClick}
                 >
                   <UserPlus className="size-4 mr-2" />
                   Invite Team Member
@@ -522,8 +498,6 @@ export default function TeamSettings() {
       )}
 
       {/* ── Dialogs ── */}
-      <InviteDialog open={inviteOpen} onOpenChange={setInviteOpen} />
-
       <AlertDialog
         open={!!deletingMember}
         onOpenChange={(open) => !open && setDeletingMember(null)}

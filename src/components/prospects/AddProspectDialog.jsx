@@ -11,6 +11,7 @@ import { Textarea } from '@/components/ui/textarea'
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
@@ -87,13 +88,15 @@ export function AddProspectDialog({ open, onOpenChange }) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="text-base font-semibold">Add Prospect</DialogTitle>
+      <DialogContent className="max-w-lg max-h-[90vh] p-0 gap-0 flex flex-col">
+        <DialogHeader className="px-6 pt-6 pb-4 border-b shrink-0">
+          <DialogTitle>Add Prospect</DialogTitle>
+          <DialogDescription>Fill in the details to add a new prospect to your pipeline.</DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col flex-1 min-h-0">
+            <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
             {/* Business Name */}
             <FormField
               control={form.control}
@@ -224,7 +227,7 @@ export function AddProspectDialog({ open, onOpenChange }) {
                     <FormLabel>Industry</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
-                        <SelectTrigger>
+                        <SelectTrigger className="w-full">
                           <SelectValue placeholder="Select industry" />
                         </SelectTrigger>
                       </FormControl>
@@ -248,7 +251,7 @@ export function AddProspectDialog({ open, onOpenChange }) {
                     <FormLabel>Source</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
-                        <SelectTrigger>
+                        <SelectTrigger className="w-full">
                           <SelectValue placeholder="Select source" />
                         </SelectTrigger>
                       </FormControl>
@@ -285,8 +288,9 @@ export function AddProspectDialog({ open, onOpenChange }) {
                 </FormItem>
               )}
             />
+            </div>
 
-            <DialogFooter className="pt-2">
+            <DialogFooter className="px-6 py-4 border-t shrink-0">
               <Button
                 type="button"
                 variant="outline"

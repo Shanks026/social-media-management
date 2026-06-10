@@ -108,7 +108,7 @@ export default function ClientProfileView({ client }) {
 
           <div className="space-y-1.5 min-w-0 flex-1">
             <div className="flex items-center gap-1">
-              <h1 className="text-2xl font-medium tracking-normal text-foreground truncate bricolage">
+              <h1 className="text-2xl font-medium tracking-tight text-foreground truncate bricolage">
                 {client.name}
               </h1>
               <TierBadge tier={client.tier} />

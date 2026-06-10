@@ -253,7 +253,7 @@ export default function SubscriptionsTab({ clientId, subTabs }) {
         {subTabs ? (
           subTabs
         ) : (
-          <h2 className="text-3xl font-normal bricolage">Subscriptions</h2>
+          <h2 className="text-2xl font-normal bricolage">Subscriptions</h2>
         )}
         <div className="flex items-center gap-3">
           {!clientId && (

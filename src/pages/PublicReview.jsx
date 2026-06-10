@@ -214,16 +214,14 @@ export default function PublicReview() {
         <div className="animate-in zoom-in-50 fade-in duration-500 mb-6 flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-green-100 dark:bg-green-500/10 text-green-600 dark:text-green-400">
           <Check size={32} strokeWidth={2.5} />
         </div>
-        <h2 className="animate-in fade-in slide-in-from-bottom-3 duration-500 delay-150 fill-mode-both text-2xl font-bold tracking-tight text-foreground">
+        <h2 className="animate-in fade-in slide-in-from-bottom-3 duration-500 delay-150 fill-mode-both text-2xl font-bold tracking-tight text-foreground bricolage">
           {statusUpdated === 'SCHEDULED'
             ? 'Content Approved'
             : 'Review Submitted'}
         </h2>
         <p className="animate-in fade-in slide-in-from-bottom-3 duration-500 delay-300 fill-mode-both mt-2 max-w-md text-muted-foreground leading-relaxed">
           {statusUpdated === 'SCHEDULED'
-            ? post?.platform_schedules
-              ? `Successfully scheduled across ${Object.keys(post.platform_schedules).length} platform${Object.keys(post.platform_schedules).length > 1 ? 's' : ''}.`
-              : `Successfully scheduled${post?.target_date ? ` for ${format(new Date(post.target_date), 'PPP')}` : ''}.`
+            ? "Your approval has been recorded. You'll receive an email when your posts go live."
             : "We've received your feedback and will prepare a new version shortly."}
         </p>
       </div>
@@ -236,7 +234,7 @@ export default function PublicReview() {
         <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400">
           <Info size={32} />
         </div>
-        <h2 className="text-2xl font-bold tracking-tight text-foreground">
+        <h2 className="text-2xl font-bold tracking-tight text-foreground bricolage">
           Link Expired
         </h2>
         <p className="mt-2 max-w-md text-muted-foreground leading-relaxed">
@@ -373,7 +371,7 @@ export default function PublicReview() {
               </DialogTrigger>
               <DialogContent className="sm:max-w-lg">
                 <DialogHeader>
-                  <DialogTitle className="text-lg">
+                  <DialogTitle className="text-lg bricolage">
                     {post.platform?.length > 0 ? 'Approve & Schedule' : 'Approve Deliverable'}
                   </DialogTitle>
                   <DialogDescription className="text-sm">
@@ -447,7 +445,7 @@ export default function PublicReview() {
               </DialogTrigger>
               <DialogContent className="max-w-lg">
                 <DialogHeader>
-                  <DialogTitle className="text-lg">Request Revisions</DialogTitle>
+                  <DialogTitle className="text-lg bricolage">Request Revisions</DialogTitle>
                   <DialogDescription className="text-sm">
                     Let the team know what needs to be changed before you can approve.
                   </DialogDescription>

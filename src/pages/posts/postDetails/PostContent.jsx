@@ -249,7 +249,7 @@ export default function PostContent({
 
           <div className="space-y-4">
             <div className="flex flex-row items-center gap-3">
-              <h1 className="text-4xl font-semibold tracking-tight bricolage">
+              <h1 className="text-3xl font-semibold tracking-tight bricolage">
                 {post.title}
               </h1>
               <Badge

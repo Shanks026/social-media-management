@@ -12,6 +12,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog'
 import {
@@ -171,10 +172,16 @@ export function CampaignDialog({ open, onOpenChange, clientId, initialData }) {
           <DialogTitle>
             {isEdit ? 'Edit Campaign' : 'New Campaign'}
           </DialogTitle>
+          <DialogDescription>
+            {isEdit
+              ? 'Update the details for this campaign.'
+              : 'Group posts into a campaign to track goals, budget, and client review.'}
+          </DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={form.handleSubmit(onSubmit)}>
+            <div className="space-y-4 overflow-y-auto max-h-[60vh] py-1 pr-1 [scrollbar-width:thin]">
             {needsClientSelect && (
               <FormField
                 control={form.control}
@@ -412,7 +419,9 @@ export function CampaignDialog({ open, onOpenChange, clientId, initialData }) {
               />
             )}
 
-            <DialogFooter>
+            </div>
+
+            <DialogFooter className="pt-4">
               <Button
                 type="button"
                 variant="outline"

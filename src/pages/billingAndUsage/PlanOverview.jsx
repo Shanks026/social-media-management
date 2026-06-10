@@ -1,4 +1,4 @@
-import { ArrowDownCircle, Zap, Calendar, AlertTriangle } from 'lucide-react'
+import { ArrowDownCircle, Zap, Calendar, AlertTriangle, ArrowUpCircle } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -39,7 +39,7 @@ export const PlanOverview = ({ sub, currentPlan, onUpgradeClick, isFree }) => {
             className="h-12 px-8 rounded-full font-medium text-sm transition-all gap-2"
             onClick={onUpgradeClick}
           >
-            Upgrade Plan <ArrowDownCircle size={18} />
+            Upgrade Plan <ArrowUpCircle size={18} />
           </Button>
         </div>
       </Card>
@@ -105,7 +105,7 @@ export const PlanOverview = ({ sub, currentPlan, onUpgradeClick, isFree }) => {
           className="h-12 px-8 rounded-full font-medium text-sm shadow-lg shadow-primary/5 transition-all gap-2"
           onClick={onUpgradeClick}
         >
-          Upgrade Plan <ArrowDownCircle size={18} />
+          Upgrade Plan <ArrowUpCircle size={18} />
         </Button>
       </div>
     </Card>

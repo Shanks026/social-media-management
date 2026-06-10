@@ -540,7 +540,7 @@ export default function InvoicesTab({ clientId, subTabs }) {
           {subTabs ? (
             subTabs
           ) : (
-            <span className="text-3xl font-normal bricolage">Invoices</span>
+            <span className="text-2xl font-normal bricolage">Invoices</span>
           )}
 
           <TabsList className="bg-muted/50 p-1">

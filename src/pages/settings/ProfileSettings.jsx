@@ -6,7 +6,7 @@ import { toast } from 'sonner'
 import { format } from 'date-fns'
 import { useSubscription } from '@/api/useSubscription'
 import { PlanOverview } from '../billingAndUsage/PlanOverview'
-import { plans } from '../billingAndUsage/TertiarySubscriptionTab'
+import { allPlanMeta } from '../billingAndUsage/planMeta'
 
 // UI
 import { Button } from '@/components/ui/button'
@@ -54,8 +54,7 @@ export default function ProfileSettings() {
   const { data: sub, isLoading } = useSubscription()
 
   const currentPlanName = sub?.plan_name?.toLowerCase() || 'ignite'
-  const currentPlan =
-    plans.find((p) => p.name.toLowerCase() === currentPlanName) || plans[0]
+  const currentPlan = allPlanMeta[currentPlanName] || allPlanMeta.ignite
 
   const handleUpgradeClick = () => {
     navigate('/billing?tab=subscription&scroll=true')
@@ -163,7 +162,7 @@ export default function ProfileSettings() {
     avatarUrl !== (user?.user_metadata?.avatar_url || '')
 
   return (
-    <div className="max-w-4xl space-y-8 mx-auto animate-in fade-in duration-700">
+    <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in duration-700">
       {/* ── Section: Avatar & Identity ── */}
       <section className="space-y-8">
         <div className="space-y-1">
@@ -354,7 +353,7 @@ export default function ProfileSettings() {
       {/* ── Section: Danger Zone ── */}
       <section className="space-y-6">
         <div className="space-y-1">
-          <h2 className="text-xl font-normal text-destructive tracking-tight bricolage">
+          <h2 className="text-2xl font-normal text-destructive tracking-tight bricolage">
             Danger Zone
           </h2>
           <p className="text-sm text-muted-foreground font-normal">
