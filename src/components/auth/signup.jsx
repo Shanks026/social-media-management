@@ -17,15 +17,15 @@ export default function SignupPage() {
           </div>
 
           {/* Heading */}
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <h1 className="text-3xl font-normal tracking-tight bricolage">
-              Create your account
+              Orchestrate your agency.
             </h1>
             <p className="text-sm text-muted-foreground font-normal">
-              Already have an account?{' '}
+              Create your account.{' '}Already have one?{' '}
               <Link
                 to="/login"
-                className="text-foreground font-medium hover:underline underline-offset-4"
+                className="text-foreground font-medium underline decoration-dotted underline-offset-4 hover:text-muted-foreground transition-colors"
               >
                 Sign in
               </Link>

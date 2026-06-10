@@ -17,15 +17,15 @@ export default function LoginPage() {
           </div>
 
           {/* Welcome heading */}
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <h1 className="text-3xl font-normal tracking-tight bricolage">
-              Welcome to Tercero
+              The grind doesn't stop.
             </h1>
             <p className="text-sm text-muted-foreground font-normal">
-              Don&apos;t have an account?{' '}
+              Login to your account.{' '}Don&apos;t have one?{' '}
               <Link
                 to="/signup"
-                className="text-foreground font-medium hover:underline underline-offset-4"
+                className="text-foreground font-medium underline decoration-dotted underline-offset-4 hover:text-muted-foreground transition-colors"
               >
                 Sign up
               </Link>
