@@ -357,7 +357,7 @@ export default function OverviewTab({ client }) {
                   </div>
                 ) : (
                   <div className="flex flex-col flex-1">
-                    <div className="space-y-3">
+                    <div className="flex flex-col gap-3">
                       {visibleMeetings.map((meeting) => (
                         <MeetingRow
                           key={meeting.id}
@@ -414,13 +414,13 @@ export default function OverviewTab({ client }) {
                     <p className="text-sm text-muted-foreground">No pending notes</p>
                   </div>
                 ) : (
-                  <div className="flex flex-col gap-0.5 mt-2">
+                  <div className="flex flex-col flex-1">
                     <div className="flex flex-col gap-3">
                       {visibleNotes.map((note) => (
                         <NoteRow key={note.id} note={note} variant="client-card" />
                       ))}
                     </div>
-                    <div className="flex items-center justify-between mt-3 pt-3 border-t border-dashed border-border/40">
+                    <div className="flex items-center justify-between mt-auto pt-3 border-t border-dashed border-border/40">
                       {extraNotes > 0 ? (
                         <span className="text-xs text-muted-foreground">
                           +{extraNotes} more note{extraNotes !== 1 && 's'}

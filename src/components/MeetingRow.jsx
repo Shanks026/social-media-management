@@ -9,7 +9,6 @@ import {
 } from '@/components/ui/tooltip'
 import CreateMeetingDialog from '@/components/CreateMeetingDialog'
 import { ClientAvatar } from '@/components/NoteRow'
-import { cn } from '@/lib/utils'
 
 /**
  * Props:
@@ -25,7 +24,6 @@ export default function MeetingRow({
   markMeetingDone,
   isCompletingMeeting,
   variant = 'row',
-  alwaysShowActions = false,
 }) {
   const meetingDate = new Date(meeting.datetime)
   let dateLabel = format(meetingDate, 'MMM d, yyyy')
@@ -54,7 +52,7 @@ export default function MeetingRow({
 
   if (isCard) {
     return (
-      <div className="@container group bg-white dark:bg-card/50 rounded-xl shadow-sm ring-1 ring-border/50 overflow-hidden flex flex-col h-full">
+      <div className="@container bg-white dark:bg-card/50 rounded-xl shadow-sm ring-1 ring-border/50 overflow-hidden flex flex-col h-full">
         <div className="px-5 pt-5 pb-4 flex flex-col flex-1">
           {/* Header: date block + title + badge */}
           <div className="flex items-start gap-4 mb-2">
@@ -90,8 +88,8 @@ export default function MeetingRow({
             </div>
           </div>
 
-          {/* Notes */}
-          <div className="mt-2 pl-16 flex-1">
+          {/* Notes — min-h keeps both 1-line and 2-line cards visually consistent */}
+          <div className="mt-2 pl-16 min-h-[40px]">
             {meeting.notes ? (
               <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
                 {meeting.notes}
@@ -103,158 +101,89 @@ export default function MeetingRow({
             )}
           </div>
 
+          <div className="flex-1" />
+
           {/* Divider */}
           <div className="border-t border-dashed border-border/60 mt-4 mb-3" />
 
-          {/* Footer */}
+          {/* Footer: actions left, client name (dashboard) or date (client) right */}
           <div className="flex items-center justify-between pl-1">
-            {variant === 'dashboard-card' && client ? (
-              <div className="flex items-center gap-2">
-                <ClientAvatar client={client} size="sm" />
-                {!isOverdue && (
-                  <>
-                    <span className="text-xs font-semibold text-foreground truncate max-w-36">
-                      {client.name}
-                    </span>
-                    {client.is_internal && (
-                      <Badge
-                        variant="secondary"
-                        className="text-[9px] px-1 py-0"
-                      >
-                        INT
-                      </Badge>
-                    )}
-                  </>
-                )}
-              </div>
-            ) : variant === 'client-card' ? (
-              <div className="flex items-center gap-2 -ml-3">
-                <CreateMeetingDialog
-                  editMeeting={meeting}
-                  defaultClientId={meeting.client_id}
-                  lockClient={true}
-                  campaignId={meeting.campaign_id ?? null}
-                >
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 text-muted-foreground hover:text-primary"
+            <div className="flex items-center gap-1 -ml-3">
+              <Tooltip delayDuration={400}>
+                <TooltipTrigger asChild>
+                  <CreateMeetingDialog
+                    editMeeting={meeting}
+                    defaultClientId={meeting.client_id}
+                    lockClient={variant === 'client-card'}
+                    campaignId={meeting.campaign_id ?? null}
                   >
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                </CreateMeetingDialog>
-                {meeting.meeting_link && (
-                  <Tooltip delayDuration={600}>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-muted-foreground hover:text-primary"
-                        onClick={() => window.open(meeting.meeting_link, '_blank')}
-                      >
-                        <LinkIcon className="h-4 w-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent side="top" className="max-w-65 break-all text-xs">
-                      {meeting.meeting_link}
-                    </TooltipContent>
-                  </Tooltip>
-                )}
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 text-muted-foreground hover:text-emerald-600"
-                  onClick={() => markMeetingDone(meeting.id)}
-                  disabled={isCompletingMeeting}
-                >
-                  <CheckCircle2 className="h-4 w-4" />
-                </Button>
-              </div>
-            ) : (
-              <div />
-            )}
-
-            <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground font-medium">
-              <span>{format(meetingDate, 'd MMMM yyyy')}</span>
-              {isOverdue && (
-                <Badge
-                  variant="destructive"
-                  className="text-[9px] px-1 py-0 h-4 ml-1"
-                >
-                  Overdue
-                </Badge>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Action bar — only for dashboard-card */}
-        {variant === 'dashboard-card' && (
-          <div
-            className={cn(
-              'grid transition-all duration-200 ease-in-out',
-              alwaysShowActions
-                ? 'grid-rows-[1fr]'
-                : 'grid-rows-[0fr] group-hover:grid-rows-[1fr] delay-400 group-hover:delay-[400ms]',
-            )}
-          >
-            <div className="overflow-hidden">
-              <div className="flex items-center justify-between px-4 py-2 border-t border-border/40 bg-muted/30">
-                <div className="flex items-center gap-1">
-                  <Tooltip delayDuration={400}>
-                    <TooltipTrigger asChild>
-                      <CreateMeetingDialog
-                        editMeeting={meeting}
-                        defaultClientId={meeting.client_id}
-                        lockClient={false}
-                      >
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="size-7 text-muted-foreground hover:text-foreground"
-                        >
-                          <Pencil className="size-3.5" />
-                        </Button>
-                      </CreateMeetingDialog>
-                    </TooltipTrigger>
-                    <TooltipContent side="top" className="text-xs">Reschedule</TooltipContent>
-                  </Tooltip>
-                  {meeting.meeting_link && (
-                    <Tooltip delayDuration={400}>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="size-7 text-muted-foreground hover:text-primary"
-                          onClick={() => window.open(meeting.meeting_link, '_blank')}
-                        >
-                          <LinkIcon className="size-3.5" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent side="top" className="max-w-65 break-all text-xs">
-                        {meeting.meeting_link}
-                      </TooltipContent>
-                    </Tooltip>
-                  )}
-                </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="size-7 text-muted-foreground hover:text-primary"
+                    >
+                      <Pencil className="size-3.5" />
+                    </Button>
+                  </CreateMeetingDialog>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="text-xs">Edit</TooltipContent>
+              </Tooltip>
+              {meeting.meeting_link && (
                 <Tooltip delayDuration={400}>
                   <TooltipTrigger asChild>
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="size-7 text-muted-foreground hover:text-emerald-600"
-                      onClick={() => markMeetingDone(meeting.id)}
-                      disabled={isCompletingMeeting}
+                      className="size-7 text-muted-foreground hover:text-primary"
+                      onClick={() => window.open(meeting.meeting_link, '_blank')}
                     >
-                      <CheckCircle2 className="size-3.5" />
+                      <LinkIcon className="size-3.5" />
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent side="top" className="text-xs">Mark as done</TooltipContent>
+                  <TooltipContent side="top" className="max-w-65 break-all text-xs">
+                    {meeting.meeting_link}
+                  </TooltipContent>
                 </Tooltip>
-              </div>
+              )}
+              <Tooltip delayDuration={400}>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-7 text-muted-foreground hover:text-emerald-600"
+                    onClick={() => markMeetingDone(meeting.id)}
+                    disabled={isCompletingMeeting}
+                  >
+                    <CheckCircle2 className="size-3.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="text-xs">Mark as done</TooltipContent>
+              </Tooltip>
             </div>
+
+            {variant === 'dashboard-card' && client ? (
+              <div className="flex items-center gap-2">
+                <ClientAvatar client={client} size="sm" />
+                <span className="text-xs font-semibold text-foreground truncate max-w-36">
+                  {client.name}
+                </span>
+                {client.is_internal && (
+                  <Badge variant="secondary" className="text-[9px] px-1 py-0">INT</Badge>
+                )}
+                {isOverdue && (
+                  <Badge variant="destructive" className="text-[9px] px-1 py-0 h-4">Overdue</Badge>
+                )}
+              </div>
+            ) : (
+              <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground font-medium">
+                <span>{format(meetingDate, 'd MMMM yyyy')}</span>
+                {isOverdue && (
+                  <Badge variant="destructive" className="text-[9px] px-1 py-0 h-4 ml-1">Overdue</Badge>
+                )}
+              </div>
+            )}
           </div>
-        )}
+        </div>
       </div>
     )
   }
