@@ -1,3 +1,7 @@
+// --- FILE SIZE LIMITS ---
+export const MAX_VIDEO_SIZE_MB = 500
+export const MAX_VIDEO_SIZE_BYTES = MAX_VIDEO_SIZE_MB * 1024 * 1024
+
 export const CURRENCY = {
   CODE: 'INR',
   LOCALE: 'en-IN',

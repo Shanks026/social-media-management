@@ -24,6 +24,7 @@ import {
   X,
   FileText,
   Smartphone,
+  Play,
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { Badge } from '@/components/ui/badge'
@@ -62,9 +63,14 @@ const PlatformIcon = ({ name }) => {
   )
 }
 
-// Detect if a URL is a video
+// Detect if a URL is a video — matches extensions, path segments, and blob URLs
 function isVideo(url = '') {
-  return /\.(mp4|webm|mov|ogg|avi)(\?.*)?$/i.test(url)
+  const videoExtensions = ['.mp4', '.mov', '.webm', '.ogg', '.m4v', '.avi']
+  return (
+    videoExtensions.some((ext) => url.toLowerCase().includes(ext)) ||
+    url.includes('video') ||
+    url.startsWith('blob:')
+  )
 }
 
 export default function PublicReview() {
@@ -348,7 +354,6 @@ export default function PublicReview() {
             {post.platform?.length > 0 && (
               <Button
                 variant="outline"
-                className="w-full"
                 onClick={() => {
                   setMobileSheetPlatform(post.platform[0])
                   setMobileSheetOpen(true)
@@ -430,7 +435,7 @@ export default function PublicReview() {
                 </div>
 
                 <DialogFooter className="mt-6">
-                  <Button className="w-full" onClick={() => handleStatusUpdate('APPROVED')} disabled={isSubmitting}>
+                  <Button onClick={() => handleStatusUpdate('APPROVED')} disabled={isSubmitting}>
                     {isSubmitting ? 'Processing...' : 'Confirm Approval'}
                   </Button>
                 </DialogFooter>
@@ -482,7 +487,6 @@ export default function PublicReview() {
 
                 <DialogFooter className="mt-6">
                   <Button
-                    className="w-full"
                     disabled={!feedback || isSubmitting}
                     onClick={() => handleStatusUpdate('NEEDS_REVISION')}
                   >
@@ -751,7 +755,14 @@ function MediaThumbnail({ url, onClick }) {
       style={{ aspectRatio: '1 / 1' }}
     >
       {video ? (
-        <video src={url} muted playsInline className="w-full h-full object-cover" />
+        <>
+          <video src={url} muted playsInline className="w-full h-full object-cover" />
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <div className="p-1.5 bg-black/50 backdrop-blur-sm rounded-full border border-white/20 text-white">
+              <Play className="h-4 w-4 fill-white" />
+            </div>
+          </div>
+        </>
       ) : isDoc ? (
         <div className="flex flex-col items-center justify-center h-full gap-1.5 bg-muted/60 p-2">
           <FileText className="h-7 w-7 text-muted-foreground shrink-0" />

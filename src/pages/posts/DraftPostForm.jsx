@@ -13,6 +13,7 @@ import {
   FileText,
 } from 'lucide-react'
 
+import { MAX_VIDEO_SIZE_MB, MAX_VIDEO_SIZE_BYTES } from '@/utils/constants'
 import { createDraftPost, updatePost, cleanupRemovedMedia } from '@/api/posts'
 import { uploadPostImage } from '@/api/storage'
 import { fetchClientById } from '@/api/clients'
@@ -560,6 +561,16 @@ export default function DraftPostForm({
   const processFiles = (fileList) => {
     let files = Array.from(fileList)
 
+    const oversized = files.filter(
+      (f) => f.type.startsWith('video/') && f.size > MAX_VIDEO_SIZE_BYTES
+    )
+    if (oversized.length > 0) {
+      toast.error(`Videos must be under ${MAX_VIDEO_SIZE_MB}MB.`)
+      files = files.filter(
+        (f) => !f.type.startsWith('video/') || f.size <= MAX_VIDEO_SIZE_BYTES
+      )
+    }
+
     if (isYoutubeSelected) {
       const videoFiles = files.filter((f) => f.type.startsWith('video/'))
       if (videoFiles.length < files.length) {
@@ -816,6 +827,22 @@ export default function DraftPostForm({
               </DialogHeader>
 
               <div className="flex-1 overflow-y-auto px-8 py-6 space-y-5">
+                {/* No clients warning — shown on global page when no clients exist yet */}
+                {!clientId && availableClients.length === 0 && (
+                  <div className="flex items-start gap-3 rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/40 px-4 py-3 text-sm text-amber-800 dark:text-amber-300">
+                    <AlertCircle className="size-4 mt-0.5 shrink-0" />
+                    <div className="space-y-0.5">
+                      <p className="font-medium">No clients yet</p>
+                      <p className="text-amber-700/70 dark:text-amber-400/70 text-xs font-normal">
+                        You need to add a client before creating a deliverable.{' '}
+                        <a href="/clients/create" className="underline underline-offset-2 font-medium hover:text-amber-900 dark:hover:text-amber-200 transition-colors">
+                          Create your first client →
+                        </a>
+                      </p>
+                    </div>
+                  </div>
+                )}
+
                 {/* Client Select */}
                 {!clientId && availableClients.length > 0 && (
                   <FormField
@@ -1312,6 +1339,12 @@ export default function DraftPostForm({
               </div>
 
               <DialogFooter className="px-8 py-5 bg-background border-t shrink-0">
+                {mutation.isPending && hasVideo && (
+                  <p className="text-xs text-muted-foreground flex items-center gap-1.5 mr-auto">
+                    <Loader2 className="size-3 animate-spin shrink-0" />
+                    Videos may take a moment to upload — please don't close this window.
+                  </p>
+                )}
                 <Button type="button" variant="outline" onClick={resetAndClose}>
                   Cancel
                 </Button>
