@@ -149,6 +149,7 @@ export function useSubscription() {
         finance_accrual: sub.finance_accrual ?? false,
         calendar_export: sub.calendar_export ?? false,
         documents_collections: sub.documents_collections ?? false,
+        reports: sub.reports ?? false,
         campaigns: true,
         campaigns_limit: sub.plan_name === 'ignite' ? 5 : null,
         proposals_limit: sub.proposals_limit ?? null,

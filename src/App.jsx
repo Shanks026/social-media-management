@@ -23,6 +23,7 @@ import NotesAndReminders from './pages/NotesAndReminders'
 import MeetingsPage from './pages/MeetingsPage'
 import Dashboard from './pages/dashboard/Dashboard'
 import DocumentsPage from './pages/documents/DocumentsPage'
+import ReportsPage from './pages/reports/ReportsPage'
 import CampaignsPage from './pages/campaigns/CampaignsPage'
 import CampaignDetailPage from './pages/campaigns/CampaignDetailPage'
 import CampaignReview from './pages/campaigns/CampaignReview'
@@ -62,6 +63,13 @@ function SubscriptionsRoute() {
   if (!sub) return null
   if (!sub.finance_subscriptions) return <Navigate to="/finance/invoices" replace />
   return <SubscriptionsTab />
+}
+
+function ReportsRoute() {
+  const { data: sub } = useSubscription()
+  if (!sub) return null
+  if (!sub.reports) return <Navigate to="/dashboard" replace />
+  return <ReportsPage />
 }
 
 function AppRoutes() {
@@ -106,6 +114,7 @@ function AppRoutes() {
           <Route path="/operations/notes" element={<NotesAndReminders />} />
           <Route path="/operations/meetings" element={<MeetingsPage />} />
           <Route path="/documents" element={<DocumentsPage />} />
+          <Route path="/reports" element={<ReportsRoute />} />
           <Route path="/calendar" element={<SocialCalendar />} />
           <Route path="/finance" element={<FinanceLayout />}>
             {/* Redirect /finance to /finance/overview */}
