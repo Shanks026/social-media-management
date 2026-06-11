@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react'
 import { format, isBefore, startOfDay } from 'date-fns'
-import { Calendar as CalendarIcon, Plus, Trash2, FileText } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { Calendar as CalendarIcon, Plus, Trash2, FileText, Settings2 } from 'lucide-react'
 
 // API
 import { useQueryClient } from '@tanstack/react-query'
@@ -64,6 +65,7 @@ export function CreateInvoiceDialog({
   onSuccess: onSuccessCallback = null,
 }) {
   const queryClient = useQueryClient()
+  const navigate = useNavigate()
   const { data: clientData } = useClients()
   const { data: nextNumber } = useNextInvoiceNumber()
   const { mutate: createInvoice, isPending } = useCreateInvoice()
@@ -184,7 +186,11 @@ export function CreateInvoiceDialog({
       notes: notes || null,
       total: subtotal,
       client: selectedClient
-        ? { name: selectedClient.name, email: selectedClient.email }
+        ? {
+            name: selectedClient.name,
+            email: selectedClient.email,
+            address: selectedClient.address,
+          }
         : null,
       items: items.map((item) => ({
         description: item.description || '',
@@ -212,6 +218,11 @@ export function CreateInvoiceDialog({
       logo_horizontal_url: subscription?.logo_horizontal_url || null,
       email: subscription?.email || '',
       mobile_number: subscription?.mobile_number || '',
+      agency_address: subscription?.agency_address || null,
+      agency_website: subscription?.agency_website || null,
+      signatory_name: subscription?.signatory_name || null,
+      signatory_designation: subscription?.signatory_designation || null,
+      signature_url: subscription?.signature_url || null,
       basic_whitelabel_enabled: subscription?.basic_whitelabel_enabled ?? false,
       full_whitelabel_enabled: subscription?.full_whitelabel_enabled ?? false,
     }),
@@ -599,21 +610,32 @@ export function CreateInvoiceDialog({
             </div>
 
             {/* Actions — sticky at bottom */}
-            <div className="shrink-0 flex justify-end gap-3 px-8 py-5 border-t border-border/50 bg-background">
+            <div className="shrink-0 flex items-center justify-between gap-3 px-8 py-5 border-t border-border/50 bg-background">
               <Button
-                variant="outline"
-                onClick={() => onOpenChange(false)}
-                disabled={isPending}
+                type="button"
+                variant="ghost"
+                onClick={() => { onOpenChange(false); navigate('/settings?tab=invoice') }}
+                className="gap-1.5 text-muted-foreground"
               >
-                Cancel
+                <Settings2 className="size-4" />
+                Invoice settings
               </Button>
-              <Button
-                onClick={handleSubmit}
-                disabled={!isValid || isPending}
-                className="min-w-[130px]"
-              >
-                {isPending ? 'Creating...' : 'Save as Draft'}
-              </Button>
+              <div className="flex items-center gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => onOpenChange(false)}
+                  disabled={isPending}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleSubmit}
+                  disabled={!isValid || isPending}
+                  className="min-w-[130px]"
+                >
+                  {isPending ? 'Creating...' : 'Save as Draft'}
+                </Button>
+              </div>
             </div>
           </div>
         </div>

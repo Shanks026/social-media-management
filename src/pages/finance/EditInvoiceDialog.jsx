@@ -244,7 +244,11 @@ export function EditInvoiceDialog({
       notes: notes || null,
       total: subtotal,
       client: selectedClient
-        ? { name: selectedClient.name, email: selectedClient.email }
+        ? {
+            name: selectedClient.name,
+            email: selectedClient.email,
+            address: selectedClient.address,
+          }
         : invoice?.client || null,
       items: items.map((item) => ({
         description: item.description || '',
@@ -272,6 +276,11 @@ export function EditInvoiceDialog({
       logo_horizontal_url: subscription?.logo_horizontal_url || null,
       email: subscription?.email || '',
       mobile_number: subscription?.mobile_number || '',
+      agency_address: subscription?.agency_address || null,
+      agency_website: subscription?.agency_website || null,
+      signatory_name: subscription?.signatory_name || null,
+      signatory_designation: subscription?.signatory_designation || null,
+      signature_url: subscription?.signature_url || null,
       basic_whitelabel_enabled: subscription?.basic_whitelabel_enabled ?? false,
       full_whitelabel_enabled: subscription?.full_whitelabel_enabled ?? false,
     }),

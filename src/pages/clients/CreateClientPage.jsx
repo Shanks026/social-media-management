@@ -58,6 +58,7 @@ const clientSchema = z.object({
   contact_name: z.string().optional(),
   website: z.string().optional(),
   location: z.string().optional(),
+  address: z.string().optional(),
   status: z.enum(['ACTIVE', 'PAUSED', 'ARCHIVED']),
   client_type: z.preprocess(
     (v) => (v === '' || v === null ? undefined : v),
@@ -136,6 +137,7 @@ export default function CreateClientPage({
       contact_name: fromProspect.contact_name || '',
       website: fromProspect.website || '',
       location: fromProspect.location || '',
+      address: '',
       status: 'ACTIVE',
       client_type: undefined,
       tier: 'BASIC',
@@ -151,6 +153,7 @@ export default function CreateClientPage({
       contact_name: '',
       website: '',
       location: '',
+      address: '',
       status: 'ACTIVE',
       client_type: undefined,
       tier: 'BASIC',
@@ -199,6 +202,7 @@ export default function CreateClientPage({
         contact_name: existingClient.contact_name || '',
         website: existingClient.website || '',
         location: existingClient.location || '',
+        address: existingClient.address || '',
         social_links: preparedSocials,
       })
 
@@ -710,6 +714,18 @@ export default function CreateClientPage({
                   placeholder="e.g. Chennai"
                 />
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>
+                Address{' '}
+                <span className="text-muted-foreground font-normal">(optional)</span>
+              </Label>
+              <Textarea
+                {...form.register('address')}
+                placeholder="e.g. 12, Anna Salai, Nungambakkam, Chennai - 600006"
+                className="min-h-20 resize-none"
+              />
             </div>
 
             <div className="space-y-2">

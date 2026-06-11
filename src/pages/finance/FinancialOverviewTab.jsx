@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   TrendingUp,
   TrendingDown,
@@ -9,6 +10,7 @@ import {
   Banknote,
   FileText,
   Lock,
+  ArrowRight,
 } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts'
 import {
@@ -65,6 +67,7 @@ const chartConfig = {
 export default function OverviewPage({ clientId, client, subTabs }) {
   const { data: subscription } = useSubscription()
   const isAccrualLocked = subscription && !subscription.finance_accrual
+  const navigate = useNavigate()
 
   const [accountingMethod, setAccountingMethod] = useState('CASH') // CASH, ACCRUAL
   const [chartRange, setChartRange] = useState('3M') // 3M, 6M, 12M
@@ -450,7 +453,7 @@ export default function OverviewPage({ clientId, client, subTabs }) {
             </div>
           </CardHeader>
           <CardContent className="flex-1 overflow-auto px-6 custom-scrollbar">
-            <div className="space-y-0 pb-4">
+            <div className="space-y-0">
               {(() => {
                 // Outstanding invoices (SENT or OVERDUE)
                 const outstandingInvoices = invoices.filter(
@@ -497,7 +500,13 @@ export default function OverviewPage({ clientId, client, subTabs }) {
                   (a, b) => new Date(b.date) - new Date(a.date),
                 )
 
-                return [...invoiceItems, ...txItems].slice(0, 8).map((item) => {
+                const combined = [...invoiceItems, ...txItems]
+                const visible = combined.slice(0, 4)
+                const remaining = combined.length - visible.length
+
+                return (
+                  <>
+                    {visible.map((item) => {
                   const isInvoice = 'invoice_number' in item
                   const client = item.client
                   const amount = isInvoice ? item.total : item.amount
@@ -557,7 +566,19 @@ export default function OverviewPage({ clientId, client, subTabs }) {
                       </div>
                     </div>
                   )
-                })
+                    })}
+                    {remaining > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => navigate('/finance/invoices')}
+                        className="w-full flex items-center justify-center gap-1 py-3 text-sm font-medium text-primary hover:underline"
+                      >
+                        +{remaining} more
+                        <ArrowRight className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                  </>
+                )
               })()}
             </div>
           </CardContent>

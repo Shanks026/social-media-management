@@ -59,6 +59,7 @@ Last updated: June 2026
 | Recurring invoice templates | ✗ | ✓ | ✓ |
 | Expense subscription tracking | ✗ | ✓ | ✓ |
 | Accrual accounting toggle | ✗ | ✓ | ✓ |
+| Client report generation (Reports) | ✗ | ✓ | ✓ |
 
 ### Documents
 
@@ -98,6 +99,7 @@ Last updated: June 2026
 | `finance_accrual` | TRUE | FALSE | TRUE | TRUE |
 | `calendar_export` | TRUE | FALSE | TRUE | TRUE |
 | `documents_collections` | TRUE | FALSE | TRUE | TRUE |
+| `reports` | TRUE | FALSE | TRUE | TRUE |
 | `campaigns` | TRUE | TRUE | TRUE | TRUE |
 
 ## DB Limit Values per Plan
@@ -140,6 +142,7 @@ Run these when setting a plan from the admin portal.
 -- TRIAL (mirrors Quantum — full access, time-limited via trial_ends_at)
 UPDATE agency_subscriptions SET
   plan_name                  = 'trial',
+  reports                    = TRUE,
   max_clients                = 30,
   max_storage_bytes          = 322122547200,
   branding_agency_sidebar    = TRUE,
@@ -157,6 +160,7 @@ WHERE user_id = $1;
 -- IGNITE
 UPDATE agency_subscriptions SET
   plan_name                  = 'ignite',
+  reports                    = FALSE,
   max_clients                = 5,
   max_storage_bytes          = 21474836480,
   extra_client_price_inr     = 500,
@@ -175,6 +179,7 @@ WHERE user_id = $1;
 -- VELOCITY
 UPDATE agency_subscriptions SET
   plan_name                  = 'velocity',
+  reports                    = TRUE,
   max_clients                = 15,
   max_storage_bytes          = 107374182400,
   extra_client_price_inr     = 500,
@@ -193,6 +198,7 @@ WHERE user_id = $1;
 -- QUANTUM
 UPDATE agency_subscriptions SET
   plan_name                  = 'quantum',
+  reports                    = TRUE,
   max_clients                = 30,
   max_storage_bytes          = 322122547200,
   extra_client_price_inr     = 500,
