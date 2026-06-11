@@ -109,7 +109,14 @@
       "Bash(Select-Object -First 20)",
       "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\chris_austin\\\\Desktop\\\\social-media-management\\\\src\\\\pages\" -Directory)",
       "Bash(Select-Object Name)",
-      "Bash(Select-String -Pattern \"doc\")"
+      "Bash(Select-String -Pattern \"doc\")",
+      "Bash(Select-String -Pattern \"invoice\" -SimpleMatch)",
+      "Bash(npx eslint *)",
+      "Bash(npx vite *)",
+      "Bash(node -e ' *)",
+      "Bash(curl -s -o inter_reg.ttf \"https://fonts.gstatic.com/s/inter/v18/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuLyfAZ9hjQ.ttf\")",
+      "Bash(node -e \"try{const f=require.resolve\\('fontkit'\\);console.log\\('fontkit:',f\\)}catch\\(e\\){console.log\\('no fontkit'\\)}; try{const f=require.resolve\\('@react-pdf/fontkit'\\);console.log\\('@react-pdf/fontkit:',f\\)}catch\\(e\\){console.log\\('no @react-pdf/fontkit'\\)}\")",
+      "Bash(grep -rიl \"999\\\\|1999\\\\|4999\\\\|price\\\\|/mo\\\\|month\\\\|₹\\\\|INR\\\\|pricing\" .claude/features/)"
     ]
   }
 }

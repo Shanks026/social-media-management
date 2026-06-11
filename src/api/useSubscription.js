@@ -42,6 +42,14 @@ export function useSubscription() {
         .eq('user_id', workspaceUserId)
         .eq('is_internal', false)
 
+      // Internal (agency) client — single source for agency contact details on invoices
+      const { data: internalClient } = await supabase
+        .from('clients')
+        .select('email, website, address')
+        .eq('user_id', workspaceUserId)
+        .eq('is_internal', true)
+        .maybeSingle()
+
       // Storage Calculation Logic
       const bytesUsed = sub.current_storage_used || 0
       const bytesMax = sub.max_storage_bytes || 0
@@ -158,13 +166,23 @@ export function useSubscription() {
         subscription_ends_at: sub.subscription_ends_at ?? null,
         is_sub_locked: subPhase === 'expired',
 
+        // Agency contact for invoices — sourced from the agency (internal client) record
+        email: internalClient?.email ?? sub.email ?? null,
+        mobile_number: sub.mobile_number ?? null,
+        agency_address: internalClient?.address ?? null,
+        agency_website: internalClient?.website ?? null,
+        // Invoice settings — signatory only (genuinely invoice-specific)
+        signatory_name: sub.signatory_name ?? null,
+        signatory_designation: sub.signatory_designation ?? null,
+        signature_url: sub.signature_url ?? null,
+
         storage_display: {
           usage_value: usageVal,
           usage_unit: usageUnit,
           max_value: maxVal,
           max_unit: maxUnit,
           percent: Math.min(100, (bytesUsed / bytesMax) * 100),
-          remaining_label: remainingLabel, // Pass pre-calculated string
+          remaining_label: remainingLabel,
         },
       }
     },

@@ -196,6 +196,16 @@ export default function ManagementTab({ client }) {
                 value={client.location}
               />
             )}
+            {client.address && (
+              <div className="sm:col-span-2">
+                <InfoRow
+                  icon={<MapPin size={16} />}
+                  label="Address"
+                  value={client.address}
+                  multiLine
+                />
+              </div>
+            )}
             <InfoRow
               icon={<Globe size={16} />}
               label="Official Website"
@@ -424,7 +434,7 @@ export default function ManagementTab({ client }) {
   )
 }
 
-function InfoRow({ icon, label, value }) {
+function InfoRow({ icon, label, value, multiLine = false }) {
   return (
     <div className="flex items-start gap-4">
       <div className="mt-0.5 h-9 w-9 shrink-0 rounded-lg bg-secondary/50 flex items-center justify-center text-muted-foreground">
@@ -434,7 +444,7 @@ function InfoRow({ icon, label, value }) {
         <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
           {label}
         </p>
-        <div className="text-sm text-foreground truncate max-w-[200px] sm:max-w-xs">
+        <div className={multiLine ? 'text-sm text-foreground whitespace-pre-wrap wrap-break-word' : 'text-sm text-foreground truncate max-w-50 sm:max-w-xs'}>
           {value}
         </div>
       </div>

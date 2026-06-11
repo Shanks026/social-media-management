@@ -39,6 +39,7 @@ export function useInvoices(filters = {}, options = {}) {
             name,
             logo_url,
             email,
+            address,
             is_internal
           )
         `,
@@ -81,6 +82,7 @@ export function useInvoice(id) {
             name,
             logo_url,
             email,
+            address,
             is_internal
           )
         `,

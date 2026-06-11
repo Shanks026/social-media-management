@@ -10,24 +10,27 @@ import {
 import { format } from 'date-fns'
 import { CURRENCY } from '@/utils/constants'
 
-/* ── Register Inter from Google Fonts ── */
+/* ── Register Inter (full glyph set, incl. ₹ U+20B9) ──
+   NOTE: The Google Fonts gstatic "latin" subset omits the Indian Rupee glyph,
+   so currency rendered blank in the PDF. These inter-ui web fonts ship the
+   complete glyph set. */
 Font.register({
   family: 'Inter',
   fonts: [
     {
-      src: 'https://fonts.gstatic.com/s/inter/v18/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuLyfAZ9hjQ.ttf',
+      src: 'https://cdn.jsdelivr.net/npm/inter-ui@3.19.3/Inter%20(web)/Inter-Regular.woff',
       fontWeight: 400,
     },
     {
-      src: 'https://fonts.gstatic.com/s/inter/v18/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuI6fAZ9hjQ.ttf',
+      src: 'https://cdn.jsdelivr.net/npm/inter-ui@3.19.3/Inter%20(web)/Inter-Medium.woff',
       fontWeight: 500,
     },
     {
-      src: 'https://fonts.gstatic.com/s/inter/v18/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuGKYAZ9hjQ.ttf',
+      src: 'https://cdn.jsdelivr.net/npm/inter-ui@3.19.3/Inter%20(web)/Inter-SemiBold.woff',
       fontWeight: 600,
     },
     {
-      src: 'https://fonts.gstatic.com/s/inter/v18/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuFuYAZ9hjQ.ttf',
+      src: 'https://cdn.jsdelivr.net/npm/inter-ui@3.19.3/Inter%20(web)/Inter-Bold.woff',
       fontWeight: 700,
     },
   ],
@@ -36,10 +39,11 @@ Font.register({
 /* ── Colour palette ── */
 const C = {
   bg: '#FFFFFF',
-  text: '#111827', // Darker almost black for main text
-  muted: '#6B7280', // Gray for labels
-  border: '#E5E7EB', // Light gray for dividers
-  tableHeader: '#F9FAFB',
+  text: '#111827',
+  muted: '#6B7280',
+  rule: '#111827', // header / footer hairline
+  dash: '#D1D5DB', // dashed table dividers
+  placeholder: '#9CA3AF',
 }
 
 /* ── Styles ── */
@@ -49,180 +53,156 @@ const s = StyleSheet.create({
     fontSize: 9,
     color: C.text,
     backgroundColor: C.bg,
-    paddingTop: 50,
-    paddingBottom: 60,
+    paddingTop: 44,
+    paddingBottom: 40,
     paddingHorizontal: 48,
+    flexDirection: 'column',
   },
 
-  /* Dividers */
-  divider: {
-    borderBottomWidth: 1,
-    borderBottomColor: C.border,
-    marginVertical: 16,
-  },
-  thickDivider: {
-    borderBottomWidth: 2,
-    borderBottomColor: '#F3F4F6',
-    marginVertical: 20,
-  },
-
-  /* Header Section */
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 8,
-  },
-  invoiceTitle: {
-    fontSize: 24,
-    fontWeight: 700,
-    color: C.text,
-    letterSpacing: -0.5,
-  },
-  invoiceNumber: {
-    fontSize: 13,
-    color: C.muted,
-    marginTop: 4,
-  },
-  logo: {
-    height: 24,
-    maxWidth: 160,
-    objectFit: 'contain',
-    marginRight: 8,
-    borderRadius: 4
-  },
-  logoText: {
-    fontSize: 18,
-    fontWeight: 700,
-    letterSpacing: -0.5,
-    color: C.text
-  },
-
-  /* Typography Utilities */
-  label: {
-    fontSize: 8,
-    fontWeight: 500,
-    color: C.muted,
-    marginBottom: 4,
-  },
-  value: {
-    fontSize: 10,
-    fontWeight: 500,
-    color: C.text,
-  },
-  valueBold: {
-    fontSize: 10,
-    fontWeight: 600,
-    color: C.text,
-  },
-  textSm: {
-    fontSize: 9,
-    color: C.muted,
-    lineHeight: 1.5,
-  },
-
-  /* Meta Grid (Project, Dates) */
-  metaGrid: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-  },
-
-  /* Address Grid (From, To) */
-  addressGrid: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-  },
-  addressBox: {
-    flex: 1,
-  },
-
-  /* Table */
-  tableHeader: {
-    flexDirection: 'row',
-    backgroundColor: C.tableHeader,
-    borderRadius: 6,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    marginBottom: 8,
-  },
-  tableHeaderCell: {
-    fontSize: 9,
-    fontWeight: 600,
-    color: C.text,
-  },
-  tableRow: {
-    flexDirection: 'row',
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: C.border,
-  },
-  tableCell: { fontSize: 10, fontWeight: 500, color: C.text },
-  tableCellMuted: { fontSize: 10, color: C.text },
-
-  colDesc: { flex: 2 },
-  colQty: { width: 50, textAlign: 'center' },
-  colRate: { width: 90, textAlign: 'center' },
-  colAmount: { width: 90, textAlign: 'right' },
-
-  /* Totals */
-  totalContainer: {
+  /* Header */
+  topBar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 12,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: C.rule,
   },
-  totalLabel: {
+  invoiceNo: {
     fontSize: 12,
-    fontWeight: 600,
+    fontWeight: 700,
     color: C.text,
   },
-  totalValue: {
+  agencyNameTop: {
     fontSize: 12,
-    fontWeight: 600,
+    fontWeight: 700,
     color: C.text,
   },
 
-  /* Note Box */
-  noteBox: {
-    borderWidth: 1,
-    borderColor: C.border,
-    borderRadius: 6,
-    padding: 12,
-    marginTop: 16,
-    backgroundColor: '#FAFAFA',
+  /* Title */
+  title: {
+    fontSize: 52,
+    fontWeight: 400,
+    letterSpacing: -1.5,
+    color: C.text,
+    marginTop: 22,
+    marginBottom: 30,
   },
-  noteText: {
+
+  /* Meta */
+  metaRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 28,
+  },
+  metaLabel: {
     fontSize: 9,
+    fontWeight: 400,
+    color: C.muted,
+    marginBottom: 6,
+  },
+  metaValue: {
+    fontSize: 12,
+    fontWeight: 700,
     color: C.text,
-    lineHeight: 1.5,
+  },
+  metaAddress: {
+    fontSize: 8.5,
+    fontWeight: 400,
+    color: C.muted,
+    marginTop: 4,
+    lineHeight: 1.4,
+    maxWidth: 220,
+  },
+  metaDates: {
+    flexDirection: 'row',
+    gap: 44,
   },
 
-  /* Bottom Section (Payment & Signature) */
-  bottomSection: {
+  /* Table */
+  tableHeadRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderStyle: 'dashed',
+    borderTopWidth: 1,
+    borderTopColor: C.dash,
+    borderBottomWidth: 1,
+    borderBottomColor: C.dash,
+  },
+  headCell: {
+    fontSize: 10,
+    fontWeight: 400,
+    color: C.muted,
+  },
+  itemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 16,
+    borderStyle: 'dashed',
+    borderBottomWidth: 1,
+    borderBottomColor: C.dash,
+  },
+  descCell: { fontSize: 11, fontWeight: 700, color: C.text },
+  numCell: { fontSize: 11, fontWeight: 400, color: C.text },
+
+  colDesc: { flex: 1 },
+  colUnit: { width: 60, textAlign: 'center' },
+  colPrice: { width: 100, textAlign: 'right' },
+  colAmount: { width: 110, textAlign: 'right' },
+
+  /* Total */
+  totalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: 18,
+  },
+  totalLabel: { fontSize: 13, fontWeight: 600, color: C.text },
+  totalValue: { fontSize: 22, fontWeight: 700, color: C.text, letterSpacing: -0.5 },
+
+  /* Notes */
+  noteBlock: { marginTop: 22, maxWidth: 320 },
+  noteLabel: { fontSize: 9, fontWeight: 600, color: C.text, marginBottom: 4 },
+  noteText: { fontSize: 9, color: C.muted, lineHeight: 1.5 },
+
+  /* Spacer pushes the closing block to the page bottom */
+  spacer: { flexGrow: 1, minHeight: 40 },
+
+  /* Closing block (agency + signatory) */
+  closing: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-end',
-    marginTop: 40,
+    marginBottom: 22,
   },
-  paymentBox: {
-    flex: 1,
+  agencyBlock: { maxWidth: 260, alignItems: 'flex-start' },
+  logoPlaceholder: {
+    width: 110,
+    height: 40,
+    borderRadius: 6,
+    backgroundColor: '#D1D5DB',
+    marginBottom: 20,
   },
-  /* Branding Footer */
+  agencyBlockName: { fontSize: 11, fontWeight: 700, color: C.text, marginBottom: 4 },
+  agencyBlockLine: { fontSize: 9.5, fontWeight: 400, color: C.text, lineHeight: 1.45 },
+
+  signBlock: { alignItems: 'center', maxWidth: 240 },
+  signImage: { height: 70, maxWidth: 220, objectFit: 'contain', marginBottom: 10 },
+  signName: { fontSize: 11, fontWeight: 700, color: C.text },
+  signRole: { fontSize: 10, fontWeight: 400, color: C.muted, marginTop: 2 },
+
+  /* Footer */
   footer: {
-    position: 'absolute',
-    bottom: 24,
-    left: 48,
-    right: 48,
-    textAlign: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingTop: 14,
+    borderTopWidth: 1,
+    borderTopColor: C.rule,
   },
-  footerText: {
-    fontSize: 7,
-    color: C.muted,
-  },
+  footerSide: { flex: 1 },
+  footerText: { fontSize: 9, fontWeight: 400, color: C.text },
 })
 
 /* ── Helpers ── */
@@ -237,159 +217,161 @@ function fmtCurrency(val) {
 function fmtDate(d) {
   if (!d) return '—'
   try {
-    return format(new Date(d), 'MMM dd, yyyy')
+    return format(new Date(d), 'd MMMM, yyyy')
   } catch {
     return '—'
   }
+}
+
+function addressLines(addr) {
+  if (!addr) return []
+  return String(addr).split('\n').map((l) => l.trim()).filter(Boolean)
 }
 
 /* ── PDF Document ── */
 export default function InvoicePDF({ invoice, agency = {}, terceroLogoDataUrl = null }) {
   const items = invoice.items || []
   const subtotal = items.reduce(
-    (s, item) => s + (item.quantity || 0) * (item.unit_price || 0),
+    (sum, item) => sum + (item.quantity || 0) * (item.unit_price || 0),
     0,
   )
   const total = invoice.total || subtotal
+
+  const isWhitelabel =
+    agency.full_whitelabel_enabled || agency.basic_whitelabel_enabled
+  const agencyName = agency.agency_name || 'Agency'
+  const clientAddr = addressLines(invoice.client?.address)
+  const agencyAddr = addressLines(agency.agency_address)
+
+  /* Bottom-left logo — same branding condition used elsewhere */
+  const renderLogo = () => {
+    if (isWhitelabel) {
+      if (agency.logo_horizontal_url)
+        return <Image src={agency.logo_horizontal_url} style={{ height: 40, maxWidth: 130, objectFit: 'contain', objectPositionX: 0, marginBottom: 20 }} />
+      if (agency.logo_url)
+        return <Image src={agency.logo_url} style={{ width: 44, height: 44, objectFit: 'contain', objectPositionX: 0, borderRadius: 6, marginBottom: 20 }} />
+      return null
+    }
+    // Ignite — Tercero branding
+    if (terceroLogoDataUrl)
+      return <Image src={terceroLogoDataUrl} style={{ height: 18, maxWidth: 110, objectFit: 'contain', objectPositionX: 0, marginBottom: 20 }} />
+    return <View style={s.logoPlaceholder} />
+  }
 
   return (
     <Document>
       <Page size="A4" style={s.page}>
 
         {/* ─── Header ─── */}
-        <View style={s.header}>
-          <View>
-            <Text style={s.invoiceTitle}>Invoice</Text>
-            <Text style={s.invoiceNumber}>#{invoice.invoice_number}</Text>
-          </View>
-          <View style={{ alignItems: 'flex-end' }}>
-            {(agency.full_whitelabel_enabled || agency.basic_whitelabel_enabled) ? (
-              /* Velocity / Quantum — agency branding: horizontal → square → name */
-              agency.logo_horizontal_url ? (
-                <Image src={agency.logo_horizontal_url} style={{ width: 120, height: 36, objectFit: 'contain', borderRadius: 4 }} />
-              ) : agency.logo_url ? (
-                <Image src={agency.logo_url} style={{ width: 28, height: 28, objectFit: 'contain', borderRadius: 4 }} />
-              ) : (
-                <Text style={s.logoText}>{agency.agency_name || 'Agency'}</Text>
-              )
-            ) : (
-              /* Ignite — TerceroLand logo */
-              terceroLogoDataUrl ? (
-                <Image src={terceroLogoDataUrl} style={{ width: 90, height: 15, objectFit: 'contain' }} />
-              ) : null
-            )}
-          </View>
+        <View style={s.topBar}>
+          <Text style={s.invoiceNo}>#{invoice.invoice_number}</Text>
+          <Text style={s.agencyNameTop}>{agencyName}</Text>
         </View>
 
-        <View style={s.divider} />
+        {/* ─── Title ─── */}
+        <Text style={s.title}>Invoice</Text>
 
-        {/* ─── Meta Grid (Project & Dates) ─── */}
-        <View style={s.metaGrid}>
+        {/* ─── Meta ─── */}
+        <View style={s.metaRow}>
           <View style={{ flex: 1 }}>
-            <Text style={s.label}>Project</Text>
-            <Text style={s.valueBold}>{invoice.project_name || 'Service Retainer'}</Text>
+            <Text style={s.metaLabel}>Billed To</Text>
+            <Text style={s.metaValue}>{invoice.client?.name || 'Client Name'}</Text>
+            {clientAddr.map((line, i) => (
+              <Text key={i} style={s.metaAddress}>{line}</Text>
+            ))}
           </View>
-          <View style={{ flex: 1 }}>
-            <Text style={s.label}>Category</Text>
-            <Text style={s.valueBold}>{invoice.category || 'Other'}</Text>
-          </View>
-          <View style={{ width: 120 }}>
-            <Text style={[s.label, { textAlign: 'right' }]}>Issued Date</Text>
-            <Text style={[s.valueBold, { textAlign: 'right' }]}>{fmtDate(invoice.issue_date)}</Text>
-          </View>
-          <View style={{ width: 120 }}>
-            <Text style={[s.label, { textAlign: 'right' }]}>Due Date</Text>
-            <Text style={[s.valueBold, { textAlign: 'right' }]}>{fmtDate(invoice.due_date)}</Text>
-          </View>
-        </View>
-
-        <View style={s.thickDivider} />
-
-        {/* ─── Address Grid (From & To) ─── */}
-        <View style={s.addressGrid}>
-          <View style={s.addressBox}>
-            <Text style={s.label}>From</Text>
-            <View style={{ marginTop: 4 }}>
-              <Text style={s.valueBold}>{agency.agency_name || 'Agency Name'}</Text>
-              {agency.email && <Text style={s.textSm}>{agency.email}</Text>}
-              {agency.mobile_number && <Text style={s.textSm}>{agency.mobile_number}</Text>}
+          <View style={s.metaDates}>
+            <View>
+              <Text style={s.metaLabel}>Created On</Text>
+              <Text style={s.metaValue}>{fmtDate(invoice.issue_date)}</Text>
             </View>
-          </View>
-
-          <View style={[s.addressBox, { alignItems: 'flex-end' }]}>
-            <Text style={[s.label, { textAlign: 'right' }]}>To</Text>
-            <View style={{ marginTop: 4, alignItems: 'flex-end' }}>
-              <Text style={[s.valueBold, { textAlign: 'right' }]}>{invoice.client?.name || 'Client Name'}</Text>
-              {invoice.client?.email && <Text style={[s.textSm, { textAlign: 'right' }]}>{invoice.client.email}</Text>}
+            <View>
+              <Text style={s.metaLabel}>Due On</Text>
+              <Text style={s.metaValue}>{fmtDate(invoice.due_date)}</Text>
             </View>
           </View>
         </View>
 
-        <View style={s.thickDivider} />
-
-        {/* ─── Items Table ─── */}
-        <View style={s.tableHeader}>
-          <Text style={[s.tableHeaderCell, s.colDesc]}>Description</Text>
-          <Text style={[s.tableHeaderCell, s.colQty]}>Units</Text>
-          <Text style={[s.tableHeaderCell, s.colRate]}>Price</Text>
-          <Text style={[s.tableHeaderCell, s.colAmount]}>Amount</Text>
+        {/* ─── Table ─── */}
+        <View style={s.tableHeadRow}>
+          <Text style={[s.headCell, s.colDesc]}>Description</Text>
+          <Text style={[s.headCell, s.colUnit]}>Unit</Text>
+          <Text style={[s.headCell, s.colPrice]}>Price</Text>
+          <Text style={[s.headCell, s.colAmount]}>Amount</Text>
         </View>
 
         {items.map((item, idx) => (
-          <View key={idx} style={s.tableRow}>
-            <Text style={[s.tableCell, s.colDesc]}>
+          <View key={idx} style={s.itemRow}>
+            <Text style={[s.descCell, s.colDesc]}>
               {item.description || 'Line item'}
             </Text>
-            <Text style={[s.tableCellMuted, s.colQty]}>
-              {item.quantity || 1}
-            </Text>
-            <Text style={[s.tableCellMuted, s.colRate]}>
-              {fmtCurrency(item.unit_price)}
-            </Text>
-            <Text style={[s.tableCell, s.colAmount]}>
+            <Text style={[s.numCell, s.colUnit]}>{item.quantity || 1}</Text>
+            <Text style={[s.numCell, s.colPrice]}>{fmtCurrency(item.unit_price)}</Text>
+            <Text style={[s.numCell, s.colAmount]}>
               {fmtCurrency((item.quantity || 1) * (item.unit_price || 0))}
             </Text>
           </View>
         ))}
 
-        {/* ─── Total Amount ─── */}
-        <View style={s.totalContainer}>
+        {/* ─── Total ─── */}
+        <View style={s.totalRow}>
           <Text style={s.totalLabel}>Total Amount</Text>
           <Text style={s.totalValue}>{fmtCurrency(total)}</Text>
         </View>
 
-        {/* ─── Note Box ─── */}
-        {invoice.notes && (
-          <View style={s.noteBox}>
-            <Text style={s.noteText}>
-              <Text style={{ fontWeight: 600 }}>Note: </Text>
-              {invoice.notes}
-            </Text>
+        {/* ─── Notes ─── */}
+        {invoice.notes ? (
+          <View style={s.noteBlock}>
+            <Text style={s.noteLabel}>Note</Text>
+            <Text style={s.noteText}>{invoice.notes}</Text>
           </View>
-        )}
+        ) : null}
 
-        {/* ─── Bottom Section (Payment Terms) ─── */}
-        {invoice.payment_terms && (
-          <View style={s.bottomSection}>
-            <View style={s.paymentBox}>
-              <Text style={[s.valueBold, { fontSize: 11, marginBottom: 8 }]}>Payment Terms</Text>
-              <Text style={s.textSm}>{invoice.payment_terms}</Text>
+        {/* ─── Spacer ─── */}
+        <View style={s.spacer} />
+
+        {/* ─── Closing block ─── */}
+        <View style={s.closing}>
+          <View style={s.agencyBlock}>
+            {renderLogo()}
+            <Text style={s.agencyBlockName}>{agencyName}</Text>
+            {agencyAddr.map((line, i) => (
+              <Text key={i} style={s.agencyBlockLine}>{line}</Text>
+            ))}
+          </View>
+
+          {(agency.signature_url || agency.signatory_name) ? (
+            <View style={s.signBlock}>
+              {agency.signature_url ? (
+                <Image src={agency.signature_url} style={s.signImage} />
+              ) : null}
+              {agency.signatory_name ? (
+                <Text style={s.signName}>{agency.signatory_name}</Text>
+              ) : null}
+              {agency.signatory_designation ? (
+                <Text style={s.signRole}>{agency.signatory_designation}</Text>
+              ) : null}
             </View>
-          </View>
-        )}
+          ) : null}
+        </View>
 
-        {/* ─── Footer: Quantum → none | Velocity → Tercero logo | Ignite → "Tercero 2026" ─── */}
-        {agency.full_whitelabel_enabled ? null : agency.basic_whitelabel_enabled ? (
-          <View style={[s.footer, { alignItems: 'center' }]}>
-            {terceroLogoDataUrl ? (
-              <Image src={terceroLogoDataUrl} style={{ width: 52, height: 9, objectFit: 'contain', opacity: 0.4 }} />
+        {/* ─── Footer ─── */}
+        <View style={s.footer}>
+          <View style={s.footerSide}>
+            {agency.email ? <Text style={s.footerText}>{agency.email}</Text> : null}
+          </View>
+          <View style={[s.footerSide, { alignItems: 'center' }]}>
+            {/* Velocity (basic whitelabel) keeps a subtle Tercero mark; Quantum & Ignite do not */}
+            {agency.basic_whitelabel_enabled && terceroLogoDataUrl ? (
+              <Image src={terceroLogoDataUrl} style={{ height: 8, maxWidth: 52, objectFit: 'contain', opacity: 0.4 }} />
             ) : null}
           </View>
-        ) : (
-          <View style={s.footer}>
-            <Text style={s.footerText}>Tercero 2026</Text>
+          <View style={[s.footerSide, { alignItems: 'flex-end' }]}>
+            {agency.agency_website ? (
+              <Text style={s.footerText}>{agency.agency_website}</Text>
+            ) : null}
           </View>
-        )}
+        </View>
 
       </Page>
     </Document>
