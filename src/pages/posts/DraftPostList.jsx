@@ -233,6 +233,7 @@ export default function DraftPostList({ clientId, onCreatePost, statusFilter = '
       queryClient.invalidateQueries({ queryKey: ['global-calendar'] })
       queryClient.invalidateQueries({ queryKey: ['global-post-counts'] })
       queryClient.invalidateQueries({ queryKey: ['postCounts', clientId] })
+      queryClient.invalidateQueries({ queryKey: ['subscription'] })
       toast.success('Post deleted successfully')
       setPostToDelete(null)
     },
@@ -411,7 +412,7 @@ export default function DraftPostList({ clientId, onCreatePost, statusFilter = '
                     </DropdownMenuTrigger>
                     <DropdownMenuContent
                       align="end"
-                      className="w-48 rounded-xl"
+                      className="w-48"
                     >
                       <DropdownMenuItem
                         disabled={!canEdit(post.status || 'DRAFT')}
@@ -452,14 +453,13 @@ export default function DraftPostList({ clientId, onCreatePost, statusFilter = '
                       )}
 
                       <DropdownMenuItem
-                        disabled={false}
-                        className="cursor-pointer font-medium text-destructive focus:bg-destructive/10 focus:text-destructive py-2"
+                        variant="destructive"
                         onClick={(e) => {
                           e.stopPropagation()
                           setPostToDelete(post)
                         }}
                       >
-                        <Trash2 className="h-4 w-4 mr-2" /> Delete Post
+                        <Trash2 className="h-4 w-4" /> Delete Post
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>

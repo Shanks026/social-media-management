@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { format } from 'date-fns'
 import {
   Clock,
@@ -15,11 +15,11 @@ import {
   MoreVertical,
   Edit2,
   Trash2,
-  AlertTriangle,
   FolderOpen,
   Megaphone,
   Plus,
   FileText,
+  Play,
 } from 'lucide-react'
 import {
   Tooltip,
@@ -40,6 +40,16 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -242,6 +252,7 @@ export function CalendarPostCard({ post }) {
       queryClient.invalidateQueries({
         queryKey: ['postCounts', post?.client_id],
       })
+      queryClient.invalidateQueries({ queryKey: ['subscription'] })
       toast.success('Post deleted successfully')
       setPostToDelete(null)
     },
@@ -354,6 +365,16 @@ export function CalendarPostCard({ post }) {
       prev === post.media_urls.length - 1 ? 0 : prev + 1,
     )
   }
+
+  useEffect(() => {
+    if (!isPreviewOpen || (post.media_urls?.length ?? 0) <= 1) return
+    const onKey = (e) => {
+      if (e.key === 'ArrowLeft') handlePrev()
+      if (e.key === 'ArrowRight') handleNext()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [isPreviewOpen, activeImageIndex, post.media_urls?.length])
 
   const renderMediaGrid = () => {
     const media = post.media_urls || []
@@ -486,7 +507,7 @@ export function CalendarPostCard({ post }) {
                   <MoreVertical className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48 rounded-xl">
+              <DropdownMenuContent align="end" className="w-48">
                 <DropdownMenuItem
                   disabled={!canEdit}
                   className="cursor-pointer font-medium text-foreground py-2"
@@ -523,13 +544,13 @@ export function CalendarPostCard({ post }) {
                 )}
                 <DropdownMenuItem
                   disabled={!canDelete}
-                  className="cursor-pointer font-medium text-destructive focus:bg-destructive/10 focus:text-destructive py-2"
+                  variant="destructive"
                   onClick={(e) => {
                     e.stopPropagation()
                     setPostToDelete(post)
                   }}
                 >
-                  <Trash2 className="h-4 w-4 mr-2" /> Delete Post
+                  <Trash2 className="h-4 w-4" /> Delete Post
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -672,39 +693,24 @@ export function CalendarPostCard({ post }) {
       </Dialog>
 
       {/* 4. Delete Confirmation Dialog */}
-      <Dialog
+      <AlertDialog
         open={!!postToDelete}
         onOpenChange={(open) => !open && setPostToDelete(null)}
       >
-        <DialogContent
-          className="sm:max-w-[425px] rounded-2xl"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <DialogHeader>
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-red-100 dark:bg-red-900/30 rounded-full">
-                <AlertTriangle className="h-6 w-6 text-red-600 dark:text-red-400" />
-              </div>
-              <DialogTitle className="text-xl">Delete Post</DialogTitle>
-            </div>
-            <DialogDescription className="pt-4 text-base">
+        <AlertDialogContent onClick={(e) => e.stopPropagation()}>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Post</AlertDialogTitle>
+            <AlertDialogDescription>
               Are you sure you want to delete{' '}
               <span className="font-semibold text-foreground">
                 "{postToDelete?.title || 'Untitled Draft'}"
               </span>
-              ? This action cannot be undone and all media will be permanently
-              deleted.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="gap-2 mt-6">
-            <Button
-              variant="outline"
-              onClick={() => setPostToDelete(null)}
-              disabled={isDeletingPost}
-            >
-              Cancel
-            </Button>
-            <Button
+              ? This action cannot be undone and all media will be permanently deleted.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeletingPost}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
               variant="destructive"
               onClick={() =>
                 handleDeletePost(
@@ -716,10 +722,10 @@ export function CalendarPostCard({ post }) {
               disabled={isDeletingPost}
             >
               {isDeletingPost ? 'Deleting...' : 'Delete Post'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AssignCampaignDialog
         open={assignCampaignOpen}
