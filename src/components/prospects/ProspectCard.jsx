@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { MapPin, CalendarClock, MoreHorizontal, Pencil, Trash2, Check } from 'lucide-react'
+import { MapPin, MoreHorizontal, Pencil, Trash2, Check, ArrowRight } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { Card, CardContent } from '@/components/ui/card'
@@ -13,7 +13,6 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { ProspectStatusBadge, PROSPECT_STATUS_CONFIG } from './ProspectStatusBadge'
 import { ProspectSourceBadge } from './ProspectSourceBadge'
-import { PlatformIcon } from '@/components/PlatformIcon'
 import { useUpdateProspect, PROSPECT_STATUSES } from '@/api/prospects'
 import { formatDate } from '@/lib/helper'
 
@@ -28,44 +27,10 @@ const STATUS_DOT = {
   lost:           'bg-red-500',
 }
 
-function isOverdue(dateStr) {
-  if (!dateStr) return false
-  return new Date(dateStr) < new Date()
-}
-
-function getProspectPlatforms(prospect) {
-  const platforms = []
-  if (prospect.instagram) {
-    platforms.push({
-      key: 'instagram',
-      href: prospect.instagram.startsWith('http')
-        ? prospect.instagram
-        : `https://instagram.com/${prospect.instagram.replace('@', '')}`,
-    })
-  }
-  if (prospect.linkedin) {
-    platforms.push({
-      key: 'linkedin',
-      href: prospect.linkedin.startsWith('http')
-        ? prospect.linkedin
-        : `https://linkedin.com/in/${prospect.linkedin}`,
-    })
-  }
-  return platforms
-}
 
 export function ProspectCard({ prospect, onClick, onEdit, onDelete }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const updateProspect = useUpdateProspect()
-
-  const platforms = getProspectPlatforms(prospect)
-  const overdue = isOverdue(prospect.next_followup_at)
-
-  const websiteHref = prospect.website
-    ? prospect.website.startsWith('http')
-      ? prospect.website
-      : `https://${prospect.website}`
-    : null
 
   async function handleStatusChange(newStatus) {
     if (newStatus === prospect.status) return
@@ -181,94 +146,41 @@ export function ProspectCard({ prospect, onClick, onEdit, onDelete }) {
         <div className="border-t border-dashed border-border pt-4 grid grid-cols-2 gap-x-4 gap-y-3.5">
           <div className="min-w-0">
             <p className="text-[11px] text-muted-foreground mb-0.5">Contact Name</p>
-            <p className="text-sm font-medium text-foreground truncate">
+            <p className="text-xs font-medium text-foreground truncate">
               {prospect.contact_name || '—'}
             </p>
           </div>
 
           <div className="min-w-0">
             <p className="text-[11px] text-muted-foreground mb-0.5">Website</p>
-            {websiteHref ? (
-              <a
-                href={websiteHref}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={(e) => e.stopPropagation()}
-                className="text-sm font-medium text-primary underline truncate block hover:opacity-80 transition-opacity"
-              >
-                {prospect.website}
-              </a>
-            ) : (
-              <p className="text-sm font-medium text-muted-foreground">—</p>
-            )}
+            <p className="text-xs font-medium text-muted-foreground truncate">
+              {prospect.website || '—'}
+            </p>
           </div>
 
           <div className="min-w-0">
             <p className="text-[11px] text-muted-foreground mb-0.5">Email</p>
-            <p className="text-sm font-medium text-foreground truncate">
+            <p className="text-xs font-medium text-foreground truncate">
               {prospect.email || '—'}
             </p>
           </div>
 
           <div className="min-w-0">
             <p className="text-[11px] text-muted-foreground mb-0.5">Phone</p>
-            <p className="text-sm font-medium text-foreground truncate">
+            <p className="text-xs font-medium text-foreground truncate">
               {prospect.phone || '—'}
             </p>
           </div>
         </div>
 
-        {/* Footer: platform icons (linked) + follow-up date */}
+        {/* Footer: created date + view details */}
         <div className="border-t border-dashed border-border pt-4 flex items-center justify-between gap-2 mt-auto">
-
-          {/* Platform icon stack with active links */}
-          {platforms.length > 0 ? (
-            <div
-              className="flex items-center"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {platforms.map((p, i) => (
-                <a
-                  key={p.key}
-                  href={p.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  title={p.key.charAt(0).toUpperCase() + p.key.slice(1)}
-                  style={{ marginLeft: i === 0 ? 0 : -6, zIndex: platforms.length - i }}
-                  className="relative block rounded-full ring-2 ring-background overflow-hidden shrink-0 hover:scale-110 transition-transform"
-                >
-                  <PlatformIcon platform={p.key} size={22} />
-                </a>
-              ))}
-            </div>
-          ) : (
-            <span />
-          )}
-
-          {/* Follow-up */}
-          {prospect.next_followup_at ? (
-            <div className="flex items-center gap-1.5 shrink-0">
-              <div
-                className={cn(
-                  'size-2 rounded-full shrink-0',
-                  overdue ? 'bg-amber-500' : 'bg-emerald-500'
-                )}
-              />
-              <span
-                className={cn(
-                  'text-xs',
-                  overdue
-                    ? 'text-amber-600 dark:text-amber-400 font-medium'
-                    : 'text-muted-foreground'
-                )}
-              >
-                {overdue && <CalendarClock className="inline size-3 mr-0.5" />}
-                Follow Up: {formatDate(prospect.next_followup_at)}
-              </span>
-            </div>
-          ) : (
-            <span className="text-xs text-muted-foreground/50">No follow-up set</span>
-          )}
+          <span className="text-xs text-muted-foreground">
+            {formatDate(prospect.created_at)}
+          </span>
+          <span className="flex items-center gap-1 text-xs text-muted-foreground">
+            View Details <ArrowRight className="size-3" />
+          </span>
         </div>
 
       </CardContent>

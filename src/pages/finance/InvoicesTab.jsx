@@ -36,7 +36,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { StatBar, StatCell } from '@/components/ui/stat-bar'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -532,7 +532,7 @@ export default function InvoicesTab({ clientId, subTabs }) {
     <Tabs
       value={activeTab}
       onValueChange={setActiveTab}
-      className="space-y-6 animate-in fade-in duration-500"
+      className="space-y-2 animate-in fade-in duration-500"
     >
       {/* --- Header Actions --- */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -641,75 +641,40 @@ export default function InvoicesTab({ clientId, subTabs }) {
         </div>
       </div>
 
-      <TabsContent value="one-off" className="space-y-6 mt-0">
+      <TabsContent value="one-off" className="space-y-4 mt-0">
         {/* --- Quick Stats --- */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card className="rounded-2xl border-none bg-card/50 shadow-sm ring-1 ring-border/50 dark:bg-card/20">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                Outstanding
-              </CardTitle>
-              <AlertCircle className="h-4 w-4 text-amber-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold tracking-tight text-amber-600 dark:text-amber-400">
-                {formatCurrency(stats.outstanding)}
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                Sent & overdue invoices
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="rounded-2xl border-none bg-card/50 shadow-sm ring-1 ring-border/50 dark:bg-card/20">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                Collected
-              </CardTitle>
-              <TrendingUp className="h-4 w-4 text-emerald-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400">
-                {formatCurrency(stats.paid)}
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                Total paid invoices
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="rounded-2xl border-none bg-card/50 shadow-sm ring-1 ring-border/50 dark:bg-card/20">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                Overdue
-              </CardTitle>
-              <TrendingDown className="h-4 w-4 text-rose-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold tracking-tight text-rose-600 dark:text-rose-400">
-                {stats.overdue}
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                Past due date
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="rounded-2xl border-none bg-card/50 shadow-sm ring-1 ring-border/50 dark:bg-card/20">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                Drafts
-              </CardTitle>
-              <FileText className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold tracking-tight text-foreground">
-                {stats.drafts}
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">Not yet sent</p>
-            </CardContent>
-          </Card>
-        </div>
+        <StatBar>
+          <StatCell
+            label="Outstanding"
+            value={formatCurrency(stats.outstanding)}
+            valueClass="text-amber-600 dark:text-amber-400"
+            sub="Sent & overdue invoices"
+            icon={<AlertCircle className="h-3 w-3 text-amber-500" />}
+            iconBg="bg-amber-100 dark:bg-amber-950"
+          />
+          <StatCell
+            label="Collected"
+            value={formatCurrency(stats.paid)}
+            valueClass="text-emerald-600 dark:text-emerald-400"
+            sub="Total paid invoices"
+            icon={<TrendingUp className="h-3 w-3 text-emerald-500" />}
+            iconBg="bg-emerald-100 dark:bg-emerald-950"
+          />
+          <StatCell
+            label="Overdue"
+            value={stats.overdue}
+            valueClass="text-rose-600 dark:text-rose-400"
+            sub="Past due date"
+            icon={<TrendingDown className="h-3 w-3 text-rose-500" />}
+            iconBg="bg-rose-100 dark:bg-rose-950"
+          />
+          <StatCell
+            label="Drafts"
+            value={stats.drafts}
+            sub="Not yet sent"
+            icon={<FileText className="h-3 w-3 text-muted-foreground" />}
+          />
+        </StatBar>
 
         {/* --- One-off Table --- */}
         {isLoading ? (

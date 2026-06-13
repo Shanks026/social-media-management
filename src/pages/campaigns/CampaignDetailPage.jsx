@@ -80,6 +80,7 @@ import {
   CarouselContent,
   CarouselItem,
 } from '@/components/ui/carousel'
+import { StatBar, StatCell } from '@/components/ui/stat-bar'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { SUPPORTED_PLATFORMS } from '@/lib/platforms'
@@ -143,28 +144,6 @@ function formatDateRange(start, end) {
   return `Until ${fmt(end)}`
 }
 
-function KpiCard({ label, value, sub, icon: Icon, color = 'text-primary' }) {
-  return (
-    <Card className="rounded-2xl border-none bg-card/50 shadow-sm ring-1 ring-border/50">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-          {label}
-        </CardTitle>
-        {Icon && <Icon className={cn('h-4 w-4 opacity-70', color)} />}
-      </CardHeader>
-      <CardContent>
-        <div className="text-2xl font-bold tracking-tight text-foreground tabular-nums">
-          {value}
-        </div>
-        {sub && (
-          <p className="text-xs text-muted-foreground mt-1 font-normal">
-            {sub}
-          </p>
-        )}
-      </CardContent>
-    </Card>
-  )
-}
 
 export default function CampaignDetailPage() {
   const { campaignId } = useParams()
@@ -483,33 +462,36 @@ export default function CampaignDetailPage() {
         </div>
 
         {/* KPI bar — always visible */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <KpiCard
+        <StatBar>
+          <StatCell
             label="Total Deliverables"
             value={analytics?.total_posts ?? 0}
-            icon={Activity}
+            sub="Across all platforms"
+            icon={<Activity className="h-3 w-3 text-primary" />}
           />
-          <KpiCard
+          <StatCell
             label="Published"
             value={analytics?.published_posts ?? 0}
-            icon={CheckCircle2}
-            color="text-emerald-500"
+            valueClass="text-emerald-600 dark:text-emerald-400"
+            sub="Successfully delivered"
+            icon={<CheckCircle2 className="h-3 w-3 text-emerald-500" />}
+            iconBg="bg-emerald-100 dark:bg-emerald-950"
           />
-          <KpiCard
+          <StatCell
             label="On-Time Rate"
             value={onTimeRate}
-            sub="of published deliverables"
-            icon={Timer}
-            color="text-blue-500"
+            sub="Of published deliverables"
+            icon={<Timer className="h-3 w-3 text-blue-500" />}
+            iconBg="bg-blue-100 dark:bg-blue-950"
           />
-          <KpiCard
+          <StatCell
             label="Progress"
             value={`${progress}%`}
             sub={`${analytics?.published_posts ?? 0} of ${analytics?.total_posts ?? 0} published`}
-            icon={Clock}
-            color="text-amber-500"
+            icon={<Clock className="h-3 w-3 text-amber-500" />}
+            iconBg="bg-amber-100 dark:bg-amber-950"
           />
-        </div>
+        </StatBar>
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="pt-2">

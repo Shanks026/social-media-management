@@ -12,6 +12,9 @@ import {
   LayoutGrid,
   TableProperties,
   ArrowUpRight,
+  Users,
+  TrendingUp,
+  Trophy,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -53,6 +56,7 @@ import {
   EmptyDescription,
   EmptyMedia,
 } from '@/components/ui/empty'
+import { StatBar, StatCell } from '@/components/ui/stat-bar'
 import { formatDate } from '@/lib/helper'
 import { cn } from '@/lib/utils'
 
@@ -133,12 +137,12 @@ export default function ProspectsPage() {
 
   // View toggle — persisted in localStorage, default 'table'
   const [view, setView] = useState(() => {
-    try { return localStorage.getItem(VIEW_KEY) || 'table' } catch { return 'table' }
+    try { return localStorage.getItem(VIEW_KEY) || 'card' } catch { return 'card' }
   })
 
   function handleViewChange(v) {
     setView(v)
-    try { localStorage.setItem(VIEW_KEY, v) } catch {}
+    try { localStorage.setItem(VIEW_KEY, v) } catch { /* ignore */ }
   }
 
   const { data: prospects = [], isLoading } = useProspects({ search })
@@ -202,51 +206,6 @@ export default function ProspectsPage() {
           </div>
         </div>
 
-        {/* ── Toolbar ────────────────────────────────────────────────────── */}
-        <div className="flex items-center gap-3">
-          <div className="relative flex-1 max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-            <Input
-              placeholder="Search prospects..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-9 bg-muted/20 border-border/40"
-            />
-          </div>
-
-          {isFiltered && (
-            <Button
-              variant="ghost"
-              onClick={() => { setSearch(''); setActiveTab('all') }}
-              className="text-muted-foreground h-9 px-3"
-            >
-              Reset
-            </Button>
-          )}
-
-          {/* View toggle */}
-          <div className="ml-auto flex items-center border rounded-lg overflow-hidden bg-background">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => handleViewChange('card')}
-              className={cn('h-9 w-9 rounded-none', view === 'card' && 'bg-muted')}
-              title="Card view"
-            >
-              <LayoutGrid size={16} />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => handleViewChange('table')}
-              className={cn('h-9 w-9 rounded-none', view === 'table' && 'bg-muted')}
-              title="Table view"
-            >
-              <TableProperties size={16} />
-            </Button>
-          </div>
-        </div>
-
         {/* ── Status Tabs ────────────────────────────────────────────────── */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="bg-transparent h-auto w-full justify-start rounded-none p-0 gap-8 border-b border-border/40 overflow-x-auto">
@@ -294,6 +253,80 @@ export default function ProspectsPage() {
             })}
           </TabsList>
         </Tabs>
+
+        {/* ── Stats ──────────────────────────────────────────────────────── */}
+        <StatBar>
+          <StatCell
+            label="Total"
+            value={prospects.length}
+            icon={<Users className="h-3 w-3 text-blue-500" />}
+            iconBg="bg-blue-100 dark:bg-blue-950"
+          />
+          <StatCell
+            label="Contacted"
+            value={prospects.filter((p) => p.status === 'contacted').length}
+            icon={<TrendingUp className="h-3 w-3 text-amber-500" />}
+            iconBg="bg-amber-100 dark:bg-amber-950"
+          />
+          <StatCell
+            label="Demo Scheduled"
+            value={prospects.filter((p) => p.status === 'demo_scheduled').length}
+            icon={<CalendarClock className="h-3 w-3 text-violet-500" />}
+            iconBg="bg-violet-100 dark:bg-violet-950"
+          />
+          <StatCell
+            label="Won"
+            value={prospects.filter((p) => p.status === 'won').length}
+            valueClass="text-emerald-600 dark:text-emerald-400"
+            icon={<Trophy className="h-3 w-3 text-emerald-500" />}
+            iconBg="bg-emerald-100 dark:bg-emerald-950"
+          />
+        </StatBar>
+
+        {/* ── Toolbar ────────────────────────────────────────────────────── */}
+        <div className="flex items-center gap-3">
+          <div className="relative flex-1 max-w-sm">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+            <Input
+              placeholder="Search prospects..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9 bg-muted/20 border-border/40"
+            />
+          </div>
+
+          {isFiltered && (
+            <Button
+              variant="ghost"
+              onClick={() => { setSearch(''); setActiveTab('all') }}
+              className="text-muted-foreground h-9 px-3"
+            >
+              Reset
+            </Button>
+          )}
+
+          {/* View toggle */}
+          <div className="ml-auto flex items-center border rounded-lg overflow-hidden bg-background">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => handleViewChange('card')}
+              className={cn('h-9 w-9 rounded-none', view === 'card' && 'bg-muted')}
+              title="Card view"
+            >
+              <LayoutGrid size={16} />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => handleViewChange('table')}
+              className={cn('h-9 w-9 rounded-none', view === 'table' && 'bg-muted')}
+              title="Table view"
+            >
+              <TableProperties size={16} />
+            </Button>
+          </div>
+        </div>
 
         {/* ── Content ────────────────────────────────────────────────────── */}
         {isLoading ? (

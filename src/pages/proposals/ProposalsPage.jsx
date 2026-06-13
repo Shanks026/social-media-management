@@ -300,6 +300,49 @@ export default function ProposalsPage() {
           </div>
         </div>
 
+        {/* ── Status tabs ── */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="bg-transparent h-auto w-full justify-start rounded-none p-0 gap-8 border-b border-border/40">
+            {STATUS_TABS.map((tab) => {
+              const count =
+                tab === 'all'
+                  ? proposals.filter((p) => p.status !== 'archived').length
+                  : proposals.filter((p) => p.status === tab).length
+              return (
+                <TabsTrigger
+                  key={tab}
+                  value={tab}
+                  className="
+                    relative rounded-none bg-transparent px-0 pb-3 pt-0 text-[13px] font-medium transition-none
+                    shadow-none border-b-2 border-transparent text-muted-foreground
+                    flex-none w-fit gap-2
+                    data-[state=active]:bg-transparent
+                    dark:data-[state=active]:bg-transparent
+                    data-[state=active]:text-black
+                    dark:data-[state=active]:text-white
+                    data-[state=active]:border-black
+                    dark:data-[state=active]:border-white
+                    data-[state=active]:shadow-none
+                    data-[state=active]:border-x-0
+                    data-[state=active]:border-t-0
+                    focus-visible:ring-0
+                  "
+                >
+                  {tab === 'all' ? 'All' : (STATUS_CONFIG[tab]?.label ?? tab)}
+                  {count > 0 && (
+                    <Badge
+                      variant="secondary"
+                      className="text-xs px-1.5 py-0 min-w-5 text-center"
+                    >
+                      {count}
+                    </Badge>
+                  )}
+                </TabsTrigger>
+              )
+            })}
+          </TabsList>
+        </Tabs>
+
         {/* ── Toolbar ── */}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <div className="relative flex-1 max-w-sm">
@@ -343,49 +386,6 @@ export default function ProposalsPage() {
             </Button>
           )}
         </div>
-
-        {/* ── Status tabs ── */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="bg-transparent h-auto w-full justify-start rounded-none p-0 gap-8 border-b border-border/40">
-            {STATUS_TABS.map((tab) => {
-              const count =
-                tab === 'all'
-                  ? proposals.filter((p) => p.status !== 'archived').length
-                  : proposals.filter((p) => p.status === tab).length
-              return (
-                <TabsTrigger
-                  key={tab}
-                  value={tab}
-                  className="
-                    relative rounded-none bg-transparent px-0 pb-3 pt-0 text-[13px] font-medium transition-none
-                    shadow-none border-b-2 border-transparent text-muted-foreground
-                    flex-none w-fit gap-2
-                    data-[state=active]:bg-transparent
-                    dark:data-[state=active]:bg-transparent
-                    data-[state=active]:text-black
-                    dark:data-[state=active]:text-white
-                    data-[state=active]:border-black
-                    dark:data-[state=active]:border-white
-                    data-[state=active]:shadow-none
-                    data-[state=active]:border-x-0
-                    data-[state=active]:border-t-0
-                    focus-visible:ring-0
-                  "
-                >
-                  {tab === 'all' ? 'All' : (STATUS_CONFIG[tab]?.label ?? tab)}
-                  {count > 0 && (
-                    <Badge
-                      variant="secondary"
-                      className="text-xs px-1.5 py-0 min-w-5 text-center"
-                    >
-                      {count}
-                    </Badge>
-                  )}
-                </TabsTrigger>
-              )
-            })}
-          </TabsList>
-        </Tabs>
 
         {/* ── Content ── */}
         {isLoading ? (
