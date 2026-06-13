@@ -279,7 +279,7 @@ export default function TeamPage() {
                   <EmptyContent>
                     <div className="text-4xl leading-none select-none mb-2">👥</div>
                     <EmptyHeader>
-                      <EmptyTitle className="font-normal text-xl">
+                      <EmptyTitle className="font-bold text-xl">
                         {members.length === 0 ? 'Just you for now' : 'No members match this filter'}
                       </EmptyTitle>
                       <EmptyDescription className="font-normal">
@@ -397,7 +397,7 @@ export default function TeamPage() {
                     <EmptyContent>
                       <div className="text-4xl leading-none select-none mb-2">📬</div>
                       <EmptyHeader>
-                        <EmptyTitle className="font-normal text-xl">No pending invites</EmptyTitle>
+                        <EmptyTitle className="font-bold text-xl">No pending invites</EmptyTitle>
                         <EmptyDescription className="font-normal">
                           Invite links you generate will appear here until they&apos;re accepted.
                         </EmptyDescription>

@@ -330,7 +330,7 @@ export default function DraftPostList({ clientId, onCreatePost, statusFilter = '
         <EmptyContent>
           <div className="text-4xl leading-none select-none mb-2">📝</div>
           <EmptyHeader>
-            <EmptyTitle className="font-normal text-xl">
+            <EmptyTitle className="font-bold text-xl">
               {statusFilter === 'ALL' ? 'No deliverables yet' : 'No deliverables found'}
             </EmptyTitle>
             <EmptyDescription className="font-normal">

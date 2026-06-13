@@ -302,7 +302,7 @@ export function ProposalTab({ clientId, prospectId, prospectName, prospectEmail 
           <EmptyContent>
             <div className="text-4xl leading-none select-none mb-2">📋</div>
             <EmptyHeader>
-              <EmptyTitle className="font-normal text-lg">
+              <EmptyTitle className="font-bold text-lg">
                 No Proposals
               </EmptyTitle>
               <EmptyDescription className="font-normal">

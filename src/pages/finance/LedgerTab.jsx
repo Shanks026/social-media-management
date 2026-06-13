@@ -359,7 +359,7 @@ export default function LedgerTab({ clientId, subTabs }) {
               {searchTerm || filterMode !== 'ALL' ? '🔍' : '🧾'}
             </div>
             <EmptyHeader>
-              <EmptyTitle className="font-normal text-xl">
+              <EmptyTitle className="font-bold text-xl">
                 {searchTerm || filterMode !== 'ALL'
                   ? 'No transactions found'
                   : 'No transactions yet'}

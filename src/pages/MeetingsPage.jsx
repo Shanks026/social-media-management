@@ -842,7 +842,7 @@ export default function MeetingsPage() {
               {isFiltered ? '🔍' : '🎥'}
             </div>
             <EmptyHeader>
-              <EmptyTitle className="font-normal text-xl">
+              <EmptyTitle className="font-bold text-xl">
                 {isFiltered ? 'No meetings found' : 'No meetings scheduled'}
               </EmptyTitle>
               <EmptyDescription className="font-normal">

@@ -686,7 +686,7 @@ export default function InvoicesTab({ clientId, subTabs }) {
                 {searchTerm || filterStatus !== 'ALL' || filterClient !== 'ALL' ? '🔍' : '🧾'}
               </div>
               <EmptyHeader>
-                <EmptyTitle className="font-normal text-xl">
+                <EmptyTitle className="font-bold text-xl">
                   {searchTerm ||
                   filterStatus !== 'ALL' ||
                   filterClient !== 'ALL'
