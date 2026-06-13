@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react'
-import { Download, Loader2 } from 'lucide-react'
+import { Download, Loader2, Activity, Receipt, TrendingUp, AlertCircle } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { useHeader } from '@/components/misc/header-context'
@@ -21,6 +21,8 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { ClientAvatar } from '@/components/NoteRow'
+import { INDUSTRY_OPTIONS } from '@/lib/industries'
+import { StatBar, StatCell } from '@/components/ui/stat-bar'
 import {
   Empty,
   EmptyContent,
@@ -101,10 +103,29 @@ export default function ReportsPage() {
   const statusEntries = Object.entries(report?.deliverables?.by_status || {})
 
   const kpis = [
-    { label: 'Deliverables', value: report?.deliverables?.total ?? 0 },
-    { label: 'Billed', value: fmtCurrency(report?.finance?.billed) },
-    { label: 'Collected', value: fmtCurrency(report?.finance?.collected) },
-    { label: 'Outstanding', value: fmtCurrency(report?.finance?.outstanding) },
+    {
+      label: 'Deliverables',
+      value: report?.deliverables?.total ?? 0,
+      icon: <Activity className="h-3 w-3 text-primary" />,
+    },
+    {
+      label: 'Billed',
+      value: fmtCurrency(report?.finance?.billed),
+      icon: <Receipt className="h-3 w-3 text-blue-500" />,
+      iconBg: 'bg-blue-100 dark:bg-blue-950',
+    },
+    {
+      label: 'Collected',
+      value: fmtCurrency(report?.finance?.collected),
+      icon: <TrendingUp className="h-3 w-3 text-emerald-500" />,
+      iconBg: 'bg-emerald-100 dark:bg-emerald-950',
+    },
+    {
+      label: 'Outstanding',
+      value: fmtCurrency(report?.finance?.outstanding),
+      icon: <AlertCircle className="h-3 w-3 text-amber-500" />,
+      iconBg: 'bg-amber-100 dark:bg-amber-950',
+    },
   ]
 
   return (
@@ -176,7 +197,7 @@ export default function ReportsPage() {
             <EmptyContent>
               <div className="text-4xl leading-none select-none mb-2">📊</div>
               <EmptyHeader>
-                <EmptyTitle className="font-normal text-xl">
+                <EmptyTitle className="font-bold text-xl">
                   Select a client
                 </EmptyTitle>
                 <EmptyDescription className="font-normal">
@@ -188,33 +209,47 @@ export default function ReportsPage() {
         ) : (
           <div className="space-y-8 animate-in fade-in duration-300">
             {/* Client header */}
-            <div className="flex items-center gap-3">
-              {selectedClient && <ClientAvatar client={selectedClient} />}
+            <div className="flex items-center gap-4">
+              {selectedClient && (
+                selectedClient.logo_url ? (
+                  <img
+                    src={selectedClient.logo_url}
+                    alt={selectedClient.name}
+                    className="size-12 rounded-lg object-cover ring-1 ring-border shrink-0"
+                  />
+                ) : (
+                  <div className="size-12 rounded-lg bg-muted flex items-center justify-center shrink-0">
+                    <span className="text-sm font-semibold text-muted-foreground">
+                      {selectedClient.name?.slice(0, 2).toUpperCase()}
+                    </span>
+                  </div>
+                )
+              )}
               <div className="min-w-0">
-                <p className="font-medium text-foreground truncate">
+                <p className="text-2xl bricolage font-bold text-foreground truncate mb-1">
                   {selectedClient?.name}
                 </p>
-                <p className="text-xs text-muted-foreground">
-                  {selectedClient?.industry || '—'}
-                  {report?.pipeline?.next_deliverable_at &&
-                    ` · Next deliverable ${formatDate(report.pipeline.next_deliverable_at)}`}
+                <p className="text-xs text-muted-foreground truncate">
+                  {INDUSTRY_OPTIONS.find((i) => i.value === selectedClient?.industry)?.label || '—'}
+                  {report?.pipeline?.next_deliverable_at
+                    ? ` · Next deliverable ${formatDate(report.pipeline.next_deliverable_at)}`
+                    : <span className="text-muted-foreground/60"> · No upcoming deliverable</span>}
                 </p>
               </div>
             </div>
 
             {/* KPI tiles */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-px overflow-hidden rounded-xl border bg-border">
+            <StatBar>
               {kpis.map((kpi) => (
-                <div key={kpi.label} className="bg-background p-5">
-                  <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-                    {kpi.label}
-                  </p>
-                  <p className="mt-1 text-2xl font-semibold tabular-nums tracking-tight">
-                    {isFetching ? '—' : kpi.value}
-                  </p>
-                </div>
+                <StatCell
+                  key={kpi.label}
+                  label={kpi.label}
+                  value={isFetching ? '—' : kpi.value}
+                  icon={kpi.icon}
+                  iconBg={kpi.iconBg}
+                />
               ))}
-            </div>
+            </StatBar>
 
             {/* Breakdown */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">

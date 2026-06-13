@@ -13,7 +13,7 @@ export function useClients() {
 
       const { data, error } = await supabase
         .from('clients')
-        .select('id, name, logo_url, is_internal, email, address')
+        .select('id, name, logo_url, is_internal, email, address, industry')
         .eq('user_id', workspaceUserId)
 
       if (error) throw error

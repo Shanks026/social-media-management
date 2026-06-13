@@ -609,7 +609,7 @@ export default function Posts() {
                   {hasActiveFilters ? '🔍' : '📝'}
                 </div>
                 <EmptyHeader>
-                  <EmptyTitle className="font-normal text-xl">
+                  <EmptyTitle className="font-bold text-xl">
                     {hasActiveFilters
                       ? 'No deliverables found'
                       : 'No deliverables yet'}

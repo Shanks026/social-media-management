@@ -81,6 +81,7 @@ import {
   CarouselItem,
 } from '@/components/ui/carousel'
 import { StatBar, StatCell } from '@/components/ui/stat-bar'
+import WorkflowHealth from '@/components/WorkflowHealth'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { SUPPORTED_PLATFORMS } from '@/lib/platforms'
@@ -495,28 +496,44 @@ export default function CampaignDetailPage() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="pt-2">
-          <div className="flex items-center justify-between mb-4">
-            {/* <span className="text-xl font-medium bricolage text-foreground">
-              {{ posts: 'Deliverables', finance: 'Finance', activity: 'Activity' }[activeTab]}
-            </span> */}
-            <TabsList className="h-9">
-              <TabsTrigger value="posts" className="text-sm px-3 gap-1.5">
-                <Activity className="size-3.5" />Deliverables
-              </TabsTrigger>
-              <TabsTrigger value="finance" className="text-sm px-3 gap-1.5">
-                <Receipt className="size-3.5" />Finance
-              </TabsTrigger>
-              <TabsTrigger value="activity" className="text-sm px-3 gap-1.5">
-                <CalendarDays className="size-3.5" />Activity
-              </TabsTrigger>
+          <div className="mb-4">
+            <TabsList className="bg-transparent h-auto w-full justify-start rounded-none p-0 gap-12 border-b border-border/40">
+              {[
+                { value: 'posts',    label: 'Deliverables', icon: Activity },
+                { value: 'finance',  label: 'Finance',      icon: Receipt },
+                { value: 'activity', label: 'Activity',     icon: CalendarDays },
+              ].map((tab) => (
+                <TabsTrigger
+                  key={tab.value}
+                  value={tab.value}
+                  className="
+                    relative rounded-none bg-transparent px-0 pb-3 pt-0 text-sm font-medium transition-none
+                    shadow-none border-b-2 border-transparent text-muted-foreground
+                    flex-none w-fit gap-2
+                    data-[state=active]:bg-transparent
+                    dark:data-[state=active]:bg-transparent
+                    data-[state=active]:text-black
+                    dark:data-[state=active]:text-white
+                    data-[state=active]:border-black
+                    dark:data-[state=active]:border-white
+                    data-[state=active]:shadow-none
+                    data-[state=active]:border-x-0
+                    data-[state=active]:border-t-0
+                    focus-visible:ring-0
+                  "
+                >
+                  <tab.icon className="size-4" />
+                  {tab.label}
+                </TabsTrigger>
+              ))}
             </TabsList>
           </div>
 
           {/* ── Posts tab ── */}
           <TabsContent value="posts" className="mt-0">
-            <div className="grid grid-cols-1 gap-4">
+            <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 items-start">
               {/* Post list */}
-              <Card className="border-none shadow-sm ring-1 ring-border/50 bg-card/50 flex flex-col h-full gap-4">
+              <Card className="lg:col-span-3 border-none shadow-sm ring-1 ring-border/50 bg-card/50 flex flex-col h-full gap-4">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 shrink-0">
                   <div>
                     <CardTitle className="text-lg font-medium bricolage">
@@ -527,23 +544,23 @@ export default function CampaignDetailPage() {
                     </CardDescription>
                   </div>
                   {campaign?.status === 'Active' && (
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5">
                       <Button
                         variant="outline"
                         size="sm"
-                        className="h-8 gap-1.5"
+                        className="h-7 px-2.5 text-xs gap-1.5"
                         onClick={() => setLinkPostsOpen(true)}
                       >
                         <Link2 className="size-3.5" />
-                        Link Deliverables
+                        Link existing
                       </Button>
                       <Button
                         size="sm"
-                        className="h-8 gap-1.5"
+                        className="h-7 px-2.5 text-xs gap-1.5"
                         onClick={() => setCreatePostOpen(true)}
                       >
                         <Plus className="size-3.5" />
-                        New Deliverable
+                        New
                       </Button>
                     </div>
                   )}
@@ -572,7 +589,7 @@ export default function CampaignDetailPage() {
                       <div className="h-10 w-10 border border-dashed rounded-full flex items-center justify-center text-muted-foreground">
                         <Activity className="h-4 w-4 opacity-50" />
                       </div>
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-base font-normal text-foreground bricolage">
                         No deliverables linked yet
                       </p>
                       <p className="text-xs text-muted-foreground/70">
@@ -621,7 +638,7 @@ export default function CampaignDetailPage() {
                               )}
 
                               <div className="min-w-0 flex-1">
-                                <p className="text-base font-medium truncate text-foreground leading-tight">
+                                <p className="text-sm font-medium truncate text-foreground leading-tight">
                                   {pv?.title || 'Untitled'}
                                 </p>
                                 {pv?.target_date && (
@@ -682,6 +699,14 @@ export default function CampaignDetailPage() {
                   )}
                 </CardContent>
               </Card>
+
+              {/* Workflow health */}
+              <WorkflowHealth
+                posts={postsData ?? []}
+                isLoading={postsLoading}
+                description="Deliverable pipeline for this campaign"
+                className="lg:col-span-2 border-none shadow-sm ring-1 ring-border/50 bg-card/50 flex flex-col h-full"
+              />
             </div>
           </TabsContent>
 

@@ -399,7 +399,7 @@ export default function ProposalsPage() {
             <EmptyContent>
               <div className="text-4xl leading-none select-none mb-2">📋</div>
               <EmptyHeader>
-                <EmptyTitle className="font-normal text-xl">
+                <EmptyTitle className="font-bold text-xl">
                   No Proposals Found
                 </EmptyTitle>
                 <EmptyDescription className="font-normal">

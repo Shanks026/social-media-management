@@ -274,7 +274,7 @@ export default function Clients() {
                 {isFilterActive ? '🔍' : '🤝'}
               </div>
               <EmptyHeader>
-                <EmptyTitle className="font-normal text-xl">
+                <EmptyTitle className="font-bold text-xl">
                   {isFilterActive
                     ? 'No clients match your criteria'
                     : 'Ready to scale your agency?'}

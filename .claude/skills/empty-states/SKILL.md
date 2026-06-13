@@ -66,7 +66,7 @@ import { Plus, SomeIcon } from 'lucide-react'
       <SomeIcon className="size-6 text-muted-foreground/60" />
     </EmptyMedia>
     <EmptyHeader>
-      <EmptyTitle className="font-normal text-xl">No Items Yet</EmptyTitle>
+      <EmptyTitle className="font-bold text-xl">No Items Yet</EmptyTitle>
       <EmptyDescription className="font-normal">
         Helpful sentence explaining what this section is for and how to get
         started.
@@ -88,7 +88,7 @@ Rules:
 
 - No animation on the `<Empty>` container — it inherits the page load animation
 - `EmptyMedia variant="icon"` — icon is `size-6 text-muted-foreground/60`
-- `EmptyTitle` — use `font-normal text-xl` for consistency
+- `EmptyTitle` — use `font-bold text-xl` for consistency (base component is `bricolage font-bold`)
 - `EmptyDescription` — use `font-normal`, keep to 1–2 sentences
 - Primary CTA button: `variant="outline" size="sm"` — default shape, no `rounded-full`
 - "Clear filters" CTA: `variant="link"` with `className="text-primary font-medium"` — never `variant="outline"`
@@ -110,7 +110,7 @@ const isFiltered = Boolean(searchQuery || activeFilter !== 'all')
         : <SomeIcon className="size-6 text-muted-foreground/60" />}
     </EmptyMedia>
     <EmptyHeader>
-      <EmptyTitle className="font-normal text-xl">
+      <EmptyTitle className="font-bold text-xl">
         {isFiltered ? 'No results found' : 'No items yet'}
       </EmptyTitle>
       <EmptyDescription className="font-normal">

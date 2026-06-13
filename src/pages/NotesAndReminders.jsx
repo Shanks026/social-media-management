@@ -814,7 +814,7 @@ export default function NotesAndReminders() {
               {search.trim() || statusTab !== 'ALL' || selectedClient !== 'all' ? '🔍' : '🗒️'}
             </div>
             <EmptyHeader>
-              <EmptyTitle className="font-normal text-xl">
+              <EmptyTitle className="font-bold text-xl">
                 {search.trim() ||
                 statusTab !== 'ALL' ||
                 selectedClient !== 'all'

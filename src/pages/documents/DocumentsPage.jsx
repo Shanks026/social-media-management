@@ -488,7 +488,7 @@ export default function DocumentsPage() {
                           {isFilterActive ? '🔍' : '📁'}
                         </div>
                         <EmptyHeader>
-                          <EmptyTitle className="font-normal text-xl">
+                          <EmptyTitle className="font-bold text-xl">
                             {isFilterActive
                               ? selectedStatus === 'Active' ||
                                 selectedStatus === 'all'
@@ -615,7 +615,7 @@ export default function DocumentsPage() {
                       <EmptyContent>
                         <div className="text-4xl leading-none select-none mb-2">📁</div>
                         <EmptyHeader>
-                          <EmptyTitle className="font-normal text-xl">
+                          <EmptyTitle className="font-bold text-xl">
                             No collections yet
                           </EmptyTitle>
                           <EmptyDescription className="font-normal">

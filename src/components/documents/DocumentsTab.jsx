@@ -285,7 +285,7 @@ export default function DocumentsTab({ clientId }) {
                     <div className="text-4xl leading-none select-none mb-2">
                       {selectedStatus === 'Archived' ? '📁' : '🔍'}
                     </div>
-                    <EmptyTitle className="font-normal text-xl">
+                    <EmptyTitle className="font-bold text-xl">
                       {selectedStatus === 'Archived'
                         ? 'No archived documents'
                         : 'No documents match your search'}
@@ -312,7 +312,7 @@ export default function DocumentsTab({ clientId }) {
                 <Empty className="py-20 border border-dashed rounded-2xl bg-muted/5">
                   <EmptyHeader>
                     <div className="text-4xl leading-none select-none mb-2">📁</div>
-                    <EmptyTitle className="font-normal text-xl">
+                    <EmptyTitle className="font-bold text-xl">
                       No active documents
                     </EmptyTitle>
                     <EmptyDescription className="font-normal">
@@ -377,7 +377,7 @@ export default function DocumentsTab({ clientId }) {
               <Empty className="py-20 border border-dashed rounded-2xl bg-muted/5">
                 <EmptyHeader>
                   <div className="text-4xl leading-none select-none mb-2">📁</div>
-                  <EmptyTitle className="font-normal text-xl">
+                  <EmptyTitle className="font-bold text-xl">
                     No collections yet
                   </EmptyTitle>
                   <EmptyDescription className="font-normal">
@@ -434,7 +434,7 @@ export default function DocumentsTab({ clientId }) {
                 <Empty className="py-20 border border-dashed rounded-2xl bg-muted/5">
                   <EmptyHeader>
                     <div className="text-4xl leading-none select-none mb-2">🔍</div>
-                    <EmptyTitle className="font-normal text-xl">
+                    <EmptyTitle className="font-bold text-xl">
                       No ungrouped documents match your search
                     </EmptyTitle>
                     <EmptyDescription className="font-normal">
@@ -455,7 +455,7 @@ export default function DocumentsTab({ clientId }) {
                 <Empty className="py-12 border border-dashed rounded-2xl bg-muted/5">
                   <EmptyHeader>
                     <div className="text-4xl leading-none select-none mb-2">📁</div>
-                    <EmptyTitle className="font-normal text-xl">
+                    <EmptyTitle className="font-bold text-xl">
                       No ungrouped documents
                     </EmptyTitle>
                     <EmptyDescription className="font-normal">

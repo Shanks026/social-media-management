@@ -334,7 +334,7 @@ export default function SubscriptionsTab({ clientId, subTabs }) {
           <EmptyContent>
             <div className="text-4xl leading-none select-none mb-2">💳</div>
             <EmptyHeader>
-              <EmptyTitle className="font-normal text-xl">
+              <EmptyTitle className="font-bold text-xl">
                 No subscriptions tracked
               </EmptyTitle>
               <EmptyDescription className="font-normal">

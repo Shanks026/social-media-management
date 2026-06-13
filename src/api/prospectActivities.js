@@ -7,11 +7,12 @@ import { PROSPECT_STATUSES } from '@/api/prospects'
 // ─── Constants ─────────────────────────────────────────────────────────────────
 
 export const ACTIVITY_TYPES = [
-  { value: 'call',    label: 'Call',    icon: 'Phone' },
-  { value: 'email',   label: 'Email',   icon: 'Mail' },
-  { value: 'dm',      label: 'DM',      icon: 'MessageCircle' },
-  { value: 'meeting', label: 'Meeting', icon: 'Video' },
-  { value: 'note',    label: 'Note',    icon: 'StickyNote' },
+  { value: 'whatsapp',  label: 'WhatsApp',  icon: 'MessageCircle' },
+  { value: 'instagram', label: 'Instagram', icon: 'Instagram' },
+  { value: 'email',     label: 'Email',     icon: 'Mail' },
+  { value: 'call',      label: 'Call',      icon: 'Phone' },
+  { value: 'inperson',  label: 'In Person', icon: 'Handshake' },
+  { value: 'others',    label: 'Others',    icon: 'Ellipsis' },
 ]
 
 // status_change is system-generated — not in the manual log list
