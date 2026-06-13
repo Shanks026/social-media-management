@@ -31,7 +31,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { StatBar, StatCell } from '@/components/ui/stat-bar'
 import { Badge } from '@/components/ui/badge'
 import StatusBadge from '@/components/StatusBadge'
 import { CustomTable } from '@/components/CustomTable'
@@ -248,7 +248,7 @@ export default function SubscriptionsTab({ clientId, subTabs }) {
   ]
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
+    <div className="space-y-4 animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         {subTabs ? (
           subTabs
@@ -283,66 +283,49 @@ export default function SubscriptionsTab({ clientId, subTabs }) {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card className="rounded-2xl border-none bg-card/50 shadow-sm ring-1 ring-border/50 transition-all duration-500">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-              {filterMode === 'ALL'
-                ? 'Total Monthly Burn'
-                : filterMode === 'INTERNAL'
-                  ? 'Internal Agency Burn'
-                  : 'Client Monthly Cost'}
-            </CardTitle>
-            <TrendingUp className="h-4 w-4 text-primary" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-medium tracking-tight bricolage">
+      <StatBar>
+        <StatCell
+          label={
+            filterMode === 'ALL'
+              ? 'Total Monthly Burn'
+              : filterMode === 'INTERNAL'
+                ? 'Internal Agency Burn'
+                : 'Client Monthly Cost'
+          }
+          value={
+            <>
               {formatCurrency(metrics.monthlyBurn)}
-              <span className="text-sm font-normal text-muted-foreground ml-1">
-                / mo
-              </span>
-            </div>
-            <p className="text-xs text-muted-foreground mt-3">
-              {filterMode === 'ALL'
-                ? 'combined cost across all accounts'
-                : 'projected based on this view'}
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="rounded-2xl border-none bg-card/50 shadow-sm ring-1 ring-border/50 transition-all duration-500">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-              Next Bill Due
-            </CardTitle>
-            <AlertCircle className="h-4 w-4 text-amber-500" />
-          </CardHeader>
-          <CardContent>
-            {metrics.nextBill ? (
-              <>
-                <div className="text-3xl font-medium tracking-tight truncate bricolage">
-                  {metrics.nextBill.name}
-                </div>
-                <div className="flex items-center gap-2 mt-3">
-                  <Badge variant="secondary" className="font-normal">
-                    {format(
-                      new Date(metrics.nextBill.next_billing_date),
-                      'MMM do',
-                    )}
-                  </Badge>
-                  <span className="text-sm text-muted-foreground">
-                    ({formatCurrency(metrics.nextBill.cost)})
-                  </span>
-                </div>
-              </>
-            ) : (
-              <div className="text-2xl font-normal text-muted-foreground bricolage">
-                No upcoming bills
+              <span className="text-sm font-normal text-muted-foreground ml-1">/ mo</span>
+            </>
+          }
+          valueClass="text-3xl font-medium bricolage"
+          sub={filterMode === 'ALL' ? 'Combined cost across all accounts' : 'Projected based on this view'}
+          icon={<TrendingUp className="h-3 w-3 text-primary" />}
+        />
+        <StatCell
+          label="Next Bill Due"
+          value={
+            metrics.nextBill
+              ? metrics.nextBill.name
+              : <span className="text-muted-foreground font-normal">No upcoming bills</span>
+          }
+          valueClass="text-2xl font-medium bricolage truncate"
+          sub={
+            metrics.nextBill ? (
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary" className="font-normal">
+                  {format(new Date(metrics.nextBill.next_billing_date), 'MMM do')}
+                </Badge>
+                <span className="text-sm text-muted-foreground">
+                  ({formatCurrency(metrics.nextBill.cost)})
+                </span>
               </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+            ) : null
+          }
+          icon={<AlertCircle className="h-3 w-3 text-amber-500" />}
+          iconBg="bg-amber-100 dark:bg-amber-950"
+        />
+      </StatBar>
 
       {isLoadingExpenses ? (
         <CustomTable columns={columns} data={[]} isLoading={true} />

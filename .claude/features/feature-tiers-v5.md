@@ -288,6 +288,7 @@ UPDATE agency_subscriptions SET
   calendar_export            = TRUE,
   documents_collections      = TRUE,
   campaigns                  = TRUE,
+  reports                    = TRUE,
   proposals_limit            = NULL,
   max_team_members           = NULL
 WHERE user_id = $1;

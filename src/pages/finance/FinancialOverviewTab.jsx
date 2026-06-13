@@ -5,7 +5,6 @@ import {
   TrendingDown,
   Activity,
   AlertCircle,
-  Info,
   Building2,
   Banknote,
   FileText,
@@ -29,6 +28,7 @@ import { CURRENCY } from '@/utils/constants'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
+import { StatBar, StatCell } from '@/components/ui/stat-bar'
 import {
   Tooltip,
   TooltipContent,
@@ -193,7 +193,7 @@ export default function OverviewPage({ clientId, client, subTabs }) {
   if (!dashboardData) return <DashboardSkeleton />
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
+    <div className="space-y-4 animate-in fade-in duration-500">
       {/* --- HEADER ACTIONS --- */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center gap-2">
@@ -247,111 +247,47 @@ export default function OverviewPage({ clientId, client, subTabs }) {
         </div>
       </div>
 
-      {/* --- KPI CARDS --- */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* 1. NET PROFIT */}
-        <Card className="rounded-2xl border-none bg-card/50 shadow-sm ring-1 ring-border/50 dark:bg-card/20">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-              {accountingMethod === 'CASH'
-                ? 'Net Profit (Cash)'
-                : 'Net Profit (Accrual)'}
-            </CardTitle>
-            <Activity className="h-4 w-4 text-primary" />
-          </CardHeader>
-          <CardContent>
-            <div
-              className={`text-2xl font-bold tracking-tight ${dashboardData.netProfit >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}
-            >
-              {dashboardData.netProfit > 0 ? '+' : ''}
-              {formatCurrency(dashboardData.netProfit)}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {`${dashboardData.margin.toFixed(1)}% margin`}
-            </p>
-          </CardContent>
-        </Card>
-
-        {/* 2. REVENUE */}
-        <Card className="rounded-2xl border-none bg-card/50 shadow-sm ring-1 ring-border/50 dark:bg-card/20">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-              {accountingMethod === 'CASH'
-                ? 'Cash Inflow (Mo)'
-                : 'Invoiced (Mo)'}
-            </CardTitle>
-            <TrendingUp className="h-4 w-4 text-emerald-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold tracking-tight text-foreground">
-              {formatCurrency(dashboardData.displayedRevenue)}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {accountingMethod === 'CASH'
-                ? 'Received this month'
-                : 'Billed this month'}
-            </p>
-          </CardContent>
-        </Card>
-
-        {/* 3. EXPENSES */}
-        <Card className="rounded-2xl border-none bg-card/50 shadow-sm ring-1 ring-border/50 dark:bg-card/20">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-              Expenses (Mo)
-            </CardTitle>
-            <TrendingDown className="h-4 w-4 text-rose-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold tracking-tight text-foreground">
-              {formatCurrency(dashboardData.totalMonthExpense)}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Subscriptions + One-offs
-            </p>
-          </CardContent>
-        </Card>
-
-        {/* 4. PENDING INVOICES */}
-        <Card className="rounded-2xl border-none bg-amber-50/50 dark:bg-amber-950/20 shadow-sm ring-1 ring-amber-200/50 dark:ring-amber-800/30">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <div className="flex items-center gap-2">
-              <CardTitle className="text-xs font-medium text-amber-700 dark:text-amber-500 uppercase tracking-wider">
-                Pending Invoices
-              </CardTitle>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger>
-                    <Info className="h-3 w-3 text-amber-600/70" />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Unpaid ledger entries + outstanding invoices</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
-            <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold tracking-tight text-amber-700 dark:text-amber-500">
-              {formatCurrency(
-                dashboardData.pendingIncome +
-                  dashboardData.overdueIncome +
-                  outstandingInvoiceTotal,
-              )}
-            </div>
-            <p className="text-xs text-amber-600/70 dark:text-amber-400/70 mt-1">
-              {dashboardData.overdueIncome > 0 ? (
-                <span className="text-rose-600 font-semibold">
-                  Incl. {formatCurrency(dashboardData.overdueIncome)} overdue
-                </span>
-              ) : (
-                'Unpaid invoices'
-              )}
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+      {/* --- KPI STAT BAR --- */}
+      <StatBar>
+        <StatCell
+          label={accountingMethod === 'CASH' ? 'Net Profit (Cash)' : 'Net Profit (Accrual)'}
+          value={`${dashboardData.netProfit > 0 ? '+' : ''}${formatCurrency(dashboardData.netProfit)}`}
+          valueClass={dashboardData.netProfit >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}
+          sub={`${dashboardData.margin.toFixed(1)}% margin`}
+          icon={<Activity className="h-3 w-3 text-primary" />}
+        />
+        <StatCell
+          label={accountingMethod === 'CASH' ? 'Cash Inflow (Mo)' : 'Invoiced (Mo)'}
+          value={formatCurrency(dashboardData.displayedRevenue)}
+          sub={accountingMethod === 'CASH' ? 'Received this month' : 'Billed this month'}
+          icon={<TrendingUp className="h-3 w-3 text-emerald-500" />}
+          iconBg="bg-emerald-100 dark:bg-emerald-950"
+        />
+        <StatCell
+          label="Expenses (Mo)"
+          value={formatCurrency(dashboardData.totalMonthExpense)}
+          sub="Subscriptions + One-offs"
+          icon={<TrendingDown className="h-3 w-3 text-rose-500" />}
+          iconBg="bg-rose-100 dark:bg-rose-950"
+        />
+        <StatCell
+          label="Pending Invoices"
+          value={formatCurrency(
+            dashboardData.pendingIncome +
+              dashboardData.overdueIncome +
+              outstandingInvoiceTotal,
+          )}
+          valueClass="text-amber-700 dark:text-amber-500"
+          sub={
+            dashboardData.overdueIncome > 0
+              ? `Incl. ${formatCurrency(dashboardData.overdueIncome)} overdue`
+              : 'Unpaid invoices'
+          }
+          icon={<AlertCircle className="h-3 w-3 text-amber-600 dark:text-amber-500" />}
+          iconBg="bg-amber-100 dark:bg-amber-950"
+          className="bg-amber-50/50 dark:bg-amber-950/20"
+        />
+      </StatBar>
 
       {/* --- TREND & LIST GRID --- */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
