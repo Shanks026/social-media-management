@@ -118,7 +118,9 @@
       "Bash(node -e \"try{const f=require.resolve\\('fontkit'\\);console.log\\('fontkit:',f\\)}catch\\(e\\){console.log\\('no fontkit'\\)}; try{const f=require.resolve\\('@react-pdf/fontkit'\\);console.log\\('@react-pdf/fontkit:',f\\)}catch\\(e\\){console.log\\('no @react-pdf/fontkit'\\)}\")",
       "Bash(grep -rიl \"999\\\\|1999\\\\|4999\\\\|price\\\\|/mo\\\\|month\\\\|₹\\\\|INR\\\\|pricing\" .claude/features/)",
       "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\chris_austin\\\\Desktop\\\\social-media-management\" -Name -Recurse | Where-Object { $_ -match \"seed|migration|schema|trigger|auth\" } | Select-Object -First 30)",
-      "PowerShell($base = \"c:\\\\Users\\\\chris_austin\\\\Desktop\\\\social-media-management\\\\node_modules\\\\lucide-react\\\\dist\\\\esm\\\\icons\"; @\\(\"instagram\",\"handshake\",\"message-circle\",\"phone\",\"mail\",\"users\",\"more-horizontal\",\"ellipsis\",\"map-pin\"\\) | ForEach-Object { \"$_ : \" + \\(Test-Path \"$base\\\\$_.js\"\\) })"
+      "PowerShell($base = \"c:\\\\Users\\\\chris_austin\\\\Desktop\\\\social-media-management\\\\node_modules\\\\lucide-react\\\\dist\\\\esm\\\\icons\"; @\\(\"instagram\",\"handshake\",\"message-circle\",\"phone\",\"mail\",\"users\",\"more-horizontal\",\"ellipsis\",\"map-pin\"\\) | ForEach-Object { \"$_ : \" + \\(Test-Path \"$base\\\\$_.js\"\\) })",
+      "mcp__supabase__list_edge_functions",
+      "mcp__supabase__get_edge_function"
     ]
   }
 }

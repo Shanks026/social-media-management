@@ -40,10 +40,17 @@ export function SignupForm({ className, ...props }) {
 
     if (error) {
       setError(error.message)
-    } else if (data?.session) {
-      navigate('/dashboard')
     } else {
-      setSuccess(true)
+      // Fire welcome email — don't await, non-blocking
+      supabase.functions.invoke('send-signup-welcome', {
+        body: { email, name },
+      }).catch(() => { /* ignore */ })
+
+      if (data?.session) {
+        navigate('/dashboard')
+      } else {
+        setSuccess(true)
+      }
     }
   }
 
