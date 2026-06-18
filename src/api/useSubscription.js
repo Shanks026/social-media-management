@@ -5,7 +5,7 @@ import { useAuth } from '@/context/AuthContext'
 // ── TESTING ONLY: set to a number (1–16+) to simulate a trial day.
 // Day 1 = first day of trial, Day 15 = grace period, Day 16 = locked.
 // Set to null for production.
-const TRIAL_DAY_OVERRIDE = null // e.g. TRIAL_DAY_OVERRIDE = 8
+const TRIAL_DAY_OVERRIDE = 16 // e.g. TRIAL_DAY_OVERRIDE = 8
 
 // ── TESTING ONLY: set to a number to simulate days until subscription expiry.
 // Positive = days remaining, 0 = expires today, negative = days past expiry.
@@ -96,7 +96,7 @@ export function useSubscription() {
           daysUntilExpiry = 14 - TRIAL_DAY_OVERRIDE
         } else {
           const msUntilExpiry = new Date(sub.trial_ends_at) - new Date()
-          daysUntilExpiry = Math.ceil(msUntilExpiry / (1000 * 60 * 60 * 24))
+          daysUntilExpiry = Math.floor(msUntilExpiry / (1000 * 60 * 60 * 24))
         }
 
         trialDaysRemaining = Math.max(daysUntilExpiry, 0)
@@ -120,7 +120,7 @@ export function useSubscription() {
           daysUntilSubExpiry = SUB_DAY_OVERRIDE
         } else {
           const msUntil = new Date(sub.subscription_ends_at) - new Date()
-          daysUntilSubExpiry = Math.ceil(msUntil / (1000 * 60 * 60 * 24))
+          daysUntilSubExpiry = Math.floor(msUntil / (1000 * 60 * 60 * 24))
         }
 
         subDaysRemaining = Math.max(daysUntilSubExpiry, 0)

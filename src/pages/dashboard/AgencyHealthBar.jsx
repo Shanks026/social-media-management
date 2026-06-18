@@ -28,7 +28,7 @@ export default function AgencyHealthBar() {
   const { data: transactions = [], isLoading: loadingTx } = useTransactions()
   const { data: expenses = [], isLoading: loadingExp } = useExpenses()
 
-  const activeClients = clientsData?.realClients?.length ?? 0
+  const activeClients = clientsData?.realClients?.filter((c) => c.status === 'ACTIVE').length ?? 0
 
   const metrics = calculatePeriodMetrics({
     transactions,

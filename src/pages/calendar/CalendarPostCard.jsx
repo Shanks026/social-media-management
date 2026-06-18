@@ -559,7 +559,7 @@ export function CalendarPostCard({ post }) {
 
         {/* Title + version */}
         <div className="flex items-center gap-2 mb-6 min-w-0">
-          <h3 className="text-lg font-medium tracking-tight text-foreground line-clamp-1 min-w-0">
+          <h3 className="text-lg font-medium tracking-tight text-foreground line-clamp-1 min-w-0 bricolage">
             {post.title || 'Untitled Draft'}
           </h3>
           <Badge

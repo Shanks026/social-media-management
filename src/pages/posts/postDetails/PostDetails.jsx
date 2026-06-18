@@ -247,14 +247,19 @@ export default function PostDetails() {
         })
         .eq('id', versionId)
       if (upError) throw upError
+      return versionId
     },
-    onSuccess: () => {
+    onSuccess: async (versionId) => {
       queryClient.invalidateQueries({ queryKey: ['post-version', postId] })
       invalidatePostRelated()
       queryClient.invalidateQueries({ queryKey: ['calendar'] })
       queryClient.invalidateQueries({ queryKey: ['global-calendar'] })
       toast.success('Post marked as published')
       setIsPublishConfirmOpen(false)
+      const { error: fnError } = await supabase.functions.invoke('send-platform-published-email', {
+        body: { post_version_id: versionId, platform: null, all_published: true },
+      })
+      if (fnError) console.error('[send-platform-published-email]', fnError)
     },
     onError: (err) => toast.error(err.message),
   })

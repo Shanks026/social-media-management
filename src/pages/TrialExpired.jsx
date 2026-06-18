@@ -100,7 +100,7 @@ export default function TrialExpired() {
       <div className="flex flex-col items-center justify-center text-center px-8 py-20 min-h-[calc(100vh-65px)]">
         <div className="max-w-lg space-y-6">
           <div className="space-y-3">
-            <h1 className="text-4xl font-semibold tracking-tight">
+            <h1 className="text-4xl font-semibold tracking-tight bricolage">
               Your trial has ended.
               <br />
               Your growth doesn't have to.
@@ -131,7 +131,7 @@ export default function TrialExpired() {
                 <div className="text-center">
                   <p className="text-3xl font-semibold tracking-tight">{postCount}</p>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    {postCount === 1 ? 'post' : 'posts'} created
+                    {postCount === 1 ? 'deliverable' : 'deliverables'} created
                   </p>
                 </div>
               )}
@@ -149,7 +149,7 @@ export default function TrialExpired() {
       {/* Plan cards */}
       <div ref={plansRef} className="px-8 py-16 max-w-275 mx-auto w-full space-y-8">
         <div className="text-center space-y-1">
-          <h2 className="text-xl font-medium tracking-tight">Pick the right plan for you</h2>
+          <h2 className="text-xl font-medium tracking-tight bricolage">Pick the right plan for you</h2>
           <p className="text-sm text-muted-foreground">
             Reach out to the team and we'll get you set up right away.
           </p>
