@@ -96,7 +96,7 @@ export function useSubscription() {
           daysUntilExpiry = 14 - TRIAL_DAY_OVERRIDE
         } else {
           const msUntilExpiry = new Date(sub.trial_ends_at) - new Date()
-          daysUntilExpiry = Math.ceil(msUntilExpiry / (1000 * 60 * 60 * 24))
+          daysUntilExpiry = Math.floor(msUntilExpiry / (1000 * 60 * 60 * 24))
         }
 
         trialDaysRemaining = Math.max(daysUntilExpiry, 0)
@@ -120,7 +120,7 @@ export function useSubscription() {
           daysUntilSubExpiry = SUB_DAY_OVERRIDE
         } else {
           const msUntil = new Date(sub.subscription_ends_at) - new Date()
-          daysUntilSubExpiry = Math.ceil(msUntil / (1000 * 60 * 60 * 24))
+          daysUntilSubExpiry = Math.floor(msUntil / (1000 * 60 * 60 * 24))
         }
 
         subDaysRemaining = Math.max(daysUntilSubExpiry, 0)

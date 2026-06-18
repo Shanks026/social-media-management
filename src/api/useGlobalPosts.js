@@ -140,6 +140,9 @@ export function useGlobalPosts(filters = {}) {
       if (filters.status === 'PARTIALLY_PUBLISHED') {
         posts = posts.filter((p) => getPublishState(p) === 'PARTIALLY_PUBLISHED')
       }
+      if (filters.status === 'SCHEDULED') {
+        posts = posts.filter((p) => getPublishState(p) === 'SCHEDULED')
+      }
       return posts
     },
     enabled: !!workspaceUserId,
