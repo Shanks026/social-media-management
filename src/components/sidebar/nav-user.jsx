@@ -1,4 +1,4 @@
-import { LogOut, User, Mail, Settings, ChevronsUpDown } from 'lucide-react'
+import { LogOut, ChevronsUpDown } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useQueryClient } from '@tanstack/react-query'
 import {
@@ -50,18 +50,19 @@ export function NavUser({ user }) {
               <ChevronsUpDown className="ml-auto size-4" />
             </SidebarMenuButton>
           </DropdownMenuTrigger>
-          <DropdownMenuContent side="top" align="start" className="w-56">
-            <DropdownMenuItem>
-              <User className="mr-2 size-4" /> Profile
-            </DropdownMenuItem>
-            <DropdownMenuItem>
-              <Settings className="mr-2 size-4" /> Account
-            </DropdownMenuItem>
+          <DropdownMenuContent side="top" align="start" className="w-64">
+            <div className="flex items-center gap-3 px-3 py-2.5">
+              <Avatar className="size-9 shrink-0">
+                <AvatarImage src={user?.user_metadata?.avatar_url} />
+                <AvatarFallback>{initials}</AvatarFallback>
+              </Avatar>
+              <div className="flex flex-col min-w-0">
+                <span className="text-sm font-medium truncate">{fullName}</span>
+                <span className="text-xs text-muted-foreground truncate">{user?.email}</span>
+              </div>
+            </div>
             <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onClick={handleLogout}
-              className="text-destructive"
-            >
+            <DropdownMenuItem onClick={handleLogout} className="text-destructive">
               <LogOut className="mr-2 size-4" /> Log out
             </DropdownMenuItem>
           </DropdownMenuContent>

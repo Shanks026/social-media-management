@@ -59,11 +59,13 @@ export const AuthProvider = ({ children }) => {
   }
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session)
-      setUser(session?.user ?? null)
-      resolveWorkspace(session?.user?.id ?? null).finally(() => setLoading(false))
-    })
+    supabase.auth.getSession()
+      .then(({ data: { session } }) => {
+        setSession(session)
+        setUser(session?.user ?? null)
+        return resolveWorkspace(session?.user?.id ?? null)
+      })
+      .finally(() => setLoading(false))
 
     const {
       data: { subscription },
