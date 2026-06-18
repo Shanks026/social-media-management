@@ -237,6 +237,13 @@ export default function DashboardWeekTimeline() {
                   ...new Set(dayPosts.flatMap((p) => p.platforms || [])),
                 ]
 
+                const allItems = []
+                if (dayPosts.length > 0) allItems.push({ type: 'posts' })
+                dayMeetings.forEach((m) => allItems.push({ type: 'meeting', data: m }))
+                dayNotes.forEach((n) => allItems.push({ type: 'note', data: n }))
+                const visibleItems = allItems.slice(0, 3)
+                const overflowCount = Math.max(0, allItems.length - 3)
+
                 return (
                   <div
                     key={key}
@@ -244,12 +251,12 @@ export default function DashboardWeekTimeline() {
                       !hasContent ? 'opacity-35' : ''
                     }`}
                   >
-                    {/* Timeline dot — centered over the line at left-[10px] */}
+                    {/* Timeline dot */}
                     <div className="w-5 flex justify-center shrink-0 pt-0.5 relative z-10">
                       <div
                         className={`size-2 rounded-full ring-2 ring-card ${
                           isCurrentDay
-                            ? 'bg-primary ring-primary/30'
+                            ? 'bg-emerald-500 dark:bg-emerald-400 ring-emerald-500/30 dark:ring-emerald-400/30'
                             : 'bg-gray-300 dark:bg-gray-500'
                         }`}
                       />
@@ -257,22 +264,29 @@ export default function DashboardWeekTimeline() {
 
                     {/* Day content */}
                     <div className="flex-1 min-w-0">
-                      {/* Day label */}
-                      <div className="flex items-baseline gap-1.5 mb-2">
-                        <p
-                          className={`text-sm leading-none ${
-                            isCurrentDay ? 'font-bold text-primary' : 'font-semibold text-foreground'
-                          }`}
-                        >
-                          {isCurrentDay
-                            ? 'Today'
-                            : isTomorrowDay
-                              ? 'Tomorrow'
-                              : format(day, 'EEEE')}
-                        </p>
-                        <span className="text-xs text-muted-foreground leading-none">
-                          {format(day, 'd MMMM')}
-                        </span>
+                      {/* Day label row with overflow badge */}
+                      <div className="flex items-baseline justify-between gap-1.5 mb-2">
+                        <div className="flex items-baseline gap-1.5">
+                          <p
+                            className={`text-sm leading-none ${
+                              isCurrentDay ? 'font-bold text-emerald-600 dark:text-emerald-400' : 'font-semibold text-foreground'
+                            }`}
+                          >
+                            {isCurrentDay
+                              ? 'Today'
+                              : isTomorrowDay
+                                ? 'Tomorrow'
+                                : format(day, 'EEEE')}
+                          </p>
+                          <span className="text-xs text-muted-foreground leading-none">
+                            {format(day, 'd MMMM')}
+                          </span>
+                        </div>
+                        {overflowCount > 0 && (
+                          <span className="text-[10px] text-muted-foreground shrink-0">
+                            +{overflowCount} event{overflowCount !== 1 && 's'}
+                          </span>
+                        )}
                       </div>
 
                       {!hasContent ? (
@@ -281,67 +295,39 @@ export default function DashboardWeekTimeline() {
                         </p>
                       ) : (
                         <div className="flex flex-col gap-2">
-                          {/* Posts row: avatars + count left · platforms right */}
-                          {dayPosts.length > 0 && (
-                            <div className="flex items-center justify-between gap-2">
-                              <div className="flex items-center gap-2">
-                                <AvatarStack clients={uniqueClients} />
-                                <Badge
-                                  variant="secondary"
-                                  className="text-[10px] px-1.5 py-0 h-5 shrink-0"
-                                >
-                                  {dayPosts.length} deliverable
-                                  {dayPosts.length !== 1 && 's'}
-                                </Badge>
-                              </div>
-                              {platforms.length > 0 && (
-                                <div className="flex items-center gap-0.5 shrink-0">
-                                  {platforms.map((pid) => (
-                                    <PlatformImg key={pid} platformId={pid} />
-                                  ))}
+                          {visibleItems.map((item) => {
+                            if (item.type === 'posts') return (
+                              <div key="posts" className="flex items-center justify-between gap-2">
+                                <div className="flex items-center gap-2">
+                                  <AvatarStack clients={uniqueClients} />
+                                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-5 shrink-0">
+                                    {dayPosts.length} deliverable{dayPosts.length !== 1 && 's'}
+                                  </Badge>
                                 </div>
-                              )}
-                            </div>
-                          )}
-
-                          {/* Meetings */}
-                          {dayMeetings.slice(0, 2).map((m) => (
-                            <div
-                              key={m.id}
-                              className="flex items-center gap-1.5 text-xs text-muted-foreground"
-                            >
-                              <Clock className="size-3.5 shrink-0 text-blue-400" />
-                              <span className="truncate font-medium">
-                                {m.title}
-                              </span>
-                              <span className="shrink-0 ml-auto">
-                                {format(new Date(m.datetime), 'h:mma')}
-                              </span>
-                            </div>
-                          ))}
-                          {dayMeetings.length > 2 && (
-                            <p className="text-xs text-muted-foreground pl-5">
-                              +{dayMeetings.length - 2} more meeting
-                              {dayMeetings.length - 2 !== 1 && 's'}
-                            </p>
-                          )}
-
-                          {/* Notes / reminders */}
-                          {dayNotes.slice(0, 1).map((n) => (
-                            <div
-                              key={n.id}
-                              className="flex items-center gap-1.5 text-xs text-muted-foreground"
-                            >
-                              <Bell className="size-3.5 shrink-0 text-amber-400" />
-                              <span className="truncate">{n.title}</span>
-                            </div>
-                          ))}
-                          {dayNotes.length > 1 && (
-                            <p className="text-xs text-muted-foreground pl-5">
-                              +{dayNotes.length - 1} more reminder
-                              {dayNotes.length - 1 !== 1 && 's'}
-                            </p>
-                          )}
+                                {platforms.length > 0 && (
+                                  <div className="flex items-center gap-0.5 shrink-0">
+                                    {platforms.map((pid) => (
+                                      <PlatformImg key={pid} platformId={pid} />
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            )
+                            if (item.type === 'meeting') return (
+                              <div key={item.data.id} className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                <Clock className="size-3.5 shrink-0 text-blue-400" />
+                                <span className="truncate font-medium">{item.data.title}</span>
+                                <span className="shrink-0 ml-auto">{format(new Date(item.data.datetime), 'h:mma')}</span>
+                              </div>
+                            )
+                            if (item.type === 'note') return (
+                              <div key={item.data.id} className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                <Bell className="size-3.5 shrink-0 text-amber-400" />
+                                <span className="truncate">{item.data.title}</span>
+                              </div>
+                            )
+                            return null
+                          })}
                         </div>
                       )}
                     </div>

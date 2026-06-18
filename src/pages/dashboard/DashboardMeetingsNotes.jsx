@@ -102,10 +102,10 @@ export default function DashboardMeetingsNotes() {
     refetchOnWindowFocus: true,
   })
 
-  const visibleMeetings = upcomingMeetings.slice(0, 2)
-  const extraMeetings = upcomingMeetings.length - 2
-  const visibleNotes = notes.slice(0, 2)
-  const extraNotes = notes.length - 2
+  const visibleMeetings = upcomingMeetings.slice(0, 3)
+  const extraMeetings = upcomingMeetings.length - 3
+  const visibleNotes = notes.slice(0, 3)
+  const extraNotes = notes.length - 3
 
   return (
     <Card className="border-none shadow-sm ring-1 ring-border/50 bg-card/50 dark:bg-card/30 flex flex-col h-full">

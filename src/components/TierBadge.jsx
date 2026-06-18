@@ -25,7 +25,7 @@ const TierBadge = ({ tier }) => {
     return (
       <Tooltip>
         <TooltipTrigger asChild>
-          <Crown className="size-5 fill-current text-purple-500 shrink-0 ms-1" />
+          <Crown className="size-4 fill-current text-purple-500 shrink-0 ms-1" />
         </TooltipTrigger>
         <TooltipContent>VIP</TooltipContent>
       </Tooltip>
@@ -36,7 +36,7 @@ const TierBadge = ({ tier }) => {
     return (
       <Tooltip>
         <TooltipTrigger asChild>
-          <Zap className="size-5 fill-current text-amber-400 shrink-0 ms-1" />
+          <Zap className="size-4 fill-current text-amber-400 shrink-0 ms-1" />
         </TooltipTrigger>
         <TooltipContent>PRO</TooltipContent>
       </Tooltip>
