@@ -120,7 +120,8 @@
       "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\chris_austin\\\\Desktop\\\\social-media-management\" -Name -Recurse | Where-Object { $_ -match \"seed|migration|schema|trigger|auth\" } | Select-Object -First 30)",
       "PowerShell($base = \"c:\\\\Users\\\\chris_austin\\\\Desktop\\\\social-media-management\\\\node_modules\\\\lucide-react\\\\dist\\\\esm\\\\icons\"; @\\(\"instagram\",\"handshake\",\"message-circle\",\"phone\",\"mail\",\"users\",\"more-horizontal\",\"ellipsis\",\"map-pin\"\\) | ForEach-Object { \"$_ : \" + \\(Test-Path \"$base\\\\$_.js\"\\) })",
       "mcp__supabase__list_edge_functions",
-      "mcp__supabase__get_edge_function"
+      "mcp__supabase__get_edge_function",
+      "Bash(npm install *)"
     ]
   }
 }

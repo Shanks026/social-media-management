@@ -52,20 +52,28 @@ Pages/Components → API functions (src/api/) → Supabase client → PostgreSQL
 - `create_revision_version()` — post versioning
 - `get_global_calendar()` — date-range post queries
 
-**Pages (src/pages/):** Feature directories — clients, posts, calendar, finance, billingAndUsage, operations (notes/meetings), documents, dashboard, settings, public review.
+**Pages (src/pages/):** Feature directories — clients, posts, calendar, finance, billingAndUsage, operations (notes/meetings), documents, dashboard, settings, prospects, reports, public review.
 
 **Header context (`src/components/misc/header-context.jsx`):** Pages call `useHeader()` to set the dynamic breadcrumb/title in the shell header via `setHeader({ title, breadcrumbs })`.
 
 **Shared utilities:**
-- `src/lib/helper.js` — `formatDate(dateInput)` → "2 Jan, 2026"; `formatFileSize(bytes)` → "2.3 MB"; `MAX_DOCUMENT_SIZE_BYTES` constant (50 MB)
+- `src/lib/helper.js` — `formatDate(dateInput)` → "2 Jan, 2026"; `formatFileSize(bytes)` → "2.3 MB"; `getPublishState(version)` → derives display status from `platform_schedules` (returns `'PARTIALLY_PUBLISHED'` when some but not all platforms have `published_at`); `effectivePlatformDate(version, platform)` → falls back to `target_date` when `platform_schedules` is absent; `MAX_DOCUMENT_SIZE_BYTES` constant (50 MB)
 - `src/lib/client-helpers.js` — `getUrgencyStatus(nextPostAt)` → urgency color/label for pipeline indicators
 - `src/lib/workspace.js` — `resolveWorkspace()` async helper for plain mutation functions that need `workspaceUserId` without React context (calls `auth.getUser()` then checks `agency_members`)
+- `src/lib/industries.js` — `INDUSTRY_OPTIONS` array (value/label pairs, e.g. `{ value: 'SaaS', label: 'SaaS & Tech' }`). The DB stores the short `value`; always resolve to `label` for display via `.find(i => i.value === x)?.label`. Also exports `getIndustryColor(value)`.
+
+**Shared UI components:**
+- `src/components/ui/stat-bar.jsx` — `<StatBar>` (bordered flex row with dividers) + `<StatCell label value sub icon iconBg>`. Accepts `className` on both; `valueClass`/`labelClass`/`subClass` on `StatCell`. The `sub` prop accepts JSX (renders in a `<div>`). Use for metric rows on Finance, Dashboard, Reports, Campaign, and Prospects pages.
+- `src/components/WorkflowHealth.jsx` — Half-donut `PieChart` showing deliverable status distribution. Props: `posts`, `isLoading`, `title`, `description`, `onViewAll`, `excludeStatuses`, `className`. Fully prop-driven — no internal data fetch. Used on dashboard, client detail, and campaign detail.
+- `src/components/ui/empty.jsx` — `<Empty>`, `<EmptyContent>`, `<EmptyHeader>`, `<EmptyTitle>`, `<EmptyDescription>`, `<EmptyMedia>`. `EmptyTitle` base class is `bricolage font-bold` — always pass `className="font-bold text-xl"` at usage sites for consistency. See `.claude/skills/empty-states/SKILL.md` for the full section-by-section reference.
 
 ### Domain Patterns
 
 **Post management:** Versioning via parent-child post relationships. Statuses: `DRAFT`, `PENDING`, `REVISIONS`, `SCHEDULED`, `ARCHIVED`. In the campaign review flow, posts are set to `PENDING_APPROVAL` when awaiting client review, then transitioned to `SCHEDULED` (approved) or `NEEDS_REVISION` (revisions requested) via the `update_post_status_by_token` RPC. Media stored in Supabase `post-media` bucket; deletions are deferred until media is unused. Shareable public review via token. `DraftPostForm` (`src/pages/posts/DraftPostForm.jsx`) is used both as a standalone page and as a dialog (pass `open`/`onOpenChange` props); it accepts `clientId`, `initialCampaignId`, and `initialCampaignName` to pre-fill context.
 
-**Clients:** "Internal Account" vs real clients (`is_internal` flag) — `client_count` in `useSubscription` excludes internal accounts. Pipeline analytics (`view_client_profitability` DB view). Tiers and industries for filtering.
+Posts support two publishing modes: (1) simple — single `target_date`, marked published in one action; (2) per-platform — `platform_schedules` JSONB column maps each platform to `{ scheduled_at, published_at }`. Use `getPublishState(version)` from `src/lib/helper.js` to derive display status — never read `version.status` directly for display when `platform_schedules` is present. Both publishing paths in `PostDetails.jsx` trigger `send-platform-published-email`.
+
+**Clients:** "Internal Account" vs real clients (`is_internal` flag). `useClients()` returns `{ internalAccount, realClients }` — fetches all non-internal clients with fields `id, name, logo_url, is_internal, email, address, industry, status`. For displaying an ACTIVE-only count (e.g. dashboard), filter `realClients` by `status === 'ACTIVE'`. `useSubscription().client_count` counts all non-internal clients regardless of status (used for billing limits — do not use for display counts). Pipeline analytics via `view_client_profitability` DB view. Tiers and industries for filtering; industry stored as short key (`'SaaS'`), display via `INDUSTRY_OPTIONS`.
 
 **Reusable tab pattern:** Feature tabs like `CampaignTab` and `DocumentsTab` accept an optional `clientId` prop. Without it they show all records (global page); with it they scope to that client (used inside `ClientProfileView`). The "New" button and `showClient` label on cards also toggle based on whether `clientId` is present.
 
@@ -81,9 +89,21 @@ Pages/Components → API functions (src/api/) → Supabase client → PostgreSQL
 
 **Teams (`/settings` → Team tab):** Agency owners invite teammates via a generated link (`/join/:token`). Invited members get full workspace access. The multi-tenant workspace model is the key architectural concept: all DB queries are scoped by `workspaceUserId` (the owner's UID), resolved via `get_my_agency_user_id()` SECURITY DEFINER SQL function. API module: `src/api/team.js`; public join page: `src/pages/JoinTeam.jsx`; team management UI: `src/pages/settings/TeamSettings.jsx`. Both `useTeamMembers()` and `usePendingInvites()` maintain Supabase Realtime subscriptions for live updates.
 
+**Prospects (`/prospects`):** Pre-client lead tracking. Statuses: `new` → `contacted` → `demo_scheduled` → `won` / `lost`; status config (colors, labels) lives in `src/components/prospects/ProspectStatusBadge.jsx` as `PROSPECT_STATUS_CONFIG`. Two views: card (default) and table; selection stored in `localStorage`. Prospect detail has dedicated tabs including `ProspectOutreachTab` — inline outreach log form (channel types: `whatsapp`, `instagram`, `email`, `call`, `inperson`, `others`) + pipeline activity feed. Activity types/icons configured in `src/api/prospectActivities.js` as `ACTIVITY_TYPES`. Prospects can be converted to clients via "Convert to Client" which navigates to `CreateClientPage` with `state.fromProspect` pre-fill and marks `converted_client_id` on success.
+
 **Proposals (`/proposals`):** Statuses: `draft` → `sent` → `viewed` → `accepted` / `declined`; `expired` computed by DB when `valid_until < now()`; `archived` is manual. Three surfaces: global list (`/proposals`), detail page (`/proposals/:proposalId`, full inline-edit with auto-save), and public review (`/proposal/:token`, unauthenticated). Per-client `ProposalTab` reused in Client Detail. Hybrid gating: all surfaces always visible; creation blocked at `proposals_limit` (5 for Trial/Ignite, null = unlimited for Velocity/Quantum) with `ProposalsUpgradePrompt`. API module: `src/api/proposals.js`. PDF export: `src/utils/downloadProposalPDF.jsx` + `src/components/proposals/ProposalPDF.jsx` (canvas-rasterized Tercero SVG logo when no agency branding). Key RPCs: `get_proposals_with_totals`, `generate_proposal_token`, `get_proposal_by_token` (public), `mark_proposal_viewed` (public), `accept_proposal` (public), `decline_proposal` (public).
 
-**Supabase Edge Functions (supabase/):** `send-approval-email`, `send-client-welcome`, `send-password-update-email`, `send-campaign-review-email`.
+**Supabase Edge Functions (supabase/):**
+- `send-approval-email` — triggered from `PostDetails.jsx` on status change to `PENDING_APPROVAL`, `SCHEDULED`, `NEEDS_REVISION`, or `PUBLISHED`; requires JWT (`verify_jwt: false`, manually verified inside)
+- `send-client-welcome` — triggered from `createClient()` in `src/api/clients.js` after INSERT; sends "Your workspace is live" (internal) or "You're in" (external); requires JWT; skips silently (returns 200) when `record.email` is null
+- `send-signup-welcome` — triggered from `signup-form.jsx` after successful `supabase.auth.signUp()`; no JWT required; takes `{ email, name }`
+- `send-platform-published-email` — triggered from `PostDetails.jsx` when a platform is marked published; takes `{ post_version_id, platform, all_published }`; skips internal clients
+- `send-campaign-review-email` — triggered from campaign detail page when sharing review link
+- `send-proposal-email` — triggered from proposals flow
+- `send-renewal-request` — triggered from renewal flow
+- `send-password-update-email` — triggered from `ForgotPasswordDialog` and `ChangePasswordDialog`; requires JWT
+- `send-feedback-notification` — internal feedback notifications
+- `delete-team-member` — removes a team member; requires JWT
 
 ### Subscription & Feature Gating
 
@@ -103,7 +123,10 @@ The `data` object includes:
   - `calendar_export` — calendar PDF export button (Velocity+)
   - `documents_collections` — document collections grouping (Velocity+)
   - `campaigns` — campaigns feature (Velocity+)
+  - `reports` — reports page access (Velocity+; also enabled on Trial)
 - `proposals_limit` — integer | null — 5 for Trial/Ignite; null = unlimited (Velocity/Quantum)
+
+**Canonical feature matrix:** `documentation/subscription-features.md` is the authoritative source for which features are enabled per plan. `.claude/features/feature-tiers-v5.md` is a secondary reference — when they conflict, trust `subscription-features.md`.
 
 **Gating pattern:** Read flags directly from `data` (e.g. `data?.finance_subscriptions`). For locked features (visible but disabled), show with a disabled state + lock icon + tooltip. For hidden features (like nav items), conditionally render them. See `.claude/features/feature-tiers-v5.md` for the full feature matrix.
 
