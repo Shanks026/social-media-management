@@ -10,7 +10,6 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar'
 import { Separator } from '../ui/separator'
-import { NavSecondary } from './nav-secondary'
 import { SidebarSubCard } from './sidebar-sub-card'
 import { useSubscription } from '@/api/useSubscription'
 
@@ -39,13 +38,11 @@ export function AppSidebar({ user, agencySettings }) {
 
           {/* This is the magic part: flex-1 makes this grow to push settings down */}
           <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-            <NavClients />
+            {/* <NavClients /> */}
           </div>
 
           <div className="flex flex-col gap-0 overflow-hidden">
             <SidebarSubCard />
-
-            <NavSecondary />
           </div>
         </SidebarContent>
 

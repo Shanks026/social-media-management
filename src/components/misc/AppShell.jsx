@@ -14,6 +14,7 @@ import CreateClientPage from '../../pages/clients/CreateClientPage'
 import WelcomeCarousel from '../WelcomeCarousel' // Import the new component
 import OnboardingPage from '../../pages/onboarding/Onboarding'
 import { SubscriptionReminder } from '../SubscriptionReminder'
+import { DeletionBanner } from '../DeletionBanner'
 import { useMeetingReminders } from '../../hooks/useMeetingReminders'
 
 export function AppShell({ user }) {
@@ -111,6 +112,7 @@ export function AppShell({ user }) {
           />
           <div ref={scrollContainerRef} className="flex flex-1 flex-col w-full h-screen min-w-0 overflow-y-auto overflow-x-hidden relative [scrollbar-gutter:stable]">
             <AppHeader user={user} agencySettings={agencySettings} />
+            <DeletionBanner />
             <AppBody>
               <Outlet
                 context={{

@@ -140,7 +140,7 @@ export default function TeamPage() {
     setHeader({
       title: 'Team',
       breadcrumbs: [
-        { label: 'Settings', href: '/settings' },
+        { label: 'My Organization' },
         { label: 'Team' },
       ],
     })

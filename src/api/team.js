@@ -271,6 +271,25 @@ export function useDeleteMemberPermanently() {
   })
 }
 
+/**
+ * Schedule the ENTIRE workspace for permanent deletion after a 14-day grace
+ * period. Owner-only (enforced in the RPC). During the window the owner keeps
+ * full access and can cancel; once elapsed, a scheduled job purges all clients,
+ * data, storage media, team-member accounts (if it was their last workspace),
+ * and the owner's own account. Returns the scheduled timestamp.
+ */
+export async function requestWorkspaceDeletion() {
+  const { data, error } = await supabase.rpc('request_workspace_deletion')
+  if (error) throw error
+  return data // timestamptz when the purge will run
+}
+
+/** Cancel a pending workspace deletion (owner-only). */
+export async function cancelWorkspaceDeletion() {
+  const { error } = await supabase.rpc('cancel_workspace_deletion')
+  if (error) throw error
+}
+
 // ─── Public (unauthenticated) ──────────────────────────────────────────────────
 
 /**
