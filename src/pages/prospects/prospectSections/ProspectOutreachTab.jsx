@@ -12,6 +12,7 @@ import {
   Handshake,
   Ellipsis,
   ArrowRightLeft,
+  ArrowRight,
   Plus,
   Trash2,
   X,
@@ -296,28 +297,37 @@ function OutreachEntry({ activity, onDelete }) {
 // ── Status activity entry ─────────────────────────────────────────────────────
 
 function StatusEntry({ activity }) {
+  const fromStatus = activity.metadata?.from_status
   const toStatus = activity.metadata?.to_status
-  const statusConfig = toStatus ? PROSPECT_STATUS_CONFIG[toStatus] : null
+  const fromConfig = fromStatus ? PROSPECT_STATUS_CONFIG[fromStatus] : null
+  const toConfig = toStatus ? PROSPECT_STATUS_CONFIG[toStatus] : null
+
+  const d = new Date(activity.occurred_at)
+  const dateStr = format(d, 'MMM d, yyyy · h:mm a')
+  const timeAgo = formatDistanceToNow(new Date(activity.created_at), { addSuffix: true })
 
   return (
     <div className="flex gap-3 group">
-      <TimelineMarker className="pt-0.5" />
+      <TimelineMarker className="pt-3.5" />
 
-      <div className="flex-1 min-w-0 pb-6">
-        <div className="flex flex-wrap items-center gap-1.5">
-          <span className="text-xs text-muted-foreground">Moved to</span>
-          {statusConfig && (
-            <Badge
-              variant="outline"
-              className={cn('text-[11px] font-medium whitespace-nowrap py-0.5 px-2', statusConfig.className)}
-            >
-              {statusConfig.label}
-            </Badge>
-          )}
+      <div className="flex-1 min-w-0 rounded-xl border border-border/70 bg-card p-3.5 mb-3">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {fromConfig && (
+              <Badge variant="outline" className={cn('text-[11px] font-medium whitespace-nowrap py-0.5 px-2', fromConfig.className)}>
+                {fromConfig.label}
+              </Badge>
+            )}
+            <ArrowRight className="size-3 text-muted-foreground shrink-0" />
+            {toConfig && (
+              <Badge variant="outline" className={cn('text-[11px] font-medium whitespace-nowrap py-0.5 px-2', toConfig.className)}>
+                {toConfig.label}
+              </Badge>
+            )}
+          </div>
+          <span className="text-[11px] text-muted-foreground shrink-0">{timeAgo}</span>
         </div>
-        <p className="text-xs text-muted-foreground/70 mt-1">
-          {formatActivityDate(activity.occurred_at)}
-        </p>
+        <p className="text-xs text-muted-foreground/60 mt-1.5">{dateStr}</p>
       </div>
     </div>
   )
