@@ -23,14 +23,14 @@ serve(async (req) => {
     // Caller-scoped client to verify ownership
     const callerClient = createClient(
       Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_ANON_KEY')!,
+      Deno.env.get('PUBLISHABLE_KEY') ?? Deno.env.get('SUPABASE_ANON_KEY')!,
       { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
     )
 
     // Admin client (service role) for bypassing RLS
     const adminClient = createClient(
       Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+      Deno.env.get('SERVICE_KEY') ?? Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     )
 
     // Verify the caller is authenticated

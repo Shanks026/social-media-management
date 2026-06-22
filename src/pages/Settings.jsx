@@ -1,17 +1,21 @@
 import { useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useHeader } from '../components/misc/header-context'
-import { User, Building2, FileText } from 'lucide-react'
+import { User, Building2, FileText, AlertTriangle } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { useAuth } from '@/context/AuthContext'
 
 import ProfileSettings from './settings/ProfileSettings'
 import AgencySettings from './settings/AgencySettings'
 import InvoiceSettings from './settings/InvoiceSettings'
+import DangerZone from './settings/DangerZone'
 
-const VALID_TABS = ['profile', 'agency', 'invoice']
+const VALID_TABS = ['profile', 'agency', 'invoice', 'danger']
 
 export default function Settings() {
   const { setHeader } = useHeader()
+  const { user, workspaceUserId } = useAuth()
+  const isOwner = !!user?.id && user.id === workspaceUserId
   const [searchParams, setSearchParams] = useSearchParams()
 
   const tab = VALID_TABS.includes(searchParams.get('tab'))
@@ -56,6 +60,9 @@ export default function Settings() {
                 { value: 'profile', icon: User, label: 'Profile' },
                 { value: 'agency', icon: Building2, label: 'Agency' },
                 { value: 'invoice', icon: FileText, label: 'Invoice' },
+                ...(isOwner
+                  ? [{ value: 'danger', icon: AlertTriangle, label: 'Danger Zone' }]
+                  : []),
               ].map((tab) => (
                 <TabsTrigger
                   key={tab.value}
@@ -102,6 +109,15 @@ export default function Settings() {
             >
               <InvoiceSettings />
             </TabsContent>
+
+            {isOwner && (
+              <TabsContent
+                value="danger"
+                className="focus-visible:outline-none"
+              >
+                <DangerZone />
+              </TabsContent>
+            )}
 
           </Tabs>
         </div>

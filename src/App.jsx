@@ -39,6 +39,8 @@ import NotFound from './pages/NotFound'
 import HelpPage from './pages/help/HelpPage'
 import PoliciesPage from './pages/help/PoliciesPage'
 import TeamPage from './pages/TeamPage'
+import AdsPage from './pages/ads/AdsPage'
+import PartnershipsPage from './pages/partnerships/PartnershipsPage'
 
 function PublicOnlyRoute({ children }) {
   const { session } = useAuth()
@@ -94,6 +96,7 @@ function AppRoutes() {
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/clients" element={<Clients />} />
           <Route path="/myorganization" element={<MyOrganization />} />
+          <Route path="/partnerships" element={<PartnershipsPage />} />
           <Route path="/clients/create" element={<CreateClientPage />} />
           <Route
             path="/clients/:clientId/edit"
@@ -110,6 +113,7 @@ function AppRoutes() {
           <Route path="/proposals/:proposalId" element={<ProposalDetailPage />} />
           <Route path="/campaigns" element={<CampaignsPage />} />
           <Route path="/campaigns/:campaignId" element={<CampaignDetailPage />} />
+          <Route path="/ads" element={<AdsPage />} />
           <Route path="/posts" element={<Posts />} />
           <Route path="/operations/notes" element={<NotesAndReminders />} />
           <Route path="/operations/meetings" element={<MeetingsPage />} />

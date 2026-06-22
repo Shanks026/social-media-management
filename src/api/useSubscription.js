@@ -167,6 +167,10 @@ export function useSubscription() {
         subscription_ends_at: sub.subscription_ends_at ?? null,
         is_sub_locked: subPhase === 'expired',
 
+        // Workspace deletion grace period
+        deletion_scheduled_at: sub.scheduled_for_deletion_at ?? null,
+        is_pending_deletion: !!sub.scheduled_for_deletion_at,
+
         // Agency contact for invoices — sourced from the agency (internal client) record
         email: internalClient?.email ?? sub.email ?? null,
         mobile_number: sub.mobile_number ?? null,

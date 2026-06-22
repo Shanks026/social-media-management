@@ -64,8 +64,8 @@ export default function MyOrganization() {
 
   useEffect(() => {
     setHeader({
-      title: 'My Organization',
-      breadcrumbs: [{ label: 'My Organization' }],
+      title: 'Workspace',
+      breadcrumbs: [{ label: 'My Organization' }, { label: 'Workspace' }],
     })
   }, [setHeader])
 
@@ -151,7 +151,7 @@ export default function MyOrganization() {
         {/* PAGE HEADER */}
         <div className="space-y-1">
           <h1 className="text-3xl font-normal tracking-tight text-foreground bricolage">
-            Organization
+            Workspace
           </h1>
           <p className="text-sm text-muted-foreground font-normal">
             Provision and manage your internal agency operational workspace.

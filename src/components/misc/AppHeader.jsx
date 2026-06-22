@@ -10,7 +10,7 @@ import { ModeToggle } from './mode-toggle'
 import { useHeader } from './header-context'
 import { SidebarTrigger } from '@/components/ui/sidebar'
 import { useSubscription } from '@/api/useSubscription'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 import { formatDate } from '@/lib/helper'
 import { useUrgentClients } from '@/api/clients'
@@ -232,8 +232,8 @@ export function AppHeader({ agencySettings }) {
                 return (
                   <BreadcrumbItem key={index}>
                     {crumb.href && !isLast ? (
-                      <BreadcrumbLink href={crumb.href}>
-                        {crumb.label}
+                      <BreadcrumbLink asChild>
+                        <Link to={crumb.href}>{crumb.label}</Link>
                       </BreadcrumbLink>
                     ) : (
                       <BreadcrumbPage className="font-medium">

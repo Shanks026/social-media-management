@@ -121,7 +121,20 @@
       "PowerShell($base = \"c:\\\\Users\\\\chris_austin\\\\Desktop\\\\social-media-management\\\\node_modules\\\\lucide-react\\\\dist\\\\esm\\\\icons\"; @\\(\"instagram\",\"handshake\",\"message-circle\",\"phone\",\"mail\",\"users\",\"more-horizontal\",\"ellipsis\",\"map-pin\"\\) | ForEach-Object { \"$_ : \" + \\(Test-Path \"$base\\\\$_.js\"\\) })",
       "mcp__supabase__list_edge_functions",
       "mcp__supabase__get_edge_function",
-      "Bash(npm install *)"
+      "Bash(npm install *)",
+      "Bash(find . -iname '*organization*' -o -iname '*myorg*')",
+      "Bash(find pages/settings -type f)",
+      "mcp__supabase__get_advisors",
+      "Bash(python3 -c \"print\\(open\\(r'C:\\\\Users\\\\chris_austin\\\\.claude\\\\projects\\\\c--Users-chris-austin-Desktop-social-media-management\\\\dc5600c4-84a0-4c54-8206-5869e2bfc6ca\\\\tool-results\\\\mcp-supabase-get_advisors-1782122307269.txt'\\).read\\(\\)[0:80000]\\)\")",
+      "Bash(python -c \"print\\('test'\\)\")",
+      "Bash(py -c \"print\\('test'\\)\")",
+      "Bash(py -c \"print\\(open\\(r'C:\\\\Users\\\\chris_austin\\\\.claude\\\\projects\\\\c--Users-chris-austin-Desktop-social-media-management\\\\dc5600c4-84a0-4c54-8206-5869e2bfc6ca\\\\tool-results\\\\mcp-supabase-get_advisors-1782122307269.txt'\\).read\\(\\)[0:80000]\\)\")",
+      "Bash(py)",
+      "Bash(git rm *)",
+      "Bash(rm -rf test)",
+      "Bash(ls -d test)",
+      "Bash(cd \"c:/Users/chris_austin/Desktop/social-media-management/src\" && echo \"=== deleteClient / delete account flows ===\" && grep -rIn \"deleteClient\\\\|delete.*account\\\\|deleteAccount\\\\|deleteWorkspace\" api pages 2>/dev/null | head -20; echo \"=== auth.admin / storage remove ===\" && grep -rIn \"auth.admin\\\\|\\\\.remove\\(\\\\|storage.from\" api 2>/dev/null | head -20; echo \"=== existing edge functions ===\" && ls ../supabase/functions 2>/dev/null)",
+      "Read(//c/Users/chris_austin/Desktop/supabase/**)"
     ]
   }
 }

@@ -249,6 +249,36 @@ export async function deleteClient(clientId) {
       }).throwOnError()
     }
 
+    // 7b. Delete proposal files (proposal-files bucket) for this client's proposals
+    const { data: proposals } = await supabase
+      .from('proposals')
+      .select('file_url')
+      .eq('client_id', clientId)
+      .not('file_url', 'is', null)
+
+    const proposalPaths = [
+      ...new Set(
+        (proposals || [])
+          .map((p) => {
+            const seg = '/public/proposal-files/'
+            return p.file_url?.includes(seg) ? p.file_url.split(seg)[1] : null
+          })
+          .filter(Boolean),
+      ),
+    ]
+
+    if (proposalPaths.length > 0) {
+      const { error: propStorageError } = await supabase.storage
+        .from('proposal-files')
+        .remove(proposalPaths)
+
+      if (propStorageError) {
+        console.error('proposal-files cleanup failed during client deletion:', propStorageError)
+      } else {
+        console.log(`Removed ${proposalPaths.length} proposal files.`)
+      }
+    }
+
     // 8. Delete the client row — DB cascade handles all child records
     const { error: dbError } = await supabase
       .from('clients')

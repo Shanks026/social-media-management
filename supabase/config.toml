@@ -382,3 +382,30 @@ s3_region = "env(S3_REGION)"
 s3_access_key = "env(S3_ACCESS_KEY)"
 # Configures AWS_SECRET_ACCESS_KEY for S3 bucket
 s3_secret_key = "env(S3_SECRET_KEY)"
+
+# ── Edge function JWT settings (pinned so CLI deploys preserve them) ──
+# verify_jwt=false: function does custom auth (service-role bearer, webhook,
+# or manual JWT verification inside). verify_jwt=true: gateway requires a
+# valid user JWT (these are invoked from the authenticated app).
+[functions.send-approval-email]
+verify_jwt = false
+[functions.send-client-welcome]
+verify_jwt = false
+[functions.send-password-update-email]
+verify_jwt = false
+[functions.send-platform-published-email]
+verify_jwt = true
+[functions.send-campaign-review-email]
+verify_jwt = true
+[functions.send-proposal-email]
+verify_jwt = false
+[functions.send-feedback-notification]
+verify_jwt = false
+[functions.send-renewal-request]
+verify_jwt = false
+[functions.send-signup-welcome]
+verify_jwt = false
+[functions.delete-team-member]
+verify_jwt = true
+[functions.delete-workspace]
+verify_jwt = false

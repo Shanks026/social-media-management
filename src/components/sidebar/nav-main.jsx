@@ -21,6 +21,13 @@ import {
   ListOrdered,
   TrendingUp,
   Rocket,
+  Briefcase,
+  Users,
+  Handshake,
+  BadgeDollarSign,
+  Settings,
+  Settings2,
+  LifeBuoy,
 } from 'lucide-react'
 import { NavLink, useLocation } from 'react-router-dom'
 import {
@@ -54,7 +61,16 @@ import {
 
 const BASE_NAV_ITEMS = [
   { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
-  { title: 'My Organization', url: '/myorganization', icon: Building2 },
+  {
+    title: 'My Organization',
+    url: '/myorganization',
+    icon: Building2,
+    items: [
+      { title: 'Workspace', url: '/myorganization', icon: Briefcase },
+      { title: 'Team', url: '/team', icon: Users },
+      { title: 'Partnerships', url: '/partnerships', icon: Handshake },
+    ],
+  },
   {
     title: 'Outreach',
     url: '/outreach',
@@ -73,6 +89,7 @@ const BASE_NAV_ITEMS = [
     icon: Megaphone,
     requiresFlag: 'campaigns',
   },
+  { title: 'Ads', url: '/ads', icon: BadgeDollarSign },
   {
     title: 'Operations',
     url: '/operations',
@@ -104,6 +121,16 @@ const BASE_NAV_ITEMS = [
       },
       { title: 'Ledger', url: '/finance/ledger', icon: ListOrdered },
       { title: 'Invoices', url: '/finance/invoices', icon: FileText },
+    ],
+  },
+  {
+    title: 'Settings',
+    url: '/settings',
+    icon: Settings,
+    items: [
+      { title: 'General Settings', url: '/settings', icon: Settings2 },
+      { title: 'Billing & Usage', url: '/billing', icon: CreditCard },
+      { title: 'Help & Info', url: '/help', icon: LifeBuoy },
     ],
   },
 ]
