@@ -87,21 +87,29 @@ serve(async (req) => {
       Deno.env.get('SERVICE_KEY') ?? Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     )
 
-    // Verify JWT manually for better debugging and control
-    const authHeader = req.headers.get('Authorization')
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: 'Missing Authorization header' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
-    }
+    // Auth: trusted server-side callers (e.g. the update_post_status_by_token RPC
+    // notifying the agency of a client decision) present the service-role key as a
+    // bearer. Everyone else (the authenticated agency app requesting approval) must
+    // present a valid user JWT.
+    const authHeader = req.headers.get('Authorization') || ''
+    const serviceKey = Deno.env.get('SERVICE_KEY') ?? Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    const isServiceCall = serviceKey !== '' && authHeader === `Bearer ${serviceKey}`
 
-    const { data: { user }, error: userError } = await supabase.auth.getUser(authHeader.replace('Bearer ', ''))
-    if (userError || !user) {
-      return new Response(JSON.stringify({ error: 'Invalid JWT', details: userError }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
+    if (!isServiceCall) {
+      if (!authHeader) {
+        return new Response(JSON.stringify({ error: 'Missing Authorization header' }), {
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
+
+      const { data: { user }, error: userError } = await supabase.auth.getUser(authHeader.replace('Bearer ', ''))
+      if (userError || !user) {
+        return new Response(JSON.stringify({ error: 'Invalid JWT', details: userError }), {
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
     }
 
     // Fetch the owner of the client to get their subscription/branding
@@ -189,7 +197,7 @@ serve(async (req) => {
       let bodyHtml = ''
 
       if (record.status === 'SCHEDULED') {
-        subject = `✅ Approved & Scheduled by ${clientName}: "${postTitle}"`
+        subject = `Approved & Scheduled by ${clientName}: "${postTitle}"`
         bodyHtml = `
           <h1 style="font-size: 26px; font-weight: 700; line-height: 1.2; margin: 0 0 16px; color: #111827;">Your post was approved</h1>
           <p style="font-size: 15px; color: #6B7280; line-height: 1.6; margin: 0 0 32px;">${clientName} has reviewed your content and given the green light for publication.</p>
@@ -212,7 +220,7 @@ serve(async (req) => {
         `
       } else {
         const clientNotes = record.client_notes || 'No additional notes provided.'
-        subject = `✍️ Revision Requested by ${clientName}: "${postTitle}"`
+        subject = `Revision Requested by ${clientName}: "${postTitle}"`
         bodyHtml = `
           <h1 style="font-size: 26px; font-weight: 700; line-height: 1.2; margin: 0 0 16px; color: #111827;">Revision requested</h1>
           <p style="font-size: 15px; color: #6B7280; line-height: 1.6; margin: 0 0 32px;">${clientName} has reviewed your post and requested changes before it can be approved.</p>
@@ -279,7 +287,7 @@ serve(async (req) => {
       const { data, error } = await resend.emails.send({
         from: `${branding.name} <notifications@tercerospace.com>`,
         to: [clientInfo.email],
-        subject: `🚀 Your post is live: "${postTitle}"`,
+        subject: `Your post is live: "${postTitle}"`,
         html: `
           <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 560px; margin: auto; background: #ffffff; color: #111827; border: 1px solid #E5E7EB;">
             <div style="padding: 40px 48px 0;">

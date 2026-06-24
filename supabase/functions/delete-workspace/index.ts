@@ -1,10 +1,18 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
-// Service-to-service function: invoked by the pg_cron scheduler with the
-// service-role key as a Bearer token. It purges every workspace whose grace
-// period (agency_subscriptions.scheduled_for_deletion_at) has elapsed.
-// Auth is custom (service-role bearer check), so verify_jwt is disabled.
+// Two-mode purge function (verify_jwt disabled; auth handled in code):
+//
+//  1. Cron batch sweep — invoked by pg_cron with the service-role key as the
+//     Bearer token. Purges every workspace whose grace period
+//     (agency_subscriptions.scheduled_for_deletion_at) has elapsed.
+//
+//  2. Superadmin immediate purge — invoked from the admin portal with the
+//     caller's session JWT and a { workspace_user_id, reason } body. Verifies
+//     the caller is an active superadmin, then immediately purges that one
+//     workspace regardless of its schedule.
+//
+// Both modes funnel through the same canonical purgeWorkspace() teardown.
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -121,31 +129,71 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
   try {
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const serviceKey = Deno.env.get('SERVICE_KEY') ?? Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    // Custom auth: only the scheduler (which holds the service/secret key) may invoke this.
     const auth = req.headers.get('Authorization') || ''
-    if (auth !== `Bearer ${serviceKey}`) return json({ error: 'Forbidden' }, 403)
+    const admin = createClient(supabaseUrl, serviceKey)
 
-    const admin = createClient(Deno.env.get('SUPABASE_URL')!, serviceKey)
+    // ── Mode 1: cron batch sweep (service-role bearer) ──
+    if (auth === `Bearer ${serviceKey}`) {
+      const { data: due, error } = await admin
+        .from('agency_subscriptions')
+        .select('user_id')
+        .not('scheduled_for_deletion_at', 'is', null)
+        .lte('scheduled_for_deletion_at', new Date().toISOString())
+      if (error) throw error
 
-    // Find workspaces whose grace period has elapsed.
-    const { data: due, error } = await admin
-      .from('agency_subscriptions')
-      .select('user_id')
-      .not('scheduled_for_deletion_at', 'is', null)
-      .lte('scheduled_for_deletion_at', new Date().toISOString())
-    if (error) throw error
-
-    const userIds = (due || []).map((d: any) => d.user_id)
-    for (const uid of userIds) {
-      try {
-        await purgeWorkspace(admin, uid)
-      } catch (e) {
-        console.error(`Purge failed for workspace ${uid}:`, (e as Error).message)
+      const userIds = (due || []).map((d: any) => d.user_id)
+      for (const uid of userIds) {
+        try {
+          await purgeWorkspace(admin, uid)
+        } catch (e) {
+          console.error(`Purge failed for workspace ${uid}:`, (e as Error).message)
+        }
       }
+      return json({ success: true, purged: userIds.length })
     }
 
-    return json({ success: true, purged: userIds.length })
+    // ── Mode 2: superadmin immediate purge (caller session JWT) ──
+    if (!auth) return json({ error: 'Unauthorized' }, 401)
+
+    let body: any = {}
+    try { body = await req.json() } catch { /* empty body */ }
+    const targetId: string | undefined = body?.workspace_user_id
+    const reason: string = (body?.reason || '').toString().trim()
+    if (!targetId) return json({ error: 'workspace_user_id is required' }, 400)
+
+    // Verify the caller's JWT and that they are an active superadmin.
+    const publishableKey = Deno.env.get('PUBLISHABLE_KEY') ?? Deno.env.get('SUPABASE_ANON_KEY')!
+    const caller = createClient(supabaseUrl, publishableKey, {
+      global: { headers: { Authorization: auth } },
+    })
+    const { data: { user }, error: userErr } = await caller.auth.getUser()
+    if (userErr || !user) return json({ error: 'Unauthorized' }, 401)
+
+    const { data: sa } = await admin
+      .from('agency_members')
+      .select('id')
+      .eq('member_user_id', user.id)
+      .eq('system_role', 'superadmin')
+      .eq('is_active', true)
+      .limit(1)
+      .maybeSingle()
+    if (!sa) return json({ error: 'Forbidden' }, 403)
+
+    // Confirm the target workspace exists before tearing it down.
+    const { data: targetSub } = await admin
+      .from('agency_subscriptions')
+      .select('user_id')
+      .eq('user_id', targetId)
+      .maybeSingle()
+    if (!targetSub) return json({ error: 'Workspace not found' }, 404)
+
+    // Audit trail (surfaced in function logs): who purged what and why.
+    console.log(`[immediate-purge] superadmin=${user.id} target=${targetId} reason=${JSON.stringify(reason)}`)
+
+    await purgeWorkspace(admin, targetId)
+    return json({ success: true, purged: 1 })
   } catch (err) {
     return json({ error: (err as Error).message }, 500)
   }
