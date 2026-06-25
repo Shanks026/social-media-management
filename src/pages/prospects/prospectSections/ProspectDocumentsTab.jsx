@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { FolderOpen, Search, X } from 'lucide-react'
+import { FolderOpen, Search, Upload, X } from 'lucide-react'
 
 import { useDocuments, uploadDocument } from '@/api/documents'
 import { useAuth } from '@/context/AuthContext'
@@ -23,7 +23,6 @@ import {
   EmptyDescription,
 } from '@/components/ui/empty'
 import DocumentCard from '@/components/documents/DocumentCard'
-import DocumentUploadZone from '@/components/documents/DocumentUploadZone'
 import UploadMetaDialog, {
   PROSPECT_DOCUMENT_CATEGORIES,
 } from '@/components/documents/UploadMetaDialog'
@@ -77,9 +76,13 @@ export default function ProspectDocumentsTab({ prospectId }) {
     },
   })
 
+  function handleOpenUpload() {
+    setPendingFile(null)
+    setDialogOpen(true)
+  }
+
   function handleFileSelected(file) {
     setPendingFile(file)
-    setDialogOpen(true)
   }
 
   function handleConfirmUpload({ displayName, category, notes }) {
@@ -160,13 +163,19 @@ export default function ProspectDocumentsTab({ prospectId }) {
               <X className="size-3.5" /> Clear
             </Button>
           )}
-        </div>
 
-        {/* ── Upload zone ── */}
-        <DocumentUploadZone
-          onFileSelected={handleFileSelected}
-          disabled={uploadMutation.isPending}
-        />
+          <div className="ml-auto">
+            <Button
+              size="sm"
+              className="gap-2 h-9"
+              onClick={handleOpenUpload}
+              disabled={uploadMutation.isPending}
+            >
+              <Upload className="size-4" />
+              Upload Document
+            </Button>
+          </div>
+        </div>
 
         {/* ── Document list ── */}
         {filteredDocs.length === 0 ? (
@@ -204,6 +213,7 @@ export default function ProspectDocumentsTab({ prospectId }) {
         open={dialogOpen}
         onOpenChange={handleDialogClose}
         file={pendingFile}
+        onFileSelected={handleFileSelected}
         onConfirm={handleConfirmUpload}
         uploadProgress={uploadProgress}
         categories={PROSPECT_DOCUMENT_CATEGORIES}

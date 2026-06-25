@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { FolderOpen, FolderPlus, Search, X, Lock } from 'lucide-react'
+import { FolderOpen, FolderPlus, Search, Upload, X, Lock } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { useSubscription } from '@/api/useSubscription'
 import {
@@ -32,7 +32,6 @@ import {
 } from '@/components/ui/empty'
 import { DOCUMENT_CATEGORIES } from './UploadMetaDialog'
 import DocumentCard from './DocumentCard'
-import DocumentUploadZone from './DocumentUploadZone'
 import UploadMetaDialog from './UploadMetaDialog'
 import CollectionCard from './CollectionCard'
 import CreateCollectionDialog from './CreateCollectionDialog'
@@ -119,9 +118,13 @@ export default function DocumentsTab({ clientId }) {
     },
   })
 
+  function handleOpenUpload() {
+    setPendingFile(null)
+    setDialogOpen(true)
+  }
+
   function handleFileSelected(file) {
     setPendingFile(file)
-    setDialogOpen(true)
   }
 
   function handleConfirmUpload({ displayName, category, notes }) {
@@ -242,6 +245,7 @@ export default function DocumentsTab({ clientId }) {
 
             {collectionsUnlocked ? (
               <Button
+                variant="secondary"
                 className="gap-2"
                 onClick={() => setCreateCollectionOpen(true)}
               >
@@ -252,6 +256,7 @@ export default function DocumentsTab({ clientId }) {
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
+                    variant="secondary"
                     className="gap-2 opacity-50 cursor-not-allowed"
                     disabled
                   >
@@ -265,16 +270,19 @@ export default function DocumentsTab({ clientId }) {
                 </TooltipContent>
               </Tooltip>
             )}
+
+            <Button
+              className="gap-2"
+              onClick={handleOpenUpload}
+              disabled={uploadMutation.isPending}
+            >
+              <Upload className="size-4" />
+              Upload Document
+            </Button>
           </div>
         </div>
 
-        {/* ── Row 2: Upload zone ── */}
-        <DocumentUploadZone
-          onFileSelected={handleFileSelected}
-          disabled={uploadMutation.isPending}
-        />
-
-        {/* ── Row 3: Content ── */}
+        {/* ── Row 2: Content ── */}
         <div className="mt-4">
           {/* All */}
           <TabsContent value="all" className="mt-4 space-y-4">
@@ -480,6 +488,7 @@ export default function DocumentsTab({ clientId }) {
         open={dialogOpen}
         onOpenChange={handleDialogClose}
         file={pendingFile}
+        onFileSelected={handleFileSelected}
         onConfirm={handleConfirmUpload}
         uploadProgress={uploadProgress}
       />

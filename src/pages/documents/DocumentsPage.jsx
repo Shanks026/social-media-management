@@ -6,6 +6,7 @@ import {
   FolderOpen,
   FolderPlus,
   Search,
+  Upload,
   X,
   Building2,
   Target,
@@ -54,7 +55,7 @@ import {
   EmptyTitle,
 } from '@/components/ui/empty'
 import DocumentCard from '@/components/documents/DocumentCard'
-import DocumentUploadZone from '@/components/documents/DocumentUploadZone'
+import { CATEGORY_DOT_COLORS } from '@/components/documents/DocumentCategoryBadge'
 import UploadMetaDialog from '@/components/documents/UploadMetaDialog'
 import CollectionCard from '@/components/documents/CollectionCard'
 import CreateCollectionDialog from '@/components/documents/CreateCollectionDialog'
@@ -227,9 +228,13 @@ export default function DocumentsPage() {
     },
   })
 
+  function handleOpenUpload() {
+    setPendingFile(null)
+    setDialogOpen(true)
+  }
+
   function handleFileSelected(file) {
     setPendingFile(file)
-    setDialogOpen(true)
   }
 
   function handleConfirmUpload({ displayName, category, clientId, prospectId, notes }) {
@@ -281,7 +286,7 @@ export default function DocumentsPage() {
 
   return (
     <div className="min-h-full bg-background selection:bg-primary/10">
-      <div className="px-8 pt-8 pb-20 space-y-8 max-w-[1400px] mx-auto animate-in fade-in duration-500">
+      <div className="px-8 pt-8 pb-20 space-y-6 max-w-[1400px] mx-auto animate-in fade-in duration-500">
         {/* ── SECTION 1: HEADER ── */}
         <div className="flex items-center justify-between">
           <div className="space-y-1">
@@ -298,40 +303,80 @@ export default function DocumentsPage() {
             </p>
           </div>
 
-          {!activeProspectId && (
-            <TooltipProvider>
-              {collectionsUnlocked ? (
-                <Button
-                  variant="outline"
-                  onClick={() => setCreateCollectionOpen(true)}
-                  className="gap-2 h-9"
-                >
-                  <FolderPlus className="size-4" />
-                  New Collection
-                </Button>
-              ) : (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className="gap-2 opacity-50 cursor-not-allowed h-9"
-                      disabled
-                    >
-                      <FolderPlus className="size-4" />
-                      New Collection
-                      <Lock size={12} />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Upgrade to unlock Collections</TooltipContent>
-                </Tooltip>
-              )}
-            </TooltipProvider>
-          )}
+          <div className="flex items-center gap-2">
+            {!activeProspectId && (
+              <TooltipProvider>
+                {collectionsUnlocked ? (
+                  <Button
+                    variant="secondary"
+                    onClick={() => setCreateCollectionOpen(true)}
+                    className="gap-2 h-9"
+                  >
+                    <FolderPlus className="size-4" />
+                    New Collection
+                  </Button>
+                ) : (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="secondary"
+                        className="gap-2 opacity-50 cursor-not-allowed h-9"
+                        disabled
+                      >
+                        <FolderPlus className="size-4" />
+                        New Collection
+                        <Lock size={12} />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Upgrade to unlock Collections</TooltipContent>
+                  </Tooltip>
+                )}
+              </TooltipProvider>
+            )}
+
+            <Button
+              className="gap-2 h-9"
+              onClick={handleOpenUpload}
+              disabled={uploadMutation.isPending}
+            >
+              <Upload className="size-4" />
+              Upload Document
+            </Button>
+          </div>
         </div>
 
         <Tabs value={activeTab} onValueChange={setTab}>
+          {/* ── Underline tab bar ── */}
+          <TabsList className="bg-transparent h-auto w-full justify-start rounded-none p-0 gap-8 border-b border-border/40">
+            <TabsTrigger
+              value="all"
+              className="relative rounded-none bg-transparent px-0 pb-3 pt-0 text-[13px] font-medium transition-none shadow-none border-b-2 border-transparent text-muted-foreground flex-none w-fit gap-2 data-[state=active]:bg-transparent dark:data-[state=active]:bg-transparent data-[state=active]:text-black dark:data-[state=active]:text-white data-[state=active]:border-black dark:data-[state=active]:border-white data-[state=active]:shadow-none data-[state=active]:border-x-0 data-[state=active]:border-t-0 focus-visible:ring-0"
+            >
+              All
+              <span className="tabular-nums text-xs text-muted-foreground">{filteredDocs.length}</span>
+            </TabsTrigger>
+            {!activeProspectId && (
+              <>
+                <TabsTrigger
+                  value="collections"
+                  className="relative rounded-none bg-transparent px-0 pb-3 pt-0 text-[13px] font-medium transition-none shadow-none border-b-2 border-transparent text-muted-foreground flex-none w-fit gap-2 data-[state=active]:bg-transparent dark:data-[state=active]:bg-transparent data-[state=active]:text-black dark:data-[state=active]:text-white data-[state=active]:border-black dark:data-[state=active]:border-white data-[state=active]:shadow-none data-[state=active]:border-x-0 data-[state=active]:border-t-0 focus-visible:ring-0"
+                >
+                  Collections
+                  <span className="tabular-nums text-xs text-muted-foreground">{collections.length}</span>
+                </TabsTrigger>
+                <TabsTrigger
+                  value="ungrouped"
+                  className="relative rounded-none bg-transparent px-0 pb-3 pt-0 text-[13px] font-medium transition-none shadow-none border-b-2 border-transparent text-muted-foreground flex-none w-fit gap-2 data-[state=active]:bg-transparent dark:data-[state=active]:bg-transparent data-[state=active]:text-black dark:data-[state=active]:text-white data-[state=active]:border-black dark:data-[state=active]:border-white data-[state=active]:shadow-none data-[state=active]:border-x-0 data-[state=active]:border-t-0 focus-visible:ring-0"
+                >
+                  Ungrouped
+                  <span className="tabular-nums text-xs text-muted-foreground">{ungroupedDocs.length}</span>
+                </TabsTrigger>
+              </>
+            )}
+          </TabsList>
+
           {/* ── SECTION 2: FILTERS ── */}
-          <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex items-center gap-3 flex-wrap mt-4">
             {/* Search */}
             <div className="relative">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none" />
@@ -339,10 +384,11 @@ export default function DocumentsPage() {
                 value={searchRaw}
                 onChange={(e) => setSearchRaw(e.target.value)}
                 placeholder="Search documents…"
-                className="pl-8 h-9 w-52 text-sm"
+                className="pl-8 h-9 w-80 text-sm"
               />
             </div>
 
+            <div className="ml-auto flex items-center gap-3">
             {/* Client / Prospect */}
             <Select
               value={selectedClientId}
@@ -417,7 +463,10 @@ export default function DocumentsPage() {
                 <SelectItem value="all">All categories</SelectItem>
                 {activeCategoryList.map((cat) => (
                   <SelectItem key={cat} value={cat}>
-                    {cat}
+                    <span className="flex items-center gap-2">
+                      <span className={`size-2 rounded-full shrink-0 ${CATEGORY_DOT_COLORS[cat] ?? 'bg-muted-foreground'}`} />
+                      {cat}
+                    </span>
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -434,45 +483,11 @@ export default function DocumentsPage() {
                 Clear filters
               </Button>
             )}
-
-            <div className="ml-auto flex items-center gap-3 shrink-0">
-              <TabsList>
-                <TabsTrigger value="all">
-                  All
-                  <span className="ml-1.5 text-xs text-muted-foreground tabular-nums">
-                    {filteredDocs.length}
-                  </span>
-                </TabsTrigger>
-                {!activeProspectId && (
-                  <>
-                    <TabsTrigger value="collections">
-                      Collections
-                      <span className="ml-1.5 text-xs text-muted-foreground tabular-nums">
-                        {collections.length}
-                      </span>
-                    </TabsTrigger>
-                    <TabsTrigger value="ungrouped">
-                      Ungrouped
-                      <span className="ml-1.5 text-xs text-muted-foreground tabular-nums">
-                        {ungroupedDocs.length}
-                      </span>
-                    </TabsTrigger>
-                  </>
-                )}
-              </TabsList>
             </div>
           </div>
 
-          {/* ── SECTION 3: UPLOAD ZONE ── */}
-          <div className="mt-8">
-            <DocumentUploadZone
-              onFileSelected={handleFileSelected}
-              disabled={uploadMutation.isPending}
-            />
-          </div>
-
-          {/* ── SECTION 4: DOCUMENT LIST ── */}
-          <div className="mt-8">
+          {/* ── SECTION 3: DOCUMENT LIST ── */}
+          <div className="mt-4">
             {error ? (
               <p className="text-sm text-destructive">
                 Failed to load documents: {error.message}
@@ -740,6 +755,7 @@ export default function DocumentsPage() {
         open={dialogOpen}
         onOpenChange={handleDialogClose}
         file={pendingFile}
+        onFileSelected={handleFileSelected}
         onConfirm={handleConfirmUpload}
         uploadProgress={uploadProgress}
         showClientSelector={true}

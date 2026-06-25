@@ -1,10 +1,15 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useEditor, EditorContent, BubbleMenu } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import TaskList from '@tiptap/extension-task-list'
 import TaskItem from '@tiptap/extension-task-item'
 import Placeholder from '@tiptap/extension-placeholder'
 import Link from '@tiptap/extension-link'
+import Table from '@tiptap/extension-table'
+import TableRow from '@tiptap/extension-table-row'
+import TableHeader from '@tiptap/extension-table-header'
+import TableCell from '@tiptap/extension-table-cell'
+import { TableContainer, TableTitle } from './editor/table-with-title'
 import {
   Bold,
   Italic,
@@ -16,6 +21,13 @@ import {
   Link as LinkIcon,
   Check,
   X,
+  ArrowUp,
+  ArrowDown,
+  ArrowLeft,
+  ArrowRight,
+  Rows3,
+  Columns3,
+  Trash2,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import SlashCommand from './editor/slash-command'
@@ -28,7 +40,7 @@ function normalizeUrl(url) {
   return `https://${trimmed}`
 }
 
-export default function RichTextEditor({ content, onChange, editable = true }) {
+export default function RichTextEditor({ content, onChange, editable = true, editorRef }) {
   const [linkOpen, setLinkOpen] = useState(false)
   const [linkUrl, setLinkUrl] = useState('')
 
@@ -46,6 +58,12 @@ export default function RichTextEditor({ content, onChange, editable = true }) {
         autolink: true,
         HTMLAttributes: { class: 'note-link', rel: 'noopener noreferrer', target: '_blank' },
       }),
+      Table.configure({ resizable: true }),
+      TableRow,
+      TableHeader,
+      TableCell,
+      TableContainer,
+      TableTitle,
       SlashCommand,
     ],
     content: content || '',
@@ -54,6 +72,10 @@ export default function RichTextEditor({ content, onChange, editable = true }) {
       attributes: { class: 'focus:outline-none' },
     },
   })
+
+  useEffect(() => {
+    if (editorRef) editorRef.current = editor
+  }, [editor, editorRef])
 
   if (!editor) return null
 
@@ -87,6 +109,7 @@ export default function RichTextEditor({ content, onChange, editable = true }) {
     <div className="tiptap-content">
       <BubbleMenu
         editor={editor}
+        pluginKey="formatBubble"
         tippyOptions={{ duration: 100, onHidden: () => setLinkOpen(false) }}
         shouldShow={({ editor, from, to }) => linkOpen || (from !== to && editor.isEditable)}
         className="flex items-center gap-0.5 rounded-lg border bg-popover p-1 shadow-md"
@@ -186,6 +209,83 @@ export default function RichTextEditor({ content, onChange, editable = true }) {
             </button>
           </>
         )}
+      </BubbleMenu>
+
+      <BubbleMenu
+        editor={editor}
+        pluginKey="tableBubble"
+        tippyOptions={{ duration: 100, placement: 'top' }}
+        shouldShow={({ editor, from, to }) => editor.isActive('table') && from === to}
+        className="flex items-center gap-0.5 rounded-lg border bg-popover p-1 shadow-md"
+      >
+        <button
+          type="button"
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => editor.chain().focus().addColumnBefore().run()}
+          className={btn(false)}
+          title="Insert column left"
+        >
+          <ArrowLeft className="size-4" />
+        </button>
+        <button
+          type="button"
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => editor.chain().focus().addColumnAfter().run()}
+          className={btn(false)}
+          title="Insert column right"
+        >
+          <ArrowRight className="size-4" />
+        </button>
+        <button
+          type="button"
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => editor.chain().focus().addRowBefore().run()}
+          className={btn(false)}
+          title="Insert row above"
+        >
+          <ArrowUp className="size-4" />
+        </button>
+        <button
+          type="button"
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => editor.chain().focus().addRowAfter().run()}
+          className={btn(false)}
+          title="Insert row below"
+        >
+          <ArrowDown className="size-4" />
+        </button>
+        <span className="mx-0.5 h-5 w-px bg-border" />
+        <button
+          type="button"
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => editor.chain().focus().deleteColumn().run()}
+          className="flex size-7 items-center justify-center rounded-md text-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+          title="Delete column"
+        >
+          <Columns3 className="size-4" />
+        </button>
+        <button
+          type="button"
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => editor.chain().focus().deleteRow().run()}
+          className="flex size-7 items-center justify-center rounded-md text-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+          title="Delete row"
+        >
+          <Rows3 className="size-4" />
+        </button>
+        <button
+          type="button"
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => {
+            if (!editor.chain().focus().deleteTableContainer().run()) {
+              editor.chain().focus().deleteTable().run()
+            }
+          }}
+          className="flex size-7 items-center justify-center rounded-md text-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+          title="Delete table"
+        >
+          <Trash2 className="size-4" />
+        </button>
       </BubbleMenu>
 
       <EditorContent editor={editor} />

@@ -9,6 +9,7 @@ export const teamKeys = {
   members: (agencyUserId) => ['team', 'members', agencyUserId],
   invites: (agencyUserId) => ['team', 'invites', agencyUserId],
   removed: (agencyUserId) => ['team', 'removed', agencyUserId],
+  myRecord: (agencyUserId, userId) => ['team', 'my-record', agencyUserId, userId],
 }
 
 // ─── Read Hooks ────────────────────────────────────────────────────────────────
@@ -288,6 +289,31 @@ export async function requestWorkspaceDeletion() {
 export async function cancelWorkspaceDeletion() {
   const { error } = await supabase.rpc('cancel_workspace_deletion')
   if (error) throw error
+}
+
+// ─── Current user's own member record ─────────────────────────────────────────
+
+/**
+ * Fetch the current user's own row in agency_members.
+ * Returns null if the user has no member record (shouldn't happen in normal flow).
+ */
+export function useMyMemberRecord() {
+  const { user, workspaceUserId } = useAuth()
+
+  return useQuery({
+    queryKey: teamKeys.myRecord(workspaceUserId, user?.id),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('agency_members')
+        .select('id, functional_role, system_role')
+        .eq('agency_user_id', workspaceUserId)
+        .eq('member_user_id', user.id)
+        .single()
+      if (error) throw error
+      return data
+    },
+    enabled: !!user?.id && !!workspaceUserId,
+  })
 }
 
 // ─── Public (unauthenticated) ──────────────────────────────────────────────────

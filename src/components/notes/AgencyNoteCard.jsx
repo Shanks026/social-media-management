@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { MoreVertical, Pencil, Trash2 } from 'lucide-react'
-import { formatDate } from '@/lib/helper'
+import { format } from 'date-fns'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -21,12 +21,16 @@ import {
 } from '@/components/ui/alert-dialog'
 import { ClientAvatar } from '@/components/NoteRow'
 import { getNoteExcerpt } from '@/components/notes/noteContent'
+import TagPill from '@/components/notes/TagPill'
 
 export default function AgencyNoteCard({ note, clientMap, onOpen, onDelete }) {
   const [deleteOpen, setDeleteOpen] = useState(false)
 
   const client = note.client_id ? clientMap[note.client_id] : null
   const excerpt = getNoteExcerpt(note.body)
+  const tags = note.tags ?? []
+  const visibleTags = tags.slice(0, 3)
+  const overflowCount = tags.length - visibleTags.length
 
   return (
     <>
@@ -69,11 +73,25 @@ export default function AgencyNoteCard({ note, clientMap, onOpen, onDelete }) {
         {/* Body */}
         <div className="flex-1 mt-3">
           {excerpt ? (
-            <p className="text-sm text-muted-foreground line-clamp-4">{excerpt}</p>
+            <p className="text-sm text-muted-foreground line-clamp-3">{excerpt}</p>
           ) : (
             <p className="text-sm text-muted-foreground/50 italic">No content</p>
           )}
         </div>
+
+        {/* Tags */}
+        {tags.length > 0 && (
+          <div className="flex flex-wrap items-center gap-1.5 mt-3">
+            {visibleTags.map((tag) => (
+              <TagPill key={tag.id} tag={tag} size="xs" />
+            ))}
+            {overflowCount > 0 && (
+              <span className="text-[10px] font-medium text-muted-foreground">
+                +{overflowCount}
+              </span>
+            )}
+          </div>
+        )}
 
         {/* Dashed separator */}
         <div className="border-t border-dashed border-border/60 mt-4 mb-3" />
@@ -96,7 +114,7 @@ export default function AgencyNoteCard({ note, clientMap, onOpen, onDelete }) {
             <span className="text-xs text-muted-foreground">Agency-wide</span>
           )}
           <span className="text-xs text-muted-foreground shrink-0">
-            {formatDate(note.updated_at)}
+            {format(new Date(note.updated_at), 'd MMM, yyyy · h:mm a')}
           </span>
         </div>
       </div>

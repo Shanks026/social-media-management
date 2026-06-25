@@ -5,6 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { supabase } from '@/lib/supabase'
 import { fetchInviteByToken, joinTeam } from '@/api/team'
+import { AGENCY_ROLE_OPTIONS } from '@/lib/team-roles'
 import { useAuth } from '@/context/AuthContext'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -18,15 +19,6 @@ import {
 } from '@/components/ui/select'
 import { Loader2, AlertCircle, Building2 } from 'lucide-react'
 
-const FUNCTIONAL_ROLES = [
-  'Content Writer',
-  'Graphic Designer',
-  'Video Editor',
-  'Social Media Manager',
-  'Account Manager',
-  'Strategist',
-  'Other',
-]
 
 const schema = z
   .object({
@@ -339,7 +331,7 @@ export default function JoinTeam() {
                       <SelectValue placeholder="Select your role" />
                     </SelectTrigger>
                     <SelectContent>
-                      {FUNCTIONAL_ROLES.map((r) => (
+                      {AGENCY_ROLE_OPTIONS.map((r) => (
                         <SelectItem key={r} value={r}>
                           {r}
                         </SelectItem>

@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, Trash2, Check, Loader2, AlertCircle, Building2 } from 'lucide-react'
+import { useQueryClient, useMutation } from '@tanstack/react-query'
+import { format } from 'date-fns'
+import { ArrowLeft, Trash2, Check, Loader2, AlertCircle, Building2, Printer } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
@@ -33,9 +34,20 @@ import {
   updateAgencyNote,
   deleteAgencyNote,
 } from '@/api/agencyNotes'
+import {
+  useNoteTags,
+  createNoteTag,
+  addTagToNote,
+  removeTagFromNote,
+} from '@/api/noteTags'
+import { nextTagColor } from '@/lib/noteTags'
 import { ClientAvatar } from '@/components/NoteRow'
 import RichTextEditor from '@/components/notes/RichTextEditor'
+import TagPill from '@/components/notes/TagPill'
+import TagPicker from '@/components/notes/TagPicker'
+import ManageTagsDialog from '@/components/notes/ManageTagsDialog'
 import { parseNoteBody } from '@/components/notes/noteContent'
+import { printNote } from '@/components/notes/printNote'
 
 function SaveIndicator({ state }) {
   if (state === 'saving')
@@ -67,12 +79,15 @@ export default function NoteEditorPage() {
 
   const { data: note, isLoading, error } = useAgencyNoteById(noteId)
   const { data: clientsData } = useClients()
+  const { data: allTags } = useNoteTags()
 
   const [title, setTitle] = useState('')
   const [clientId, setClientId] = useState('none')
   const [saveState, setSaveState] = useState('idle')
   const [initializedId, setInitializedId] = useState(null)
+  const [manageTagsOpen, setManageTagsOpen] = useState(false)
 
+  const editorRef = useRef(null)
   const valuesRef = useRef({ title: '', body: '', client_id: null })
   const dirtyRef = useRef(false)
   const saveTimer = useRef(null)
@@ -91,6 +106,34 @@ export default function NoteEditorPage() {
     () => allClients.find((c) => c.id === clientId) || null,
     [allClients, clientId],
   )
+
+  const noteTags = useMemo(() => note?.tags ?? [], [note?.tags])
+  const selectedTagIds = useMemo(() => noteTags.map((t) => t.id), [noteTags])
+
+  // Tags live in a junction table, independent of the note's auto-save. They are
+  // mutated directly and never touch dirtyRef — so tagging a note then hitting
+  // Back must NOT bump updated_at or reorder the list.
+  const invalidateNoteTags = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['agency-notes', 'detail', noteId] })
+    queryClient.invalidateQueries({ queryKey: ['agency-notes', 'list'] })
+  }, [queryClient, noteId])
+
+  const toggleTagMutation = useMutation({
+    mutationFn: async (tagId) => {
+      if (selectedTagIds.includes(tagId)) await removeTagFromNote(noteId, tagId)
+      else await addTagToNote(noteId, tagId)
+    },
+    onSuccess: invalidateNoteTags,
+    onError: (err) => toast.error(err.message || 'Failed to update tags'),
+  })
+
+  const createTagMutation = useMutation({
+    mutationFn: (name) =>
+      createNoteTag({ name, color: nextTagColor(allTags?.length ?? 0) }),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ['note-tags', 'list'] }),
+    onError: (err) => toast.error(err.message || 'Failed to create tag'),
+  })
 
   // Populate the controlled inputs when the note loads/changes (guarded set-during-render —
   // the documented React pattern for resetting state when an entity id changes).
@@ -233,6 +276,21 @@ export default function NoteEditorPage() {
         </Button>
         <div className="flex items-center gap-3">
           <SaveIndicator state={saveState} />
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-8 text-muted-foreground hover:text-foreground"
+            title="Print / Save as PDF"
+            onClick={() =>
+              printNote(
+                title || 'Untitled',
+                editorRef.current?.getHTML() || '',
+                selectedClient?.name || null,
+              )
+            }
+          >
+            <Printer className="size-4" />
+          </Button>
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button
@@ -270,9 +328,28 @@ export default function NoteEditorPage() {
         className="bricolage border-0 shadow-none focus-visible:ring-0 px-0 h-auto text-3xl font-bold tracking-tight placeholder:text-muted-foreground/40 md:text-3xl"
       />
 
-      {/* Client link */}
+      {/* Tags */}
+      <div className="flex flex-wrap items-center gap-1.5">
+        {noteTags.map((tag) => (
+          <TagPill
+            key={tag.id}
+            tag={tag}
+            onRemove={() => toggleTagMutation.mutate(tag.id)}
+          />
+        ))}
+        <TagPicker
+          selectedTagIds={selectedTagIds}
+          allTags={allTags ?? []}
+          onToggle={(tagId) => toggleTagMutation.mutate(tagId)}
+          onCreate={(name) => createTagMutation.mutateAsync(name)}
+          isBusy={createTagMutation.isPending}
+          onManage={() => setManageTagsOpen(true)}
+        />
+      </div>
+
+      {/* Properties bar: linked to + created */}
       <div className="flex items-center gap-2 pb-2 border-b">
-        <span className="text-xs text-muted-foreground">Linked to</span>
+        <span className="text-xs text-muted-foreground shrink-0">Linked to</span>
         <Select value={clientId} onValueChange={handleClientChange}>
           <SelectTrigger className="h-8 w-auto gap-2 border-0 shadow-none px-2 text-xs font-medium hover:bg-accent">
             <SelectValue>
@@ -308,6 +385,16 @@ export default function NoteEditorPage() {
             ))}
           </SelectContent>
         </Select>
+
+        <div className="ml-auto flex items-center gap-1 shrink-0 text-xs text-muted-foreground">
+          <span>{format(new Date(note.created_at), 'd MMM yyyy, h:mm a')}</span>
+          {note.created_by_name && (
+            <>
+              <span>·</span>
+              <span className="font-medium text-foreground">{note.created_by_name}</span>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Body */}
@@ -315,6 +402,13 @@ export default function NoteEditorPage() {
         key={note.id}
         content={parseNoteBody(note.body)}
         onChange={handleBodyChange}
+        editorRef={editorRef}
+      />
+
+      <ManageTagsDialog
+        open={manageTagsOpen}
+        onOpenChange={setManageTagsOpen}
+        tags={allTags ?? []}
       />
     </div>
   )

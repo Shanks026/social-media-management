@@ -1,6 +1,21 @@
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 
+export const CATEGORY_DOT_COLORS = {
+  'Contract':         'bg-blue-500',
+  'NDA':              'bg-purple-500',
+  'Brand Guidelines': 'bg-pink-500',
+  'Creative Brief':   'bg-orange-500',
+  'Brand Assets':     'bg-yellow-500',
+  'Meeting Notes':    'bg-teal-500',
+  'Invoice / Finance':'bg-green-500',
+  'SOP':              'bg-indigo-500',
+  'Pitch Deck':       'bg-cyan-500',
+  'Case Study':       'bg-amber-500',
+  'Discovery Notes':  'bg-teal-500',
+  'Other':            'bg-muted-foreground',
+}
+
 const CATEGORY_STYLES = {
   // Client categories
   'Contract':         'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',

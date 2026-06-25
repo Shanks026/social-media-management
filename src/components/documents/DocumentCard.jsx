@@ -258,8 +258,11 @@ export default function DocumentCard({ doc }) {
                 <Building2 className="size-3 text-muted-foreground" />
               </div>
             )}
-            <span className="text-xs font-medium text-muted-foreground max-w-28 truncate">
+            <span className="text-xs font-medium text-muted-foreground max-w-40 truncate">
               {doc.clients?.name ?? doc.prospects?.business_name}
+              {doc.clients?.is_internal && (
+                <span className="ml-1 text-muted-foreground/60">(You)</span>
+              )}
             </span>
           </div>
         )}
