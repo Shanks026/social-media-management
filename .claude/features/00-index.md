@@ -6,7 +6,7 @@ Tracks planned and built features. Each entry links to its full planning doc.
 
 | # | Feature | Doc | Status |
 |---|---------|-----|--------|
-| 01 | Notes & Tasks Split | [01-notes-and-tasks-split.md](01-notes-and-tasks-split.md) | Planned — Phase 1 not started |
+| 01 | Notes & Tasks Split | [01-notes-and-tasks-split.md](01-notes-and-tasks-split.md) | ✅ Complete |
 
 ## Key Database Changes
 

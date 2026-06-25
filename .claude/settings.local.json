@@ -134,7 +134,8 @@
       "Bash(rm -rf test)",
       "Bash(ls -d test)",
       "Bash(cd \"c:/Users/chris_austin/Desktop/social-media-management/src\" && echo \"=== deleteClient / delete account flows ===\" && grep -rIn \"deleteClient\\\\|delete.*account\\\\|deleteAccount\\\\|deleteWorkspace\" api pages 2>/dev/null | head -20; echo \"=== auth.admin / storage remove ===\" && grep -rIn \"auth.admin\\\\|\\\\.remove\\(\\\\|storage.from\" api 2>/dev/null | head -20; echo \"=== existing edge functions ===\" && ls ../supabase/functions 2>/dev/null)",
-      "Read(//c/Users/chris_austin/Desktop/supabase/**)"
+      "Read(//c/Users/chris_austin/Desktop/supabase/**)",
+      "PowerShell(Rename-Item -Path \"c:\\\\Users\\\\chris_austin\\\\Desktop\\\\social-media-management\\\\src\\\\pages\\\\NotesAndReminders.jsx\" -NewName \"TasksAndReminders.jsx\")"
     ]
   }
 }

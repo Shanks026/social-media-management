@@ -1058,7 +1058,7 @@ export default function CampaignDetailPage() {
               <Card className="border-none bg-card/50 shadow-sm ring-1 ring-border/50 gap-0">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
                   <div className="flex items-center gap-2">
-                    <CardTitle className="text-lg font-medium bricolage">Notes</CardTitle>
+                    <CardTitle className="text-lg font-medium bricolage">Tasks</CardTitle>
                     {!notesLoading && (
                       <span className="text-lg text-muted-foreground tabular-nums">
                         {campaignNotes.filter((n) => n.status !== 'ARCHIVED').length}
@@ -1077,7 +1077,7 @@ export default function CampaignDetailPage() {
                         <Plus className="h-4 w-4" />
                       </Button>
                     </CreateNoteDialog>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" onClick={() => navigate('/operations/notes')}>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" onClick={() => navigate('/operations/tasks')}>
                       <ArrowUpRight className="h-4 w-4" />
                     </Button>
                   </div>

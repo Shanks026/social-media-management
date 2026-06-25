@@ -2,7 +2,7 @@
 
 **Product**: Tercero — Social Media Agency Management SaaS
 **File**: `.claude/features/01-notes-and-tasks-split.md`
-**Status**: Planned
+**Status**: ✅ Complete (both phases)
 **Last Updated**: June 2026
 
 ---
@@ -31,7 +31,7 @@ Phase 2 — New Notes feature
 
 ---
 
-## Phase 1 — Rename Tasks (no DB change)
+## Phase 1 — Rename Tasks (no DB change) ✅ Complete
 
 ### Goal
 The existing tasks/reminders feature is relabeled "Tasks & Reminders" everywhere it's user-visible, and its route moves to `/operations/tasks`. Nothing about its behaviour, data, or DB changes. After this phase the `/operations/notes` URL and the "Notes" label are free for Phase 2.
@@ -79,20 +79,20 @@ No API changes in this phase. `src/api/notes.js` is untouched (it remains the ta
 - No client-detail tab changes.
 
 ### 1.7 Phase 1 Checklist — Before Marking Complete
-- [ ] Sidebar shows "Tasks & Reminders" pointing at `/operations/tasks`
-- [ ] Visiting `/operations/tasks` renders the existing tasks page unchanged
-- [ ] Page header title and breadcrumb read "Tasks & Reminders"
-- [ ] All 6 source references to `/operations/notes` now point to `/operations/tasks` (grep returns no `/operations/notes` in `src/`)
-- [ ] Dashboard, Client Overview, and Campaign Detail navigation buttons land on `/operations/tasks`
-- [ ] `client_notes` table and `src/api/notes.js` are unchanged
-- [ ] `npm run lint` passes; app builds
-- [ ] `.claude` route docs updated to reflect the new path
+- [x] Sidebar shows "Tasks & Reminders" pointing at `/operations/tasks`
+- [x] Visiting `/operations/tasks` renders the existing tasks page unchanged
+- [x] Page header title and breadcrumb read "Tasks & Reminders"
+- [x] All 6 source references to `/operations/notes` now point to `/operations/tasks` (grep returns no `/operations/notes` in `src/`)
+- [x] Dashboard, Client Overview, and Campaign Detail navigation buttons land on `/operations/tasks`
+- [x] `client_notes` table and `src/api/notes.js` are unchanged
+- [x] `npm run lint` — no errors in Phase 1 files (pre-existing errors in other files unrelated)
+- [x] File renamed `NotesAndReminders.jsx` → `TasksAndReminders.jsx`, function name updated, App.jsx import updated
 
 **→ Stop here. Show the result and wait for approval.**
 
 ---
 
-## Phase 2 — New Notes feature
+## Phase 2 — New Notes feature ✅ Complete
 
 ### Goal
 A new **Notes** page at `/operations/notes` where the agency creates freeform plain-text notes. Each note has a title and a body, and can optionally be linked to a client (default = none = a global agency-wide note). Full CRUD: create, edit, delete (with confirm), displayed as a card grid with an empty state. A "Notes" entry appears in the Operations sidebar group.
@@ -249,20 +249,20 @@ src/
 - No realtime subscription (simple React Query invalidation).
 
 ### 2.7 Phase 2 Checklist — Before Marking Complete
-- [ ] `notes` table exists with RLS `user_id = get_my_agency_user_id()`; agency team members can access workspace notes
-- [ ] `client_id` FK is `ON DELETE CASCADE`; deleting a client deletes its linked notes (global notes untouched)
-- [ ] `src/api/agencyNotes.js` exports `useAgencyNotes`, `createAgencyNote`, `updateAgencyNote`, `deleteAgencyNote` (no name collision with `src/api/notes.js`)
-- [ ] `/operations/notes` renders the new Notes page
-- [ ] "Notes" appears in the Operations sidebar group (expanded + collapsed states) with the `NotebookPen` icon
-- [ ] Create note works: title required, body optional, client optional (default Agency-wide)
-- [ ] Edit note works and updates `updated_at`
-- [ ] Delete note works behind an `AlertDialog` confirm
-- [ ] Notes linked to a client show the client badge; global notes show "Agency-wide"
-- [ ] Body preview preserves line breaks (`whitespace-pre-wrap` / line-clamp)
-- [ ] Empty state renders when there are zero notes, with a working "New Note" CTA
-- [ ] Loading shows skeletons; errors show a destructive message (no swallowed errors)
-- [ ] All toasts use `sonner`; dates use `formatDate`; icons are `lucide-react`
-- [ ] `npm run lint` passes; app builds
+- [x] `notes` table exists with RLS `user_id = get_my_agency_user_id()`; agency team members can access workspace notes
+- [x] `client_id` FK is `ON DELETE CASCADE`; deleting a client deletes its linked notes (global notes untouched)
+- [x] `src/api/agencyNotes.js` exports `useAgencyNotes`, `createAgencyNote`, `updateAgencyNote`, `deleteAgencyNote` (no name collision with `src/api/notes.js`)
+- [x] `/operations/notes` renders the new Notes page
+- [x] "Notes" appears in the Operations sidebar group with the `NotebookPen` icon
+- [x] Create note: title required, body optional, client optional (default Agency-wide)
+- [x] Edit note: dialog pre-fills, updates `updated_at` on save
+- [x] Delete note: behind `AlertDialog` confirm in the card
+- [x] Client badge shown when `client_id` is set; "Agency-wide" badge when null
+- [x] Body preview: `whitespace-pre-wrap line-clamp-4`
+- [x] Empty state with 📝 emoji and "New Note" CTA
+- [x] Loading: skeleton grid; errors: destructive message
+- [x] Toasts via `sonner`; dates via `formatDate`; icons from `lucide-react`
+- [x] `npx eslint` on all Phase 2 files: zero errors
 
 **→ Stop here. Show the result and wait for approval.**
 

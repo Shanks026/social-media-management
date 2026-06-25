@@ -11,6 +11,7 @@ import {
   ArrowUpRight,
   CheckCircle2,
   Clock,
+  ClipboardCheck,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -120,7 +121,7 @@ export default function DashboardMeetingsNotes() {
               <CalendarIcon className="size-3.5" /> Meetings
             </TabsTrigger>
             <TabsTrigger value="notes" className="gap-1.5 text-xs">
-              <FileText className="size-3.5" /> Notes
+              <ClipboardCheck className="size-3.5" /> Tasks
             </TabsTrigger>
           </TabsList>
 
@@ -166,7 +167,7 @@ export default function DashboardMeetingsNotes() {
                 navigate(
                   activeTab === 'meetings'
                     ? '/operations/meetings'
-                    : '/operations/notes',
+                    : '/operations/tasks',
                 )
               }
             >
@@ -271,7 +272,7 @@ export default function DashboardMeetingsNotes() {
                     variant="ghost"
                     size="sm"
                     className="h-7 text-xs px-2 text-muted-foreground hover:text-foreground -mr-2"
-                    onClick={() => navigate('/operations/notes')}
+                    onClick={() => navigate('/operations/tasks')}
                   >
                     View all <ArrowUpRight className="ml-1 h-3 w-3" />
                   </Button>

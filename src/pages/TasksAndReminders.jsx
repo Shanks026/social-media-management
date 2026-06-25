@@ -519,7 +519,7 @@ function KanbanNotesView({ notes, clientMap, queryClient }) {
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
-export default function NotesAndReminders() {
+export default function TasksAndReminders() {
   const { setHeader } = useHeader()
   const queryClient = useQueryClient()
 
@@ -536,10 +536,10 @@ export default function NotesAndReminders() {
 
   useEffect(() => {
     setHeader({
-      title: 'Notes & Reminders',
+      title: 'Tasks & Reminders',
       breadcrumbs: [
         { label: 'Operations', href: '/operations' },
-        { label: 'Notes & Reminders', href: '/operations/notes' },
+        { label: 'Tasks & Reminders', href: '/operations/tasks' },
       ],
     })
   }, [setHeader])
@@ -653,7 +653,7 @@ export default function NotesAndReminders() {
       <div className="flex items-center justify-between">
         <div className="space-y-1">
           <h1 className="text-3xl font-normal tracking-tight text-foreground bricolage">
-            Notes & Reminders{' '}
+            Tasks & Reminders{' '}
             {filteredNotes.length > 0 && (
               <span className="text-muted-foreground/50 ml-2 font-extralight">
                 {filteredNotes.length}
@@ -661,7 +661,7 @@ export default function NotesAndReminders() {
             )}
           </h1>
           <p className="text-sm text-muted-foreground">
-            All notes and reminders across your organization
+            All tasks and reminders across your organization
           </p>
         </div>
 

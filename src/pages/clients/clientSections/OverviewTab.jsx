@@ -10,8 +10,13 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   CircleDollarSign,
+  ClipboardCheck,
 } from 'lucide-react'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 import {
   Card,
   CardContent,
@@ -67,14 +72,14 @@ const platformChartConfig = {
 
 // Chart config — keyed by display name, matching post_status enum
 const chartConfig = {
-  'DRAFT':                { label: 'Draft',               color: '#3b82f6' },
-  'PENDING APPROVAL':     { label: 'Pending Approval',    color: '#f97316' },
-  'APPROVED':             { label: 'Approved',            color: '#22c55e' },
-  'NEEDS REVISION':       { label: 'Needs Revision',      color: '#ec4899' },
-  'SCHEDULED':            { label: 'Scheduled',           color: '#a855f7' },
-  'DELIVERED':            { label: 'Delivered',           color: '#14b8a6' },
-  'PARTIALLY PUBLISHED':  { label: 'Partially Published', color: '#84cc16' },
-  'PUBLISHED':            { label: 'Published',           color: '#10b981' },
+  DRAFT: { label: 'Draft', color: '#3b82f6' },
+  'PENDING APPROVAL': { label: 'Pending Approval', color: '#f97316' },
+  APPROVED: { label: 'Approved', color: '#22c55e' },
+  'NEEDS REVISION': { label: 'Needs Revision', color: '#ec4899' },
+  SCHEDULED: { label: 'Scheduled', color: '#a855f7' },
+  DELIVERED: { label: 'Delivered', color: '#14b8a6' },
+  'PARTIALLY PUBLISHED': { label: 'Partially Published', color: '#84cc16' },
+  PUBLISHED: { label: 'Published', color: '#10b981' },
 }
 
 const ALLOWED_STATUSES = [
@@ -90,14 +95,14 @@ const ALLOWED_STATUSES = [
 
 // Maps DB enum values → display names (ARCHIVED excluded from chart)
 const STATUS_DISPLAY_MAP = {
-  DRAFT:                'DRAFT',
-  PENDING_APPROVAL:     'PENDING APPROVAL',
-  APPROVED:             'APPROVED',
-  NEEDS_REVISION:       'NEEDS REVISION',
-  SCHEDULED:            'SCHEDULED',
-  DELIVERED:            'DELIVERED',
-  PARTIALLY_PUBLISHED:  'PARTIALLY PUBLISHED',
-  PUBLISHED:            'PUBLISHED',
+  DRAFT: 'DRAFT',
+  PENDING_APPROVAL: 'PENDING APPROVAL',
+  APPROVED: 'APPROVED',
+  NEEDS_REVISION: 'NEEDS REVISION',
+  SCHEDULED: 'SCHEDULED',
+  DELIVERED: 'DELIVERED',
+  PARTIALLY_PUBLISHED: 'PARTIALLY PUBLISHED',
+  PUBLISHED: 'PUBLISHED',
 }
 
 function normalizeStatus(raw) {
@@ -302,7 +307,7 @@ export default function OverviewTab({ client }) {
                   <CalendarIcon className="size-3.5" /> Meetings
                 </TabsTrigger>
                 <TabsTrigger value="notes" className="gap-1.5 text-xs">
-                  <FileText className="size-3.5" /> Notes
+                  <ClipboardCheck className="size-3.5" /> Tasks
                 </TabsTrigger>
               </TabsList>
               <div className="flex items-center gap-1">
@@ -314,14 +319,21 @@ export default function OverviewTab({ client }) {
                           defaultClientId={client.id}
                           lockClient={true}
                         >
-                          <Button variant="ghost" size="icon" className="h-8 w-8" disabled={client.is_internal}>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            disabled={client.is_internal}
+                          >
                             <Plus className="h-4 w-4" />
                           </Button>
                         </CreateMeetingDialog>
                       </span>
                     </TooltipTrigger>
                     {client.is_internal && (
-                      <TooltipContent>Meetings are not available for internal accounts</TooltipContent>
+                      <TooltipContent>
+                        Meetings are not available for internal accounts
+                      </TooltipContent>
                     )}
                   </Tooltip>
                 ) : (
@@ -371,7 +383,8 @@ export default function OverviewTab({ client }) {
                     <div className="flex items-center justify-between mt-auto pt-3 border-t border-dashed border-border/40">
                       {extraMeetings > 0 ? (
                         <span className="text-xs text-muted-foreground">
-                          +{extraMeetings} more meeting{extraMeetings !== 1 && 's'}
+                          +{extraMeetings} more meeting
+                          {extraMeetings !== 1 && 's'}
                         </span>
                       ) : (
                         <span />
@@ -390,10 +403,7 @@ export default function OverviewTab({ client }) {
               </TabsContent>
 
               {/* Notes Tab */}
-              <TabsContent
-                value="notes"
-                className="mt-0 flex-1 flex flex-col"
-              >
+              <TabsContent value="notes" className="mt-0 flex-1 flex flex-col">
                 {isLoadingNotes ? (
                   <div className="space-y-3">
                     {[1, 2, 3].map((i) => (
@@ -411,13 +421,19 @@ export default function OverviewTab({ client }) {
                     <div className="h-10 w-10 border border-dashed rounded-full flex items-center justify-center text-muted-foreground">
                       <FileText className="h-4 w-4 opacity-50" />
                     </div>
-                    <p className="text-sm text-muted-foreground">No pending notes</p>
+                    <p className="text-sm text-muted-foreground">
+                      No pending notes
+                    </p>
                   </div>
                 ) : (
                   <div className="flex flex-col flex-1">
                     <div className="flex flex-col gap-3">
                       {visibleNotes.map((note) => (
-                        <NoteRow key={note.id} note={note} variant="client-card" />
+                        <NoteRow
+                          key={note.id}
+                          note={note}
+                          variant="client-card"
+                        />
                       ))}
                     </div>
                     <div className="flex items-center justify-between mt-auto pt-3 border-t border-dashed border-border/40">
@@ -432,7 +448,7 @@ export default function OverviewTab({ client }) {
                         variant="ghost"
                         size="sm"
                         className="h-7 text-xs px-2 text-muted-foreground hover:text-foreground"
-                        onClick={() => navigate('/operations/notes')}
+                        onClick={() => navigate('/operations/tasks')}
                       >
                         View all notes <ArrowUpRight className="ml-1 h-3 w-3" />
                       </Button>
@@ -447,7 +463,9 @@ export default function OverviewTab({ client }) {
         {/* COLUMN 1: WORKFLOW HEALTH (moved to center) */}
         <Card className="border-none shadow-sm ring-1 ring-border/50 bg-card/50 flex flex-col h-auto">
           <CardHeader className="pb-2">
-            <CardTitle className="text-lg font-medium bricolage">Workflow Health</CardTitle>
+            <CardTitle className="text-lg font-medium bricolage">
+              Workflow Health
+            </CardTitle>
             <CardDescription>
               Pipeline distribution across statuses
             </CardDescription>
@@ -475,10 +493,17 @@ export default function OverviewTab({ client }) {
               <>
                 {/* Scaled-up Donut Chart using Shadcn ChartContainer */}
                 <div className="h-[240px] w-full mt-2 relative">
-                  <ChartContainer config={chartConfig} className="h-full w-full">
+                  <ChartContainer
+                    config={chartConfig}
+                    className="h-full w-full"
+                  >
                     <PieChart>
                       <Pie
-                        data={totalPosts === 0 ? [{ name: 'empty', value: 1 }] : pieChartData}
+                        data={
+                          totalPosts === 0
+                            ? [{ name: 'empty', value: 1 }]
+                            : pieChartData
+                        }
                         cx="50%"
                         cy="80%"
                         startAngle={180}
@@ -514,7 +539,9 @@ export default function OverviewTab({ client }) {
                   >
                     {totalPosts === 0 ? (
                       <>
-                        <span className="text-3xl font-bold text-muted-foreground/30">0</span>
+                        <span className="text-3xl font-bold text-muted-foreground/30">
+                          0
+                        </span>
                         <span className="text-[11px] mt-1 text-muted-foreground/40 font-medium uppercase tracking-wider">
                           Deliverables
                         </span>
@@ -560,8 +587,9 @@ export default function OverviewTab({ client }) {
                       <div className="flex items-center gap-2 border-l-2 border-destructive pl-3">
                         <AlertCircle className="h-3.5 w-3.5 text-destructive shrink-0" />
                         <span className="text-xs text-destructive font-medium">
-                          {needsRevisionCount} post{needsRevisionCount !== 1 && 's'}{' '}
-                          require immediate revision
+                          {needsRevisionCount} post
+                          {needsRevisionCount !== 1 && 's'} require immediate
+                          revision
                         </span>
                       </div>
                     ) : pendingApprovalCount > 0 ? (

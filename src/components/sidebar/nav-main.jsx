@@ -11,6 +11,7 @@ import {
   Layers,
   Send,
   Bell,
+  NotebookPen,
   Video,
   FolderOpen,
   FileBarChart,
@@ -95,7 +96,8 @@ const BASE_NAV_ITEMS = [
     url: '/operations',
     icon: Layers,
     items: [
-      { title: 'Notes & Reminders', url: '/operations/notes', icon: Bell },
+      { title: 'Tasks & Reminders', url: '/operations/tasks', icon: Bell },
+      { title: 'Notes', url: '/operations/notes', icon: NotebookPen },
       { title: 'Meetings', url: '/operations/meetings', icon: Video },
       { title: 'Documents', url: '/documents', icon: FolderOpen },
       {
