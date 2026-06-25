@@ -7,6 +7,8 @@ import { format } from 'date-fns'
 import { useSubscription } from '@/api/useSubscription'
 import { PlanOverview } from '../billingAndUsage/PlanOverview'
 import { allPlanMeta } from '../billingAndUsage/planMeta'
+import { useMyMemberRecord } from '@/api/team'
+import { getRolePalette, ADMIN_PALETTE } from '@/lib/team-roles'
 
 // UI
 import { Button } from '@/components/ui/button'
@@ -37,6 +39,7 @@ import {
   Heart,
   Save,
   X,
+  Briefcase,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import ChangePasswordDialog from '@/components/settings/ChangePasswordDialog'
@@ -52,6 +55,10 @@ export default function ProfileSettings() {
   const { user } = useAuth()
   const navigate = useNavigate()
   const { data: sub, isLoading } = useSubscription()
+  const { data: memberRecord } = useMyMemberRecord()
+
+  const isAdmin = memberRecord?.system_role === 'admin'
+  const functionalRole = memberRecord?.functional_role ?? null
 
   const currentPlanName = sub?.plan_name?.toLowerCase() || 'ignite'
   const currentPlan = allPlanMeta[currentPlanName] || allPlanMeta.ignite
@@ -125,10 +132,7 @@ export default function ProfileSettings() {
     try {
       const previousAvatarUrl = user?.user_metadata?.avatar_url || ''
       const { error } = await supabase.auth.updateUser({
-        data: {
-          full_name: fullName,
-          avatar_url: avatarUrl,
-        },
+        data: { full_name: fullName, avatar_url: avatarUrl },
       })
       if (error) throw error
 
@@ -250,6 +254,26 @@ export default function ProfileSettings() {
               placeholder="Your name"
             />
           </div>
+
+          {(isAdmin || functionalRole) && (
+            <InfoRow
+              icon={<Briefcase size={16} />}
+              label="Role"
+              value={
+                isAdmin ? (
+                  <span className="flex items-center gap-2">
+                    <span className={cn('size-2 rounded-full shrink-0', ADMIN_PALETTE.dot)} />
+                    Admin
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-2">
+                    <span className={cn('size-2 rounded-full shrink-0', getRolePalette(functionalRole)?.dot ?? 'bg-muted-foreground/40')} />
+                    {functionalRole}
+                  </span>
+                )
+              }
+            />
+          )}
 
           <div className="space-y-6">
             <InfoRow

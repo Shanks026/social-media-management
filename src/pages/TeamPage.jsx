@@ -1,9 +1,37 @@
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, useCallback } from 'react'
+import {
+  useReactTable,
+  getCoreRowModel,
+  getSortedRowModel,
+  getFilteredRowModel,
+  flexRender,
+  createColumnHelper,
+} from '@tanstack/react-table'
 import { useHeader } from '@/components/misc/header-context'
 import { useAuth } from '@/context/AuthContext'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import { Input } from '@/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,8 +54,11 @@ import {
   Link,
   CalendarDays,
   Clock,
-  Briefcase,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
   RotateCcw,
+  Search,
 } from 'lucide-react'
 import {
   useTeamMembers,
@@ -50,7 +81,13 @@ import {
   EmptyDescription,
 } from '@/components/ui/empty'
 
-// ─── MemberAvatar ───────────────────────────────────────────────────────────────
+import {
+  ADMIN_PALETTE,
+  REMOVED_PALETTE,
+  getRolePalette,
+} from '@/lib/team-roles'
+
+// ─── Sub-components ─────────────────────────────────────────────────────────
 
 function MemberAvatar({ name, email, avatarUrl }) {
   if (avatarUrl) {
@@ -58,7 +95,7 @@ function MemberAvatar({ name, email, avatarUrl }) {
       <img
         src={avatarUrl}
         alt={name || email}
-        className="size-10 rounded-xl object-cover shrink-0"
+        className="size-8 rounded-lg object-cover shrink-0"
       />
     )
   }
@@ -66,29 +103,32 @@ function MemberAvatar({ name, email, avatarUrl }) {
     ? name.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase()
     : (email?.[0] ?? '?').toUpperCase()
   return (
-    <div className="size-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary text-sm font-semibold shrink-0">
+    <div className="size-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary text-xs font-semibold shrink-0">
       {initials}
     </div>
   )
 }
 
-// ─── Tab trigger class (mirrors Deliverables) ────────────────────────────────
+function SortableHeader({ column, label }) {
+  const dir = column.getIsSorted()
+  return (
+    <button
+      className="flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+      onClick={() => column.toggleSorting(dir === 'asc')}
+    >
+      {label}
+      {dir === 'asc' ? (
+        <ArrowUp className="size-3" />
+      ) : dir === 'desc' ? (
+        <ArrowDown className="size-3" />
+      ) : (
+        <ArrowUpDown className="size-3 opacity-40" />
+      )}
+    </button>
+  )
+}
 
-const TAB_CLASS = `
-  relative rounded-none bg-transparent px-0 pb-3 pt-0 text-[13px] font-medium transition-none
-  shadow-none border-b-2 border-transparent text-muted-foreground
-  flex-none w-fit gap-2
-  data-[state=active]:bg-transparent
-  dark:data-[state=active]:bg-transparent
-  data-[state=active]:text-black
-  dark:data-[state=active]:text-white
-  data-[state=active]:border-black
-  dark:data-[state=active]:border-white
-  data-[state=active]:shadow-none
-  data-[state=active]:border-x-0
-  data-[state=active]:border-t-0
-  focus-visible:ring-0
-`
+const columnHelper = createColumnHelper()
 
 // ─── Main Page ───────────────────────────────────────────────────────────────
 
@@ -97,7 +137,8 @@ export default function TeamPage() {
   const { user, userRole } = useAuth()
   const isAdmin = userRole === 'admin'
 
-  const [activeTab, setActiveTab] = useState('team')
+  const [sorting, setSorting] = useState([])
+  const [globalFilter, setGlobalFilter] = useState('')
   const [roleFilter, setRoleFilter] = useState('all')
   const [inviteOpen, setInviteOpen] = useState(false)
   const [removingMember, setRemovingMember] = useState(null)
@@ -111,42 +152,16 @@ export default function TeamPage() {
   const restoreMember = useRestoreMember()
   const deleteMemberPermanently = useDeleteMemberPermanently()
 
-  // Role filter chips — derived from actual member data; "Removed" added when applicable
-  const roleOptions = useMemo(() => {
-    const hasAdmins = members.some((m) => m.system_role === 'admin')
-    const functionalRoles = [
-      ...new Set(
-        members
-          .filter((m) => m.functional_role && m.system_role !== 'admin')
-          .map((m) => m.functional_role),
-      ),
-    ]
-    const opts = [{ key: 'all', label: 'All' }]
-    if (hasAdmins) opts.push({ key: 'admin', label: 'Admin' })
-    functionalRoles.forEach((r) => opts.push({ key: r, label: r }))
-    if (isAdmin && removedMembers.length > 0)
-      opts.push({ key: 'removed', label: 'Removed' })
-    return opts
-  }, [members, removedMembers, isAdmin])
-
-  const filteredMembers = useMemo(() => {
-    if (roleFilter === 'removed') return removedMembers
-    if (roleFilter === 'all') return members
-    if (roleFilter === 'admin') return members.filter((m) => m.system_role === 'admin')
-    return members.filter((m) => m.functional_role === roleFilter)
-  }, [members, removedMembers, roleFilter])
-
   useEffect(() => {
     setHeader({
       title: 'Team',
-      breadcrumbs: [
-        { label: 'My Organization' },
-        { label: 'Team' },
-      ],
+      breadcrumbs: [{ label: 'My Organization' }, { label: 'Team' }],
     })
   }, [setHeader])
 
-  const handleRemove = async () => {
+  // ── Handlers ──────────────────────────────────────────────────────────────
+
+  const handleRemove = useCallback(async () => {
     if (!removingMember) return
     try {
       await removeMember.mutateAsync(removingMember.id)
@@ -156,27 +171,27 @@ export default function TeamPage() {
     } finally {
       setRemovingMember(null)
     }
-  }
+  }, [removingMember, removeMember])
 
-  const handleRevoke = async (inviteId) => {
+  const handleRevoke = useCallback(async (inviteId) => {
     try {
       await revokeInvite.mutateAsync(inviteId)
       toast.success('Invite revoked')
     } catch (err) {
       toast.error(err.message || 'Failed to revoke invite')
     }
-  }
+  }, [revokeInvite])
 
-  const handleRestore = async (member) => {
+  const handleRestore = useCallback(async (member) => {
     try {
       await restoreMember.mutateAsync(member.id)
       toast.success(`${member.full_name || 'Member'} restored`)
     } catch (err) {
       toast.error(err.message || 'Failed to restore member')
     }
-  }
+  }, [restoreMember])
 
-  const handleDeletePermanently = async () => {
+  const handleDeletePermanently = useCallback(async () => {
     if (!deletingMember) return
     try {
       await deleteMemberPermanently.mutateAsync(deletingMember.id)
@@ -186,18 +201,197 @@ export default function TeamPage() {
     } finally {
       setDeletingMember(null)
     }
-  }
+  }, [deletingMember, deleteMemberPermanently])
 
-  const handleCopyInviteLink = (token) => {
+  const handleCopyInviteLink = useCallback((token) => {
     const baseUrl = import.meta.env.VITE_APP_URL || window.location.origin
     navigator.clipboard.writeText(`${baseUrl}/join/${token}`)
     toast.success('Link copied')
-  }
+  }, [])
+
+  // ── Filter chips + table data ─────────────────────────────────────────────
+
+  const roleOptions = useMemo(() => {
+    const hasAdmins = members.some((m) => m.system_role === 'admin')
+    const functionalRoles = [
+      ...new Set(
+        members
+          .filter((m) => m.functional_role && m.system_role !== 'admin')
+          .map((m) => m.functional_role),
+      ),
+    ]
+    const opts = [{ key: 'all', label: 'All Members', dot: null }]
+    if (hasAdmins) opts.push({ key: 'admin', label: 'Admin', dot: ADMIN_PALETTE.dot })
+    functionalRoles.forEach((r) => opts.push({ key: r, label: r, dot: getRolePalette(r)?.dot }))
+    if (isAdmin && removedMembers.length > 0)
+      opts.push({ key: 'removed', label: 'Removed', dot: REMOVED_PALETTE.dot })
+    return opts
+  }, [members, removedMembers, isAdmin])
+
+  const tableData = useMemo(() => {
+    if (roleFilter === 'removed') return removedMembers.map((m) => ({ ...m, _removed: true }))
+    if (roleFilter === 'all') return members
+    if (roleFilter === 'admin') return members.filter((m) => m.system_role === 'admin')
+    return members.filter((m) => m.functional_role === roleFilter)
+  }, [members, removedMembers, roleFilter])
+
+  // ── Column definitions ────────────────────────────────────────────────────
+
+  const columns = useMemo(() => [
+    columnHelper.accessor((row) => row.full_name || row.email, {
+      id: 'member',
+      header: ({ column }) => <SortableHeader column={column} label="Member" />,
+      cell: ({ row }) => {
+        const m = row.original
+        const isSelf = m.member_user_id === user?.id
+        return (
+          <div className="flex items-center gap-3 py-1">
+            <MemberAvatar name={m.full_name} email={m.email} avatarUrl={m.avatar_url} />
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-sm font-medium leading-tight">
+                  {m.full_name || m.email}
+                </span>
+                {isSelf && (
+                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 font-normal">
+                    You
+                  </Badge>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground mt-0.5 truncate max-w-55">
+                {m.email}
+              </p>
+            </div>
+          </div>
+        )
+      },
+    }),
+
+    columnHelper.accessor((row) => row.system_role === 'admin' ? 'Admin' : (row.functional_role || 'Member'), {
+      id: 'role',
+      header: () => <span className="text-xs font-medium text-muted-foreground">Role</span>,
+      cell: ({ row }) => {
+        const m = row.original
+        const isOwner = m.system_role === 'admin'
+        if (isOwner) {
+          return (
+            <Badge className={cn('border-0 text-xs font-medium', ADMIN_PALETTE.badge)}>
+              Admin
+            </Badge>
+          )
+        }
+        if (m.functional_role) {
+          const palette = getRolePalette(m.functional_role)
+          return (
+            <Badge className={cn('border-0 text-xs font-medium', palette?.badge)}>
+              {m.functional_role}
+            </Badge>
+          )
+        }
+        return <span className="text-xs text-muted-foreground">Member</span>
+      },
+    }),
+
+    columnHelper.accessor('joined_at', {
+      id: 'joined',
+      header: ({ column }) => <SortableHeader column={column} label="Joined" />,
+      sortingFn: 'datetime',
+      cell: ({ row }) => {
+        const m = row.original
+        if (m._removed) {
+          return <Badge variant="outline" className="text-[10px] text-muted-foreground font-normal">Removed</Badge>
+        }
+        return (
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <CalendarDays size={11} className="shrink-0" />
+            {formatDate(m.joined_at)}
+          </div>
+        )
+      },
+    }),
+
+    columnHelper.display({
+      id: 'actions',
+      header: () => null,
+      cell: ({ row }) => {
+        const m = row.original
+        const isSelf = m.member_user_id === user?.id
+        const isOwner = m.system_role === 'admin'
+
+        if (m._removed) {
+          return (
+            <div className="flex items-center justify-end gap-0.5">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-8 text-muted-foreground hover:text-foreground"
+                    onClick={() => handleRestore(m)}
+                  >
+                    <RotateCcw className="size-3.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Restore access</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-8 text-muted-foreground hover:text-destructive"
+                    onClick={() => setDeletingMember(m)}
+                  >
+                    <Trash2 className="size-3.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Delete permanently</TooltipContent>
+              </Tooltip>
+            </div>
+          )
+        }
+
+        if (isAdmin && !isOwner && !isSelf) {
+          return (
+            <div className="flex justify-end">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-8 text-muted-foreground hover:text-destructive"
+                    onClick={() => setRemovingMember(m)}
+                  >
+                    <Trash2 className="size-3.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Remove member</TooltipContent>
+              </Tooltip>
+            </div>
+          )
+        }
+
+        return null
+      },
+    }),
+  ], [user?.id, isAdmin, handleRestore])
+
+  const table = useReactTable({
+    data: tableData,
+    columns,
+    state: { sorting, globalFilter },
+    onSortingChange: setSorting,
+    onGlobalFilterChange: setGlobalFilter,
+    globalFilterFn: 'includesString',
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+  })
 
   return (
     <div className="h-full bg-background overflow-y-auto overflow-x-hidden selection:bg-primary/10 [scrollbar-gutter:stable]">
       <div className="overflow-hidden">
-        <div className="px-8 pt-8 pb-20 space-y-6 max-w-[1400px] mx-auto animate-in fade-in duration-700 fill-mode-both">
+        <div className="px-8 pt-8 pb-20 space-y-6 max-w-350 mx-auto animate-in fade-in duration-700 fill-mode-both">
 
           {/* ── Page header ── */}
           <div className="flex items-center justify-between gap-4">
@@ -209,257 +403,209 @@ export default function TeamPage() {
                 Manage workspace members, invites, and access.
               </p>
             </div>
+
             {isAdmin && (
-              <Button
-                size="sm"
-                className="gap-2 shrink-0"
-                onClick={() => setInviteOpen(true)}
-              >
-                <UserPlus size={14} />
-                Invite Team Member
-              </Button>
+              <div className="flex items-center gap-2 shrink-0">
+                {/* ── Pending invites popover ── */}
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" size="sm" className="gap-2">
+                      <Link size={14} />
+                      Active Links
+                      {pendingInvites.length > 0 && (
+                        <Badge variant="secondary" className="text-xs px-1.5 py-0 min-w-4.5 text-center">
+                          {pendingInvites.length}
+                        </Badge>
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-105 p-0" align="end">
+                    <div className="px-4 pt-4 pb-3 border-b border-border/50">
+                      <p className="text-sm font-medium">Pending Invites</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Active invite links that haven&apos;t been accepted yet.
+                      </p>
+                    </div>
+                    {pendingInvites.length === 0 ? (
+                      <div className="flex flex-col items-center gap-1.5 py-8 text-center px-4">
+                        <span className="text-3xl leading-none select-none">📬</span>
+                        <p className="text-sm font-medium mt-1">No pending invites</p>
+                        <p className="text-xs text-muted-foreground">
+                          Links you generate will appear here until accepted.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="divide-y divide-border/40 max-h-72 overflow-y-auto">
+                        {pendingInvites.map((invite) => (
+                          <div key={invite.id} className="flex items-center gap-3 px-4 py-3">
+                            <div className="size-8 rounded-lg bg-muted flex items-center justify-center shrink-0">
+                              <Link size={13} className="text-muted-foreground" />
+                            </div>
+                            <div className="flex-1 min-w-0 space-y-0.5">
+                              <p className="text-xs font-mono text-foreground truncate">
+                                /join/{invite.token.slice(0, 18)}…
+                              </p>
+                              <div className="flex items-center gap-2.5 text-[11px] text-muted-foreground">
+                                <span className="flex items-center gap-1">
+                                  <CalendarDays size={10} />
+                                  {formatDate(invite.created_at)}
+                                </span>
+                                <span className="flex items-center gap-1">
+                                  <Clock size={10} />
+                                  Expires {formatDate(invite.expires_at)}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-0.5 shrink-0">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="size-7 text-muted-foreground hover:text-foreground"
+                                onClick={() => handleCopyInviteLink(invite.token)}
+                                title="Copy link"
+                              >
+                                <Copy className="size-3" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="size-7 text-muted-foreground hover:text-destructive"
+                                onClick={() => handleRevoke(invite.id)}
+                                title="Revoke"
+                              >
+                                <Trash2 className="size-3" />
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </PopoverContent>
+                </Popover>
+
+                <Button size="sm" className="gap-2" onClick={() => setInviteOpen(true)}>
+                  <UserPlus size={14} />
+                  Invite Team Member
+                </Button>
+              </div>
             )}
           </div>
 
-          {/* ── Tabs ── */}
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-            <TabsList className="bg-transparent h-auto w-full justify-start rounded-none p-0 gap-8 border-b border-border/40">
-              <TabsTrigger value="team" className={TAB_CLASS}>
-                Team
-                {members.length > 0 && (
-                  <Badge variant="secondary" className="text-xs px-1.5 py-0 min-w-[20px] text-center">
-                    {members.length}
-                  </Badge>
-                )}
-              </TabsTrigger>
-              {isAdmin && (
-                <TabsTrigger value="invites" className={TAB_CLASS}>
-                  Pending Invites
-                  {pendingInvites.length > 0 && (
-                    <Badge variant="secondary" className="text-xs px-1.5 py-0 min-w-[20px] text-center">
-                      {pendingInvites.length}
-                    </Badge>
-                  )}
-                </TabsTrigger>
+          {/* ── Search + filter toolbar ── */}
+          {!membersLoading && (
+            <div className="flex items-center gap-3">
+              <div className="relative w-60">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none" />
+                <Input
+                  placeholder="Search members…"
+                  value={globalFilter}
+                  onChange={(e) => setGlobalFilter(e.target.value)}
+                  className="pl-8 h-8 text-sm"
+                />
+              </div>
+              <div className="flex-1" />
+              {roleOptions.length > 1 && (
+                <Select value={roleFilter} onValueChange={setRoleFilter}>
+                  <SelectTrigger size="sm" className="w-40 h-8">
+                    <SelectValue>
+                      {(() => {
+                        const opt = roleOptions.find((o) => o.key === roleFilter)
+                        return (
+                          <span className="flex items-center gap-2">
+                            {opt?.dot
+                              ? <span className={cn('size-2 rounded-full shrink-0', opt.dot)} />
+                              : <span className="size-2 rounded-full shrink-0 bg-muted-foreground/30" />
+                            }
+                            {opt?.label ?? 'All Members'}
+                          </span>
+                        )
+                      })()}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {roleOptions.map((opt) => (
+                      <SelectItem key={opt.key} value={opt.key}>
+                        <span className="flex items-center gap-2">
+                          {opt.dot
+                            ? <span className={cn('size-2 rounded-full shrink-0', opt.dot)} />
+                            : <span className="size-2 rounded-full shrink-0 bg-muted-foreground/30" />
+                          }
+                          {opt.label}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               )}
-            </TabsList>
+            </div>
+          )}
 
-            {/* ── Team tab ── */}
-            <TabsContent value="team" className="space-y-6 focus-visible:outline-none outline-none">
-
-              {/* Role filter chips */}
-              {!membersLoading && roleOptions.length > 1 && (
-                <div className="flex items-center gap-2 flex-wrap">
-                  {roleOptions.map((opt) => (
-                    <button
-                      key={opt.key}
-                      onClick={() => setRoleFilter(opt.key)}
+          {/* ── Table ── */}
+          {membersLoading ? (
+            <div className="space-y-1 rounded-xl overflow-hidden border border-border/50">
+              <div className="h-10 bg-muted/30 animate-pulse" />
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="h-14 bg-muted/20 animate-pulse" />
+              ))}
+            </div>
+          ) : tableData.length === 0 ? (
+            <Empty className="py-16 border border-dashed rounded-2xl bg-muted/5">
+              <EmptyContent>
+                <div className="text-4xl leading-none select-none mb-2">👥</div>
+                <EmptyHeader>
+                  <EmptyTitle className="font-bold text-xl">
+                    {members.length === 0 ? 'Just you for now' : 'No members match this filter'}
+                  </EmptyTitle>
+                  <EmptyDescription className="font-normal">
+                    {members.length === 0
+                      ? 'Invite a teammate to collaborate on client accounts and share the workload.'
+                      : 'Try selecting a different role filter above.'}
+                  </EmptyDescription>
+                </EmptyHeader>
+                {isAdmin && members.length === 0 && (
+                  <Button variant="outline" size="sm" onClick={() => setInviteOpen(true)}>
+                    <UserPlus className="size-4 mr-2" />
+                    Invite Team Member
+                  </Button>
+                )}
+              </EmptyContent>
+            </Empty>
+          ) : (
+            <div className="rounded-xl border border-border/50 overflow-hidden">
+              <Table>
+                <TableHeader>
+                  {table.getHeaderGroups().map((hg) => (
+                    <TableRow key={hg.id} className="hover:bg-transparent border-b border-border/50 bg-muted/20">
+                      {hg.headers.map((header) => (
+                        <TableHead key={header.id} className="px-4 h-10">
+                          {header.isPlaceholder
+                            ? null
+                            : flexRender(header.column.columnDef.header, header.getContext())}
+                        </TableHead>
+                      ))}
+                    </TableRow>
+                  ))}
+                </TableHeader>
+                <TableBody>
+                  {table.getRowModel().rows.map((row) => (
+                    <TableRow
+                      key={row.id}
                       className={cn(
-                        'px-3 py-1 rounded-full text-xs font-medium transition-colors border',
-                        roleFilter === opt.key
-                          ? 'bg-foreground text-background border-foreground'
-                          : 'bg-transparent text-muted-foreground border-border/50 hover:border-foreground/30 hover:text-foreground',
+                        'border-b border-border/40 last:border-0',
+                        row.original._removed && 'opacity-50',
                       )}
                     >
-                      {opt.label}
-                    </button>
+                      {row.getVisibleCells().map((cell) => (
+                        <TableCell key={cell.id} className="px-4">
+                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        </TableCell>
+                      ))}
+                    </TableRow>
                   ))}
-                </div>
-              )}
-
-              {/* Member list */}
-              {membersLoading ? (
-                <div className="max-w-4xl space-y-3">
-                  {[...Array(3)].map((_, i) => (
-                    <div key={i} className="h-[66px] bg-muted/40 animate-pulse rounded-xl" />
-                  ))}
-                </div>
-              ) : filteredMembers.length === 0 ? (
-                <Empty className="py-16 border border-dashed rounded-2xl bg-muted/5">
-                  <EmptyContent>
-                    <div className="text-4xl leading-none select-none mb-2">👥</div>
-                    <EmptyHeader>
-                      <EmptyTitle className="font-bold text-xl">
-                        {members.length === 0 ? 'Just you for now' : 'No members match this filter'}
-                      </EmptyTitle>
-                      <EmptyDescription className="font-normal">
-                        {members.length === 0
-                          ? 'Invite a teammate to collaborate on client accounts and share the workload.'
-                          : 'Try selecting a different role filter above.'}
-                      </EmptyDescription>
-                    </EmptyHeader>
-                    {isAdmin && members.length === 0 && (
-                      <Button variant="outline" size="sm" onClick={() => setInviteOpen(true)}>
-                        <UserPlus className="size-4 mr-2" />
-                        Invite Team Member
-                      </Button>
-                    )}
-                  </EmptyContent>
-                </Empty>
-              ) : (
-                <div className="max-w-4xl space-y-3">
-                  {filteredMembers.map((member) => {
-                    const isRemoved = roleFilter === 'removed'
-                    const isSelf = member.member_user_id === user?.id
-                    const isOwner = member.system_role === 'admin'
-                    return (
-                      <div
-                        key={member.id}
-                        className={cn(
-                          'flex items-center gap-4 rounded-xl border border-border/50 bg-card/30 px-5 py-4',
-                          isRemoved && 'opacity-60',
-                        )}
-                      >
-                        <MemberAvatar
-                          name={member.full_name}
-                          email={member.email}
-                          avatarUrl={member.avatar_url}
-                        />
-                        <div className="flex-1 min-w-0 space-y-1">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <p className="text-sm font-medium truncate">
-                              {member.full_name || member.email}
-                            </p>
-                            {!isRemoved && isOwner && (
-                              <Badge variant="secondary" className="text-xs">Admin</Badge>
-                            )}
-                            {!isRemoved && isSelf && (
-                              <Badge variant="outline" className="text-xs">You</Badge>
-                            )}
-                          </div>
-                          <p className="text-xs text-muted-foreground truncate">{member.email}</p>
-                        </div>
-                        <div className="hidden sm:flex items-center gap-6 shrink-0">
-                          {member.functional_role && (
-                            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                              <Briefcase size={12} className="shrink-0" />
-                              {member.functional_role}
-                            </div>
-                          )}
-                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                            <CalendarDays size={12} className="shrink-0" />
-                            {isRemoved ? 'Removed' : `Joined ${formatDate(member.joined_at)}`}
-                          </div>
-                        </div>
-                        {isRemoved ? (
-                          <div className="flex items-center gap-1 shrink-0">
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="size-8 text-muted-foreground hover:text-foreground"
-                                  onClick={() => handleRestore(member)}
-                                >
-                                  <RotateCcw className="size-3.5" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>Restore access</TooltipContent>
-                            </Tooltip>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="size-8 text-muted-foreground hover:text-destructive"
-                                  onClick={() => setDeletingMember(member)}
-                                >
-                                  <Trash2 className="size-3.5" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>Delete permanently</TooltipContent>
-                            </Tooltip>
-                          </div>
-                        ) : (
-                          isAdmin && !isOwner && !isSelf && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="size-8 text-muted-foreground hover:text-destructive shrink-0"
-                              onClick={() => setRemovingMember(member)}
-                            >
-                              <Trash2 className="size-3.5" />
-                            </Button>
-                          )
-                        )}
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
-            </TabsContent>
-
-            {/* ── Pending Invites tab ── */}
-            {isAdmin && (
-              <TabsContent value="invites" className="space-y-4 focus-visible:outline-none outline-none">
-                {pendingInvites.length === 0 ? (
-                  <Empty className="py-16 border border-dashed rounded-2xl bg-muted/5">
-                    <EmptyContent>
-                      <div className="text-4xl leading-none select-none mb-2">📬</div>
-                      <EmptyHeader>
-                        <EmptyTitle className="font-bold text-xl">No pending invites</EmptyTitle>
-                        <EmptyDescription className="font-normal">
-                          Invite links you generate will appear here until they&apos;re accepted.
-                        </EmptyDescription>
-                      </EmptyHeader>
-                      <Button variant="outline" size="sm" onClick={() => setInviteOpen(true)}>
-                        <UserPlus className="size-4 mr-2" />
-                        Invite Team Member
-                      </Button>
-                    </EmptyContent>
-                  </Empty>
-                ) : (
-                  <div className="max-w-4xl space-y-3">
-                    {pendingInvites.map((invite) => (
-                      <div
-                        key={invite.id}
-                        className="flex items-center gap-4 rounded-xl border border-border/50 bg-card/30 px-5 py-4"
-                      >
-                        <div className="size-10 rounded-xl bg-muted flex items-center justify-center shrink-0">
-                          <Link size={16} className="text-muted-foreground" />
-                        </div>
-                        <div className="flex-1 min-w-0 space-y-1">
-                          <p className="text-sm font-mono text-muted-foreground truncate">
-                            /join/{invite.token.slice(0, 20)}…
-                          </p>
-                          <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                            <span className="flex items-center gap-1">
-                              <CalendarDays size={11} />
-                              Created {formatDate(invite.created_at)}
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <Clock size={11} />
-                              Expires {formatDate(invite.expires_at)}
-                            </span>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-1 shrink-0">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="size-8 text-muted-foreground hover:text-foreground"
-                            onClick={() => handleCopyInviteLink(invite.token)}
-                            title="Copy link"
-                          >
-                            <Copy className="size-3.5" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="size-8 text-muted-foreground hover:text-destructive"
-                            onClick={() => handleRevoke(invite.id)}
-                            title="Revoke"
-                          >
-                            <Trash2 className="size-3.5" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </TabsContent>
-            )}
-          </Tabs>
+                </TableBody>
+              </Table>
+            </div>
+          )}
 
           {/* ── Dialogs ── */}
           <InviteDialog open={inviteOpen} onOpenChange={setInviteOpen} />
