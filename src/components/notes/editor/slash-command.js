@@ -13,6 +13,7 @@ import {
   Quote,
   Code,
   Minus,
+  Table as TableIcon,
 } from 'lucide-react'
 import SlashCommandList from './SlashCommandList'
 
@@ -79,6 +80,33 @@ const COMMANDS = [
     icon: Code,
     run: (editor, range) =>
       editor.chain().focus().deleteRange(range).toggleCodeBlock().run(),
+  },
+  {
+    title: 'Table',
+    subtitle: '3×3 table with a title',
+    icon: TableIcon,
+    run: (editor, range) => {
+      const cell = (header) => ({
+        type: header ? 'tableHeader' : 'tableCell',
+        content: [{ type: 'paragraph' }],
+      })
+      const row = (header) => ({
+        type: 'tableRow',
+        content: [cell(header), cell(header), cell(header)],
+      })
+      editor
+        .chain()
+        .focus()
+        .deleteRange(range)
+        .insertContent({
+          type: 'tableContainer',
+          content: [
+            { type: 'tableTitle' },
+            { type: 'table', content: [row(true), row(false), row(false)] },
+          ],
+        })
+        .run()
+    },
   },
   {
     title: 'Divider',

@@ -21,12 +21,16 @@ import {
 } from '@/components/ui/alert-dialog'
 import { ClientAvatar } from '@/components/NoteRow'
 import { getNoteExcerpt } from '@/components/notes/noteContent'
+import TagPill from '@/components/notes/TagPill'
 
 export default function AgencyNoteCard({ note, clientMap, onOpen, onDelete }) {
   const [deleteOpen, setDeleteOpen] = useState(false)
 
   const client = note.client_id ? clientMap[note.client_id] : null
   const excerpt = getNoteExcerpt(note.body)
+  const tags = note.tags ?? []
+  const visibleTags = tags.slice(0, 3)
+  const overflowCount = tags.length - visibleTags.length
 
   return (
     <>
@@ -74,6 +78,20 @@ export default function AgencyNoteCard({ note, clientMap, onOpen, onDelete }) {
             <p className="text-sm text-muted-foreground/50 italic">No content</p>
           )}
         </div>
+
+        {/* Tags */}
+        {tags.length > 0 && (
+          <div className="flex flex-wrap items-center gap-1.5 mt-3">
+            {visibleTags.map((tag) => (
+              <TagPill key={tag.id} tag={tag} size="xs" />
+            ))}
+            {overflowCount > 0 && (
+              <span className="text-[10px] font-medium text-muted-foreground">
+                +{overflowCount}
+              </span>
+            )}
+          </div>
+        )}
 
         {/* Dashed separator */}
         <div className="border-t border-dashed border-border/60 mt-4 mb-3" />
