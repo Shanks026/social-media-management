@@ -24,6 +24,7 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   User,
+  Image,
   FileText,
   CalendarDays,
   ChevronLeft,
@@ -633,7 +634,7 @@ export default function CampaignDetailPage() {
                                 </div>
                               ) : (
                                 <div className="w-12 h-12 rounded-lg shrink-0 border border-border/50 bg-muted flex items-center justify-center">
-                                  <Activity className="size-5 text-muted-foreground/40" />
+                                  <Image className="size-5 text-muted-foreground/40" />
                                 </div>
                               )}
 
@@ -1057,7 +1058,7 @@ export default function CampaignDetailPage() {
               <Card className="border-none bg-card/50 shadow-sm ring-1 ring-border/50 gap-0">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
                   <div className="flex items-center gap-2">
-                    <CardTitle className="text-lg font-medium bricolage">Notes</CardTitle>
+                    <CardTitle className="text-lg font-medium bricolage">Tasks</CardTitle>
                     {!notesLoading && (
                       <span className="text-lg text-muted-foreground tabular-nums">
                         {campaignNotes.filter((n) => n.status !== 'ARCHIVED').length}
@@ -1076,7 +1077,7 @@ export default function CampaignDetailPage() {
                         <Plus className="h-4 w-4" />
                       </Button>
                     </CreateNoteDialog>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" onClick={() => navigate('/operations/notes')}>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" onClick={() => navigate('/operations/tasks')}>
                       <ArrowUpRight className="h-4 w-4" />
                     </Button>
                   </div>

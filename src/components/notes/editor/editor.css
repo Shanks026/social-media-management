@@ -1,0 +1,130 @@
+/* Tiptap content styling — scoped to .tiptap-content, dark-mode aware via theme vars. */
+
+.tiptap-content .ProseMirror {
+  outline: none;
+  min-height: 360px;
+  line-height: 1.7;
+  font-size: 0.975rem;
+}
+
+.tiptap-content .ProseMirror > * + * {
+  margin-top: 0.6em;
+}
+
+.tiptap-content .ProseMirror h1 {
+  font-size: 1.875rem;
+  font-weight: 700;
+  line-height: 1.2;
+  margin-top: 1.2em;
+}
+.tiptap-content .ProseMirror h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.25;
+  margin-top: 1em;
+}
+.tiptap-content .ProseMirror h3 {
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin-top: 0.8em;
+}
+
+.tiptap-content .ProseMirror ul,
+.tiptap-content .ProseMirror ol {
+  padding-left: 1.4rem;
+}
+.tiptap-content .ProseMirror ul {
+  list-style: disc;
+}
+.tiptap-content .ProseMirror ol {
+  list-style: decimal;
+}
+.tiptap-content .ProseMirror li {
+  margin: 0.2em 0;
+}
+.tiptap-content .ProseMirror li p {
+  margin: 0;
+}
+
+.tiptap-content .ProseMirror blockquote {
+  border-left: 3px solid var(--border);
+  padding-left: 1rem;
+  color: var(--muted-foreground);
+  font-style: italic;
+}
+
+.tiptap-content .ProseMirror pre {
+  background: var(--muted);
+  border-radius: 0.5rem;
+  padding: 0.75rem 1rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.85rem;
+  overflow-x: auto;
+}
+.tiptap-content .ProseMirror pre code {
+  background: none;
+  padding: 0;
+  font-size: inherit;
+}
+.tiptap-content .ProseMirror code {
+  background: var(--muted);
+  border-radius: 0.3rem;
+  padding: 0.1rem 0.35rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.85em;
+}
+
+.tiptap-content .ProseMirror a,
+.tiptap-content .ProseMirror a.note-link {
+  color: var(--primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.tiptap-content .ProseMirror hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 1.25rem 0;
+}
+
+/* Task lists (checkboxes) */
+.tiptap-content .ProseMirror ul[data-type='taskList'] {
+  list-style: none;
+  padding-left: 0.1rem;
+}
+.tiptap-content .ProseMirror ul[data-type='taskList'] li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+}
+.tiptap-content .ProseMirror ul[data-type='taskList'] li > label {
+  margin-top: 0.25rem;
+  user-select: none;
+}
+.tiptap-content .ProseMirror ul[data-type='taskList'] li > div {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.tiptap-content .ProseMirror ul[data-type='taskList'] input[type='checkbox'] {
+  cursor: pointer;
+  accent-color: var(--primary);
+}
+.tiptap-content
+  .ProseMirror
+  ul[data-type='taskList']
+  li[data-checked='true']
+  > div
+  p {
+  color: var(--muted-foreground);
+  text-decoration: line-through;
+}
+
+/* Placeholder (empty editor) */
+.tiptap-content .ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  color: var(--muted-foreground);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}

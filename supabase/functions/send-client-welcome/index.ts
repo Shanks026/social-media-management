@@ -108,7 +108,7 @@ serve(async (req) => {
 
     if (isInternal) {
       // ── INTERNAL: Agency onboarding themselves ──────────────────
-      subject = `🎉 Welcome aboard — your workspace is ready`
+      subject = `Welcome aboard — your workspace is ready`
       bodyHtml = `
         <h1 style="font-size: 26px; font-weight: 700; line-height: 1.2; margin: 0 0 16px; color: #111827;">Your workspace is live. Let's get to work.</h1>
         <p style="font-size: 15px; color: #6B7280; line-height: 1.6; margin: 0 0 32px;">
@@ -132,7 +132,7 @@ serve(async (req) => {
       `
     } else {
       // ── EXTERNAL: Agency onboarding a new client ─────────────────
-      subject = `🚀 You're in — ${agencyName} has set you up`
+      subject = `You're in — ${agencyName} has set you up`
       bodyHtml = `
         <h1 style="font-size: 26px; font-weight: 700; line-height: 1.2; margin: 0 0 16px; color: #111827;">Welcome, ${clientName}.</h1>
         <p style="font-size: 15px; color: #6B7280; line-height: 1.6; margin: 0 0 32px;">

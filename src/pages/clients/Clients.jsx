@@ -178,7 +178,7 @@ export default function Clients() {
           </div>
           <Skeleton className="h-11 w-36 rounded-full" />
         </div>
-        <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-6 grid-cols-1 lg:grid-cols-2">
           {Array.from({ length: 6 }).map((_, i) => (
             <ClientCardSkeleton key={i} />
           ))}
@@ -309,7 +309,7 @@ export default function Clients() {
             </EmptyContent>
           </Empty>
         ) : (
-          <div className="grid gap-6 grid-cols-1 md:grid-cols-2">
+          <div className="grid gap-6 grid-cols-1 lg:grid-cols-2">
             {sortedClients.map((client) => (
               <ClientCard
                 key={client.id}

@@ -81,16 +81,16 @@ const STATUS_CONFIG = {
   TODO: {
     label: 'To Do',
     className:
-      'bg-blue-500/10 text-blue-700 dark:text-blue-400 border-transparent',
+      'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 border-none',
   },
   DONE: {
     label: 'Done',
     className:
-      'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-transparent',
+      'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400 border-none',
   },
   ARCHIVED: {
     label: 'Archived',
-    className: 'bg-muted text-muted-foreground border-transparent',
+    className: 'bg-muted text-muted-foreground border-none',
   },
 }
 
@@ -187,7 +187,6 @@ function NoteCard({ note, clientMap }) {
             </div>
 
             <Badge
-              variant="outline"
               className={cn(
                 'text-[10px] px-2 py-0.5 shrink-0 font-medium',
                 statusCfg.className,
@@ -239,45 +238,46 @@ function NoteCard({ note, clientMap }) {
         </div>
 
         {/* Actions Bar */}
-        <div className="flex items-center gap-1 px-4 py-2.5 border-t border-border/40 bg-muted/20">
-          {note.status === 'ARCHIVED' && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 px-2 text-xs text-muted-foreground hover:text-primary gap-1.5"
-              onClick={() => setStatus('TODO')}
-              disabled={isBusy}
-            >
-              <RotateCcw className="size-3.5" /> Restore
-            </Button>
-          )}
+        <div className="flex items-center justify-between px-4 py-2.5 border-t border-border/40 bg-muted/20">
+          {/* Left: archive / restore + edit */}
+          <div className="flex items-center gap-1">
+            {note.status === 'ARCHIVED' ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-xs text-muted-foreground hover:text-primary gap-1.5"
+                onClick={() => setStatus('TODO')}
+                disabled={isBusy}
+              >
+                <RotateCcw className="size-3.5" /> Restore
+              </Button>
+            ) : (
+              <>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-7 text-muted-foreground hover:text-amber-500"
+                  onClick={() => setStatus('ARCHIVED')}
+                  disabled={isBusy}
+                  title="Archive"
+                >
+                  <Archive className="size-3.5" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-7 text-muted-foreground hover:text-primary"
+                  onClick={() => setEditOpen(true)}
+                  disabled={isBusy}
+                  title="Edit"
+                >
+                  <Pencil className="size-3.5" />
+                </Button>
+              </>
+            )}
+          </div>
 
-          <div className="flex-1" />
-
-          {note.status !== 'ARCHIVED' && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="size-7 text-muted-foreground hover:text-amber-500"
-              onClick={() => setStatus('ARCHIVED')}
-              disabled={isBusy}
-              title="Archive"
-            >
-              <Archive className="size-3.5" />
-            </Button>
-          )}
-          {note.status !== 'ARCHIVED' && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="size-7 text-muted-foreground hover:text-primary"
-              onClick={() => setEditOpen(true)}
-              disabled={isBusy}
-              title="Edit"
-            >
-              <Pencil className="size-3.5" />
-            </Button>
-          )}
+          {/* Right: delete only */}
           <Button
             variant="ghost"
             size="icon"
@@ -519,7 +519,7 @@ function KanbanNotesView({ notes, clientMap, queryClient }) {
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
-export default function NotesAndReminders() {
+export default function TasksAndReminders() {
   const { setHeader } = useHeader()
   const queryClient = useQueryClient()
 
@@ -536,10 +536,10 @@ export default function NotesAndReminders() {
 
   useEffect(() => {
     setHeader({
-      title: 'Notes & Reminders',
+      title: 'Tasks & Reminders',
       breadcrumbs: [
         { label: 'Operations', href: '/operations' },
-        { label: 'Notes & Reminders', href: '/operations/notes' },
+        { label: 'Tasks & Reminders', href: '/operations/tasks' },
       ],
     })
   }, [setHeader])
@@ -653,7 +653,7 @@ export default function NotesAndReminders() {
       <div className="flex items-center justify-between">
         <div className="space-y-1">
           <h1 className="text-3xl font-normal tracking-tight text-foreground bricolage">
-            Notes & Reminders{' '}
+            Tasks & Reminders{' '}
             {filteredNotes.length > 0 && (
               <span className="text-muted-foreground/50 ml-2 font-extralight">
                 {filteredNotes.length}
@@ -661,7 +661,7 @@ export default function NotesAndReminders() {
             )}
           </h1>
           <p className="text-sm text-muted-foreground">
-            All notes and reminders across your organization
+            All tasks and reminders across your organization
           </p>
         </div>
 

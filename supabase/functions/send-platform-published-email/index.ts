@@ -9,7 +9,8 @@ const corsHeaders = {
 
 const resend = new Resend(Deno.env.get('RESEND_API_KEY'))
 
-function formatPlatform(p: string): string {
+function formatPlatform(p: string | null | undefined): string {
+  if (!p) return ''
   const map: Record<string, string> = {
     instagram: 'Instagram',
     linkedin: 'LinkedIn',
@@ -140,7 +141,7 @@ serve(async (req) => {
   if (all_published) {
     // All platforms are now live — send the "all published" summary email
     const allPlatforms = (version.platform as string[]).map(formatPlatform).join(', ')
-    subject = `🚀 All posts are now live: "${postTitle}"`
+    subject = `All posts are now live: "${postTitle}"`
     bodyHtml = `
       <h1 style="font-size: 26px; font-weight: 700; line-height: 1.2; margin: 0 0 16px; color: #111827;">All platforms are now live</h1>
       <p style="font-size: 15px; color: #6B7280; line-height: 1.6; margin: 0 0 32px;">Hi ${client.name},<br>Your content has been published across all scheduled platforms and is now fully live.</p>
@@ -164,7 +165,7 @@ serve(async (req) => {
     `
   } else {
     // Single platform just went live
-    subject = `🚀 Your ${platformLabel} post is now live: "${postTitle}"`
+    subject = `Your ${platformLabel} post is now live: "${postTitle}"`
     bodyHtml = `
       <h1 style="font-size: 26px; font-weight: 700; line-height: 1.2; margin: 0 0 16px; color: #111827;">Your ${platformLabel} post is live</h1>
       <p style="font-size: 15px; color: #6B7280; line-height: 1.6; margin: 0 0 32px;">Hi ${client.name},<br>Your content has been published on ${platformLabel} and is now live.</p>

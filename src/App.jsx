@@ -19,7 +19,9 @@ import InvoicesTab from './pages/finance/InvoicesTab'
 import Posts from './pages/Posts'
 import BillingUsage from './pages/billingAndUsage/BillingUsage'
 import CreateClientPage from './pages/clients/CreateClientPage'
-import NotesAndReminders from './pages/NotesAndReminders'
+import TasksAndReminders from './pages/TasksAndReminders'
+import Notes from './pages/Notes'
+import NoteEditorPage from './pages/NoteEditorPage'
 import MeetingsPage from './pages/MeetingsPage'
 import Dashboard from './pages/dashboard/Dashboard'
 import DocumentsPage from './pages/documents/DocumentsPage'
@@ -115,7 +117,9 @@ function AppRoutes() {
           <Route path="/campaigns/:campaignId" element={<CampaignDetailPage />} />
           <Route path="/ads" element={<AdsPage />} />
           <Route path="/posts" element={<Posts />} />
-          <Route path="/operations/notes" element={<NotesAndReminders />} />
+          <Route path="/operations/tasks" element={<TasksAndReminders />} />
+          <Route path="/operations/notes" element={<Notes />} />
+          <Route path="/operations/notes/:noteId" element={<NoteEditorPage />} />
           <Route path="/operations/meetings" element={<MeetingsPage />} />
           <Route path="/documents" element={<DocumentsPage />} />
           <Route path="/reports" element={<ReportsRoute />} />
