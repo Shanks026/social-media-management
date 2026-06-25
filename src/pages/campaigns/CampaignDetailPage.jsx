@@ -24,6 +24,7 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   User,
+  Image,
   FileText,
   CalendarDays,
   ChevronLeft,
@@ -633,7 +634,7 @@ export default function CampaignDetailPage() {
                                 </div>
                               ) : (
                                 <div className="w-12 h-12 rounded-lg shrink-0 border border-border/50 bg-muted flex items-center justify-center">
-                                  <Activity className="size-5 text-muted-foreground/40" />
+                                  <Image className="size-5 text-muted-foreground/40" />
                                 </div>
                               )}
 

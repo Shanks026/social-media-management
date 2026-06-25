@@ -4,7 +4,7 @@ import {
   Search,
   CheckSquare,
   Square,
-  Activity,
+  Image,
   Play,
 } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
@@ -187,16 +187,16 @@ export function LinkPostsToCampaignDialog({
               </p>
             </div>
           ) : (
-            <div className="space-y-2 pb-4">
+            <div className="divide-y divide-dashed divide-border">
               {filtered.map((post) => {
                 const mediaUrl = post.media_urls?.[0]
                 return (
                   <div
                     key={post.id}
                     className={cn(
-                      'flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer transition-all border border-transparent',
+                      'flex items-center gap-3 px-4 py-3 cursor-pointer transition-all rounded-none',
                       selectedIds.has(post.id)
-                        ? 'bg-primary/10 border-primary/20 ring-1 ring-primary/20'
+                        ? 'bg-primary/10'
                         : 'hover:bg-muted/50',
                     )}
                     onClick={() => toggleSelect(post.id)}
@@ -207,7 +207,7 @@ export function LinkPostsToCampaignDialog({
                     />
 
                     {mediaUrl ? (
-                      <div className="w-10 h-10 rounded-lg border border-border/50 bg-muted relative overflow-hidden shadow-sm shrink-0">
+                      <div className="w-10 h-10 rounded-lg border border-border/50 bg-muted relative overflow-hidden shrink-0">
                         {mediaUrl.match(/\.(mp4|mov|webm)$/i) ? (
                           <div className="absolute inset-0 flex items-center justify-center bg-black/90">
                             <Play className="size-3.5 text-white fill-current" />
@@ -221,8 +221,8 @@ export function LinkPostsToCampaignDialog({
                         )}
                       </div>
                     ) : (
-                      <div className="w-10 h-10 rounded-lg shrink-0 border border-border/50 bg-muted flex items-center justify-center shadow-sm">
-                        <Activity className="size-4 text-muted-foreground/50" />
+                      <div className="w-10 h-10 rounded-lg shrink-0 border border-border/50 bg-muted flex items-center justify-center">
+                        <Image className="size-4 text-muted-foreground/50" />
                       </div>
                     )}
 

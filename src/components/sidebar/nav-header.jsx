@@ -79,10 +79,10 @@ export function AppSidebarHeader({ agencySettings }) {
                 showTerceroDefault
                   ? isCollapsed
                     ? 'size-7'
-                    : 'h-9 w-32 ml-[-4px]'
+                    : 'h-9 w-32 -ml-1'
                   : isCollapsed || !horizontalLogo
                     ? `shadow-sm bg-background ${isCollapsed ? 'size-6' : 'size-9'}`
-                    : 'h-10 w-auto max-w-[160px]'
+                    : 'h-10 w-auto max-w-40'
               }`}
             >
               {isLoading ? (

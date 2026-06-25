@@ -1,6 +1,7 @@
-import { MoreHorizontal, Target, CalendarDays, User } from 'lucide-react'
+import { MoreHorizontal, Target, CalendarDays } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -9,13 +10,14 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Card, CardContent } from '@/components/ui/card'
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import { cn } from '@/lib/utils'
 import { format, parseISO } from 'date-fns'
 
 const STATUS_STYLES = {
-  Active: 'bg-emerald-500/15 text-emerald-700',
-  Completed: 'bg-blue-500/15 text-blue-700',
-  Archived: 'bg-muted text-muted-foreground',
+  Active: 'bg-emerald-100 text-emerald-600 border-none hover:bg-emerald-100',
+  Completed: 'bg-blue-100 text-blue-600 border-none hover:bg-blue-100',
+  Archived: 'bg-muted text-muted-foreground border-none hover:bg-muted',
 }
 
 const PIPELINE_COLORS = {
@@ -139,14 +141,11 @@ export function CampaignCard({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center gap-2.5">
-          <span
-            className={cn(
-              'px-2.5 py-0.5 rounded-full text-xs font-medium',
-              STATUS_STYLES[status] ?? STATUS_STYLES.Archived,
-            )}
+          <Badge
+            className={cn(STATUS_STYLES[status] ?? STATUS_STYLES.Archived)}
           >
             {status}
-          </span>
+          </Badge>
           {total_posts > 0 && (
             <CircularProgress progress={progress} size={22} strokeWidth={2.5} />
           )}
@@ -205,7 +204,7 @@ export function CampaignCard({
       </div>
 
       {/* Row 2: Title */}
-      <h3 className="text-lg font-semibold line-clamp-2 mb-5">{name}</h3>
+      <h3 className="bricolage text-lg font-semibold line-clamp-2 mb-5">{name}</h3>
 
       {/* Pipeline Stats */}
       <div className="min-w-0 mb-5">
@@ -252,17 +251,12 @@ export function CampaignCard({
         <div className="flex items-center min-w-0">
           {showClient && client_name && (
             <div className="flex items-center gap-2">
-              {client_avatar ? (
-                <img
-                  src={client_avatar}
-                  alt={client_name}
-                  className="size-6 rounded-full object-cover border border-border"
-                />
-              ) : (
-                <div className="size-6 rounded-full bg-primary/10 flex items-center justify-center">
-                  <User className="size-3 text-primary" />
-                </div>
-              )}
+              <Avatar className="size-6">
+                <AvatarImage src={client_avatar} alt={client_name} />
+                <AvatarFallback className="text-[9px] font-bold">
+                  {client_name.split(' ').filter(w => /[a-zA-Z]/.test(w)).map(w => w[0]).join('').toUpperCase().slice(0, 2)}
+                </AvatarFallback>
+              </Avatar>
               <span className="text-xs font-medium truncate max-w-[120px]">
                 {client_name}
               </span>

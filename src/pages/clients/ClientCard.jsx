@@ -148,7 +148,7 @@ function ClientCard({ client, onOpen, onDelete }) {
           </div>
 
           {/* Pipeline stats */}
-          <div className="pt-4 border-t border-dashed border-border">
+          <div className="pt-4">
             {hasPipelineData ? (
               <div className="grid grid-cols-5">
                 <StatItem count={pipeline.drafts} label="Drafts" colorClass="bg-blue-500" />
@@ -164,7 +164,7 @@ function ClientCard({ client, onOpen, onDelete }) {
 
           {/* Metrics row: MRR + Margin + Campaigns */}
           {hasMetrics && (
-            <div className="pt-4 border-t border-dashed border-border flex items-center gap-2.5">
+            <div className="pt-4 flex items-center gap-2.5">
               {showFinancials && (
                 <span className="text-xs font-semibold text-foreground">
                   {(client.avg_monthly_retainer ?? 0) > 0 ? formatMRR(client.avg_monthly_retainer) : '-'}{' '}
