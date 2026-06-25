@@ -22,6 +22,24 @@ export function useAgencyNotes() {
   })
 }
 
+export function useAgencyNoteById(noteId) {
+  return useQuery({
+    queryKey: ['agency-notes', 'detail', noteId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('notes')
+        .select('*')
+        .eq('id', noteId)
+        .single()
+      if (error) throw error
+      return data
+    },
+    enabled: !!noteId,
+    staleTime: 30000,
+    retry: 1,
+  })
+}
+
 export async function createAgencyNote({ title, body, client_id = null }) {
   const { workspaceUserId } = await resolveWorkspace()
   const { data, error } = await supabase

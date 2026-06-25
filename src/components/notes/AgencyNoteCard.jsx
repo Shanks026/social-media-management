@@ -1,4 +1,4 @@
-﻿import { useState } from 'react'
+import { useState } from 'react'
 import { MoreVertical, Pencil, Trash2 } from 'lucide-react'
 import { formatDate } from '@/lib/helper'
 import { Badge } from '@/components/ui/badge'
@@ -20,26 +20,38 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { ClientAvatar } from '@/components/NoteRow'
+import { getNoteExcerpt } from '@/components/notes/noteContent'
 
-export default function AgencyNoteCard({ note, clientMap, onEdit, onDelete }) {
+export default function AgencyNoteCard({ note, clientMap, onOpen, onDelete }) {
   const [deleteOpen, setDeleteOpen] = useState(false)
 
   const client = note.client_id ? clientMap[note.client_id] : null
+  const excerpt = getNoteExcerpt(note.body)
 
   return (
     <>
-      <div className="flex flex-col rounded-lg border bg-card p-5 hover:border-foreground/20 transition-colors">
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={() => onOpen(note)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') onOpen(note)
+        }}
+        className="flex flex-col rounded-lg border bg-card p-5 hover:border-foreground/20 transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
         {/* Title + menu */}
         <div className="flex items-start justify-between gap-2">
-          <p className="bricolage font-medium text-base leading-tight line-clamp-2">{note.title}</p>
+          <p className="bricolage font-medium text-base leading-tight line-clamp-2">
+            {note.title || <span className="text-muted-foreground/50">Untitled</span>}
+          </p>
           <DropdownMenu>
-            <DropdownMenuTrigger asChild>
+            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
               <Button variant="ghost" size="icon" className="size-7 shrink-0 -mt-0.5 -mr-1">
                 <MoreVertical className="size-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => onEdit(note)}>
+            <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+              <DropdownMenuItem onClick={() => onOpen(note)}>
                 <Pencil className="size-3.5 mr-2" />
                 Edit
               </DropdownMenuItem>
@@ -56,10 +68,8 @@ export default function AgencyNoteCard({ note, clientMap, onEdit, onDelete }) {
 
         {/* Body */}
         <div className="flex-1 mt-3">
-          {note.body ? (
-            <p className="text-sm text-muted-foreground whitespace-pre-wrap line-clamp-4">
-              {note.body}
-            </p>
+          {excerpt ? (
+            <p className="text-sm text-muted-foreground line-clamp-4">{excerpt}</p>
           ) : (
             <p className="text-sm text-muted-foreground/50 italic">No content</p>
           )}
@@ -114,4 +124,3 @@ export default function AgencyNoteCard({ note, clientMap, onEdit, onDelete }) {
     </>
   )
 }
-

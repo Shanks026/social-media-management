@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useNavigate } from 'react-router-dom'
 import { Plus, Search } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -27,18 +28,15 @@ import { useClients } from '@/api/clients'
 import {
   useAgencyNotes,
   createAgencyNote,
-  updateAgencyNote,
   deleteAgencyNote,
 } from '@/api/agencyNotes'
 import AgencyNoteCard from '@/components/notes/AgencyNoteCard'
-import AgencyNoteDialog from '@/components/notes/AgencyNoteDialog'
 
 export default function Notes() {
   const { setHeader } = useHeader()
   const queryClient = useQueryClient()
+  const navigate = useNavigate()
 
-  const [dialogOpen, setDialogOpen] = useState(false)
-  const [editingNote, setEditingNote] = useState(null)
   const [clientFilter, setClientFilter] = useState('all')
   const [search, setSearch] = useState('')
 
@@ -88,23 +86,11 @@ export default function Notes() {
 
   const createMutation = useMutation({
     mutationFn: createAgencyNote,
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['agency-notes', 'list'] })
-      toast.success('Note saved')
-      setDialogOpen(false)
+      navigate(`/operations/notes/${data.id}`)
     },
-    onError: (err) => toast.error(err.message || 'Failed to save note'),
-  })
-
-  const updateMutation = useMutation({
-    mutationFn: ({ id, updates }) => updateAgencyNote(id, updates),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['agency-notes', 'list'] })
-      toast.success('Note updated')
-      setDialogOpen(false)
-      setEditingNote(null)
-    },
-    onError: (err) => toast.error(err.message || 'Failed to update note'),
+    onError: (err) => toast.error(err.message || 'Failed to create note'),
   })
 
   const deleteMutation = useMutation({
@@ -116,35 +102,19 @@ export default function Notes() {
     onError: (err) => toast.error(err.message || 'Failed to delete note'),
   })
 
-  function handleEdit(note) {
-    setEditingNote(note)
-    setDialogOpen(true)
+  function handleNewNote() {
+    createMutation.mutate({ title: '', body: '' })
+  }
+
+  function handleOpen(note) {
+    navigate(`/operations/notes/${note.id}`)
   }
 
   function handleDelete(noteId) {
     deleteMutation.mutate(noteId)
   }
 
-  function handleDialogSubmit(values) {
-    if (editingNote) {
-      updateMutation.mutate({ id: editingNote.id, updates: values })
-    } else {
-      createMutation.mutate(values)
-    }
-  }
-
-  function handleDialogOpenChange(open) {
-    setDialogOpen(open)
-    if (!open) setEditingNote(null)
-  }
-
-  function openCreateDialog() {
-    setEditingNote(null)
-    setDialogOpen(true)
-  }
-
   const isLoading = isLoadingNotes || isLoadingClients
-  const isSubmitting = createMutation.isPending || updateMutation.isPending
 
   return (
     <div className="p-8 max-w-[1400px] mx-auto space-y-6 animate-in fade-in duration-500">
@@ -164,7 +134,7 @@ export default function Notes() {
           </p>
         </div>
 
-        <Button className="gap-2 h-9" onClick={openCreateDialog}>
+        <Button className="gap-2 h-9" onClick={handleNewNote} disabled={createMutation.isPending}>
           <Plus size={16} />
           New Note
         </Button>
@@ -224,7 +194,7 @@ export default function Notes() {
           </EmptyHeader>
           {clientFilter === 'all' && !search && (
             <EmptyContent>
-              <Button onClick={openCreateDialog}>
+              <Button onClick={handleNewNote} disabled={createMutation.isPending}>
                 <Plus className="size-4 mr-2" />
                 New Note
               </Button>
@@ -238,21 +208,12 @@ export default function Notes() {
               key={note.id}
               note={note}
               clientMap={clientMap}
-              onEdit={handleEdit}
+              onOpen={handleOpen}
               onDelete={handleDelete}
             />
           ))}
         </div>
       )}
-
-      <AgencyNoteDialog
-        open={dialogOpen}
-        onOpenChange={handleDialogOpenChange}
-        note={editingNote}
-        clients={allClients}
-        onSubmit={handleDialogSubmit}
-        isSubmitting={isSubmitting}
-      />
     </div>
   )
 }

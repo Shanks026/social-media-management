@@ -268,6 +268,71 @@ src/
 
 ---
 
+## Phase 3 — Notion-style rich text editor + dedicated note page ✅ Complete
+
+### Goal
+Replace the generic create/edit dialog with a Notion-like editing experience. Clicking "New Note" instantly creates a blank note and navigates to a dedicated full-page editor at `/operations/notes/:noteId`. On that page the user types the title inline, links a client inline, and writes the body in a rich text editor that supports a `/` slash command menu, a selection bubble menu, headings, bullet/ordered lists, task checklists, blockquotes, and code blocks. Changes auto-save (debounced). The list page's cards open the same editor.
+
+### Before Starting — Confirm With Codebase
+1. `react@19.2` — install Tiptap v2 (supports React 19). If npm peer resolution errors, retry with `--legacy-peer-deps`.
+2. No `@tailwindcss/typography` plugin installed — editor content is styled with a dedicated `editor.css` (ProseMirror selectors), not `prose` classes.
+3. Auto-save convention (from `ProposalDetailPage.jsx`): `saveState` of `'idle' | 'saving' | 'saved' | 'error'` + a debounced `setTimeout` ref. Mirror it.
+4. `body` column is `TEXT` — no schema change. Tiptap JSON is stored stringified; an excerpt helper extracts plain text for card previews. Parse defensively (legacy/empty `body` is plain text, not JSON).
+
+### 3.1 Database
+No schema change. `body` (TEXT) now stores stringified Tiptap JSON. Legacy/empty values are treated as plain text by the excerpt + load guards.
+
+### 3.2 Dependencies
+`@tiptap/react`, `@tiptap/pm`, `@tiptap/starter-kit`, `@tiptap/extension-task-list`, `@tiptap/extension-task-item`, `@tiptap/extension-placeholder`, `@tiptap/suggestion`, `tippy.js` (slash-menu positioning).
+
+### 3.3 API Layer
+Add to `src/api/agencyNotes.js`:
+- `useAgencyNoteById(noteId)` — single-note read hook, key `['agency-notes', 'detail', noteId]`, `enabled: !!noteId`.
+- `createAgencyNote` already supports empty title/body (used for instant blank-note creation).
+
+### 3.4 Components
+```
+src/
+├── pages/
+│   └── NoteEditorPage.jsx            — full-page editor at /operations/notes/:noteId
+└── components/
+    └── notes/
+        ├── RichTextEditor.jsx        — Tiptap wrapper (extensions, bubble menu, slash)
+        └── editor/
+            ├── slash-command.js      — Tiptap suggestion extension + command list
+            ├── SlashCommandList.jsx  — keyboard-navigable React menu rendered via tippy
+            └── editor.css            — ProseMirror content + placeholder + task-list styles
+```
+- `lib/helper.js` (or local util): `getNoteExcerpt(body)` → plain-text excerpt from Tiptap JSON (falls back to raw string).
+
+### 3.5 Flow & Integration
+- `Notes.jsx`: "New Note" → `createAgencyNote({ title: '', body: '' })` → navigate to `/operations/notes/:id`. Card click + card "Edit" → navigate to the editor (no dialog). Card delete stays. `AgencyNoteDialog.jsx` is removed (dialog flow retired). Card preview uses `getNoteExcerpt`. Cards labelled "Untitled" when title empty.
+- `App.jsx`: add `<Route path="/operations/notes/:noteId" element={<NoteEditorPage />} />` (keep list route; place the param route after it).
+- Editor page header breadcrumb: Operations → Notes → {title or "Untitled"}; includes a Back action and a client selector and delete.
+
+### 3.6 What This Phase Does NOT Include
+- No images / file embeds / tables / databases / nested pages (true Notion blocks) — text-formatting blocks only.
+- No collaborative/realtime editing; no version history.
+- No client-detail tab; no sharing/public access; no gating.
+
+### 3.7 Phase 3 Checklist — Before Marking Complete
+- [x] Tiptap deps installed (`@tiptap/* @2.27`, `tippy.js`); `npm run build` succeeds
+- [x] `useAgencyNoteById` added; `getNoteExcerpt`/`parseNoteBody` handle JSON + legacy plain text
+- [x] "New Note" creates a blank note and navigates straight to the editor
+- [x] Editor page: inline title, inline client selector (with avatars), rich text body
+- [x] Slash `/` menu implemented (Text, H1–H3, bullet/numbered/to-do lists, quote, code, divider)
+- [x] Selection bubble menu implemented (bold/italic/strike/code)
+- [x] Task-list checkboxes styled + nested; persist via stored JSON
+- [x] Auto-save debounced (600 ms) with `saveState` indicator; flush-on-back; list invalidated
+- [x] Card click + dropdown Edit open the editor; delete still works; preview uses excerpt; `AgencyNoteDialog` removed
+- [x] `npx eslint` on all Phase 3 files: zero errors
+
+**Verified:** lint + production build. **Not yet verified interactively** (couldn't run a browser session here): live slash-menu keyboard nav, checkbox toggling, and bubble-menu positioning — worth a manual smoke test.
+
+**→ Stop here. Show the result and wait for approval.**
+
+---
+
 ## Data Model Summary (Final State After All Phases)
 
 ```
