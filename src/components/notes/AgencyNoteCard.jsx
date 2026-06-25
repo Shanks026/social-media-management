@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { MoreVertical, Pencil, Trash2 } from 'lucide-react'
-import { formatDate } from '@/lib/helper'
+import { format } from 'date-fns'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -73,7 +73,7 @@ export default function AgencyNoteCard({ note, clientMap, onOpen, onDelete }) {
         {/* Body */}
         <div className="flex-1 mt-3">
           {excerpt ? (
-            <p className="text-sm text-muted-foreground line-clamp-4">{excerpt}</p>
+            <p className="text-sm text-muted-foreground line-clamp-3">{excerpt}</p>
           ) : (
             <p className="text-sm text-muted-foreground/50 italic">No content</p>
           )}
@@ -114,7 +114,7 @@ export default function AgencyNoteCard({ note, clientMap, onOpen, onDelete }) {
             <span className="text-xs text-muted-foreground">Agency-wide</span>
           )}
           <span className="text-xs text-muted-foreground shrink-0">
-            {formatDate(note.updated_at)}
+            {format(new Date(note.updated_at), 'd MMM, yyyy · h:mm a')}
           </span>
         </div>
       </div>

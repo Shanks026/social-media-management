@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQueryClient, useMutation } from '@tanstack/react-query'
+import { format } from 'date-fns'
 import { ArrowLeft, Trash2, Check, Loader2, AlertCircle, Building2, Printer } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -346,7 +347,7 @@ export default function NoteEditorPage() {
         />
       </div>
 
-      {/* Linked to + Created by */}
+      {/* Properties bar: linked to + created */}
       <div className="flex items-center gap-2 pb-2 border-b">
         <span className="text-xs text-muted-foreground shrink-0">Linked to</span>
         <Select value={clientId} onValueChange={handleClientChange}>
@@ -385,12 +386,15 @@ export default function NoteEditorPage() {
           </SelectContent>
         </Select>
 
-        {note.created_by_name && (
-          <div className="ml-auto flex items-center gap-1.5 shrink-0">
-            <span className="text-xs text-muted-foreground">Created by</span>
-            <span className="text-xs font-medium">{note.created_by_name}</span>
-          </div>
-        )}
+        <div className="ml-auto flex items-center gap-1 shrink-0 text-xs text-muted-foreground">
+          <span>{format(new Date(note.created_at), 'd MMM yyyy, h:mm a')}</span>
+          {note.created_by_name && (
+            <>
+              <span>·</span>
+              <span className="font-medium text-foreground">{note.created_by_name}</span>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Body */}

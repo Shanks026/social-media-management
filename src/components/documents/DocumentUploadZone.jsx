@@ -19,7 +19,7 @@ const ACCEPTED_EXTENSIONS = [
  *   disabled       — boolean
  *   compact        — boolean — smaller layout for use inside collection cards
  */
-export default function DocumentUploadZone({ onFileSelected, disabled, compact = false }) {
+export default function DocumentUploadZone({ onFileSelected, disabled, compact = false, className }) {
   const inputRef = useRef(null)
   const [isDragging, setIsDragging] = useState(false)
 
@@ -106,6 +106,7 @@ export default function DocumentUploadZone({ onFileSelected, disabled, compact =
           ? 'border-primary bg-primary/5'
           : 'border-border hover:border-muted-foreground/40',
         disabled && 'pointer-events-none opacity-50',
+        className,
       )}
     >
       <div className="flex size-10 items-center justify-center rounded-lg bg-muted">
