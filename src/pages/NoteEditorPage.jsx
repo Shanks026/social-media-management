@@ -284,7 +284,7 @@ export default function NoteEditorPage() {
             onClick={() =>
               printNote(
                 title || 'Untitled',
-                editorRef.current?.getHTML() || '',
+                editorRef.current?.view?.dom?.innerHTML || editorRef.current?.getHTML() || '',
                 selectedClient?.name || null,
               )
             }
@@ -403,6 +403,7 @@ export default function NoteEditorPage() {
         content={parseNoteBody(note.body)}
         onChange={handleBodyChange}
         editorRef={editorRef}
+        noteId={noteId}
       />
 
       <ManageTagsDialog

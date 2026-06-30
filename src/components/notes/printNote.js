@@ -85,9 +85,17 @@ td, th {
 }
 th { background: #f1f5f9; font-weight: 600; }
 td p, th p { margin: 0; }
+/* Media nodes */
+[data-node-view-wrapper] { display: block; margin: 0.75rem 0; }
+[data-node-view-wrapper] img { max-width: 100%; border-radius: 6px; display: block; }
+[data-node-view-wrapper] video { max-width: 100%; border-radius: 6px; display: block; }
+[data-media-controls] { display: none !important; }
+/* Dropzone placeholders hidden in print */
+[data-node-view-wrapper] [style*="border-dashed"] { display: none !important; }
 @media print {
   body { padding: 0; }
   a { color: #3b82f6; }
+  [data-media-controls] { display: none !important; }
 }
 `
 

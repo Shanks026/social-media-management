@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tercero — System Roles &amp; Permissions</title>
+<style>
+  :root {
+    --ink:        #1c1a22;
+    --ink-soft:   #4a4654;
+    --ink-faint:  #6f6a7d;
+    --paper:      #faf9fc;
+    --card:       #ffffff;
+    --line:       #e7e3ee;
+    --line-soft:  #f0edf5;
+    --accent:     #6d4aff;   /* violet — ties to the app's admin palette */
+    --accent-soft:#efeaff;
+    --owner:      #6d4aff;
+    --admin:      #2563eb;
+    --member:     #0f9d7a;
+    --yes:        #0f9d7a;
+    --yes-bg:     #e7f7f1;
+    --no:         #c2415a;
+    --no-bg:      #fbecef;
+    --flag:       #b4690e;
+    --flag-bg:    #fbf0df;
+    --view:       #5a6b86;
+    --view-bg:    #eef1f6;
+    --shadow:     0 1px 2px rgba(28,26,34,.04), 0 8px 24px -16px rgba(28,26,34,.18);
+  }
+
+  * { box-sizing: border-box; }
+
+  html { -webkit-text-size-adjust: 100%; }
+
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: ui-sans-serif, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 15px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 56px 28px 96px;
+  }
+
+  /* ── Masthead ─────────────────────────────────────── */
+  .masthead { border-bottom: 2px solid var(--ink); padding-bottom: 28px; margin-bottom: 44px; }
+  .eyebrow {
+    font-size: 12px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase;
+    color: var(--accent); margin: 0 0 14px;
+  }
+  h1 {
+    font-size: clamp(30px, 5vw, 46px); line-height: 1.05; margin: 0 0 14px;
+    font-weight: 800; letter-spacing: -.02em; text-wrap: balance;
+  }
+  .standfirst { font-size: 17px; color: var(--ink-soft); max-width: 62ch; margin: 0; }
+  .meta-row {
+    display: flex; flex-wrap: wrap; gap: 8px 20px; margin-top: 22px;
+    font-size: 12.5px; color: var(--ink-faint); font-weight: 600;
+    letter-spacing: .02em; text-transform: uppercase;
+  }
+  .meta-row span { display: inline-flex; align-items: center; gap: 7px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; }
+
+  /* ── Section scaffolding ──────────────────────────── */
+  section { margin-top: 56px; }
+  .section-head { display: flex; align-items: baseline; gap: 14px; margin-bottom: 22px; }
+  .section-num {
+    font-size: 13px; font-weight: 700; color: var(--accent);
+    font-variant-numeric: tabular-nums; letter-spacing: .05em;
+  }
+  h2 { font-size: 22px; font-weight: 750; letter-spacing: -.01em; margin: 0; }
+  .section-sub { color: var(--ink-faint); font-size: 14px; margin: 4px 0 0; }
+
+  /* ── The one-liner ────────────────────────────────── */
+  .mantra {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 0;
+    border: 1px solid var(--line); border-radius: 14px; overflow: hidden;
+    background: var(--card); box-shadow: var(--shadow);
+  }
+  .mantra div { padding: 22px 24px; }
+  .mantra div + div { border-left: 1px solid var(--line); }
+  .mantra .who { font-weight: 750; font-size: 16px; margin: 0 0 4px; }
+  .mantra .does { color: var(--ink-faint); font-size: 13.5px; margin: 0; }
+  .mantra .owner .who { color: var(--owner); }
+  .mantra .admin .who { color: var(--admin); }
+  .mantra .member .who { color: var(--member); }
+
+  /* ── Role cards ───────────────────────────────────── */
+  .roles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+  .role {
+    background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+    padding: 0; overflow: hidden; box-shadow: var(--shadow); display: flex; flex-direction: column;
+  }
+  .role-top { padding: 20px 22px 18px; border-top: 4px solid; }
+  .role.owner .role-top  { border-color: var(--owner); }
+  .role.admin .role-top  { border-color: var(--admin); }
+  .role.member .role-top { border-color: var(--member); }
+  .role-name { font-size: 18px; font-weight: 780; margin: 0; letter-spacing: -.01em; }
+  .role-tag { font-size: 12.5px; color: var(--ink-faint); margin: 5px 0 0; font-weight: 600; }
+  .role-count {
+    display: inline-block; margin-top: 12px; font-size: 11.5px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .06em; padding: 4px 10px; border-radius: 100px;
+  }
+  .role.owner .role-count  { background: var(--accent-soft); color: var(--owner); }
+  .role.admin .role-count  { background: #e6efff; color: var(--admin); }
+  .role.member .role-count { background: #e3f6ef; color: var(--member); }
+
+  .role-list { padding: 4px 22px 22px; margin: 0; list-style: none; font-size: 13.5px; }
+  .role-list li { display: flex; gap: 10px; padding: 7px 0; border-top: 1px solid var(--line-soft); align-items: flex-start; }
+  .role-list li:first-child { border-top: none; }
+  .mark { flex-shrink: 0; font-weight: 800; width: 16px; text-align: center; line-height: 1.5; }
+  .mark.y { color: var(--yes); }
+  .mark.n { color: var(--no); }
+  .role-list .label { color: var(--ink-soft); }
+
+  /* ── Legend ───────────────────────────────────────── */
+  .legend { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 18px; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; font-weight: 650;
+    padding: 5px 11px; border-radius: 100px; border: 1px solid var(--line);
+  }
+  .glyph { font-weight: 800; }
+  .chip.yes  { background: var(--yes-bg);  color: var(--yes); border-color: transparent; }
+  .chip.no   { background: var(--no-bg);   color: var(--no); border-color: transparent; }
+  .chip.flag { background: var(--flag-bg); color: var(--flag); border-color: transparent; }
+  .chip.view { background: var(--view-bg); color: var(--view); border-color: transparent; }
+
+  /* ── Matrix ───────────────────────────────────────── */
+  .table-scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 14px; background: var(--card); box-shadow: var(--shadow); }
+  table { border-collapse: collapse; width: 100%; min-width: 620px; font-size: 13.5px; }
+  thead th {
+    position: sticky; top: 0; background: var(--ink); color: #fff; font-weight: 650;
+    text-align: left; padding: 13px 16px; font-size: 12px; letter-spacing: .04em; text-transform: uppercase;
+  }
+  thead th.role-col { text-align: center; width: 96px; }
+  thead th.role-col span { display: block; font-size: 10.5px; opacity: .65; letter-spacing: .02em; margin-top: 2px; text-transform: none; font-weight: 500; }
+  tbody td { padding: 11px 16px; border-top: 1px solid var(--line-soft); vertical-align: middle; }
+  tbody td.area { font-weight: 600; color: var(--ink); white-space: nowrap; }
+  tbody td.action { color: var(--ink-soft); }
+  tbody td.cell { text-align: center; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .group-row td {
+    background: var(--line-soft); font-weight: 750; font-size: 11.5px; letter-spacing: .07em;
+    text-transform: uppercase; color: var(--ink-faint); padding: 9px 16px;
+  }
+  tbody tr:hover td:not(.group-row td) { background: #fcfbfe; }
+  .c-yes  { color: var(--yes); }
+  .c-no   { color: var(--no); opacity: .75; }
+  .c-flag { color: var(--flag); }
+  .c-view { color: var(--view); }
+  .cell small { display: block; font-size: 9.5px; font-weight: 600; letter-spacing: .02em; opacity: .8; text-transform: uppercase; }
+
+  /* ── Functional roles ─────────────────────────────── */
+  .note {
+    background: var(--accent-soft); border: 1px solid #ddd2ff; border-radius: 12px;
+    padding: 16px 18px; font-size: 13.5px; color: var(--ink-soft); margin-bottom: 24px;
+  }
+  .note strong { color: var(--ink); }
+  .frole-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+  .frole-group {
+    background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px;
+    box-shadow: var(--shadow);
+  }
+  .frole-group h3 {
+    font-size: 11.5px; font-weight: 750; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--accent); margin: 0 0 12px;
+  }
+  .frole-tags { display: flex; flex-wrap: wrap; gap: 7px; }
+  .ftag {
+    font-size: 13px; font-weight: 600; padding: 5px 11px; border-radius: 8px;
+    background: var(--line-soft); color: var(--ink-soft);
+  }
+  .ftag.custom { background: transparent; border: 1px dashed #c9bdf2; color: var(--accent); }
+
+  footer {
+    margin-top: 64px; padding-top: 24px; border-top: 1px solid var(--line);
+    font-size: 12.5px; color: var(--ink-faint); display: flex; flex-wrap: wrap; gap: 6px 18px;
+  }
+  code { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: .9em; background: var(--line-soft); padding: 1px 6px; border-radius: 5px; color: var(--ink); }
+
+  @media (max-width: 760px) {
+    .mantra, .roles { grid-template-columns: 1fr; }
+    .mantra div + div { border-left: none; border-top: 1px solid var(--line); }
+    .wrap { padding: 40px 18px 72px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="masthead">
+    <p class="eyebrow">Tercero · Access Control Reference</p>
+    <h1>System Roles &amp; Permissions</h1>
+    <p class="standfirst">Who can do what inside a single agency workspace. The system role decides access; the functional role is a cosmetic job title and never affects permissions.</p>
+    <div class="meta-row">
+      <span><i class="dot" style="background:var(--owner)"></i>Owner — runs the company</span>
+      <span><i class="dot" style="background:var(--admin)"></i>Admin — runs the work</span>
+      <span><i class="dot" style="background:var(--member)"></i>Member — does assigned work</span>
+    </div>
+  </header>
+
+  <!-- Mantra -->
+  <section style="margin-top:0">
+    <div class="mantra">
+      <div class="owner">
+        <p class="who">Owner</p>
+        <p class="does">The founder/co-founder who signed up. Exactly one. Owns billing, the team, and the workspace itself.</p>
+      </div>
+      <div class="admin">
+        <p class="who">Admin</p>
+        <p class="does">A trusted operational deputy. Full command of client work — but nothing about the company.</p>
+      </div>
+      <div class="member">
+        <p class="who">Member</p>
+        <p class="does">Delivery staff. The default for everyone who joins. Drafts work; needs approval to send it out.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Role cards -->
+  <section>
+    <div class="section-head">
+      <span class="section-num">01</span>
+      <div>
+        <h2>The three system roles</h2>
+        <p class="section-sub">Highlights of what each tier can and cannot do.</p>
+      </div>
+    </div>
+    <div class="roles">
+
+      <article class="role owner">
+        <div class="role-top">
+          <p class="role-name">Owner</p>
+          <p class="role-tag">Founder / co-founder · account holder</p>
+          <span class="role-count">Exactly 1 · immutable</span>
+        </div>
+        <ul class="role-list">
+          <li><span class="mark y">✓</span><span class="label">Everything an Admin can do</span></li>
+          <li><span class="mark y">✓</span><span class="label">Onboard team &amp; promote/demote roles</span></li>
+          <li><span class="mark y">✓</span><span class="label">Billing — the Tercero subscription</span></li>
+          <li><span class="mark y">✓</span><span class="label">Edit workspace settings &amp; branding</span></li>
+          <li><span class="mark y">✓</span><span class="label">Configure the invoice signatory</span></li>
+          <li><span class="mark y">✓</span><span class="label">Delete the workspace</span></li>
+        </ul>
+      </article>
+
+      <article class="role admin">
+        <div class="role-top">
+          <p class="role-name">Admin</p>
+          <p class="role-tag">Operational deputy · granted by promotion</p>
+          <span class="role-count">Many · owner-promoted</span>
+        </div>
+        <ul class="role-list">
+          <li><span class="mark y">✓</span><span class="label">Full CRUD on clients &amp; deliverables</span></li>
+          <li><span class="mark y">✓</span><span class="label">Full finance + issue invoices</span></li>
+          <li><span class="mark y">✓</span><span class="label">All documents, incl. confidential</span></li>
+          <li><span class="mark y">✓</span><span class="label">Proposals, prospects, reports, campaigns</span></li>
+          <li><span class="mark n">✕</span><span class="label">Team management</span></li>
+          <li><span class="mark n">✕</span><span class="label">Billing · workspace edit · signatory · delete</span></li>
+        </ul>
+      </article>
+
+      <article class="role member">
+        <div class="role-top">
+          <p class="role-name">Member</p>
+          <p class="role-tag">Delivery staff · default on join</p>
+          <span class="role-count">Many · default role</span>
+        </div>
+        <ul class="role-list">
+          <li><span class="mark y">✓</span><span class="label">View all clients</span></li>
+          <li><span class="mark y">✓</span><span class="label">Draft &amp; edit deliverables (needs approval)</span></li>
+          <li><span class="mark y">✓</span><span class="label">Work within campaigns · notes · meetings</span></li>
+          <li><span class="mark y">✓</span><span class="label">Documents — by per-member level</span></li>
+          <li><span class="mark n">✕</span><span class="label">Finance, proposals, prospects, reports</span></li>
+          <li><span class="mark n">✕</span><span class="label">Confidential docs · create/delete clients</span></li>
+        </ul>
+      </article>
+
+    </div>
+  </section>
+
+  <!-- Matrix -->
+  <section>
+    <div class="section-head">
+      <span class="section-num">02</span>
+      <div>
+        <h2>Full permission map</h2>
+        <p class="section-sub">Every surface, action by action.</p>
+      </div>
+    </div>
+
+    <div class="legend">
+      <span class="chip yes"><span class="glyph">✓</span> Full access</span>
+      <span class="chip flag"><span class="glyph">⚙</span> Flag-gated (per member)</span>
+      <span class="chip view"><span class="glyph">◐</span> View only</span>
+      <span class="chip no"><span class="glyph">✕</span> No access</span>
+    </div>
+
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>Area</th>
+            <th>Action</th>
+            <th class="role-col">Owner</th>
+            <th class="role-col">Admin</th>
+            <th class="role-col">Member</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="group-row"><td colspan="5">Work &amp; delivery</td></tr>
+          <tr><td class="area">Dashboard</td><td class="action">View (non-finance)</td><td class="cell c-yes">✓</td><td class="cell c-yes">✓</td><td class="cell c-yes">✓</td></tr>
+          <tr><td class="area">Clients</td><td class="action">View</td><td class="cell c-yes">✓</td><td class="cell c-yes">✓</td><td class="cell c-yes">✓</td></tr>
+          <tr><td class="area">Clients</td><td class="action">Create · edit · delete</td><td class="cell c-yes">✓</td><td class="cell c-yes">✓</td><td class="cell c-no">✕</td></tr>
+          <tr><td class="area">Deliverables</td><td class="action">Create / edit draft</td><td class="cell c-yes">✓</td><td class="cell c-yes">✓</td><td class="cell c-yes">✓</td></tr>
+          <tr><td class="area">Deliverables</td><td class="action">Approve internally</td><td class="cell c-yes">✓</td><td class="cell c-yes">✓</td><td class="cell c-no">✕</td></tr>
+          <tr><td class="area">Deliverables</td><td class="action">Send to client</td><td class="cell c-yes">✓</td><td class="cell c-yes">✓</td><td class="cell c-no">✕</td></tr>
+          <tr><td class="area">Campaigns</td><td class="action">View / work within</td><td class="cell c-yes">✓</td><td class="cell c-yes">✓</td><td class="cell c-yes">✓</td></tr>
+          <tr><td class="area">Campaigns</td><td class="action">Create campaign</td><td class="cell c-yes">✓</td><td class="cell c-yes">✓</td><td class="cell c-no">✕</td></tr>
+          <tr><td class="area">Calendar</td><td class="action">View</td><td class="cell c-yes">✓</td><td class="cell c-yes">✓</td><td class="cell c-yes">✓</td></tr>
+
+          <tr class="group-row"><td colspan="5">Operations</td></tr>
+          <tr><td class="area">Meetings</td><td class="action">View all · create</td><td class="cell c-yes">✓</td><td class="cell c-yes">✓</td><td class="cell c-yes">✓</td></tr>
+          <tr><td class="area">Meetings</td><td class="action">Edit / delete others'</td><td class="cell c-yes">✓</td><td class="cell c-yes">✓</td><td class="cell c-view">◐<small>own only</small></td></tr>
+          <tr><td class="area">Notes</td><td class="action">View all · create</td><td class="cell c-yes">✓</td><td class="cell c-yes">✓</td><td class="cell c-yes">✓</td></tr>
+          <tr><td class="area">Notes</td><td class="action">Edit / delete others'</td><td class="cell c-yes">✓</td><td class="cell c-yes">✓</td><td class="cell c-view">◐<small>own only</small></td></tr>
+          <tr><td class="area">Tasks <small style="font-weight:500;color:var(--ink-faint)">(future)</small></td><td class="action">Create / assign</td><td class="cell c-yes">✓</td><td class="cell c-yes">✓</td><td class="cell c-no">✕</td></tr>
+          <tr><td class="area">Tasks <small style="font-weight:500;color:var(--ink-faint)">(future)</small></td><td class="action">Complete assigned</td><td class="cell c-yes">✓</td><td class="cell c-yes">✓</td><td class="cell c-yes">✓</td></tr>
+
+          <tr class="group-row"><td colspan="5">Documents</td></tr>
+          <tr><td class="area">Documents</td><td class="action">Non-confidential</td><td class="cell c-yes">✓<small>manage</small></td><td class="cell c-yes">✓<small>manage</small></td><td class="cell c-flag">⚙<small>none/view/manage</small></td></tr>
+          <tr><td class="area">Documents</td><td class="action">Confidential (Contract/NDA/Finance)</td><td class="cell c-yes">✓</td><td class="cell c-yes">✓</td><td class="cell c-no">✕<small>never</small></td></tr>
+
+          <tr class="group-row"><td colspan="5">Commercial &amp; sales</td></tr>
+          <tr><td class="area">Finance</td><td class="action">Invoices · expenses · ledger · subs</td><td class="cell c-yes">✓</td><td class="cell c-yes">✓</td><td class="cell c-no">✕</td></tr>
+          <tr><td class="area">Finance</td><td class="action">Issue invoices</td><td class="cell c-yes">✓</td><td class="cell c-yes">✓</td><td class="cell c-no">✕</td></tr>
+          <tr><td class="area">Dashboard</td><td class="action">Finance widgets / revenue</td><td class="cell c-yes">✓</td><td class="cell c-yes">✓</td><td class="cell c-no">✕</td></tr>
+          <tr><td class="area">Proposals</td><td class="action">View / create / edit</td><td class="cell c-yes">✓</td><td class="cell c-yes">✓</td><td class="cell c-no">✕</td></tr>
+          <tr><td class="area">Prospects</td><td class="action">View / create / convert</td><td class="cell c-yes">✓</td><td class="cell c-yes">✓</td><td class="cell c-no">✕</td></tr>
+          <tr><td class="area">Reports</td><td class="action">View</td><td class="cell c-yes">✓</td><td class="cell c-yes">✓</td><td class="cell c-no">✕</td></tr>
+
+          <tr class="group-row"><td colspan="5">The company (owner-reserved)</td></tr>
+          <tr><td class="area">Invoice signatory</td><td class="action">Configure name / signature</td><td class="cell c-yes">✓</td><td class="cell c-no">✕</td><td class="cell c-no">✕</td></tr>
+          <tr><td class="area">Billing</td><td class="action">Tercero subscription</td><td class="cell c-yes">✓</td><td class="cell c-no">✕</td><td class="cell c-no">✕</td></tr>
+          <tr><td class="area">Workspace settings</td><td class="action">Edit agency identity / branding</td><td class="cell c-yes">✓</td><td class="cell c-view">◐<small>view</small></td><td class="cell c-no">✕</td></tr>
+          <tr><td class="area">Team</td><td class="action">Invite · promote · remove</td><td class="cell c-yes">✓</td><td class="cell c-no">✕</td><td class="cell c-no">✕</td></tr>
+          <tr><td class="area">Workspace</td><td class="action">Delete workspace</td><td class="cell c-yes">✓</td><td class="cell c-no">✕</td><td class="cell c-no">✕</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Functional roles -->
+  <section>
+    <div class="section-head">
+      <span class="section-num">03</span>
+      <div>
+        <h2>Functional roles</h2>
+        <p class="section-sub">Cosmetic job titles — a badge only, never an access control.</p>
+      </div>
+    </div>
+
+    <div class="note">
+      <strong>These do not affect permissions.</strong> A Member who is a "Finance Manager" still has no finance access — access comes only from the system role above. The list is a curated default; an owner can type a <strong>Custom…</strong> title for any agency type.
+    </div>
+
+    <div class="frole-grid">
+      <div class="frole-group">
+        <h3>Leadership</h3>
+        <div class="frole-tags">
+          <span class="ftag">Founder</span>
+          <span class="ftag">Co-founder</span>
+          <span class="ftag">CEO / Managing Director</span>
+        </div>
+      </div>
+      <div class="frole-group">
+        <h3>Client &amp; Strategy</h3>
+        <div class="frole-tags">
+          <span class="ftag">Account Manager</span>
+          <span class="ftag">Project Manager</span>
+          <span class="ftag">Strategist</span>
+          <span class="ftag">Creative Director</span>
+        </div>
+      </div>
+      <div class="frole-group">
+        <h3>Content &amp; Creative</h3>
+        <div class="frole-tags">
+          <span class="ftag">Social Media Manager</span>
+          <span class="ftag">Content Creator</span>
+          <span class="ftag">Designer</span>
+          <span class="ftag">Copywriter</span>
+          <span class="ftag">Video Editor / Producer</span>
+        </div>
+      </div>
+      <div class="frole-group">
+        <h3>Growth &amp; Specialist</h3>
+        <div class="frole-tags">
+          <span class="ftag">Marketing Specialist</span>
+          <span class="ftag">Community Manager</span>
+          <span class="ftag">SEO / Media Buyer</span>
+          <span class="ftag">Developer</span>
+          <span class="ftag">Analyst</span>
+        </div>
+      </div>
+      <div class="frole-group">
+        <h3>Finance &amp; Ops</h3>
+        <div class="frole-tags">
+          <span class="ftag">Finance Manager</span>
+          <span class="ftag">Operations Manager</span>
+        </div>
+      </div>
+      <div class="frole-group">
+        <h3>Anything else</h3>
+        <div class="frole-tags">
+          <span class="ftag custom">+ Custom…</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <span>Source of truth: <code>.claude/features/03-rbac-team-roles.md</code></span>
+    <span>Onboarding is owner-only · everyone joins as Member · Admin is a manual promotion</span>
+  </footer>
+
+</div>
+</body>
+</html>

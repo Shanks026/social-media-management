@@ -1,6 +1,11 @@
+import { useEffect } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
+import { supabase } from '@/lib/supabase'
 import { AuthProvider, useAuth } from '../src/context/AuthContext'
 import { useSubscription } from './api/useSubscription'
+import { useMaintenanceMode } from './api/appConfig'
+import MaintenanceScreen from './components/MaintenanceScreen'
 import LoginPage from './components/auth/login'
 import SignupPage from './components/auth/signup'
 import { AppShell } from './components/misc/AppShell'
@@ -43,6 +48,31 @@ import PoliciesPage from './pages/help/PoliciesPage'
 import TeamPage from './pages/TeamPage'
 import AdsPage from './pages/ads/AdsPage'
 import PartnershipsPage from './pages/partnerships/PartnershipsPage'
+
+function MaintenanceGate({ children }) {
+  const queryClient = useQueryClient()
+  const { data, isLoading } = useMaintenanceMode()
+
+  useEffect(() => {
+    const channel = supabase
+      .channel('maintenance_mode_watch')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'app_config',
+        filter: 'key=eq.maintenance_mode',
+      }, () => {
+        queryClient.invalidateQueries({ queryKey: ['app-config', 'maintenance_mode'] })
+      })
+      .subscribe()
+
+    return () => { supabase.removeChannel(channel) }
+  }, [queryClient])
+
+  if (isLoading) return null
+  if (data?.is_active) return <MaintenanceScreen message={data.message} />
+  return children
+}
 
 function PublicOnlyRoute({ children }) {
   const { session } = useAuth()
@@ -150,7 +180,9 @@ function AppRoutes() {
 export default function App() {
   return (
     <AuthProvider>
-      <AppRoutes />
+      <MaintenanceGate>
+        <AppRoutes />
+      </MaintenanceGate>
     </AuthProvider>
   )
 }

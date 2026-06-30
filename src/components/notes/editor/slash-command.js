@@ -14,6 +14,8 @@ import {
   Code,
   Minus,
   Table as TableIcon,
+  ImageIcon,
+  Video,
 } from 'lucide-react'
 import SlashCommandList from './SlashCommandList'
 
@@ -107,6 +109,20 @@ const COMMANDS = [
         })
         .run()
     },
+  },
+  {
+    title: 'Image',
+    subtitle: 'Upload a photo or image',
+    icon: ImageIcon,
+    run: (editor, range) =>
+      editor.chain().focus().deleteRange(range).insertContent({ type: 'noteImage', attrs: {} }).run(),
+  },
+  {
+    title: 'Video',
+    subtitle: 'Upload a video clip',
+    icon: Video,
+    run: (editor, range) =>
+      editor.chain().focus().deleteRange(range).insertContent({ type: 'noteVideo', attrs: {} }).run(),
   },
   {
     title: 'Divider',
