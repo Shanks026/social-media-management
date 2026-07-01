@@ -273,7 +273,7 @@ export function ProposalTab({ clientId, prospectId, prospectName, prospectEmail 
               key={tab}
               onClick={() => setActiveTab(tab)}
               className={cn(
-                'px-3 py-2 text-[13px] font-medium capitalize border-b-2 -mb-px transition-colors',
+                'px-3 py-2 text-sm font-medium capitalize border-b-2 -mb-px transition-colors',
                 activeTab === tab
                   ? 'border-primary text-foreground'
                   : 'border-transparent text-muted-foreground hover:text-foreground',

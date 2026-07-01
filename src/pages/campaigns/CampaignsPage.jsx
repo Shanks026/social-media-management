@@ -1,6 +1,7 @@
 import { useHeader } from '@/components/misc/header-context'
 import { useSubscription } from '@/api/useSubscription'
 import { useCampaigns } from '@/api/campaigns'
+import { usePermissions } from '@/api/usePermissions'
 import { CampaignTab } from '@/components/campaigns/CampaignTab'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
@@ -14,6 +15,7 @@ export default function CampaignsPage() {
   }, [setHeader])
   const { data: sub, isLoading: subLoading } = useSubscription()
   const { data: campaigns = [], isLoading: campaignsLoading } = useCampaigns()
+  const { canCreateCampaigns } = usePermissions()
   const [isCreateOpen, setIsCreateOpen] = useState(false)
 
   const campaignCount = campaigns.length
@@ -42,32 +44,34 @@ export default function CampaignsPage() {
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
-            {campaignsLimit !== null && !campaignsLoading && (
-              <span className="text-xs text-muted-foreground">
-                {campaignCount} / {campaignsLimit} campaigns
-              </span>
-            )}
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span>
-                  <Button
-                    onClick={() => !atLimit && setIsCreateOpen(true)}
-                    className="gap-2 h-9"
-                    disabled={atLimit}
-                  >
-                    <Plus size={16} />
-                    New Campaign
-                  </Button>
+          {canCreateCampaigns && (
+            <div className="flex items-center gap-3">
+              {campaignsLimit !== null && !campaignsLoading && (
+                <span className="text-xs text-muted-foreground">
+                  {campaignCount} / {campaignsLimit} campaigns
                 </span>
-              </TooltipTrigger>
-              {atLimit && (
-                <TooltipContent>
-                  Campaign limit reached. Upgrade to Velocity for unlimited campaigns.
-                </TooltipContent>
               )}
-            </Tooltip>
-          </div>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span>
+                    <Button
+                      onClick={() => !atLimit && setIsCreateOpen(true)}
+                      className="gap-2 h-9"
+                      disabled={atLimit}
+                    >
+                      <Plus size={16} />
+                      New Campaign
+                    </Button>
+                  </span>
+                </TooltipTrigger>
+                {atLimit && (
+                  <TooltipContent>
+                    Campaign limit reached. Upgrade to Velocity for unlimited campaigns.
+                  </TooltipContent>
+                )}
+              </Tooltip>
+            </div>
+          )}
         </div>
 
         {/* --- SECTION 2: THE CONTENT --- */}

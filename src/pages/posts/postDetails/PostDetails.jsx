@@ -4,7 +4,16 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useHeader } from '../../../components/misc/header-context'
 import { toast } from 'sonner'
-import { createRevision, fetchPostDetails, deletePost, markPostDelivered } from '@/api/posts'
+import {
+  createRevision,
+  fetchPostDetails,
+  deletePost,
+  markPostDelivered,
+  submitForInternalApproval,
+  approveInternally,
+  requestInternalChanges,
+} from '@/api/posts'
+import { usePermissions } from '@/api/usePermissions'
 
 // Sub-components
 import PostContent from './PostContent'
@@ -31,6 +40,8 @@ export default function PostDetails() {
   const { setHeader } = useHeader()
   const queryClient = useQueryClient()
 
+  const { canSendDeliverables } = usePermissions()
+
   const [isConfirmOpen, setIsConfirmOpen] = useState(false)
   const [showHistory, setShowHistory] = useState(false)
   const [isPublishConfirmOpen, setIsPublishConfirmOpen] = useState(false)
@@ -45,6 +56,10 @@ export default function PostDetails() {
   const [deliveryNote, setDeliveryNote] = useState('')
   const [approveDate, setApproveDate] = useState(null)
   const [publishingPlatformId, setPublishingPlatformId] = useState(null)
+
+  // Phase 5: internal approval loop dialog state
+  const [isRequestChangesOpen, setIsRequestChangesOpen] = useState(false)
+  const [changeNotes, setChangeNotes] = useState('')
 
   // Invalidate all caches that depend on post status/counts
   const invalidatePostRelated = () => {
@@ -284,7 +299,7 @@ export default function PostDetails() {
     onSuccess: () => {
       toast.success('Post deleted permanently')
       setIsDeleteConfirmOpen(false)
-      navigate(`/clients/${clientId}/posts`)
+      navigate(-1)
     },
     onError: (err) => {
       console.error('Delete Mutation Failed:', err)
@@ -312,6 +327,46 @@ export default function PostDetails() {
     onError: (err) => {
       toast.error(err.message || 'Failed to resend approval link')
     },
+  })
+
+  // Phase 5 mutations ─────────────────────────────────────────────────────────
+
+  const submitForApprovalMutation = useMutation({
+    mutationFn: () => submitForInternalApproval(post.id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['post-version', postId] })
+      queryClient.invalidateQueries({ queryKey: ['pending-approvals'] })
+      queryClient.invalidateQueries({ queryKey: ['pending-approvals-count'] })
+      invalidatePostRelated()
+      toast.success('Submitted for internal review')
+    },
+    onError: (err) => toast.error(err.message),
+  })
+
+  const approveInternallyMutation = useMutation({
+    mutationFn: () => approveInternally(post.id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['post-version', postId] })
+      queryClient.invalidateQueries({ queryKey: ['pending-approvals'] })
+      queryClient.invalidateQueries({ queryKey: ['pending-approvals-count'] })
+      invalidatePostRelated()
+      toast.success('Deliverable approved — now Ready')
+    },
+    onError: (err) => toast.error(err.message),
+  })
+
+  const requestChangesMutation = useMutation({
+    mutationFn: () => requestInternalChanges(post.id, changeNotes),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['post-version', postId] })
+      queryClient.invalidateQueries({ queryKey: ['pending-approvals'] })
+      queryClient.invalidateQueries({ queryKey: ['pending-approvals-count'] })
+      invalidatePostRelated()
+      toast.success('Changes requested')
+      setIsRequestChangesOpen(false)
+      setChangeNotes('')
+    },
+    onError: (err) => toast.error(err.message),
   })
 
   const handleRefresh = () => {
@@ -350,13 +405,13 @@ export default function PostDetails() {
       <PostContent
         post={post}
         isInternal={isInternal}
+        canSendDeliverables={canSendDeliverables}
         showHistory={showHistory}
         setShowHistory={setShowHistory}
         onSendForApproval={() => setIsConfirmOpen(true)}
         onApproveAndSchedule={() => {
           const hasPlatforms = (post.platforms?.length ?? 0) > 0
           if (!hasPlatforms) {
-            // Non-social deliverable: approve directly, no schedule dialog
             approveDeliverableMutation.mutate(post.id)
           } else {
             if (!post.platform_schedules && post.target_date) setApproveDate(new Date(post.target_date))
@@ -381,6 +436,11 @@ export default function PostDetails() {
         isApproveSchedulePending={approveAndScheduleMutation.isPending || approveDeliverableMutation.isPending}
         onMarkDelivered={() => setIsMarkDeliveredOpen(true)}
         isMarkDeliveredPending={markAsDeliveredMutation.isPending}
+        onSubmitForApproval={() => submitForApprovalMutation.mutate()}
+        isSubmitPending={submitForApprovalMutation.isPending}
+        onApproveInternally={() => approveInternallyMutation.mutate()}
+        isApproveInternallyPending={approveInternallyMutation.isPending}
+        onRequestChanges={() => setIsRequestChangesOpen(true)}
       />
 
       <DraftPostForm
@@ -427,6 +487,38 @@ export default function PostDetails() {
         onConfirmDelete={() => deletePostMutation.mutate(post.actual_post_id)}
         isDeletePending={deletePostMutation.isPending}
       />
+
+      {/* Request Changes Dialog (Phase 5) */}
+      <Dialog open={isRequestChangesOpen} onOpenChange={setIsRequestChangesOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Request Changes</DialogTitle>
+            <DialogDescription>
+              Describe what needs to be revised. The member will see this feedback and can resubmit.
+            </DialogDescription>
+          </DialogHeader>
+          <Textarea
+            placeholder="e.g. Caption too long — cut to 150 chars. Swap the second image."
+            value={changeNotes}
+            onChange={(e) => setChangeNotes(e.target.value)}
+            rows={4}
+            className="resize-none"
+          />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setIsRequestChangesOpen(false); setChangeNotes('') }}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => requestChangesMutation.mutate()}
+              disabled={requestChangesMutation.isPending}
+            >
+              {requestChangesMutation.isPending && <Loader2 size={13} className="animate-spin mr-1.5" />}
+              Send Feedback
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Mark as Delivered Dialog */}
       <Dialog open={isMarkDeliveredOpen} onOpenChange={setIsMarkDeliveredOpen}>

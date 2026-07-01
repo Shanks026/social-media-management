@@ -29,6 +29,9 @@ import {
   Settings,
   Settings2,
   LifeBuoy,
+  ShieldCheck,
+  ClipboardCheck,
+  PencilRuler,
 } from 'lucide-react'
 import { NavLink, useLocation } from 'react-router-dom'
 import {
@@ -55,6 +58,7 @@ import {
 } from '@/components/ui/popover'
 import { useSubscription } from '@/api/useSubscription'
 import { usePermissions } from '@/api/usePermissions'
+import { usePendingApprovalsCount, useMySubmissionsCount } from '@/api/posts'
 import {
   Tooltip,
   TooltipContent,
@@ -84,7 +88,15 @@ const BASE_NAV_ITEMS = [
   },
   { title: 'Clients', url: '/clients', icon: UserStar },
 
-  { title: 'Deliverables', url: '/posts', icon: Send },
+  { title: 'Deliverables', url: '/posts', icon: PencilRuler },
+  { title: 'Submissions', url: '/submissions', icon: Send, showChangesCount: true, requiresPermission: 'isTeamMember' },
+  {
+    title: 'Approvals',
+    url: '/approvals',
+    icon: ClipboardCheck,
+    requiresPermission: 'canSendDeliverables',
+    showCount: true,
+  },
   {
     title: 'Campaigns',
     url: '/campaigns',
@@ -193,6 +205,8 @@ export function NavMain() {
   const location = useLocation()
   const { data: sub, isLoading } = useSubscription()
   const perms = usePermissions()
+  const { data: approvalCount = 0 } = usePendingApprovalsCount()
+  const { data: submissionsChangesCount = 0 } = useMySubmissionsCount('CHANGES_REQUESTED')
   const [openPopover, setOpenPopover] = useState(null)
   const [suppressedTooltip, setSuppressedTooltip] = useState(null)
 
@@ -349,6 +363,8 @@ export function NavMain() {
               )
             }
 
+            const itemCount = item.showCount ? approvalCount : 0
+            const changesCount = item.showChangesCount ? submissionsChangesCount : 0
             return (
               <SidebarMenuItem key={item.title}>
                 <SidebarMenuButton
@@ -359,6 +375,16 @@ export function NavMain() {
                   <NavLink to={item.url}>
                     <item.icon className="size-4 shrink-0" />
                     {!isCollapsed && <span>{item.title}</span>}
+                    {!isCollapsed && itemCount > 0 && (
+                      <span className="ml-auto flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-primary-foreground">
+                        {itemCount > 99 ? '99+' : itemCount}
+                      </span>
+                    )}
+                    {!isCollapsed && changesCount > 0 && (
+                      <span className="ml-auto flex h-4 min-w-4 items-center justify-center rounded-full bg-pink-500 px-1 text-[10px] font-bold text-white">
+                        {changesCount > 99 ? '99+' : changesCount}
+                      </span>
+                    )}
                     {!isCollapsed && isTopLocked && (
                       <Lock className="ml-auto size-3 shrink-0 text-muted-foreground" />
                     )}

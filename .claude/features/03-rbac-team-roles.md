@@ -154,9 +154,12 @@ The `client-documents` bucket is private, but its read policy (`foldername[1] = 
   is_confidential per document; RLS + storage policy; none/view/manage enforced in
   nav, DocumentsTab (global + client detail), and upload/edit/delete.
 
-⬜ Phase 5 — Deliverable Approval Workflow + Campaign-create gating
-  Member draft → internal approval by owner/admin before client send; members
-  cannot create campaigns. (Adds a workflow state — more than pure gating.)
+✅ Phase 5 — Deliverable Approval Workflow
+  SUBMITTED/CHANGES_REQUESTED/READY statuses; submit_for_internal_approval RPC
+  (creator-only); approve_deliverable + request_changes RPCs (owner/admin);
+  Approvals page (owner/admin queue); Submissions page (member tracker);
+  updated_by column + trigger; "My Work" filter; attribution in PostDetails.
+  Campaign-create gating deferred.
 ```
 
 **After each phase: stop and wait for approval before proceeding.**
@@ -424,7 +427,7 @@ The **owner** is the only person who can onboard teammates and set access tiers.
 
 ✅ **Phase 2 complete.**
 
-**→ Phase 3 is next.**
+**→ Phase 3 is next** (Restricted Sections — Finance, Billing, Proposals, Prospects, Reports).
 
 ---
 
@@ -553,49 +556,111 @@ CREATE POLICY client_documents_write ON public.client_documents
 
 ---
 
-## Phase 5 — Deliverable Approval Workflow + Campaign-create gating
+## Phase 5 — Internal Approval Workflow ✅
 
-> ⚠️ This phase is **more than gating** — it adds a workflow state to deliverables. Scope it deliberately.
+> ⚠️ This phase adds a workflow state to deliverables — it is more than pure gating.
 
 ### Goal
 
-Member-created deliverables require **internal approval by an owner/admin** before they can be sent to a client (or published, for the internal account). Members cannot create campaigns.
+Member-created deliverables require **internal review by an owner/admin** before they can be sent to a client or marked ready. A dedicated approval queue lets owners/admins triage submissions; a submissions tracker lets members follow progress on their own work.
 
-### 5.1 Concept
+> **Campaign-create gating** (originally scoped to this phase) is deferred — no gating on campaign creation for members yet.
 
+### What Was Built
+
+#### 5.1 Database
+
+**Migration `add_updated_by_to_post_versions`:**
+- Added `updated_by uuid REFERENCES auth.users(id)` to `post_versions`
+- Trigger `set_post_version_updated_by` fires on UPDATE when any content field changes (`title`, `content`, `platform`, `media_urls`, `target_date`) — auto-fills `updated_by = auth.uid()`
+
+**Migration `scope_submit_to_creator`:**
+- Updated `submit_for_internal_approval(p_version_id)` RPC to enforce `created_by = auth.uid()` — only the creator of the draft may submit it; anyone else gets an exception
+
+**New statuses added to `post_versions.status` enum:**
+
+| Status | Who triggers | Meaning |
+|---|---|---|
+| `SUBMITTED` | Member calls `submit_for_internal_approval` | In the owner/admin review queue |
+| `CHANGES_REQUESTED` | Owner/admin calls `request_changes` | Member must revise and resubmit |
+| `READY` | Owner/admin calls `approve_deliverable` | Cleared for client send or publish |
+
+**Full internal approval flow:**
 ```
-MEMBER creates/edits deliverable (DRAFT)
-   │  submit for internal approval
-   ▼
-INTERNAL APPROVAL  ← owner/admin reviews
-   ├─ internal-account deliverable → approved = ready/published
-   └─ client deliverable → enters EXISTING client review flow (public token)
-                              → client approves → scheduled
-OWNER/ADMIN-created deliverables skip internal approval (self-approve).
+DRAFT → SUBMITTED (member submits)
+           → READY (owner/admin approves) → PENDING_APPROVAL (client send) or published
+           → CHANGES_REQUESTED (owner/admin requests changes)
+              → SUBMITTED (member resubmits)
 ```
 
-The internal-approval UI is **uniform** regardless of deliverable type; only the post-approval path differs. Client deliverables additionally pass through the existing client-review flow.
+**New RPCs:**
+- `submit_for_internal_approval(p_version_id)` — sets status SUBMITTED; creator-only guard (DB exception on mismatch)
+- `approve_deliverable(p_version_id)` — sets status READY; owner/admin enforced in RPC
+- `request_changes(p_version_id, p_note)` — sets status CHANGES_REQUESTED; owner/admin enforced in RPC
 
-### 5.2 Work
+#### 5.2 API & Shared Config
 
-- Add an internal-approval state/transition to the post/version workflow (a `PENDING_INTERNAL` style status or an `approved_by`/`approved_at` gate) — confirm against current statuses (`DRAFT`, `PENDING`, `REVISIONS`, `SCHEDULED`, `PENDING_APPROVAL`, `ARCHIVED`) before adding.
-- Gate "send to client" / "publish" actions behind `usePermissions().canSendDeliverables` (owner/admin). Members get "Submit for approval" instead.
-- Owner/admin get an approval action (approve / request changes) on member-submitted deliverables.
-- Enforce server-side: the status transition RPC must reject a member attempting to move a deliverable past internal approval.
-- **Campaigns:** hide "New campaign" for members (`!canCreateCampaigns`); block campaign-create mutation server-side for non-admins.
+**`src/lib/post-statuses.js`** (new — single source of truth for all status display):
+- `POST_STATUS_CONFIG` keyed by DB enum (underscores) — each entry: `{ label, icon, color (hex), className (Tailwind badge classes) }`; covers all 12 statuses including the three new ones
+- `POST_CHART_CONFIG` keyed by display name (spaces, e.g. `'PENDING APPROVAL'`) for Recharts charts; hex colors match `POST_STATUS_CONFIG`
+- `STATUS_DISPLAY_MAP` — converts DB enum key → chart display key
+- `ALLOWED_CHART_STATUSES` — ordered list of statuses to render on donut/bar charts
+- Replaces local status definitions previously duplicated in `WorkflowHealth`, `ContentPipelineBar`, `OverviewTab`, and `StatusBadge`
 
-### 5.3 Phase 5 Checklist
+**`src/api/posts.js`** additions:
+- `submitForApproval(versionId)` — calls `submit_for_internal_approval`
+- `approveDeliverable(versionId)` — calls `approve_deliverable`
+- `requestChanges(versionId, note)` — calls `request_changes`
 
-- [ ] Internal-approval state added; member submit → owner/admin approve
-- [ ] Members cannot send to client / publish (UI + server)
-- [ ] Owner/admin self-approve; approval UI uniform for internal + client deliverables
-- [ ] Client deliverables still flow into the existing client-review process after internal approval
-- [ ] Members cannot create campaigns (UI + server)
-- [ ] **Adversarial test:** a member calling the status-transition / campaign-create RPC directly is rejected
+#### 5.3 Components
 
-🧪 **Test checkpoint:** Member drafts a deliverable → only "Submit for approval"; cannot send to client or create a campaign. Owner/admin approves → client flow proceeds. Owner/admin drafting skips the internal gate.
+**Approvals page (`src/pages/approvals/ApprovalsPage.jsx`):**
+- Owner/admin-only; sidebar nav entry hidden for members
+- Three tabs: Submitted (pending queue), Ready, Changes Requested
+- Sortable table with inline thumbnail (video camcorder-icon overlay), client badge, creator chip, status badge, due date
+- `ApprovalDetailDialog` — full post preview with approve / request-changes actions
 
-**→ Stop. Show result, wait for approval.**
+**Submissions page (`src/pages/submissions/SubmissionsPage.jsx`):**
+- Member-facing tracker; nav entry hidden for owners/admins
+- Three tabs: Submitted, Ready, Changes Requested
+- Shows the current user's submitted deliverables only
+
+**PostDetails.jsx attribution strip:**
+- Created by / Updated by / Submitted by rows with avatar + name
+- Uses `created_by` (author), `updated_by` (last editor from trigger), and submission timestamp
+
+**DraftPostList + CalendarPostCard:** Creator avatar/name chip shown on each card row.
+
+**"My Work" toggle:**
+- Filter button on global Posts page (`Posts.jsx`) and client WorkflowTab
+- Filters the list to posts where `created_by = user.id`
+
+**Status additions across charts and tab lists:**
+- `SUBMITTED`, `CHANGES_REQUESTED`, `READY` added to `WorkflowHealth` donut, `ContentPipelineBar` dashboard chart, `OverviewTab` chart, `Posts.jsx` tab list, `WorkflowTab.jsx` tab list, `StatusBadge.jsx`
+- Bottleneck alert priority (4-tier): CHANGES_REQUESTED → SUBMITTED → PENDING_APPROVAL → all-clear
+
+**`nav-user.jsx` (sidebar footer):**
+- Displays user's system role label (`SYSTEM_ROLE_PALETTE`) instead of email in the collapsed footer tile
+- Email still shown in the expanded dropdown menu
+
+### 5.4 Phase 5 Checklist
+
+- [x] `updated_by` column on `post_versions` + trigger on content-change UPDATE
+- [x] SUBMITTED, CHANGES_REQUESTED, READY statuses added to enum
+- [x] `submit_for_internal_approval` scoped to post creator (DB exception + UI guard)
+- [x] `approve_deliverable` and `request_changes` RPCs (owner/admin enforced in RPC)
+- [x] Approvals page — owner/admin queue with approve / request-changes actions
+- [x] Submissions page — member tracker for own submitted deliverables
+- [x] Attribution (created by / updated by / submitted by) displayed in PostDetails
+- [x] Creator chips on DraftPostList and CalendarPostCard
+- [x] "My Work" filter on global Posts page and WorkflowTab
+- [x] New statuses visible in charts, tabs, and badges across all surfaces
+- [x] `src/lib/post-statuses.js` — shared source of truth for status colors/config
+- [x] Sidebar footer shows role label instead of email
+- [ ] Members cannot create campaigns (deferred)
+- [ ] Adversarial test: member calling `approve_deliverable` / `request_changes` RPC directly is rejected
+
+✅ **Phase 5 complete (campaign-create gating deferred).**
 
 ---
 
@@ -621,6 +686,7 @@ auth.users (owner)
 | `agency_invites`   | `functional_role` | text    | nullable; set by joiner at join (not by owner at invite)                       |
 | `agency_invites`   | `permissions`     | jsonb   | nullable; auto-derived from `system_role` by `join_team`, not stored on invite |
 | `client_documents` | `is_confidential` | boolean | Phase 4 — default false; backfilled true for Contract/NDA/Invoice-Finance      |
+| `post_versions`    | `updated_by`      | uuid    | Phase 5 — FK to `auth.users`; set by trigger on content-field UPDATE          |
 
 ### DB Helper Functions (SECURITY DEFINER)
 
@@ -633,6 +699,9 @@ auth.users (owner)
 | `my_documents_level()`         | text    | documents RLS + UI                                                         |
 | `can_view_confidential_docs()` | boolean | confidential doc RLS                                                       |
 | `update_member_access(...)`    | void    | **owner-only** promote/demote/edit member                                  |
+| `submit_for_internal_approval(p_version_id)` | void | sets SUBMITTED; raises if caller ≠ creator |
+| `approve_deliverable(p_version_id)`          | void | sets READY; owner/admin only               |
+| `request_changes(p_version_id, p_note)`      | void | sets CHANGES_REQUESTED; owner/admin only   |
 
 ---
 

@@ -115,8 +115,13 @@ function PostRow({ post, isSelected, isApproved, isRevised, onClick }) {
       <div className="shrink-0 h-10 w-10 rounded-md overflow-hidden bg-muted flex items-center justify-center">
         {firstMedia ? (
           isVideo(firstMedia) ? (
-            <div className="h-full w-full bg-black/80 flex items-center justify-center">
-              <Play className="size-4 text-white fill-white" />
+            <div className="relative h-full w-full bg-black">
+              <video src={firstMedia} muted playsInline className="h-full w-full object-cover" />
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div className="bg-black/40 backdrop-blur-sm p-1 rounded-full">
+                  <Play className="size-3 text-white fill-white" />
+                </div>
+              </div>
             </div>
           ) : isDocumentUrl(firstMedia) ? (
             <div className="h-full w-full flex flex-col items-center justify-center gap-0.5 bg-muted/60">
@@ -204,9 +209,14 @@ function MediaGallery({ mediaUrls }) {
         return (
           <div key={i} className="relative aspect-square rounded-lg overflow-hidden bg-muted">
             {isVideo(url) ? (
-              <div className="h-full w-full bg-black/90 flex items-center justify-center">
-                <Play className="size-6 text-white fill-white opacity-80" />
-              </div>
+              <>
+                <video src={url} muted playsInline className="h-full w-full object-cover" />
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <div className="bg-black/40 backdrop-blur-sm p-1.5 rounded-full">
+                    <Play className="size-4 text-white fill-white" />
+                  </div>
+                </div>
+              </>
             ) : isDocumentUrl(url) ? (
               <div className="h-full w-full flex flex-col items-center justify-center gap-1 bg-muted/60">
                 <FileText className="size-6 text-muted-foreground" />

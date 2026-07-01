@@ -36,7 +36,8 @@ function buildPostsQuery(userId, filters = {}) {
         updated_at,
         published_at,
         platform_schedules,
-        deliverable_type
+        deliverable_type,
+        created_by
       )
     `,
     )
@@ -119,6 +120,7 @@ function normalizePosts(data) {
         // Campaign info
         campaign_id: row.campaign_id || null,
         campaign_name: row.campaigns?.name || null,
+        created_by: v.created_by || null,
       }
     })
 }
@@ -177,6 +179,9 @@ export function usePostCounts() {
       const counts = {
         all: 0,
         DRAFT: 0,
+        SUBMITTED: 0,
+        CHANGES_REQUESTED: 0,
+        READY: 0,
         PENDING_APPROVAL: 0,
         APPROVED: 0,
         SCHEDULED: 0,

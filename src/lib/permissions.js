@@ -27,6 +27,7 @@ export function resolveCapabilities({ role, permissions }) {
     // Role identifiers
     isOwner: role === 'owner',
     isAdmin: full,
+    isTeamMember: role === 'member',
 
     // Owner-only powers
     canManageTeam: isOwnerTier,

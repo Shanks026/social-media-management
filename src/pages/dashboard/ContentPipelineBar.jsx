@@ -18,39 +18,11 @@ import { AlertCircle, ArrowUpRight, CheckCircle2 } from 'lucide-react'
 import { useGlobalPosts } from '@/api/useGlobalPosts'
 import { Button } from '@/components/ui/button'
 import { getPublishState } from '@/lib/helper'
-
-const chartConfig = {
-  'DRAFT':                { label: 'Draft',               color: '#3b82f6' },
-  'PENDING APPROVAL':     { label: 'Pending Approval',    color: '#f97316' },
-  'APPROVED':             { label: 'Approved',            color: '#22c55e' },
-  'NEEDS REVISION':       { label: 'Needs Revision',      color: '#ec4899' },
-  'SCHEDULED':            { label: 'Scheduled',           color: '#a855f7' },
-  'DELIVERED':            { label: 'Delivered',           color: '#14b8a6' },
-  'PARTIALLY PUBLISHED':  { label: 'Partially Published', color: '#84cc16' },
-  'PUBLISHED':            { label: 'Published',           color: '#10b981' },
-}
-
-const ALLOWED_STATUSES = [
-  'DRAFT',
-  'PENDING APPROVAL',
-  'APPROVED',
-  'NEEDS REVISION',
-  'SCHEDULED',
-  'DELIVERED',
-  'PARTIALLY PUBLISHED',
-  'PUBLISHED',
-]
-
-const STATUS_DISPLAY_MAP = {
-  DRAFT:                'DRAFT',
-  PENDING_APPROVAL:     'PENDING APPROVAL',
-  APPROVED:             'APPROVED',
-  NEEDS_REVISION:       'NEEDS REVISION',
-  SCHEDULED:            'SCHEDULED',
-  DELIVERED:            'DELIVERED',
-  PARTIALLY_PUBLISHED:  'PARTIALLY PUBLISHED',
-  PUBLISHED:            'PUBLISHED',
-}
+import {
+  POST_CHART_CONFIG as chartConfig,
+  ALLOWED_CHART_STATUSES as ALLOWED_STATUSES,
+  STATUS_DISPLAY_MAP,
+} from '@/lib/post-statuses'
 
 function normalizeStatus(raw) {
   if (!raw) return 'DRAFT'
@@ -69,7 +41,7 @@ export default function ContentPipelineBar() {
   // restarts/interrupts the donut's entry animation (the "not smooth" jank).
   // React Query's structural sharing keeps `posts` stable when unchanged, so
   // this memo — and the chart — stays stable across incidental re-renders.
-  const { chartData, pieChartData, totalPosts, needsRevisionCount, pendingApprovalCount } = useMemo(() => {
+  const { chartData, pieChartData, totalPosts, needsRevisionCount, changesRequestedCount, pendingApprovalCount, submittedCount } = useMemo(() => {
     const counts = ALLOWED_STATUSES.reduce((acc, status) => {
       acc[status] = 0
       return acc
@@ -100,7 +72,9 @@ export default function ContentPipelineBar() {
       pieChartData: nextChartData.filter((d) => d.value > 0),
       totalPosts: nextTotalPosts,
       needsRevisionCount: counts['NEEDS REVISION'] || 0,
+      changesRequestedCount: counts['CHANGES REQUESTED'] || 0,
       pendingApprovalCount: counts['PENDING APPROVAL'] || 0,
+      submittedCount: counts['SUBMITTED'] || 0,
     }
   }, [posts])
 
@@ -227,16 +201,28 @@ export default function ContentPipelineBar() {
                     <div className="flex items-center gap-2 border-l-2 border-destructive pl-3">
                       <AlertCircle className="h-3.5 w-3.5 text-destructive shrink-0" />
                       <span className="text-xs text-destructive font-medium">
-                        {needsRevisionCount} post{needsRevisionCount !== 1 && 's'}{' '}
-                        require immediate revision
+                        {needsRevisionCount} deliverable{needsRevisionCount !== 1 && 's'} require client revision
                       </span>
                     </div>
-                  ) : pendingApprovalCount > 0 ? (
+                  ) : changesRequestedCount > 0 ? (
                     <div className="flex items-center gap-2 border-l-2 border-amber-500 pl-3">
                       <AlertCircle className="h-3.5 w-3.5 text-amber-500 shrink-0" />
                       <span className="text-xs text-amber-600 dark:text-amber-400 font-medium">
-                        {pendingApprovalCount} post
-                        {pendingApprovalCount !== 1 && 's'} awaiting approval
+                        {changesRequestedCount} deliverable{changesRequestedCount !== 1 && 's'} need internal changes
+                      </span>
+                    </div>
+                  ) : pendingApprovalCount > 0 ? (
+                    <div className="flex items-center gap-2 border-l-2 border-orange-500 pl-3">
+                      <AlertCircle className="h-3.5 w-3.5 text-orange-500 shrink-0" />
+                      <span className="text-xs text-orange-600 dark:text-orange-400 font-medium">
+                        {pendingApprovalCount} deliverable{pendingApprovalCount !== 1 && 's'} awaiting client approval
+                      </span>
+                    </div>
+                  ) : submittedCount > 0 ? (
+                    <div className="flex items-center gap-2 border-l-2 border-violet-500 pl-3">
+                      <AlertCircle className="h-3.5 w-3.5 text-violet-500 shrink-0" />
+                      <span className="text-xs text-violet-600 dark:text-violet-400 font-medium">
+                        {submittedCount} deliverable{submittedCount !== 1 && 's'} pending internal review
                       </span>
                     </div>
                   ) : (

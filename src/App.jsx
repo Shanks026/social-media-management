@@ -49,6 +49,8 @@ import PoliciesPage from './pages/help/PoliciesPage'
 import TeamPage from './pages/TeamPage'
 import AdsPage from './pages/ads/AdsPage'
 import PartnershipsPage from './pages/partnerships/PartnershipsPage'
+import ApprovalsPage from './pages/approvals/ApprovalsPage'
+import SubmissionsPage from './pages/submissions/SubmissionsPage'
 
 function MaintenanceGate({ children }) {
   const queryClient = useQueryClient()
@@ -170,6 +172,8 @@ function AppRoutes() {
           <Route path="/prospects/:prospectId" element={<RequirePermission cap="prospects"><ProspectDetailPage /></RequirePermission>} />
           <Route path="/proposals" element={<RequirePermission cap="proposals"><ProposalsPage /></RequirePermission>} />
           <Route path="/proposals/:proposalId" element={<RequirePermission cap="proposals"><ProposalDetailPage /></RequirePermission>} />
+          <Route path="/submissions" element={<RequirePermission cap="isTeamMember"><SubmissionsPage /></RequirePermission>} />
+          <Route path="/approvals" element={<RequirePermission cap="canSendDeliverables"><ApprovalsPage /></RequirePermission>} />
           <Route path="/campaigns" element={<CampaignsPage />} />
           <Route path="/campaigns/:campaignId" element={<CampaignDetailPage />} />
           <Route path="/ads" element={<AdsPage />} />
