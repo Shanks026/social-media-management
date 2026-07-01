@@ -1,5 +1,5 @@
 import { format, isToday, isTomorrow, differenceInDays } from 'date-fns'
-import { CheckCircle2, Clock, Link as LinkIcon, Pencil } from 'lucide-react'
+import { CheckCircle2, Clock, Link as LinkIcon, Lock, Pencil } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -84,6 +84,13 @@ export default function MeetingRow({
               <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1.5">
                 <Clock className="h-3 w-3 shrink-0" />
                 {format(meetingDate, 'h:mm a')}
+                {meeting.visibility === 'private' && (
+                  <>
+                    <span className="text-muted-foreground/40">·</span>
+                    <Lock className="h-2.5 w-2.5 shrink-0" />
+                    <span>Private</span>
+                  </>
+                )}
               </p>
             </div>
           </div>
@@ -206,6 +213,13 @@ export default function MeetingRow({
           </p>
           <p className="text-xs text-muted-foreground flex items-center gap-1">
             <Clock className="h-3 w-3" /> {format(meetingDate, 'h:mm a')}
+            {meeting.visibility === 'private' && (
+              <>
+                <span className="text-muted-foreground/40">·</span>
+                <Lock className="h-2.5 w-2.5 shrink-0" />
+                <span>Private</span>
+              </>
+            )}
           </p>
         </div>
       </div>

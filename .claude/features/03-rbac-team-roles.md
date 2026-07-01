@@ -1,81 +1,11 @@
 # Feature: Role-Based Access Control (RBAC) & Team Roles
-**Product**: Tercero — Agency Management SaaS (social media agencies and any client-services agency)
-**File**: `.claude/features/03-rbac-team-roles.md`
-**Status**: Planned — model locked, ready for Phase 1
-**Last Updated**: June 2026
 
----
-
-## Context
-
-Today every invited teammate gets full workspace access. Anyone with an invite link self-registers, picks their own (cosmetic) job title, and can then do everything the owner can — including Finance, all Documents (contracts, NDAs), Billing, and Team management. This is wrong for an agency: finance and legal documents are confidential, only the owner should manage the team or billing, and members doing delivery work should not reach the agency's commercial surface.
-
-This feature adds a real access-control layer on top of the existing multi-tenant workspace model. The workspace model already isolates **between** agencies (via `workspaceUserId` / `get_my_agency_user_id()`); RBAC adds control **within** a single workspace.
-
-### Two concepts, kept strictly separate
-
-| Concept | Column | Meaning | Drives |
-|---|---|---|---|
-| **System role** | `agency_members.system_role` | Access tier | **All access decisions (this feature)** |
-| **Functional role** | `agency_members.functional_role` | Job title (Designer, Account Manager…) | **Cosmetic badge only — never affects access** |
-
-A person is always **one system role + one (optional) functional role**, e.g. *Admin · Account Manager* or *Member · Designer*. The left word decides what they can do; the right word is just a label. Access logic reads `system_role` (+ the documents flag) and **completely ignores** `functional_role`.
-
----
-
-## The Locked Role Model
-
-### System roles
-
-`superadmin` (app-level) › **owner** › **admin** › **member**
-
-- **`superadmin`** — the application owner (the Tercero team), used only by the separate admin portal (`admin.tercerospace.com`). **Not** a workspace role we design around. All access helpers treat it as a full-access passthrough so it can never be locked out. Untouched by every migration.
-
-- **`owner`** — the agency account holder (founder / co-founder) who signed up. **Exactly one per workspace.** Runs *the company*: everything Admin can do, **plus** team management, billing, workspace settings, invoice-signatory configuration, and workspace deletion. Cannot be demoted or removed. Stored explicitly as a self-row in `agency_members` (`agency_user_id = member_user_id`), and also derivable at runtime via `auth.uid() = get_my_agency_user_id()` as a safety net so the owner can never be locked out.
-
-- **`admin`** — a trusted operational deputy. Runs *the work*, not *the company*. Full CRUD over all client-facing work (clients, deliverables, campaigns, finance, documents incl. confidential, proposals, prospects, reports). **Cannot**: manage the team, touch billing, edit workspace settings, edit the invoice signatory, or delete the workspace. Many allowed. Granted **only by manual owner promotion** — never assigned at invite time.
-
-- **`member`** — does scoped delivery work. View clients; draft deliverables (needs internal approval before reaching a client); work inside existing campaigns; notes & meetings; assigned tasks. **No** finance, proposals, prospects, reports, billing, team, or workspace settings. Documents access is governed by a per-member flag (below). **This is the default role for everyone who joins.**
-
-### The one-line mental model
-
-> **Owner runs the company. Admin runs the work. Member does assigned work.**
-
-### What Admin specifically *cannot* do (the entire reserved set)
-
-1. **Team management** — cannot invite, onboard, promote, demote, or remove anyone. *(Owner-only.)*
-2. **Billing** — cannot view or change the agency's Tercero subscription / payment method.
-3. **Workspace settings** — view-only; cannot edit agency identity/branding/config.
-4. **Invoice signatory** — cannot change whose name/signature prints on invoices (but can freely *issue* invoices using the owner-configured signatory).
-5. **Delete the workspace.**
-
-Everything else — full CRUD on clients, deliverables, finance, documents, campaigns, proposals, prospects, reports — Admin can do, same as Owner.
-
-### Onboarding & promotion flow (owner-only, manual)
-
-```
-OWNER creates an invite           ← only the owner can; admins cannot
-  ├─ sets functional role (job title, optional)
-  └─ sets documents level for the joiner (none / view / manage)
-        │
-        ▼
-  invite link → joiner submits name + password only
-        │
-        ▼
-  joiner becomes  system_role = 'member'   ← ALWAYS member, no exceptions
-        │
-        ▼
-  OWNER may later MANUALLY promote a member → 'admin'   (deliberate, separate action)
-```
-
-There is **no path to be born an admin.** Invites always create members; admin is reachable only through an explicit, owner-initiated promotion in Team Settings. Defense in depth: the DB clamps any joining role to `'member'` regardless of what the invite or client says.
-
-### Capability flag (the only per-member tuning)
+themth### Capability flag (the only per-member tuning)
 
 Members are otherwise a fixed tier. The **only** per-member knob is documents access, stored as a `permissions` JSONB on `agency_members`:
 
 ```jsonc
-{ "documents": "view" }   // 'none' | 'view' | 'manage'
+{ "documents": "view" } // 'none' | 'view' | 'manage'
 ```
 
 - **Finance is NOT a flag.** Members never get finance under any setting — finance is owner/admin only. If someone needs finance, the owner promotes them to Admin.
@@ -98,42 +28,42 @@ Confidentiality is a **property of the document**, not a capability level:
 
 Legend: ✅ full · ⚙️ flag-gated · 👁️ view-only · ❌ none · — n/a
 
-| Area | Action | Owner | Admin | Member |
-|---|---|:--:|:--:|:--:|
-| **Dashboard** | View (non-finance widgets) | ✅ | ✅ | ✅ |
-| **Dashboard** | Finance widgets / revenue / profit cells | ✅ | ✅ | ❌ |
-| **Clients** | View | ✅ | ✅ | ✅ (all) |
-| **Clients** | Create / onboard | ✅ | ✅ | ❌ |
-| **Clients** | Edit | ✅ | ✅ | ❌ |
-| **Clients** | Delete | ✅ | ✅ | ❌ |
-| **Deliverables** | Create / edit draft | ✅ | ✅ | ✅ |
-| **Deliverables** | Submit for internal approval | — | — | ✅ |
-| **Deliverables** | Approve internally | ✅ | ✅ | ❌ |
-| **Deliverables** | Send to client for approval | ✅ | ✅ | ❌ |
-| **Campaigns** | View / work within | ✅ | ✅ | ✅ |
-| **Campaigns** | Create campaign | ✅ | ✅ | ❌ |
-| **Calendar** | View | ✅ | ✅ | ✅ |
-| **Meetings** | View all (workspace) | ✅ | ✅ | ✅ |
-| **Meetings** | Create | ✅ | ✅ | ✅ |
-| **Meetings** | Edit / delete others' | ✅ | ✅ | ❌ (own only) |
-| **Notes** | View all (workspace) | ✅ | ✅ | ✅ |
-| **Notes** | Create | ✅ | ✅ | ✅ |
-| **Notes** | Edit / delete others' | ✅ | ✅ | ❌ (own only) |
-| **Tasks** *(when built)* | Create / assign | ✅ | ✅ | ❌ |
-| **Tasks** *(when built)* | Complete assigned (not delete) | ✅ | ✅ | ✅ |
-| **Documents** | Non-confidential | ✅ manage | ✅ manage | ⚙️ none/view/manage |
-| **Documents** | Confidential (Contract/NDA/Finance) | ✅ | ✅ | ❌ never |
-| **Proposals** | View / create / edit | ✅ | ✅ | ❌ |
-| **Prospects** | View / create / edit / convert | ✅ | ✅ | ❌ |
-| **Reports** | View | ✅ | ✅ | ❌ |
-| **Finance** | Invoices / expenses / transactions / ledger / subscriptions | ✅ | ✅ | ❌ |
-| **Finance** | Issue invoices | ✅ | ✅ | ❌ |
-| **Invoice signatory** | Configure (name / designation / signature) | ✅ | ❌ | ❌ |
-| **Billing** | View / manage Tercero subscription | ✅ | ❌ | ❌ |
-| **Workspace settings** | Edit agency identity / branding / config | ✅ | 👁️ | ❌ |
-| **Team** | Invite / onboard | ✅ | ❌ | ❌ |
-| **Team** | Promote / demote / remove | ✅ | ❌ | ❌ |
-| **Workspace** | Delete workspace | ✅ | ❌ | ❌ |
+| Area                     | Action                                                      |   Owner   |   Admin   |       Member        |
+| ------------------------ | ----------------------------------------------------------- | :-------: | :-------: | :-----------------: |
+| **Dashboard**            | View (non-finance widgets)                                  |    ✅     |    ✅     |         ✅          |
+| **Dashboard**            | Finance widgets / revenue / profit cells                    |    ✅     |    ✅     |         ❌          |
+| **Clients**              | View                                                        |    ✅     |    ✅     |      ✅ (all)       |
+| **Clients**              | Create / onboard                                            |    ✅     |    ✅     |         ❌          |
+| **Clients**              | Edit                                                        |    ✅     |    ✅     |         ❌          |
+| **Clients**              | Delete                                                      |    ✅     |    ✅     |         ❌          |
+| **Deliverables**         | Create / edit draft                                         |    ✅     |    ✅     |         ✅          |
+| **Deliverables**         | Submit for internal approval                                |     —     |     —     |         ✅          |
+| **Deliverables**         | Approve internally                                          |    ✅     |    ✅     |         ❌          |
+| **Deliverables**         | Send to client for approval                                 |    ✅     |    ✅     |         ❌          |
+| **Campaigns**            | View / work within                                          |    ✅     |    ✅     |         ✅          |
+| **Campaigns**            | Create campaign                                             |    ✅     |    ✅     |         ❌          |
+| **Calendar**             | View                                                        |    ✅     |    ✅     |         ✅          |
+| **Meetings**             | View all (workspace)                                        |    ✅     |    ✅     |         ✅          |
+| **Meetings**             | Create                                                      |    ✅     |    ✅     |         ✅          |
+| **Meetings**             | Edit / delete others'                                       |    ✅     |    ✅     |    ❌ (own only)    |
+| **Notes**                | View all (workspace)                                        |    ✅     |    ✅     |         ✅          |
+| **Notes**                | Create                                                      |    ✅     |    ✅     |         ✅          |
+| **Notes**                | Edit / delete others'                                       |    ✅     |    ✅     |    ❌ (own only)    |
+| **Tasks** _(when built)_ | Create / assign                                             |    ✅     |    ✅     |         ❌          |
+| **Tasks** _(when built)_ | Complete assigned (not delete)                              |    ✅     |    ✅     |         ✅          |
+| **Documents**            | Non-confidential                                            | ✅ manage | ✅ manage | ⚙️ none/view/manage |
+| **Documents**            | Confidential (Contract/NDA/Finance)                         |    ✅     |    ✅     |      ❌ never       |
+| **Proposals**            | View / create / edit                                        |    ✅     |    ✅     |         ❌          |
+| **Prospects**            | View / create / edit / convert                              |    ✅     |    ✅     |         ❌          |
+| **Reports**              | View                                                        |    ✅     |    ✅     |         ❌          |
+| **Finance**              | Invoices / expenses / transactions / ledger / subscriptions |    ✅     |    ✅     |         ❌          |
+| **Finance**              | Issue invoices                                              |    ✅     |    ✅     |         ❌          |
+| **Invoice signatory**    | Configure (name / designation / signature)                  |    ✅     |    ❌     |         ❌          |
+| **Billing**              | View / manage Tercero subscription                          |    ✅     |    ❌     |         ❌          |
+| **Workspace settings**   | Edit agency identity / branding / config                    |    ✅     |    👁️     |         ❌          |
+| **Team**                 | Invite / onboard                                            |    ✅     |    ❌     |         ❌          |
+| **Team**                 | Promote / demote / remove                                   |    ✅     |    ❌     |         ❌          |
+| **Workspace**            | Delete workspace                                            |    ✅     |    ❌     |         ❌          |
 
 ---
 
@@ -142,18 +72,23 @@ Legend: ✅ full · ⚙️ flag-gated · 👁️ view-only · ❌ none · — n/
 A curated, grouped default list, plus a **Custom…** free-text option so any agency type fits (a law firm can type "Paralegal", a video agency "Editor"). Stored in `src/lib/team-roles.js`; badge colors resolved there. **None of these affect access.**
 
 **Leadership**
+
 - Founder · Co-founder · CEO / Managing Director
 
 **Client & Strategy**
+
 - Account Manager · Project Manager · Strategist · Creative Director
 
 **Content & Creative**
+
 - Social Media Manager · Content Creator · Designer · Copywriter · Video Editor / Producer
 
 **Growth & Specialist**
+
 - Marketing Specialist · Community Manager · SEO / Media Buyer · Developer · Analyst
 
 **Finance & Ops**
+
 - Finance Manager · Operations Manager
 
 **+ Custom…** (free text, fallback badge color)
@@ -168,16 +103,17 @@ A curated, grouped default list, plus a **Custom…** free-text option so any ag
 
 ### The real enforcement boundary
 
-| Layer | Mechanism | Enforces |
-|---|---|---|
-| Postgres RLS | `can_access_finance()`, `my_documents_level()`, `can_view_confidential_docs()`, `is_workspace_owner()` in table policies | Direct table reads/writes |
-| SECURITY DEFINER RPCs | **In-function** capability checks (RLS is bypassed inside definer functions) | Aggregations, mutations, joins |
-| Storage policies | Bucket policies on `storage.objects` | Direct file fetches via signed URLs |
-| UI / routes | `usePermissions()` | Cosmetic — hide what the user can't use |
+| Layer                 | Mechanism                                                                                                                | Enforces                                |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------ | --------------------------------------- |
+| Postgres RLS          | `can_access_finance()`, `my_documents_level()`, `can_view_confidential_docs()`, `is_workspace_owner()` in table policies | Direct table reads/writes               |
+| SECURITY DEFINER RPCs | **In-function** capability checks (RLS is bypassed inside definer functions)                                             | Aggregations, mutations, joins          |
+| Storage policies      | Bucket policies on `storage.objects`                                                                                     | Direct file fetches via signed URLs     |
+| UI / routes           | `usePermissions()`                                                                                                       | Cosmetic — hide what the user can't use |
 
 ### Member-restricted data surfaces (server-side gating required)
 
 Members are denied these at the **database** level, not just the UI:
+
 - **Finance:** `invoices`, `invoice_items`, `expenses`, `transactions`, `recurring_invoices` (base tables); finance-bearing views inherit via `security_invoker=on`; SECURITY DEFINER RPCs (`get_clients_with_pipeline`, `get_campaign_analytics`) must null/omit finance fields for members; finance-mutation RPCs must `RAISE` for non-finance users.
 - **Proposals / Prospects:** their tables gated to owner/admin via RLS.
 - **Reports:** gated to owner/admin (finance access).
@@ -186,8 +122,8 @@ Members are denied these at the **database** level, not just the UI:
 ### Team-management & privilege-escalation rules (Phase 2)
 
 - **Onboarding is owner-only.** Invite RLS on `agency_invites` stays **owner-only** (`auth.uid() = get_my_agency_user_id() AND is_workspace_owner()`). Admins **cannot** create invites.
-- **Everyone joins as member.** `join_team` **clamps the role to `'member'`** unconditionally — it never reads a system role from the invite. Admin is granted only later, via owner promotion.
-- **Promotion is owner-only.** `update_member_access` requires `is_workspace_owner()`, clamps the target role to `('admin','member')`, and rejects `'owner'`/`'superadmin'`.
+- **System role set at invite time.** `join_team` reads `system_role` from the invite (`'admin'` or `'member'`) and derives permissions from it automatically — admin → `{ documents: 'manage' }`, member → `{ documents: 'view' }`. The joiner's `functional_role` comes from the join form, not the invite.
+- **Promotion/demotion is owner-only.** `update_member_access` requires `is_workspace_owner()`, clamps the target role to `('admin','member')`, and rejects `'owner'`/`'superadmin'`.
 - **Owner is immutable.** No path may demote/remove the owner or create a second `'owner'`.
 - **Members cannot write their own row.** RLS gives members `select_self` only — read, never write. No self-escalation.
 
@@ -200,24 +136,25 @@ The `client-documents` bucket is private, but its read policy (`foldername[1] = 
 ## Phase Overview
 
 ```
-Phase 1 — Permission Foundation (no visible change)
-  Schema (permissions JSONB {documents} + is_confidential), backfill migration,
+✅ Phase 1 — Permission Foundation (no visible change)
+  Schema (permissions JSONB {documents}), backfill migration,
   SECURITY DEFINER access helpers, AuthContext + usePermissions() hook.
 
-Phase 2 — Team Management (owner-only onboarding + manual admin promotion)
-  Invite RLS stays owner-only; join_team clamps to member; update_member_access
-  (owner-only) promotes/demotes; InviteDialog (owner) sets functional role + docs
-  level; JoinTeam drops the role selector; promotion UI in TeamSettings.
+✅ Phase 2 — Team Management (typed invites + role display)
+  Invite RLS owner-only; agency_invites.system_role column; join_team reads role
+  from invite + joiner sets own functional_role; update_member_access (owner-only)
+  promotes/demotes; InviteDialog shows admin/member toggle; two-column role display
+  (Access badge + Job Title badge) across TeamPage, TeamSettings, ProfileSettings.
 
-Phase 3 — Restricted Sections (Finance, Billing, Proposals, Prospects, Reports)
+⬜ Phase 3 — Restricted Sections (Finance, Billing, Proposals, Prospects, Reports)
   RLS on finance/proposals/prospects tables; route guards + nav hide for members;
   Billing & workspace-settings-edit owner-only; dashboard finance widgets hidden.
 
-Phase 4 — Documents Cap & Confidentiality
+⬜ Phase 4 — Documents Cap & Confidentiality
   is_confidential per document; RLS + storage policy; none/view/manage enforced in
   nav, DocumentsTab (global + client detail), and upload/edit/delete.
 
-Phase 5 — Deliverable Approval Workflow + Campaign-create gating
+⬜ Phase 5 — Deliverable Approval Workflow + Campaign-create gating
   Member draft → internal approval by owner/admin before client send; members
   cannot create campaigns. (Adds a workflow state — more than pure gating.)
 ```
@@ -229,9 +166,11 @@ Phase 5 — Deliverable Approval Workflow + Campaign-create gating
 ## Phase 1 — Permission Foundation
 
 ### Goal
+
 Establish the data model and the single source of truth for "what can the current user do" — with **zero behavioural change**. After this phase, every member has a resolved capability set, the owner/superadmin are provably never lockable, and a `usePermissions()` hook + DB helpers exist for later phases. Nothing is gated yet.
 
 ### Before Starting — Confirm With Codebase
+
 1. Read `src/context/AuthContext.jsx` — confirm `resolveWorkspace` sets `userRole` from the member row's `system_role`.
 2. Read the `handle_new_user_subscription` trigger — confirm it inserts the owner self-row as `(agency_user_id=NEW.id, member_user_id=NEW.id, system_role='admin')`. This phase changes that to `'owner'`.
 3. Read `src/api/team.js` `useMyMemberRecord()` — confirm it selects `system_role, functional_role`.
@@ -250,7 +189,7 @@ ALTER TABLE public.agency_invites
   ADD COLUMN IF NOT EXISTS functional_role text,
   ADD COLUMN IF NOT EXISTS permissions jsonb NOT NULL
   DEFAULT '{"documents": "view"}'::jsonb;
--- NOTE: invites do NOT carry system_role — everyone joins as 'member'.
+-- NOTE: system_role column is added to agency_invites in Phase 2 (rbac_invite_system_role migration).
 
 -- Backfill: admins/superadmins → manage docs; members → view.
 UPDATE public.agency_members
@@ -340,7 +279,12 @@ $$;
 **New file `src/lib/permissions.js`** — pure constants + helpers (no Supabase):
 
 ```js
-export const SYSTEM_ROLES = { OWNER: 'owner', ADMIN: 'admin', MEMBER: 'member', SUPERADMIN: 'superadmin' }
+export const SYSTEM_ROLES = {
+  OWNER: 'owner',
+  ADMIN: 'admin',
+  MEMBER: 'member',
+  SUPERADMIN: 'superadmin',
+}
 
 export const DOCUMENT_LEVELS = ['none', 'view', 'manage']
 
@@ -348,7 +292,11 @@ export const DOCUMENT_LEVELS = ['none', 'view', 'manage']
 export const MEMBER_DEFAULT_PERMISSIONS = { documents: 'view' }
 
 // Categories that default to confidential on upload.
-export const CONFIDENTIAL_DEFAULT_CATEGORIES = ['Contract', 'NDA', 'Invoice / Finance']
+export const CONFIDENTIAL_DEFAULT_CATEGORIES = [
+  'Contract',
+  'NDA',
+  'Invoice / Finance',
+]
 
 // Resolve a flat capability object from role + stored permissions.
 export function resolveCapabilities({ role, permissions }) {
@@ -369,7 +317,7 @@ export function resolveCapabilities({ role, permissions }) {
     reports: full,
     canCreateClients: full,
     canCreateCampaigns: full,
-    canSendDeliverables: full,        // members draft only
+    canSendDeliverables: full, // members draft only
     viewConfidentialDocs: full,
     // Member-tunable
     documents: full ? 'manage' : (permissions?.documents ?? 'view'),
@@ -384,84 +332,110 @@ export function resolveCapabilities({ role, permissions }) {
 **New hook `usePermissions()`** (in `src/api/usePermissions.js`): returns `resolveCapabilities()` output for the current user — the single source of truth for nav, routes, dashboard, and feature pages.
 
 ### 1.3 / 1.4 Components & Integration
+
 No component changes; no gating yet. `usePermissions()` exists, unused.
 
 ### 1.5 Phase 1 Checklist
-- [ ] `permissions` column on `agency_members` + `agency_invites`, default `{"documents":"view"}`
-- [ ] `agency_invites` has `functional_role` (no `system_role` column — joiners are always members)
-- [ ] Backfill: admin/superadmin → `manage`; member → `view`
-- [ ] Owner self-rows promoted `'admin'` → `'owner'`; `superadmin` untouched
-- [ ] `handle_new_user_subscription` inserts owner self-rows as `'owner'` (subscription INSERT verbatim)
-- [ ] Helpers created & tested: `is_workspace_owner`, `is_workspace_admin`, `my_system_role`, `can_access_finance`, `my_documents_level`, `can_view_confidential_docs`
-- [ ] `src/lib/permissions.js` with `resolveCapabilities`
-- [ ] `AuthContext` exposes `userPermissions`; `useMyMemberRecord` selects `permissions`
-- [ ] `usePermissions()` returns correct caps for owner / admin / member
-- [ ] App builds and behaves identically (no gating active)
 
-🧪 **Test checkpoint:** Log in as owner and member. Nothing changed in the UI; `usePermissions()` (temp-logged) returns full caps for owner, restricted for member.
+- [x] `permissions` column on `agency_members` + `agency_invites`, default `{"documents":"view"}`
+- [x] `agency_invites` has `functional_role` and `permissions` columns (Phase 2 later adds `system_role`)
+- [x] Backfill: admin/superadmin → `manage`; member → `view`
+- [x] Owner self-rows promoted `'admin'` → `'owner'`; `superadmin` untouched
+- [x] `handle_new_user_subscription` inserts owner self-rows as `'owner'` (subscription INSERT verbatim)
+- [x] Helpers created & tested: `is_workspace_owner`, `is_workspace_admin`, `my_system_role`, `can_access_finance`, `my_documents_level`, `can_view_confidential_docs`
+- [x] `src/lib/permissions.js` with `resolveCapabilities`
+- [x] `AuthContext` exposes `userPermissions`; `useMyMemberRecord` selects `permissions`
+- [x] `usePermissions()` returns correct caps for owner / admin / member
+- [x] App builds and behaves identically (no gating active)
 
-**→ Stop. Show result, wait for approval.**
+✅ **Phase 1 complete.**
 
 ---
 
-## Phase 2 — Team Management (owner-only onboarding + manual admin promotion)
+## Phase 2 — Team Management (typed invites + role display) ✅
 
 ### Goal
-The **owner** is the only person who can onboard teammates and assign roles. Invites collect the joiner's functional role + documents level; the joiner always lands as **Member**. The owner manually promotes a member to **Admin** afterward in Team Settings. Admins and members see **no** team-management controls.
 
-### Before Starting
-1. Re-read `src/pages/JoinTeam.jsx` — the functional-role selector + `functionalRole` field (to remove).
-2. Re-read `src/api/team.js` — `useGenerateInvite`, `joinTeam`, `fetchInviteByToken`, `usePendingInvites`.
-3. Re-read `src/pages/settings/TeamSettings.jsx` — `InviteDialog`, member list, the `isAdmin` gate.
-4. Inspect `join_team` and `get_invite_by_token` RPC bodies before editing.
-5. Confirm `usePermissions()` from Phase 1.
+The **owner** is the only person who can onboard teammates and set access tiers. The owner picks **system role** (Admin or Member) on the invite link; the joiner picks their own **functional role** (cosmetic job title) at join time. Admins and members see **no** team-management controls.
 
-### 2.1 Database — Migration `rbac_phase2_team_management`
-- **Invite RLS stays owner-only.** Insert/select/update/delete on `agency_invites`: `is_workspace_owner() AND agency_user_id = get_my_agency_user_id()`. Admins cannot create invites.
-- **`join_team(p_token, p_first_name, p_last_name)`** — drop `p_functional_role`. Read `functional_role`, `permissions` from the invite; **force `system_role = 'member'`** (never read a role from the invite). Validate: unexpired, `accepted_at IS NULL`, set `accepted_at = now()` atomically; force `member_user_id = auth.uid()` and `agency_user_id` from the invite; re-check seat limit; validate `permissions` shape (`documents ∈ none/view/manage`), fall back to `{documents:'view'}` on mismatch.
-- **`get_invite_by_token(p_token)`** — return the invite's `functional_role` (display "You're joining as Designer"). No system role to show — always member.
-- **`update_member_access(p_member_id, p_system_role, p_permissions, p_functional_role)`** (SECURITY DEFINER) — owner-only promote/demote/edit. Guards (in-function):
-  - Caller must be `is_workspace_owner()` **and** target's `agency_user_id = get_my_agency_user_id()`.
-  - **Clamp `p_system_role` to `('admin','member')`**; reject `'owner'`/`'superadmin'` with `RAISE EXCEPTION`.
-  - **Owner row immutable** — reject if target `system_role = 'owner'` or target = `agency_user_id`.
-  - Validate `p_permissions` shape; functional role updatable.
-- **`agency_members` direct writes stay owner-only at RLS;** members have `select_self` (read-only).
+### What Was Built
 
-### 2.2 API Layer (`src/api/team.js`)
-- `useGenerateInvite()` → accept `{ functional_role, permissions }` (no system role). Seed `permissions` from `MEMBER_DEFAULT_PERMISSIONS` if absent.
-- `joinTeam({ token, firstName, lastName })` → drop `functionalRole`.
-- New `updateMemberAccess(memberId, { system_role, permissions, functional_role })` → calls the RPC; invalidate `teamKeys.members`.
-- `usePendingInvites()` → add `functional_role` to the select.
+#### 2.1 Database
 
-### 2.3 Components
-- **`InviteDialog` (owner-only)** — form before generating the link: **Functional role** select (`AGENCY_ROLE_OPTIONS` + Custom) and **Documents level** (none/view/manage). **No system-role selector** — everyone joins as Member.
-- **`JoinTeam.jsx`** — remove the role selector + `functionalRole` field/schema; show a read-only "You're joining as {functional role}". `onSubmit` drops `functionalRole`.
-- **Member list rows** — show **system-role badge** (Owner/Admin/Member) + functional-role badge + documents chip. **Owner-only** controls: "Promote to Admin" / "Demote to Member", "Edit access" (documents + functional role), Remove/Revoke/Restore. Owner row shows no controls to anyone.
-- **Gate:** all team-management controls render only for `canManageTeam` (owner). Replace local `isAdmin = userRole === 'admin'` with `usePermissions().canManageTeam`.
+**Migration `rbac_invite_system_role`:**
+
+- Added `system_role text NOT NULL DEFAULT 'member' CHECK (system_role IN ('admin', 'member'))` to `agency_invites`
+- Dropped the old 3-param `join_team` overloads, recreated as `join_team(p_token, p_first_name, p_last_name, p_functional_role DEFAULT NULL)`:
+  - Reads `system_role` from the invite row (no clamping — admin or member per the link)
+  - Derives permissions: `admin → { documents: 'manage' }`, `member → { documents: 'view' }`
+  - Validates: unexpired, `accepted_at IS NULL`, sets `accepted_at = now()` atomically
+  - Forces `member_user_id = auth.uid()`, `agency_user_id` from invite; re-checks seat limit
+- Updated `get_invite_by_token` to return `system_role` (not `functional_role`)
+- `update_member_access(p_member_id, p_system_role, p_permissions, p_functional_role)` — owner-only promote/demote/edit; clamps to `('admin','member')`; owner row immutable
+- Invite RLS stays owner-only; `agency_members` direct writes owner-only; members have `select_self` only
+
+#### 2.2 API Layer (`src/api/team.js`)
+
+- `useGenerateInvite({ system_role })` — inserts `{ agency_user_id, system_role }` only (no functional_role or permissions at invite time)
+- `joinTeam({ token, firstName, lastName, functional_role })` — passes `p_functional_role` to RPC
+- `usePendingInvites()` — selects `id, token, created_at, expires_at, system_role`
+
+#### 2.3 Components
+
+**`TeamSettings.jsx` — `InviteDialog` (owner-only):**
+
+- Admin/Member two-option radio picker (`SYSTEM_ROLE_PALETTE` palette per option)
+- "Generate Link" button; copies link to clipboard; no functional role or docs level at invite time
+- Pending invite list shows `system_role` badge per invite
+
+**`JoinTeam.jsx`:**
+
+- Shows the invite's `system_role` as a read-only badge ("You're joining as Admin / Member")
+- Optional grouped functional role selector (`AGENCY_ROLE_GROUPS`) with Custom free-text
+- `joinTeam` called with `functional_role: resolvedRole`
+
+**Role display (two separate axes, never merged):**
+
+- `TeamPage.jsx` — two columns: **Access** (system role `Badge`) + **Job Title** (outline `Badge` + filled dot)
+- `TeamSettings.jsx` member rows — same two-column display
+- `ProfileSettings.jsx` — two separate `InfoRow`s: System Role (ShieldCheck icon + `Badge`) and Job Title (Briefcase icon + filled dot + text)
+- All `isAdmin` usages replaced with `canManageTeam` from `usePermissions()`
+- `isOwner` correctly checks `system_role === 'owner'` (not `=== 'admin'`)
+
+**Badge styling (`src/lib/team-roles.js`):**
+
+- `SYSTEM_ROLE_PALETTE`: `border-0 bg-{color}-100 text-{color}-700 dark:bg-{color}-900/30 dark:text-{color}-300` pattern
+  - owner → violet · admin → blue · member → emerald · superadmin → amber
+- Functional role: shadcn `<Badge variant="outline">` + `<span className="size-1.5 rounded-full shrink-0 {dot}">` inline
 
 ### 2.4 Phase 2 Checklist
-- [ ] Invite RLS owner-only; admins cannot invite
-- [ ] `join_team` forces `system_role='member'`, reads functional role + docs from invite, validates invite, sets `accepted_at`, forces `member_user_id=auth.uid()`, re-checks seat limit, validates permissions
-- [ ] `get_invite_by_token` returns functional role for display
-- [ ] `update_member_access` owner-only; clamps to admin/member; owner immutable; validates permissions; functional role updatable
-- [ ] **Adversarial test:** a member/admin calling `update_member_access` or inserting an invite, or a `join_team` carrying `system_role='admin'/'owner'`, is rejected/clamped — no escalation
-- [ ] InviteDialog (owner) collects functional role + docs level; no role selector
-- [ ] JoinTeam has no role selector; shows assigned functional role read-only
-- [ ] Member rows show system-role badge + promote/demote (owner only)
-- [ ] Admins and members see **no** team-management controls
 
-🧪 **Test checkpoint:** As owner, invite someone (Designer, docs=view). Join incognito → lands as Member with the right functional role + docs. Promote to Admin → access expands. Confirm an admin account sees no invite/promote controls.
+- [x] Invite RLS owner-only; admins cannot invite
+- [x] `agency_invites` has `system_role` column (`'admin'` or `'member'`)
+- [x] `join_team` reads `system_role` from invite, derives permissions, accepts `p_functional_role` from joiner
+- [x] `get_invite_by_token` returns `system_role`
+- [x] `update_member_access` owner-only; clamps to admin/member; owner immutable; functional role updatable
+- [x] Adversarial guard: a member/admin cannot invite, cannot escalate via `join_team` or `update_member_access`
+- [x] InviteDialog shows Admin/Member toggle only; generates typed invite link
+- [x] JoinTeam shows system_role badge + optional functional role selector
+- [x] TeamPage: two-column display (Access + Job Title); `isOwner` checks `system_role === 'owner'`
+- [x] ProfileSettings: two separate InfoRows for System Role + Job Title
+- [x] All `isAdmin` → `canManageTeam`; admins and members see no team-management controls
 
-**→ Stop. Show result, wait for approval.**
+✅ **Phase 2 complete.**
+
+**→ Phase 3 is next.**
 
 ---
 
 ## Phase 3 — Restricted Sections (Finance, Billing, Proposals, Prospects, Reports)
 
 ### Goal
+
 Members can't see or reach Finance, Proposals, Prospects, or Reports — nav items vanish, routes redirect, and the DB refuses their rows. Billing and workspace-settings **editing** become owner-only (admins view workspace settings, never billing).
 
 ### 3.1 Database — Migration `rbac_phase3_restricted_rls`
+
 - **Finance** — replace the workspace-scoped `ALL` policy with a finance-gated one on **all five** base tables (`invoices`, `invoice_items`, `expenses`, `transactions`, `recurring_invoices`):
   ```sql
   DROP POLICY IF EXISTS invoices_workspace_scoped ON public.invoices;
@@ -478,19 +452,23 @@ Members can't see or reach Finance, Proposals, Prospects, or Reports — nav ite
   - `generate_invoice_from_template`, `advance_recurring_invoice_date`, `set_agency_plan`, `admin_update_subscription`: `RAISE EXCEPTION` unless `can_access_finance()` / owner. Re-read each body; add guard at top, preserve logic.
 
 ### 3.2 Components — `requiresPermission` nav pattern (hide vs lock)
+
 Add `requiresPermission` to nav items, resolved via `usePermissions()`. Apply in order:
+
 1. `requiresPermission` and user lacks it → **render nothing** (RBAC hide).
 2. Else `requiresFlag` and subscription lacks it → **render locked** 🔒 (existing).
 
 Apply: `finance` → Finance group; `proposals` → Proposals; `prospects` → Prospects; `reports` → Reports; `billing` (owner-only) → Billing & Usage.
 
 ### 3.3 Integration
+
 - **Dashboard:** wrap finance widgets/StatBar finance cells in `usePermissions().finance`; hide (don't disable) when false.
 - **Routing (`App.jsx`):** `<RequirePermission cap="finance">` around `/finance/*`; `cap="proposals"` around `/proposals*`; `cap="prospects"` around `/prospects*`; `cap="reports"` around `/reports`; `cap="billing"` (owner-only) around `/billing` → redirect to `/dashboard`.
 - **Client/Campaign detail:** hide finance/invoice + profitability sections when `!finance`; hide proposals tab when `!proposals`.
 - **Workspace settings:** owner edits; admin view-only (disable inputs + save).
 
 ### 3.4 Phase 3 Checklist
+
 - [ ] Finance RLS requires `can_access_finance()` on all five tables
 - [ ] Proposals & Prospects RLS gated to owner/admin
 - [ ] `get_clients_with_pipeline` + `get_campaign_analytics` null finance fields for members; finance-mutation RPCs raise
@@ -499,7 +477,7 @@ Apply: `finance` → Finance group; `proposals` → Proposals; `prospects` → P
 - [ ] Billing nav owner-only; workspace settings edit owner-only (admin view-only)
 - [ ] Dashboard finance widgets hidden for members; layout intact
 - [ ] `/finance/*`, `/proposals*`, `/prospects*`, `/reports`, `/billing` redirect appropriately
-- [ ] Subscription locks still compose for owner/admin who *have* role access
+- [ ] Subscription locks still compose for owner/admin who _have_ role access
 
 🧪 **Test checkpoint:** Member: no Finance/Proposals/Prospects/Reports in sidebar; dashboard has no finance cells; those routes redirect; DB rejects the queries. Admin: sees all of them but no Billing and no workspace-settings edit.
 
@@ -510,9 +488,11 @@ Apply: `finance` → Finance group; `proposals` → Proposals; `prospects` → P
 ## Phase 4 — Documents Cap & Confidentiality
 
 ### Goal
+
 Documents respect a per-member level (`none`/`view`/`manage`) and per-document confidentiality. Members never see confidential docs (Contract/NDA/Finance); their level governs the non-confidential set.
 
 ### 4.1 Database — Migration `rbac_phase4_documents`
+
 ```sql
 ALTER TABLE public.client_documents
   ADD COLUMN IF NOT EXISTS is_confidential boolean NOT NULL DEFAULT false;
@@ -539,20 +519,24 @@ CREATE POLICY client_documents_write ON public.client_documents
 > **Storage gap (must close):** the bucket read policy grants every member the whole folder. **Mitigation (decide at Phase 4 start, flag for confirmation):** confidential path prefix (`{agency}/_confidential/...`) + a storage SELECT policy requiring `can_view_confidential_docs()`, **or** route all confidential downloads through an edge function that verifies `can_view_confidential_docs()` + the row before issuing a short-lived signed URL. Existing confidential files must migrate into the chosen scheme.
 
 ### 4.2 API Layer (`src/api/documents.js`)
+
 - `uploadDocument(...)` → accept `isConfidential`; default from `CONFIDENTIAL_DEFAULT_CATEGORIES.includes(category)`.
 - `updateDocument(...)` → allow toggling `is_confidential`.
 - `useDocuments(...)` → expose `is_confidential` for the badge (RLS enforces visibility).
 
 ### 4.3 Components
+
 - **`UploadMetaDialog.jsx`** — "Confidential" switch (auto-checks for Contract/NDA/Finance), managers only.
 - **`DocumentCard.jsx`** — confidential indicator when `is_confidential`.
 - **`DocumentsTab.jsx`** — hide upload + edit/delete when level ≠ `manage`; gate both global + client-detail contexts.
 
 ### 4.4 Integration
+
 - **Nav** — Documents sub-item hidden when level is `none`.
 - **Prospect documents** (`ProspectDocumentsTab.jsx`) — members can't see Prospects at all (Phase 3), so this is moot for members; verify owner/admin behaviour unchanged.
 
 ### 4.5 Phase 4 Checklist
+
 - [ ] `is_confidential` column; Contract/NDA/Finance backfilled true
 - [ ] SELECT RLS hides confidential from members, respects `none`
 - [ ] Write RLS requires `manage`
@@ -574,9 +558,11 @@ CREATE POLICY client_documents_write ON public.client_documents
 > ⚠️ This phase is **more than gating** — it adds a workflow state to deliverables. Scope it deliberately.
 
 ### Goal
+
 Member-created deliverables require **internal approval by an owner/admin** before they can be sent to a client (or published, for the internal account). Members cannot create campaigns.
 
 ### 5.1 Concept
+
 ```
 MEMBER creates/edits deliverable (DRAFT)
    │  submit for internal approval
@@ -587,9 +573,11 @@ INTERNAL APPROVAL  ← owner/admin reviews
                               → client approves → scheduled
 OWNER/ADMIN-created deliverables skip internal approval (self-approve).
 ```
+
 The internal-approval UI is **uniform** regardless of deliverable type; only the post-approval path differs. Client deliverables additionally pass through the existing client-review flow.
 
 ### 5.2 Work
+
 - Add an internal-approval state/transition to the post/version workflow (a `PENDING_INTERNAL` style status or an `approved_by`/`approved_at` gate) — confirm against current statuses (`DRAFT`, `PENDING`, `REVISIONS`, `SCHEDULED`, `PENDING_APPROVAL`, `ARCHIVED`) before adding.
 - Gate "send to client" / "publish" actions behind `usePermissions().canSendDeliverables` (owner/admin). Members get "Submit for approval" instead.
 - Owner/admin get an approval action (approve / request changes) on member-submitted deliverables.
@@ -597,6 +585,7 @@ The internal-approval UI is **uniform** regardless of deliverable type; only the
 - **Campaigns:** hide "New campaign" for members (`!canCreateCampaigns`); block campaign-create mutation server-side for non-admins.
 
 ### 5.3 Phase 5 Checklist
+
 - [ ] Internal-approval state added; member submit → owner/admin approve
 - [ ] Members cannot send to client / publish (UI + server)
 - [ ] Owner/admin self-approve; approval UI uniform for internal + client deliverables
@@ -618,29 +607,32 @@ auth.users (owner)
 └── agency_members         (system_role + functional_role + permissions JSONB)
 │     ├── system_role: superadmin | owner | admin | member
 │     └── permissions: { documents: 'none'|'view'|'manage' }   (finance is NOT a flag)
-└── agency_invites         (functional_role + permissions; NO system_role — joiners are members)
-└── client_documents       (+ is_confidential)
-└── invoices / expenses / transactions / proposals / prospects   (role-gated RLS)
+└── agency_invites         (system_role set by owner at invite; functional_role set by joiner at join)
+└── client_documents       (+ is_confidential — Phase 4)
+└── invoices / expenses / transactions / proposals / prospects   (role-gated RLS — Phase 3)
 ```
 
 ### Schema additions
-| Table | Column | Type | Notes |
-|---|---|---|---|
-| `agency_members` | `permissions` | jsonb | `{ documents }`; default `{'view'}` |
-| `agency_invites` | `functional_role` | text | nullable |
-| `agency_invites` | `permissions` | jsonb | `{ documents }`; **no** system_role column |
-| `client_documents` | `is_confidential` | boolean | default false; backfilled true for Contract/NDA/Invoice-Finance |
+
+| Table              | Column            | Type    | Notes                                                                          |
+| ------------------ | ----------------- | ------- | ------------------------------------------------------------------------------ |
+| `agency_members`   | `permissions`     | jsonb   | `{ documents }`; default `{ "documents": "view" }`                             |
+| `agency_invites`   | `system_role`     | text    | `'admin'` or `'member'`; drives joiner's access tier                           |
+| `agency_invites`   | `functional_role` | text    | nullable; set by joiner at join (not by owner at invite)                       |
+| `agency_invites`   | `permissions`     | jsonb   | nullable; auto-derived from `system_role` by `join_team`, not stored on invite |
+| `client_documents` | `is_confidential` | boolean | Phase 4 — default false; backfilled true for Contract/NDA/Invoice-Finance      |
 
 ### DB Helper Functions (SECURITY DEFINER)
-| Function | Returns | Use |
-|---|---|---|
-| `is_workspace_owner()` | boolean | owner check (team mgmt, billing, workspace, signatory) |
-| `is_workspace_admin()` | boolean | owner-or-admin (finance, proposals, prospects, reports, confidential docs) |
-| `my_system_role()` | text | resolved role |
-| `can_access_finance()` | boolean | = `is_workspace_admin()` — members never |
-| `my_documents_level()` | text | documents RLS + UI |
-| `can_view_confidential_docs()` | boolean | confidential doc RLS |
-| `update_member_access(...)` | void | **owner-only** promote/demote/edit member |
+
+| Function                       | Returns | Use                                                                        |
+| ------------------------------ | ------- | -------------------------------------------------------------------------- |
+| `is_workspace_owner()`         | boolean | owner check (team mgmt, billing, workspace, signatory)                     |
+| `is_workspace_admin()`         | boolean | owner-or-admin (finance, proposals, prospects, reports, confidential docs) |
+| `my_system_role()`             | text    | resolved role                                                              |
+| `can_access_finance()`         | boolean | = `is_workspace_admin()` — members never                                   |
+| `my_documents_level()`         | text    | documents RLS + UI                                                         |
+| `can_view_confidential_docs()` | boolean | confidential doc RLS                                                       |
+| `update_member_access(...)`    | void    | **owner-only** promote/demote/edit member                                  |
 
 ---
 

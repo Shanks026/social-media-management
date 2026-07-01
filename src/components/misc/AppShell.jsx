@@ -4,7 +4,7 @@ import { AppHeader } from './AppHeader'
 import { AppBody } from './AppBody'
 import { Outlet } from 'react-router-dom'
 import { SidebarProvider } from '@/components/ui/sidebar'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useLocation } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 
@@ -20,27 +20,43 @@ import { useMeetingReminders } from '../../hooks/useMeetingReminders'
 export function AppShell({ user }) {
   const queryClient = useQueryClient()
   const scrollContainerRef = useRef(null)
+  const isCheckingRef = useRef(false)
   const { pathname } = useLocation()
 
   useEffect(() => {
     scrollContainerRef.current?.scrollTo({ top: 0 })
   }, [pathname])
   useMeetingReminders(user?.id)
-  const [agencySettings, setAgencySettings] = useState(null)
+  // Read previously-cached settings for this user so remounts skip the loading screen.
+  const settingsKey = `agency_settings_${user?.id}`
+  const [agencySettings, setAgencySettings] = useState(() => {
+    try {
+      const cached = sessionStorage.getItem(settingsKey)
+      return cached ? JSON.parse(cached) : null
+    } catch { return null }
+  })
   const [showWelcome, setShowWelcome] = useState(false)
   const [isSetupOpen, setIsSetupOpen] = useState(false)
   const [setupMode, setSetupMode] = useState('full') // 'full' or 'branding'
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(() => {
+    try { return !sessionStorage.getItem(settingsKey) } catch { return true }
+  })
   const [hasSeenWelcomeState, setHasSeenWelcomeState] = useState(
     () => localStorage.getItem(`has_seen_welcome_${user?.id}`) === 'true'
   )
 
-  const checkAgencyStatus = async () => {
-    if (!user) return
+  const checkAgencyStatus = useCallback(async () => {
+    if (isCheckingRef.current) return
+    isCheckingRef.current = true
+    if (!user) {
+      isCheckingRef.current = false
+      return
+    }
     try {
       // Refresh both the local state and the global subscription query
       await queryClient.invalidateQueries({ queryKey: ['subscription'] })
       const settings = await fetchAgencySettings()
+      try { sessionStorage.setItem(settingsKey, JSON.stringify(settings)) } catch {}
       setAgencySettings(settings)
       const isIncomplete =
         !settings || !settings.agency_name || settings.agency_name.trim() === ''
@@ -57,14 +73,15 @@ export function AppShell({ user }) {
     } catch (err) {
       console.error('AppShell: Status check failed', err)
     } finally {
+      isCheckingRef.current = false
       setLoading(false)
     }
-  }
+  }, [user, queryClient])
 
   useEffect(() => {
     checkAgencyStatus()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user])
+  }, [user?.id])
 
   const handleSetupComplete = async () => {
     if (setupMode === 'full') {

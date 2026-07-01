@@ -8,7 +8,8 @@ import { useSubscription } from '@/api/useSubscription'
 import { PlanOverview } from '../billingAndUsage/PlanOverview'
 import { allPlanMeta } from '../billingAndUsage/planMeta'
 import { useMyMemberRecord } from '@/api/team'
-import { getRolePalette, ADMIN_PALETTE } from '@/lib/team-roles'
+import { getRolePalette, SYSTEM_ROLE_PALETTE } from '@/lib/team-roles'
+import { Badge } from '@/components/ui/badge'
 
 // UI
 import { Button } from '@/components/ui/button'
@@ -40,6 +41,7 @@ import {
   Save,
   X,
   Briefcase,
+  ShieldCheck,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import ChangePasswordDialog from '@/components/settings/ChangePasswordDialog'
@@ -57,7 +59,7 @@ export default function ProfileSettings() {
   const { data: sub, isLoading } = useSubscription()
   const { data: memberRecord } = useMyMemberRecord()
 
-  const isAdmin = memberRecord?.system_role === 'admin'
+  const systemRole = memberRecord?.system_role ?? null
   const functionalRole = memberRecord?.functional_role ?? null
 
   const currentPlanName = sub?.plan_name?.toLowerCase() || 'ignite'
@@ -255,24 +257,32 @@ export default function ProfileSettings() {
             />
           </div>
 
-          {(isAdmin || functionalRole) && (
-            <InfoRow
-              icon={<Briefcase size={16} />}
-              label="Role"
-              value={
-                isAdmin ? (
-                  <span className="flex items-center gap-2">
-                    <span className={cn('size-2 rounded-full shrink-0', ADMIN_PALETTE.dot)} />
-                    Admin
-                  </span>
-                ) : (
-                  <span className="flex items-center gap-2">
-                    <span className={cn('size-2 rounded-full shrink-0', getRolePalette(functionalRole)?.dot ?? 'bg-muted-foreground/40')} />
-                    {functionalRole}
-                  </span>
-                )
-              }
-            />
+          {systemRole && (
+            <>
+              <InfoRow
+                icon={<ShieldCheck size={16} />}
+                label="System Role"
+                value={
+                  <Badge className={SYSTEM_ROLE_PALETTE[systemRole]?.badge}>
+                    {SYSTEM_ROLE_PALETTE[systemRole]?.label ?? systemRole}
+                  </Badge>
+                }
+              />
+              <InfoRow
+                icon={<Briefcase size={16} />}
+                label="Job Title"
+                value={
+                  functionalRole ? (
+                    <span className="flex items-center gap-2">
+                      <span className={cn('size-2 rounded-full shrink-0', getRolePalette(functionalRole)?.dot ?? 'bg-muted-foreground/40')} />
+                      {functionalRole}
+                    </span>
+                  ) : (
+                    <span className="text-muted-foreground">—</span>
+                  )
+                }
+              />
+            </>
           )}
 
           <div className="space-y-6">

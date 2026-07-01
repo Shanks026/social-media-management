@@ -1,6 +1,8 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 
+const MAINTENANCE_OFF = { is_active: false, message: null }
+
 export function useMaintenanceMode() {
   return useQuery({
     queryKey: ['app-config', 'maintenance_mode'],
@@ -14,13 +16,17 @@ export function useMaintenanceMode() {
       // Gracefully degrade if the table doesn't exist yet (pre-migration)
       if (error) {
         console.warn('[maintenance] check failed:', error.message)
-        return { is_active: false, message: null }
+        return MAINTENANCE_OFF
       }
 
-      return data?.value ?? { is_active: false, message: null }
+      return data?.value ?? MAINTENANCE_OFF
     },
-    staleTime: 0,
-    refetchInterval: 30_000,
+    // Seed with "off" so the gate never has an undefined/pending window that
+    // would blank the whole app. Live toggles arrive via the realtime
+    // subscription in MaintenanceGate; the interval is just a slow safety net.
+    initialData: MAINTENANCE_OFF,
+    staleTime: 5 * 60 * 1000,
+    refetchInterval: 5 * 60 * 1000,
     retry: false,
   })
 }

@@ -74,7 +74,7 @@ import { formatDate, formatFileSize } from '@/lib/helper'
 import DocumentCategoryBadge from './DocumentCategoryBadge'
 import { DOCUMENT_CATEGORIES } from './UploadMetaDialog'
 import { useAuth } from '@/context/AuthContext'
-import { Building2, Lock } from 'lucide-react'
+import { Building2, Lock, ShieldAlert } from 'lucide-react'
 import DocumentPreviewModal from './DocumentPreviewModal'
 import MoveToCollectionDialog from './MoveToCollectionDialog'
 import { useSubscription } from '@/api/useSubscription'
@@ -96,7 +96,7 @@ const editSchema = z.object({
   notes: z.string().max(500).optional(),
 })
 
-export default function DocumentCard({ doc }) {
+export default function DocumentCard({ doc, canManage = true }) {
   const { user } = useAuth()
   const queryClient = useQueryClient()
   const { data: sub } = useSubscription()
@@ -214,6 +214,12 @@ export default function DocumentCard({ doc }) {
               {doc.display_name}
             </button>
             <DocumentCategoryBadge category={doc.category} className="shrink-0" />
+            {doc.is_confidential && (
+              <span className="shrink-0 flex items-center gap-1 text-xs font-medium text-amber-600 dark:text-amber-500">
+                <ShieldAlert className="size-3" />
+                Confidential
+              </span>
+            )}
             {isArchived && (
               <span className="shrink-0 text-xs font-medium text-muted-foreground">
                 Archived
@@ -287,44 +293,48 @@ export default function DocumentCard({ doc }) {
               <Download className="size-4" />
               Download
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={openEditDialog}>
-              <Pencil className="size-4" />
-              Rename / Recategorise
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onSelect={() => setMoveDialogOpen(true)}
-              disabled={!sub?.documents_collections}
-              className={!sub?.documents_collections ? 'opacity-50 cursor-not-allowed' : ''}
-            >
-              <FolderInput className="size-4" />
-              Move to Collection
-              {!sub?.documents_collections && <Lock size={12} className="ml-auto" />}
-            </DropdownMenuItem>
-            {isArchived ? (
-              <DropdownMenuItem
-                onClick={() => unarchiveMutation.mutate()}
-                disabled={unarchiveMutation.isPending}
-              >
-                <ArchiveRestore className="size-4" />
-                Restore
-              </DropdownMenuItem>
-            ) : (
-              <DropdownMenuItem
-                onClick={() => archiveMutation.mutate()}
-                disabled={archiveMutation.isPending}
-              >
-                <Archive className="size-4" />
-                Archive
-              </DropdownMenuItem>
+            {canManage && (
+              <>
+                <DropdownMenuItem onClick={openEditDialog}>
+                  <Pencil className="size-4" />
+                  Rename / Recategorise
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onSelect={() => setMoveDialogOpen(true)}
+                  disabled={!sub?.documents_collections}
+                  className={!sub?.documents_collections ? 'opacity-50 cursor-not-allowed' : ''}
+                >
+                  <FolderInput className="size-4" />
+                  Move to Collection
+                  {!sub?.documents_collections && <Lock size={12} className="ml-auto" />}
+                </DropdownMenuItem>
+                {isArchived ? (
+                  <DropdownMenuItem
+                    onClick={() => unarchiveMutation.mutate()}
+                    disabled={unarchiveMutation.isPending}
+                  >
+                    <ArchiveRestore className="size-4" />
+                    Restore
+                  </DropdownMenuItem>
+                ) : (
+                  <DropdownMenuItem
+                    onClick={() => archiveMutation.mutate()}
+                    disabled={archiveMutation.isPending}
+                  >
+                    <Archive className="size-4" />
+                    Archive
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  className="text-destructive focus:text-destructive"
+                  onClick={() => setDeleteOpen(true)}
+                >
+                  <Trash2 className="size-4" />
+                  Delete
+                </DropdownMenuItem>
+              </>
             )}
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              className="text-destructive focus:text-destructive"
-              onClick={() => setDeleteOpen(true)}
-            >
-              <Trash2 className="size-4" />
-              Delete
-            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

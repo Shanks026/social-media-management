@@ -50,7 +50,7 @@ import { Lock } from 'lucide-react'
  *   collection   — collection object { id, name, description, client_id, created_at }
  *   documents    — array of documents belonging to this collection
  */
-export default function CollectionCard({ collection, documents = [], locked = false }) {
+export default function CollectionCard({ collection, documents = [], locked = false, canManage = true }) {
   const { user } = useAuth()
   const queryClient = useQueryClient()
   const [expanded, setExpanded] = useState(false)
@@ -63,13 +63,14 @@ export default function CollectionCard({ collection, documents = [], locked = fa
   const [uploadProgress, setUploadProgress] = useState(null)
 
   const uploadMutation = useUploadMutation({
-    mutationFn: ({ file, displayName, category, notes }) =>
+    mutationFn: ({ file, displayName, category, notes, isConfidential }) =>
       uploadDocument({
         clientId: collection.client_id,
         file,
         displayName,
         category,
         notes,
+        isConfidential,
         collectionId: collection.id,
       }),
     onMutate: () => setUploadProgress(10),
@@ -94,10 +95,10 @@ export default function CollectionCard({ collection, documents = [], locked = fa
     setUploadDialogOpen(true)
   }
 
-  function handleConfirmUpload({ displayName, category, notes }) {
+  function handleConfirmUpload({ displayName, category, notes, isConfidential }) {
     if (!pendingFile) return
     setUploadProgress(30)
-    uploadMutation.mutate({ file: pendingFile, displayName, category, notes })
+    uploadMutation.mutate({ file: pendingFile, displayName, category, notes, isConfidential })
   }
 
   function handleUploadDialogClose(open) {
@@ -169,60 +170,66 @@ export default function CollectionCard({ collection, documents = [], locked = fa
             {formatDate(collection.created_at)}
           </span>
 
-          {/* Actions menu */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild onClick={(e) => {
-              e.stopPropagation()
-            }}>
-              <Button variant="ghost" size="icon" className="size-7 shrink-0">
-                <MoreHorizontal className="size-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem
-                onClick={(e) => {
-                  e.stopPropagation()
-                  setRenameOpen(true)
-                }}
-              >
-                <Pencil className="size-4" />
-                Rename
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                className="text-destructive focus:text-destructive"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  setDeleteOpen(true)
-                }}
-              >
-                <Trash2 className="size-4" />
-                Delete collection
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {/* Actions menu — manage level only */}
+          {canManage && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild onClick={(e) => {
+                e.stopPropagation()
+              }}>
+                <Button variant="ghost" size="icon" className="size-7 shrink-0">
+                  <MoreHorizontal className="size-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setRenameOpen(true)
+                  }}
+                >
+                  <Pencil className="size-4" />
+                  Rename
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  className="text-destructive focus:text-destructive"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setDeleteOpen(true)
+                  }}
+                >
+                  <Trash2 className="size-4" />
+                  Delete collection
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
             </AccordionPrimitive.Trigger>
           </AccordionPrimitive.Header>
 
           {/* ── Expanded body ── */}
           <AccordionContent className="pb-0" forceMount={false}>
             <div className="border-t border-border/40 bg-muted/20 px-4 py-4 space-y-3">
-              {/* Upload zone for this collection */}
-              <DocumentUploadZone
-                onFileSelected={handleFileSelected}
-                disabled={uploadMutation.isPending}
-                compact
-              />
+              {/* Upload zone for this collection — manage level only */}
+              {canManage && (
+                <DocumentUploadZone
+                  onFileSelected={handleFileSelected}
+                  disabled={uploadMutation.isPending}
+                  compact
+                />
+              )}
 
               {/* Documents */}
               {documents.length === 0 ? (
                 <p className="text-xs text-muted-foreground text-center py-4 italic">
-                  This collection is empty. Upload a document above to add it here.
+                  {canManage
+                    ? 'This collection is empty. Upload a document above to add it here.'
+                    : 'This collection is empty.'}
                 </p>
               ) : (
                 <div className="space-y-2">
                   {documents.map((doc) => (
-                    <DocumentCard key={doc.id} doc={doc} />
+                    <DocumentCard key={doc.id} doc={doc} canManage={canManage} />
                   ))}
                 </div>
               )}

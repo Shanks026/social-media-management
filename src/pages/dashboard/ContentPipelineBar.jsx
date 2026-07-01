@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Card,
@@ -56,40 +57,52 @@ function normalizeStatus(raw) {
   return STATUS_DISPLAY_MAP[raw] ?? null
 }
 
+// Stable reference for the empty-state placeholder arc (avoids re-animating it).
+const EMPTY_PIE = [{ name: 'empty', value: 1 }]
+
 export default function ContentPipelineBar() {
   const navigate = useNavigate()
   const { data: posts = [], isLoading: loadingPosts } = useGlobalPosts()
 
-  // 1. Workflow Health
-  const postCounts = ALLOWED_STATUSES.reduce((acc, status) => {
-    acc[status] = 0
-    return acc
-  }, {})
+  // Derive the chart data once per posts change. Recomputing inline on every
+  // render hands Recharts a new `data` array reference each time, which
+  // restarts/interrupts the donut's entry animation (the "not smooth" jank).
+  // React Query's structural sharing keeps `posts` stable when unchanged, so
+  // this memo — and the chart — stays stable across incidental re-renders.
+  const { chartData, pieChartData, totalPosts, needsRevisionCount, pendingApprovalCount } = useMemo(() => {
+    const counts = ALLOWED_STATUSES.reduce((acc, status) => {
+      acc[status] = 0
+      return acc
+    }, {})
 
-  posts.forEach((post) => {
-    const status = normalizeStatus(getPublishState(post))
-    if (status && ALLOWED_STATUSES.includes(status)) {
-      postCounts[status] += 1
+    posts.forEach((post) => {
+      const status = normalizeStatus(getPublishState(post))
+      if (status && ALLOWED_STATUSES.includes(status)) {
+        counts[status] += 1
+      }
+    })
+
+    const nextChartData = ALLOWED_STATUSES.map((name) => ({
+      name,
+      value: counts[name],
+      fill: chartConfig[name].color,
+    }))
+
+    const nextTotalPosts = posts.filter((post) => {
+      let status = getPublishState(post)?.replace(/_/g, ' ') || 'DRAFT'
+      if (status === 'PENDING') status = 'PENDING APPROVAL'
+      if (status === 'REVISIONS') status = 'NEEDS REVISION'
+      return ALLOWED_STATUSES.includes(status)
+    }).length
+
+    return {
+      chartData: nextChartData,
+      pieChartData: nextChartData.filter((d) => d.value > 0),
+      totalPosts: nextTotalPosts,
+      needsRevisionCount: counts['NEEDS REVISION'] || 0,
+      pendingApprovalCount: counts['PENDING APPROVAL'] || 0,
     }
-  })
-
-  const chartData = ALLOWED_STATUSES.map((name) => ({
-    name,
-    value: postCounts[name],
-    fill: chartConfig[name].color,
-  }))
-
-  const pieChartData = chartData.filter((d) => d.value > 0)
-
-  const totalPosts = posts.filter((post) => {
-    let status = getPublishState(post)?.replace(/_/g, ' ') || 'DRAFT'
-    if (status === 'PENDING') status = 'PENDING APPROVAL'
-    if (status === 'REVISIONS') status = 'NEEDS REVISION'
-    return ALLOWED_STATUSES.includes(status)
-  }).length
-
-  const needsRevisionCount = postCounts['NEEDS REVISION'] || 0
-  const pendingApprovalCount = postCounts['PENDING APPROVAL'] || 0
+  }, [posts])
 
   return (
     <Card className="border-none shadow-sm ring-1 ring-border/50 bg-card/50 dark:bg-card/30 flex flex-col h-full">
@@ -133,7 +146,7 @@ export default function ContentPipelineBar() {
                 <ChartContainer config={chartConfig} className="h-full w-full">
                   <PieChart>
                     <Pie
-                      data={totalPosts === 0 ? [{ name: 'empty', value: 1 }] : pieChartData}
+                      data={totalPosts === 0 ? EMPTY_PIE : pieChartData}
                       cx="50%"
                       cy="80%"
                       startAngle={180}

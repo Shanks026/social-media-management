@@ -15,6 +15,7 @@ import {
   Filter,
   Users,
   Clock,
+  Lock,
   Pencil,
   Trash2,
   Search,
@@ -185,6 +186,13 @@ function MeetingCard({ meeting, clientMap }) {
               <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground mt-1.5">
                 <Clock className="size-3.5 shrink-0" />
                 {format(new Date(meeting.datetime), 'h:mm a')}
+                {meeting.visibility === 'private' && (
+                  <>
+                    <span className="text-muted-foreground/40">·</span>
+                    <Lock className="size-3 shrink-0" />
+                    <span>Private</span>
+                  </>
+                )}
               </div>
             </div>
           </div>

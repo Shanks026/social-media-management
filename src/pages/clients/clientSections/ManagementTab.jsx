@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { deleteClient, updateClientStatus } from '@/api/clients'
+import { usePermissions } from '@/api/usePermissions'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
 
@@ -46,6 +47,7 @@ const CLIENT_TYPE_LABELS = {
 export default function ManagementTab({ client }) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const { canCreateClients } = usePermissions()
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [archiveDialogOpen, setArchiveDialogOpen] = useState(false)
@@ -97,15 +99,17 @@ export default function ManagementTab({ client }) {
                 'Workspace details and contact information.'}
             </p>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => navigate(`/clients/${client.id}/edit`)}
-            className="gap-2 w-fit shrink-0"
-          >
-            <Pencil size={14} />
-            Edit Profile
-          </Button>
+          {canCreateClients && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate(`/clients/${client.id}/edit`)}
+              className="gap-2 w-fit shrink-0"
+            >
+              <Pencil size={14} />
+              Edit Profile
+            </Button>
+          )}
         </div>
 
         {/* Row 1: Logo */}
@@ -284,10 +288,10 @@ export default function ManagementTab({ client }) {
         )}
       </section>
 
-      <Separator className="opacity-50" />
+      {canCreateClients && <Separator className="opacity-50" />}
 
-      {/* 3. Danger Zone */}
-      <section className="space-y-6">
+      {/* 3. Danger Zone — owner/admin only */}
+      {canCreateClients && <section className="space-y-6">
         <div className="space-y-1">
           <h2 className="text-2xl font-medium text-destructive tracking-tight bricolage">
             Danger Zone
@@ -363,7 +367,7 @@ export default function ManagementTab({ client }) {
             Delete
           </Button>
         </div>
-      </section>
+      </section>}
 
       {/* Archive Confirmation */}
       <Dialog open={archiveDialogOpen} onOpenChange={setArchiveDialogOpen}>

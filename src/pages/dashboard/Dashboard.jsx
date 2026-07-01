@@ -4,6 +4,7 @@ import { AlertTriangle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useHeader } from '@/components/misc/header-context'
 import { useSubscription } from '@/api/useSubscription'
+import { usePermissions } from '@/api/usePermissions'
 import { formatDate } from '@/lib/helper'
 import DashboardWelcomeMessage from './DashboardWelcomeMessage'
 import AgencyHealthBar from './AgencyHealthBar'
@@ -72,6 +73,7 @@ function SubExpiryBanner({ phase, daysRemaining, endsAt, planName }) {
 export default function Dashboard() {
   const { setHeader } = useHeader()
   const { data: sub } = useSubscription()
+  const { finance } = usePermissions()
 
   useEffect(() => {
     setHeader({ breadcrumbs: [{ label: 'Dashboard' }], actions: null })
@@ -95,8 +97,8 @@ export default function Dashboard() {
         <SubExpiryBanner phase={sub.sub_phase} daysRemaining={sub.sub_days_remaining} endsAt={sub.subscription_ends_at} planName={sub.plan_name} />
       )}
 
-      {/* Row 2: KPI cards */}
-      <AgencyHealthBar />
+      {/* Row 2: KPI cards — hidden for members */}
+      {finance && <AgencyHealthBar />}
 
       {/* Row 3: Meetings/Notes + Pipeline + Scheduled Posts */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-stretch">
@@ -105,15 +107,15 @@ export default function Dashboard() {
         <DashboardWeekTimeline />
       </div>
 
-      {/* Row 4: Finance + Social Media */}
+      {/* Row 4: Finance + Social Media (finance widgets hidden for members) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
-        <FinancialSnapshot />
-        <LifetimeRevenue />
+        {finance && <FinancialSnapshot />}
+        {finance && <LifetimeRevenue />}
         <DashboardSocialMediaUsage />
       </div>
 
-      {/* Row 5: Recent invoices table */}
-      <DashboardInvoiceTable />
+      {/* Row 5: Recent invoices table (finance only) */}
+      {finance && <DashboardInvoiceTable />}
 
       {/* Row 6: Client content health grid */}
       <ClientHealthGrid />

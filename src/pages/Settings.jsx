@@ -4,6 +4,7 @@ import { useHeader } from '../components/misc/header-context'
 import { User, Building2, FileText, AlertTriangle } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useAuth } from '@/context/AuthContext'
+import { usePermissions } from '@/api/usePermissions'
 
 import ProfileSettings from './settings/ProfileSettings'
 import AgencySettings from './settings/AgencySettings'
@@ -15,12 +16,17 @@ const VALID_TABS = ['profile', 'agency', 'invoice', 'danger']
 export default function Settings() {
   const { setHeader } = useHeader()
   const { user, workspaceUserId } = useAuth()
+  const { isAdmin } = usePermissions()
   const isOwner = !!user?.id && user.id === workspaceUserId
   const [searchParams, setSearchParams] = useSearchParams()
 
-  const tab = VALID_TABS.includes(searchParams.get('tab'))
-    ? searchParams.get('tab')
-    : 'profile'
+  // Agency (workspace) settings: owner edits, admin view-only, member no access.
+  // Invoice signatory: owner-only (also DB-enforced via trigger).
+  const requested = searchParams.get('tab')
+  const canSeeTab = (t) =>
+    t === 'agency' ? isAdmin : t === 'invoice' || t === 'danger' ? isOwner : true
+  const tab =
+    VALID_TABS.includes(requested) && canSeeTab(requested) ? requested : 'profile'
 
   useEffect(() => {
     setHeader({
@@ -58,8 +64,8 @@ export default function Settings() {
             <TabsList className="bg-transparent border-b border-border/40 rounded-none p-0 h-auto gap-8 w-full justify-start">
               {[
                 { value: 'profile', icon: User, label: 'Profile' },
-                { value: 'agency', icon: Building2, label: 'Agency' },
-                { value: 'invoice', icon: FileText, label: 'Invoice' },
+                ...(isAdmin ? [{ value: 'agency', icon: Building2, label: 'Agency' }] : []),
+                ...(isOwner ? [{ value: 'invoice', icon: FileText, label: 'Invoice' }] : []),
                 ...(isOwner
                   ? [{ value: 'danger', icon: AlertTriangle, label: 'Danger Zone' }]
                   : []),
@@ -96,19 +102,31 @@ export default function Settings() {
               <ProfileSettings />
             </TabsContent>
 
-            <TabsContent
-              value="agency"
-              className="focus-visible:outline-none"
-            >
-              <AgencySettings />
-            </TabsContent>
+            {isAdmin && (
+              <TabsContent
+                value="agency"
+                className="focus-visible:outline-none"
+              >
+                {!isOwner && (
+                  <p className="mb-4 text-sm text-muted-foreground rounded-md border border-border/60 bg-muted/40 px-3 py-2">
+                    View only — workspace settings can be edited by the owner.
+                  </p>
+                )}
+                {/* Admin view-only: disable all form controls; owner edits freely. */}
+                <fieldset disabled={!isOwner} className="min-w-0 border-0 p-0 m-0 disabled:opacity-100">
+                  <AgencySettings />
+                </fieldset>
+              </TabsContent>
+            )}
 
-            <TabsContent
-              value="invoice"
-              className="focus-visible:outline-none"
-            >
-              <InvoiceSettings />
-            </TabsContent>
+            {isOwner && (
+              <TabsContent
+                value="invoice"
+                className="focus-visible:outline-none"
+              >
+                <InvoiceSettings />
+              </TabsContent>
+            )}
 
             {isOwner && (
               <TabsContent

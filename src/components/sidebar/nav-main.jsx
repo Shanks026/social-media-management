@@ -54,6 +54,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover'
 import { useSubscription } from '@/api/useSubscription'
+import { usePermissions } from '@/api/usePermissions'
 import {
   Tooltip,
   TooltipContent,
@@ -69,7 +70,7 @@ const BASE_NAV_ITEMS = [
     items: [
       { title: 'Workspace', url: '/myorganization', icon: Briefcase },
       { title: 'Team', url: '/team', icon: Users },
-      { title: 'Partnerships', url: '/partnerships', icon: Handshake },
+      // { title: 'Partnerships', url: '/partnerships', icon: Handshake },
     ],
   },
   {
@@ -77,8 +78,8 @@ const BASE_NAV_ITEMS = [
     url: '/outreach',
     icon: Rocket,
     items: [
-      { title: 'Prospects', url: '/prospects', icon: Target },
-      { title: 'Proposals', url: '/proposals', icon: FileText },
+      { title: 'Prospects', url: '/prospects', icon: Target, requiresPermission: 'prospects' },
+      { title: 'Proposals', url: '/proposals', icon: FileText, requiresPermission: 'proposals' },
     ],
   },
   { title: 'Clients', url: '/clients', icon: UserStar },
@@ -90,7 +91,7 @@ const BASE_NAV_ITEMS = [
     icon: Megaphone,
     requiresFlag: 'campaigns',
   },
-  { title: 'Ads', url: '/ads', icon: BadgeDollarSign },
+  // { title: 'Ads', url: '/ads', icon: BadgeDollarSign },
   {
     title: 'Operations',
     url: '/operations',
@@ -99,12 +100,13 @@ const BASE_NAV_ITEMS = [
       { title: 'Tasks & Reminders', url: '/operations/tasks', icon: Bell },
       { title: 'Notes', url: '/operations/notes', icon: NotebookPen },
       { title: 'Meetings', url: '/operations/meetings', icon: Video },
-      { title: 'Documents', url: '/documents', icon: FolderOpen },
+      { title: 'Documents', url: '/documents', icon: FolderOpen, requiresPermission: 'hasDocuments' },
       {
         title: 'Reports',
         url: '/reports',
         icon: FileBarChart,
         requiresFlag: 'reports',
+        requiresPermission: 'reports',
       },
     ],
   },
@@ -113,6 +115,7 @@ const BASE_NAV_ITEMS = [
     title: 'Finance',
     url: '/finance',
     icon: Banknote,
+    requiresPermission: 'finance',
     items: [
       { title: 'Overview', url: '/finance/overview', icon: PieChart },
       {
@@ -131,7 +134,7 @@ const BASE_NAV_ITEMS = [
     icon: Settings,
     items: [
       { title: 'General Settings', url: '/settings', icon: Settings2 },
-      { title: 'Billing & Usage', url: '/billing', icon: CreditCard },
+      { title: 'Billing & Usage', url: '/billing', icon: CreditCard, requiresPermission: 'canBilling' },
       { title: 'Help & Info', url: '/help', icon: LifeBuoy },
     ],
   },
@@ -189,11 +192,20 @@ export function NavMain() {
   const { state } = useSidebar()
   const location = useLocation()
   const { data: sub, isLoading } = useSubscription()
+  const perms = usePermissions()
   const [openPopover, setOpenPopover] = useState(null)
   const [suppressedTooltip, setSuppressedTooltip] = useState(null)
 
   const isCollapsed = state === 'collapsed'
-  const navItems = BASE_NAV_ITEMS
+
+  // RBAC: hide items the user lacks permission for (vs requiresFlag, which locks).
+  // Filter sub-items first, then drop any parent group left with no children.
+  const allowed = (node) => !node.requiresPermission || perms[node.requiresPermission]
+  const navItems = BASE_NAV_ITEMS.filter(allowed)
+    .map((item) =>
+      item.items ? { ...item, items: item.items.filter(allowed) } : item,
+    )
+    .filter((item) => !item.items || item.items.length > 0)
 
   return (
     <SidebarGroup>

@@ -12,6 +12,7 @@ import { fetchClients, deleteClient } from '@/api/clients'
 import { getUrgencyStatus } from '@/lib/client-helpers'
 import { useHeader } from '@/components/misc/header-context'
 import { useSubscription } from '../../api/useSubscription'
+import { usePermissions } from '@/api/usePermissions'
 
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -44,6 +45,7 @@ export default function Clients() {
   const { user } = useOutletContext()
 
   const { data: subscription, isLoading: isSubLoading } = useSubscription()
+  const { canCreateClients } = usePermissions()
 
   useEffect(() => {
     setHeader({
@@ -206,27 +208,29 @@ export default function Clients() {
             </p>
           </div>
 
-          <Button
-            onClick={handleCreateClick}
-            disabled={isSubLoading}
-            className={cn(
-              'h-9 gap-2 transition-all duration-300',
-              subscription?.is_client_limit_reached &&
-                'bg-secondary text-secondary-foreground hover:bg-secondary/80 border border-border text-xs',
-            )}
-          >
-            {subscription?.is_client_limit_reached ? (
-              <>
-                <Lock className="h-4 w-4" />
-                <span>Limit Reached</span>
-              </>
-            ) : (
-              <>
-                <Plus className="h-4 w-4" />
-                <span>Create Client</span>
-              </>
-            )}
-          </Button>
+          {canCreateClients && (
+            <Button
+              onClick={handleCreateClick}
+              disabled={isSubLoading}
+              className={cn(
+                'h-9 gap-2 transition-all duration-300',
+                subscription?.is_client_limit_reached &&
+                  'bg-secondary text-secondary-foreground hover:bg-secondary/80 border border-border text-xs',
+              )}
+            >
+              {subscription?.is_client_limit_reached ? (
+                <>
+                  <Lock className="h-4 w-4" />
+                  <span>Limit Reached</span>
+                </>
+              ) : (
+                <>
+                  <Plus className="h-4 w-4" />
+                  <span>Create Client</span>
+                </>
+              )}
+            </Button>
+          )}
         </div>
 
         {/* --- SECTION 2: THE TOOLBAR --- */}
@@ -294,17 +298,19 @@ export default function Clients() {
                   Clear all filters
                 </Button>
               ) : (
-                <Button
-                  onClick={handleCreateClick}
-                  variant="outline"
-                  size="sm"
-                  disabled={
-                    isSubLoading || subscription?.is_client_limit_reached
-                  }
-                >
-                  <Plus className="size-4 mr-2" />
-                  Onboard Your First Client
-                </Button>
+                canCreateClients && (
+                  <Button
+                    onClick={handleCreateClick}
+                    variant="outline"
+                    size="sm"
+                    disabled={
+                      isSubLoading || subscription?.is_client_limit_reached
+                    }
+                  >
+                    <Plus className="size-4 mr-2" />
+                    Onboard Your First Client
+                  </Button>
+                )
               )}
             </EmptyContent>
           </Empty>

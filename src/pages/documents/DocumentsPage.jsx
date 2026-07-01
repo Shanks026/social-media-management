@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import { useHeader } from '@/components/misc/header-context'
 import { useAuth } from '@/context/AuthContext'
+import { usePermissions } from '@/api/usePermissions'
 import { useClients } from '@/api/clients'
 import { useProspects } from '@/api/prospects'
 import { useSubscription } from '@/api/useSubscription'
@@ -92,6 +93,8 @@ export default function DocumentsPage() {
   // ── Subscription ─────────────────────────────────────────────────────────────
   const { data: sub } = useSubscription()
   const collectionsUnlocked = sub?.documents_collections ?? false
+  const { documents: docsLevel } = usePermissions()
+  const canManage = docsLevel === 'manage'
 
   // ── Clients + Prospects ───────────────────────────────────────────────────────
   const { data: clientsData } = useClients()
@@ -209,8 +212,8 @@ export default function DocumentsPage() {
   const [createCollectionOpen, setCreateCollectionOpen] = useState(false)
 
   const uploadMutation = useMutation({
-    mutationFn: ({ file, displayName, category, clientId, prospectId, notes }) =>
-      uploadDocument({ clientId, prospectId, file, displayName, category, notes }),
+    mutationFn: ({ file, displayName, category, clientId, prospectId, notes, isConfidential }) =>
+      uploadDocument({ clientId, prospectId, file, displayName, category, notes, isConfidential }),
     onMutate: () => setUploadProgress(10),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['documents', 'list'] })
@@ -237,7 +240,7 @@ export default function DocumentsPage() {
     setPendingFile(file)
   }
 
-  function handleConfirmUpload({ displayName, category, clientId, prospectId, notes }) {
+  function handleConfirmUpload({ displayName, category, clientId, prospectId, notes, isConfidential }) {
     if (!pendingFile) return
     setUploadProgress(30)
     uploadMutation.mutate({
@@ -247,6 +250,7 @@ export default function DocumentsPage() {
       clientId,
       prospectId,
       notes,
+      isConfidential,
     })
   }
 
@@ -304,7 +308,7 @@ export default function DocumentsPage() {
           </div>
 
           <div className="flex items-center gap-2">
-            {!activeProspectId && (
+            {canManage && !activeProspectId && (
               <TooltipProvider>
                 {collectionsUnlocked ? (
                   <Button
@@ -334,14 +338,16 @@ export default function DocumentsPage() {
               </TooltipProvider>
             )}
 
-            <Button
-              className="gap-2 h-9"
-              onClick={handleOpenUpload}
-              disabled={uploadMutation.isPending}
-            >
-              <Upload className="size-4" />
-              Upload Document
-            </Button>
+            {canManage && (
+              <Button
+                className="gap-2 h-9"
+                onClick={handleOpenUpload}
+                disabled={uploadMutation.isPending}
+              >
+                <Upload className="size-4" />
+                Upload Document
+              </Button>
+            )}
           </div>
         </div>
 
@@ -554,6 +560,7 @@ export default function DocumentsPage() {
                                 collection={col}
                                 documents={filteredDocs.filter((d) => d.collection_id === col.id)}
                                 locked={!collectionsUnlocked}
+                                canManage={canManage}
                               />
                             ))}
                           </div>
@@ -595,7 +602,7 @@ export default function DocumentsPage() {
                             </p>
                           )}
                           {ungroupedDocs.map((doc) => (
-                            <DocumentCard key={doc.id} doc={doc} />
+                            <DocumentCard key={doc.id} doc={doc} canManage={canManage} />
                           ))}
                         </div>
                       )}
@@ -652,6 +659,7 @@ export default function DocumentsPage() {
                             (d) => d.collection_id === col.id,
                           )}
                           locked={!collectionsUnlocked}
+                          canManage={canManage}
                         />
                       ))}
                     </div>

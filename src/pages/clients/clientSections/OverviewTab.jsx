@@ -47,6 +47,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { fetchAllPostsByClient } from '@/api/posts'
 import { fetchUpcomingMeetings, deleteMeeting } from '@/api/meetings'
 import { useTransactions } from '@/api/transactions'
+import { usePermissions } from '@/api/usePermissions'
 import { toast } from 'sonner'
 import { formatCurrency } from '@/utils/finance'
 import { format } from 'date-fns'
@@ -125,6 +126,7 @@ const CustomPlatformTick = ({ x, y, payload }) => {
 
 export default function OverviewTab({ client }) {
   const [activeEngagementTab, setActiveEngagementTab] = useState('meetings')
+  const { finance } = usePermissions()
 
   const [, setSearchParams] = useSearchParams()
   const navigate = useNavigate()
@@ -618,7 +620,7 @@ export default function OverviewTab({ client }) {
         {/* COLUMN 3: WEEK TIMELINE (external) or RECENT TRANSACTIONS (internal) */}
         {!client.is_internal ? (
           <ClientWeekTimeline clientId={client.id} />
-        ) : (
+        ) : finance ? (
           <Card className="border-none shadow-sm ring-1 ring-border/50 bg-card/50 flex flex-col gap-2 h-full">
             <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
               <CardTitle className="text-lg font-medium bricolage">
@@ -704,11 +706,11 @@ export default function OverviewTab({ client }) {
               )}
             </CardContent>
           </Card>
-        )}
+        ) : null}
       </div>
 
-      {/* ROW 2: SOCIAL MEDIA USAGE (+ RECENT TRANSACTIONS for external) */}
-      {!client.is_internal ? (
+      {/* ROW 2: SOCIAL MEDIA USAGE (+ RECENT TRANSACTIONS for external w/ finance) */}
+      {!client.is_internal && finance ? (
         <div className="grid gap-4" style={{ gridTemplateColumns: '50% 1fr' }}>
           <Card className="border-none shadow-sm ring-1 ring-border/50 bg-card/50 flex flex-col">
             <CardHeader>

@@ -42,6 +42,7 @@ import {
 } from '@/api/campaigns'
 import { useGlobalPosts } from '@/api/useGlobalPosts'
 import { useSubscription } from '@/api/useSubscription'
+import { usePermissions } from '@/api/usePermissions'
 import { useCampaignTransactions } from '@/api/transactions'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { fetchCampaignMeetings, deleteMeeting } from '@/api/meetings'
@@ -173,6 +174,7 @@ export default function CampaignDetailPage() {
     campaignId,
   })
   const { data: sub } = useSubscription()
+  const { finance } = usePermissions()
   const isInternalClient = campaign?.clients?.is_internal ?? false
 
   const { data: invoices = [], isLoading: invoicesLoading } =
@@ -501,7 +503,7 @@ export default function CampaignDetailPage() {
             <TabsList className="bg-transparent h-auto w-full justify-start rounded-none p-0 gap-12 border-b border-border/40">
               {[
                 { value: 'posts',    label: 'Deliverables', icon: Activity },
-                { value: 'finance',  label: 'Finance',      icon: Receipt },
+                ...(finance ? [{ value: 'finance', label: 'Finance', icon: Receipt }] : []),
                 { value: 'activity', label: 'Activity',     icon: CalendarDays },
               ].map((tab) => (
                 <TabsTrigger
@@ -711,7 +713,8 @@ export default function CampaignDetailPage() {
             </div>
           </TabsContent>
 
-          {/* ── Finance tab ── */}
+          {/* ── Finance tab (hidden for members) ── */}
+          {finance && (
           <TabsContent value="finance" className="mt-0">
             {isInternalClient ? (
               /* ── Internal campaign: budget vs expense transactions ── */
@@ -1050,6 +1053,7 @@ export default function CampaignDetailPage() {
               </div>
             )}
           </TabsContent>
+          )}
 
           {/* ── Activity tab ── */}
           <TabsContent value="activity" className="mt-0">
