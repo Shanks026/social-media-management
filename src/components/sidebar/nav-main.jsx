@@ -10,7 +10,7 @@ import {
   Megaphone,
   Layers,
   Send,
-  Bell,
+  ListTodo,
   NotebookPen,
   Video,
   FolderOpen,
@@ -29,6 +29,9 @@ import {
   Settings,
   Settings2,
   LifeBuoy,
+  ShieldCheck,
+  ClipboardCheck,
+  PencilRuler,
 } from 'lucide-react'
 import { NavLink, useLocation } from 'react-router-dom'
 import {
@@ -54,6 +57,9 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover'
 import { useSubscription } from '@/api/useSubscription'
+import { usePermissions } from '@/api/usePermissions'
+import { usePendingApprovalsCount, useMySubmissionsCount } from '@/api/posts'
+import { useMyOverdueTaskCount } from '@/api/tasks'
 import {
   Tooltip,
   TooltipContent,
@@ -69,7 +75,7 @@ const BASE_NAV_ITEMS = [
     items: [
       { title: 'Workspace', url: '/myorganization', icon: Briefcase },
       { title: 'Team', url: '/team', icon: Users },
-      { title: 'Partnerships', url: '/partnerships', icon: Handshake },
+      // { title: 'Partnerships', url: '/partnerships', icon: Handshake },
     ],
   },
   {
@@ -77,34 +83,43 @@ const BASE_NAV_ITEMS = [
     url: '/outreach',
     icon: Rocket,
     items: [
-      { title: 'Prospects', url: '/prospects', icon: Target },
-      { title: 'Proposals', url: '/proposals', icon: FileText },
+      { title: 'Prospects', url: '/prospects', icon: Target, requiresPermission: 'prospects' },
+      { title: 'Proposals', url: '/proposals', icon: FileText, requiresPermission: 'proposals' },
     ],
   },
   { title: 'Clients', url: '/clients', icon: UserStar },
 
-  { title: 'Deliverables', url: '/posts', icon: Send },
+  { title: 'Deliverables', url: '/posts', icon: PencilRuler },
+  { title: 'Submissions', url: '/submissions', icon: Send, showChangesCount: true, requiresPermission: 'isTeamMember' },
+  {
+    title: 'Approvals',
+    url: '/approvals',
+    icon: ClipboardCheck,
+    requiresPermission: 'canSendDeliverables',
+    showCount: true,
+  },
   {
     title: 'Campaigns',
     url: '/campaigns',
     icon: Megaphone,
     requiresFlag: 'campaigns',
   },
-  { title: 'Ads', url: '/ads', icon: BadgeDollarSign },
+  // { title: 'Ads', url: '/ads', icon: BadgeDollarSign },
+  { title: 'Tasks & Todos', url: '/tasks', icon: ListTodo, showTodoCount: true },
   {
     title: 'Operations',
     url: '/operations',
     icon: Layers,
     items: [
-      { title: 'Tasks & Reminders', url: '/operations/tasks', icon: Bell },
       { title: 'Notes', url: '/operations/notes', icon: NotebookPen },
       { title: 'Meetings', url: '/operations/meetings', icon: Video },
-      { title: 'Documents', url: '/documents', icon: FolderOpen },
+      { title: 'Documents', url: '/documents', icon: FolderOpen, requiresPermission: 'hasDocuments' },
       {
         title: 'Reports',
         url: '/reports',
         icon: FileBarChart,
         requiresFlag: 'reports',
+        requiresPermission: 'reports',
       },
     ],
   },
@@ -113,6 +128,7 @@ const BASE_NAV_ITEMS = [
     title: 'Finance',
     url: '/finance',
     icon: Banknote,
+    requiresPermission: 'finance',
     items: [
       { title: 'Overview', url: '/finance/overview', icon: PieChart },
       {
@@ -131,7 +147,7 @@ const BASE_NAV_ITEMS = [
     icon: Settings,
     items: [
       { title: 'General Settings', url: '/settings', icon: Settings2 },
-      { title: 'Billing & Usage', url: '/billing', icon: CreditCard },
+      { title: 'Billing & Usage', url: '/billing', icon: CreditCard, requiresPermission: 'canBilling' },
       { title: 'Help & Info', url: '/help', icon: LifeBuoy },
     ],
   },
@@ -189,11 +205,23 @@ export function NavMain() {
   const { state } = useSidebar()
   const location = useLocation()
   const { data: sub, isLoading } = useSubscription()
+  const perms = usePermissions()
+  const { data: approvalCount = 0 } = usePendingApprovalsCount()
+  const { data: submissionsChangesCount = 0 } = useMySubmissionsCount('CHANGES_REQUESTED')
+  const { data: overdueCount = 0 } = useMyOverdueTaskCount()
   const [openPopover, setOpenPopover] = useState(null)
   const [suppressedTooltip, setSuppressedTooltip] = useState(null)
 
   const isCollapsed = state === 'collapsed'
-  const navItems = BASE_NAV_ITEMS
+
+  // RBAC: hide items the user lacks permission for (vs requiresFlag, which locks).
+  // Filter sub-items first, then drop any parent group left with no children.
+  const allowed = (node) => !node.requiresPermission || perms[node.requiresPermission]
+  const navItems = BASE_NAV_ITEMS.filter(allowed)
+    .map((item) =>
+      item.items ? { ...item, items: item.items.filter(allowed) } : item,
+    )
+    .filter((item) => !item.items || item.items.length > 0)
 
   return (
     <SidebarGroup>
@@ -337,6 +365,9 @@ export function NavMain() {
               )
             }
 
+            const itemCount = item.showCount ? approvalCount : 0
+            const changesCount = item.showChangesCount ? submissionsChangesCount : 0
+            const myTodos = item.showTodoCount ? overdueCount : 0
             return (
               <SidebarMenuItem key={item.title}>
                 <SidebarMenuButton
@@ -347,6 +378,21 @@ export function NavMain() {
                   <NavLink to={item.url}>
                     <item.icon className="size-4 shrink-0" />
                     {!isCollapsed && <span>{item.title}</span>}
+                    {!isCollapsed && itemCount > 0 && (
+                      <span className="ml-auto flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-primary-foreground">
+                        {itemCount > 99 ? '99+' : itemCount}
+                      </span>
+                    )}
+                    {!isCollapsed && changesCount > 0 && (
+                      <span className="ml-auto flex h-4 min-w-4 items-center justify-center rounded-full bg-pink-500 px-1 text-[10px] font-bold text-white">
+                        {changesCount > 99 ? '99+' : changesCount}
+                      </span>
+                    )}
+                    {!isCollapsed && myTodos > 0 && (
+                      <span className="ml-auto flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-500 px-1 text-[10px] font-bold text-white">
+                        {myTodos > 99 ? '99+' : myTodos}
+                      </span>
+                    )}
                     {!isCollapsed && isTopLocked && (
                       <Lock className="ml-auto size-3 shrink-0 text-muted-foreground" />
                     )}

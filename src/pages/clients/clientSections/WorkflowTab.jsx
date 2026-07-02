@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Search, Globe, Plus } from 'lucide-react'
+import { Search, Globe, Plus, User } from 'lucide-react'
+import { useAuth } from '@/context/AuthContext'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -18,6 +19,9 @@ import { getPublishState } from '@/lib/helper'
 const ALL_STATUS_TABS = [
   { key: 'ALL',                 label: 'All' },
   { key: 'DRAFT',               label: 'Drafts' },
+  { key: 'SUBMITTED',           label: 'Submitted' },
+  { key: 'CHANGES_REQUESTED',   label: 'Changes Requested' },
+  { key: 'READY',               label: 'Ready' },
   { key: 'PENDING_APPROVAL',    label: 'Pending Approval' },
   { key: 'APPROVED',            label: 'Approved' },
   { key: 'SCHEDULED',           label: 'Scheduled' },
@@ -30,8 +34,10 @@ const ALL_STATUS_TABS = [
 const INTERNAL_EXCLUDED = ['PENDING_APPROVAL', 'NEEDS_REVISION']
 
 export default function WorkflowTab({ client }) {
+  const { user } = useAuth()
   const [createOpen, setCreateOpen] = useState(false)
   const [statusFilter, setStatusFilter] = useState('ALL')
+  const [myWorkOnly, setMyWorkOnly] = useState(false)
 
   const statusTabs = client.is_internal
     ? ALL_STATUS_TABS.filter((t) => !INTERNAL_EXCLUDED.includes(t.key))
@@ -52,7 +58,7 @@ export default function WorkflowTab({ client }) {
       if (status && status in acc) acc[status]++
       return acc
     },
-    { ALL: 0, DRAFT: 0, PENDING_APPROVAL: 0, APPROVED: 0, SCHEDULED: 0, NEEDS_REVISION: 0, PARTIALLY_PUBLISHED: 0, DELIVERED: 0, PUBLISHED: 0 },
+    { ALL: 0, DRAFT: 0, SUBMITTED: 0, CHANGES_REQUESTED: 0, READY: 0, PENDING_APPROVAL: 0, APPROVED: 0, SCHEDULED: 0, NEEDS_REVISION: 0, PARTIALLY_PUBLISHED: 0, DELIVERED: 0, PUBLISHED: 0 },
   )
 
   return (
@@ -83,6 +89,15 @@ export default function WorkflowTab({ client }) {
             </SelectContent>
           </Select>
 
+          <Button
+            variant={myWorkOnly ? 'default' : 'outline'}
+            size="sm"
+            className="h-9 gap-1.5 text-xs"
+            onClick={() => setMyWorkOnly(v => !v)}
+          >
+            <User className="h-3.5 w-3.5" />
+            My Work
+          </Button>
           <Button
             size="sm"
             onClick={() => setCreateOpen(true)}
@@ -123,6 +138,7 @@ export default function WorkflowTab({ client }) {
         clientId={client.id}
         onCreatePost={() => setCreateOpen(true)}
         statusFilter={statusFilter}
+        myWorkOnly={myWorkOnly}
       />
       <CreateDraftPost
         clientId={client.id}

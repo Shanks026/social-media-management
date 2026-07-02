@@ -42,10 +42,13 @@ import {
 } from '@/api/campaigns'
 import { useGlobalPosts } from '@/api/useGlobalPosts'
 import { useSubscription } from '@/api/useSubscription'
+import { usePermissions } from '@/api/usePermissions'
 import { useCampaignTransactions } from '@/api/transactions'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { fetchCampaignMeetings, deleteMeeting } from '@/api/meetings'
-import { fetchCampaignNotes } from '@/api/notes'
+import { useTasks } from '@/api/tasks'
+import { useTeamMembers } from '@/api/team'
+import { useAuth } from '@/context/AuthContext'
 import { AddTransactionDialog } from '@/pages/finance/AddTransactionDialog'
 import DraftPostForm from '@/pages/posts/DraftPostForm'
 import { LinkPostsToCampaignDialog } from '@/components/campaigns/LinkPostsToCampaignDialog'
@@ -53,9 +56,9 @@ import { CampaignDialog } from '@/components/campaigns/CampaignDialog'
 import { CreateInvoiceDialog } from '@/pages/finance/CreateInvoiceDialog'
 import CampaignReportPDF from '@/components/campaigns/CampaignReportPDF'
 import MeetingRow from '@/components/MeetingRow'
-import NoteRow from '@/components/NoteRow'
+import TaskCard from '@/components/tasks/TaskCard'
 import CreateMeetingDialog from '@/components/CreateMeetingDialog'
-import CreateNoteDialog from '@/components/CreateNoteDialog'
+import CreateTaskDialog from '@/components/tasks/CreateTaskDialog'
 import StatusBadge from '@/components/StatusBadge'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -173,6 +176,7 @@ export default function CampaignDetailPage() {
     campaignId,
   })
   const { data: sub } = useSubscription()
+  const { finance } = usePermissions()
   const isInternalClient = campaign?.clients?.is_internal ?? false
 
   const { data: invoices = [], isLoading: invoicesLoading } =
@@ -189,11 +193,25 @@ export default function CampaignDetailPage() {
     enabled: !!campaignId,
   })
 
-  const { data: campaignNotes = [], isLoading: notesLoading } = useQuery({
-    queryKey: ['campaign-notes', campaignId],
-    queryFn: () => fetchCampaignNotes(campaignId),
-    enabled: !!campaignId,
-  })
+  const { data: campaignNotes = [], isLoading: notesLoading } = useTasks({ campaignId })
+
+  const { user } = useAuth()
+  const { data: teamMembers = [] } = useTeamMembers()
+  const memberMap = useMemo(() => {
+    const map = Object.fromEntries(teamMembers.map((m) => [m.member_user_id, m]))
+    if (user && !map[user.id]) {
+      map[user.id] = {
+        member_user_id: user.id,
+        full_name: user.user_metadata?.full_name || user.user_metadata?.name || null,
+        email: user.email,
+        avatar_url: user.user_metadata?.avatar_url || null,
+      }
+    }
+    return map
+  }, [teamMembers, user])
+  const clientMap = useMemo(() =>
+    campaign?.clients ? { [String(campaign.clients.id)]: campaign.clients } : {},
+  [campaign])
 
   const { mutate: markMeetingDone, isPending: isCompletingMeeting } =
     useMutation({
@@ -501,7 +519,7 @@ export default function CampaignDetailPage() {
             <TabsList className="bg-transparent h-auto w-full justify-start rounded-none p-0 gap-12 border-b border-border/40">
               {[
                 { value: 'posts',    label: 'Deliverables', icon: Activity },
-                { value: 'finance',  label: 'Finance',      icon: Receipt },
+                ...(finance ? [{ value: 'finance', label: 'Finance', icon: Receipt }] : []),
                 { value: 'activity', label: 'Activity',     icon: CalendarDays },
               ].map((tab) => (
                 <TabsTrigger
@@ -711,7 +729,8 @@ export default function CampaignDetailPage() {
             </div>
           </TabsContent>
 
-          {/* ── Finance tab ── */}
+          {/* ── Finance tab (hidden for members) ── */}
+          {finance && (
           <TabsContent value="finance" className="mt-0">
             {isInternalClient ? (
               /* ── Internal campaign: budget vs expense transactions ── */
@@ -1050,6 +1069,7 @@ export default function CampaignDetailPage() {
               </div>
             )}
           </TabsContent>
+          )}
 
           {/* ── Activity tab ── */}
           <TabsContent value="activity" className="mt-0">
@@ -1072,12 +1092,12 @@ export default function CampaignDetailPage() {
                     <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground" onClick={() => notesCarouselApi?.scrollNext()}>
                       <ChevronRight className="size-4" />
                     </Button>
-                    <CreateNoteDialog clientId={campaign.client_id} lockClient={true} campaignId={campaignId} campaignName={campaign.name}>
+                    <CreateTaskDialog clientId={campaign.client_id} lockClient={true} campaignId={campaignId} campaignName={campaign.name}>
                       <Button variant="ghost" size="icon" className="h-8 w-8">
                         <Plus className="h-4 w-4" />
                       </Button>
-                    </CreateNoteDialog>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" onClick={() => navigate('/operations/tasks')}>
+                    </CreateTaskDialog>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" onClick={() => navigate('/tasks')}>
                       <ArrowUpRight className="h-4 w-4" />
                     </Button>
                   </div>
@@ -1085,7 +1105,7 @@ export default function CampaignDetailPage() {
                 <CardContent className="pt-0">
                   {notesLoading ? (
                     <div className="flex gap-3">
-                      {[1, 2, 3].map((i) => <Skeleton key={i} className="w-80 h-44 rounded-xl shrink-0" />)}
+                      {[1, 2, 3].map((i) => <Skeleton key={i} className="w-[480px] h-44 rounded-xl shrink-0" />)}
                     </div>
                   ) : campaignNotes.filter((n) => n.status !== 'ARCHIVED').length === 0 ? (
                     <div className="flex flex-col items-center justify-center text-center py-10 gap-2 rounded-xl border border-dashed border-border/50">
@@ -1099,8 +1119,8 @@ export default function CampaignDetailPage() {
                     <Carousel setApi={setNotesCarouselApi} opts={{ align: 'start', dragFree: true }}>
                       <CarouselContent>
                         {campaignNotes.filter((n) => n.status !== 'ARCHIVED').map((note) => (
-                          <CarouselItem key={note.id} className="basis-[340px]">
-                            <NoteRow note={note} variant="client-card" />
+                          <CarouselItem key={note.id} className="basis-[480px]">
+                            <TaskCard task={note} clientMap={clientMap} memberMap={memberMap} currentUserId={user?.id} />
                           </CarouselItem>
                         ))}
                       </CarouselContent>

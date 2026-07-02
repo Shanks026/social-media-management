@@ -10,6 +10,8 @@ import TableRow from '@tiptap/extension-table-row'
 import TableHeader from '@tiptap/extension-table-header'
 import TableCell from '@tiptap/extension-table-cell'
 import { TableContainer, TableTitle } from './editor/table-with-title'
+import { ImageNode } from './editor/ImageNode'
+import { VideoNode } from './editor/VideoNode'
 import {
   Bold,
   Italic,
@@ -40,7 +42,7 @@ function normalizeUrl(url) {
   return `https://${trimmed}`
 }
 
-export default function RichTextEditor({ content, onChange, editable = true, editorRef }) {
+export default function RichTextEditor({ content, onChange, editable = true, editorRef, noteId }) {
   const [linkOpen, setLinkOpen] = useState(false)
   const [linkUrl, setLinkUrl] = useState('')
 
@@ -64,6 +66,8 @@ export default function RichTextEditor({ content, onChange, editable = true, edi
       TableCell,
       TableContainer,
       TableTitle,
+      ImageNode.configure({ noteId: noteId ?? null }),
+      VideoNode.configure({ noteId: noteId ?? null }),
       SlashCommand,
     ],
     content: content || '',

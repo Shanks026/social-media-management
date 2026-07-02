@@ -56,7 +56,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { useAuth } from '@/context/AuthContext'
+import { useTeamMembers } from '@/api/team'
 import { useQueryClient, useMutation } from '@tanstack/react-query'
 import { deleteMeeting } from '@/api/meetings'
 import { deletePost, createRevision } from '@/api/posts'
@@ -206,6 +208,7 @@ export function CalendarPostCard({ post }) {
   const [assignCampaignOpen, setAssignCampaignOpen] = useState(false)
 
   const { data: sub } = useSubscription()
+  const { data: members = [] } = useTeamMembers()
 
   const createRevisionMutation = useMutation({
     mutationFn: () => createRevision(post.version_id, user?.id),
@@ -593,6 +596,21 @@ export function CalendarPostCard({ post }) {
 
         {/* Dotted Divider & Footer */}
         <div className="mt-auto">
+          {(() => {
+            const creator = members.find(m => m.member_user_id === post.created_by)
+            if (!creator) return null
+            const initials = creator.full_name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) ?? '?'
+            return (
+              <div className="flex items-center gap-1.5 mb-3">
+                <span className="text-xs text-muted-foreground">Created by</span>
+                <Avatar className="size-4 shrink-0">
+                  <AvatarImage src={creator.avatar_url} />
+                  <AvatarFallback className="text-[9px]">{initials}</AvatarFallback>
+                </Avatar>
+                <span className="text-xs font-medium text-foreground/70 truncate">{creator.full_name}</span>
+              </div>
+            )
+          })()}
           <hr className="border-t border-dashed border-border mb-4" />
 
           <div className="flex items-center justify-between">

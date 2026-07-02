@@ -100,7 +100,7 @@ export function usePendingInvites() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('agency_invites')
-        .select('id, token, created_at, expires_at')
+        .select('id, token, created_at, expires_at, system_role')
         .eq('agency_user_id', workspaceUserId)
         .is('accepted_at', null)
         .gt('expires_at', new Date().toISOString())
@@ -117,14 +117,14 @@ export function usePendingInvites() {
 
 /**
  * Generate a new invite token and return the full join URL.
+ * Accepts { functional_role, permissions } set by the owner in InviteDialog.
  */
 export function useGenerateInvite() {
   const queryClient = useQueryClient()
   const { workspaceUserId } = useAuth()
 
   return useMutation({
-    mutationFn: async () => {
-      // Check seat limit before generating an invite
+    mutationFn: async ({ system_role = 'member' } = {}) => {
       const { data: sub, error: subError } = await supabase
         .from('agency_subscriptions')
         .select('max_team_members')
@@ -146,7 +146,10 @@ export function useGenerateInvite() {
 
       const { data, error } = await supabase
         .from('agency_invites')
-        .insert({ agency_user_id: workspaceUserId })
+        .insert({
+          agency_user_id: workspaceUserId,
+          system_role,
+        })
         .select('token')
         .single()
 
@@ -305,7 +308,7 @@ export function useMyMemberRecord() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('agency_members')
-        .select('id, functional_role, system_role')
+        .select('id, functional_role, system_role, permissions')
         .eq('agency_user_id', workspaceUserId)
         .eq('member_user_id', user.id)
         .single()
@@ -330,15 +333,32 @@ export async function fetchInviteByToken(token) {
 
 /**
  * Complete the team join flow after Supabase auth signup.
- * Validates the token, wires up agency_members, marks invite accepted.
+ * functional_role and permissions come from the invite (set by the owner).
  */
-export async function joinTeam({ token, firstName, lastName, functionalRole }) {
+export async function joinTeam({ token, firstName, lastName, functional_role }) {
   const { data, error } = await supabase.rpc('join_team', {
     p_token: token,
     p_first_name: firstName,
     p_last_name: lastName,
-    p_functional_role: functionalRole || null,
+    p_functional_role: functional_role ?? null,
   })
   if (error) throw error
   return data
+}
+
+/**
+ * Promote, demote, or update a team member's access. Owner-only.
+ * system_role: 'admin' | 'member'
+ * permissions: { documents: 'none' | 'view' | 'manage' }
+ * functional_role: optional string (null = keep current)
+ */
+export async function updateMemberAccess(memberId, { system_role, permissions, functional_role, roles_and_responsibilities }) {
+  const { error } = await supabase.rpc('update_member_access', {
+    p_member_id: memberId,
+    p_system_role: system_role,
+    p_permissions: permissions,
+    p_functional_role: functional_role ?? null,
+    p_roles_and_responsibilities: roles_and_responsibilities ?? null,
+  })
+  if (error) throw error
 }

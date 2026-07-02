@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState, useRef, useEffect, useLayoutEffect } from 'react'
 import { useAuth } from '@/context/AuthContext'
+import { usePermissions } from '@/api/usePermissions'
 import {
   useTeamMembers,
   usePendingInvites,
@@ -9,9 +10,18 @@ import {
   useRemovedMembers,
   useRestoreMember,
   useDeleteMemberPermanently,
+  updateMemberAccess,
 } from '@/api/team'
+import {
+  SYSTEM_ROLE_PALETTE,
+  AGENCY_ROLE_GROUPS,
+  getRolePalette,
+} from '@/lib/team-roles'
 import { formatDate } from '@/lib/helper'
+import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
+import { useQueryClient } from '@tanstack/react-query'
+import { teamKeys } from '@/api/team'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
@@ -21,7 +31,9 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
+  DialogFooter,
 } from '@/components/ui/dialog'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -35,58 +47,104 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
+import { Textarea } from '@/components/ui/textarea'
 import {
   UserPlus,
   Copy,
   Check,
   Link,
   Trash2,
-  Users,
   CalendarDays,
   Briefcase,
   Clock,
   Loader2,
   RotateCcw,
+  ShieldCheck,
+  ShieldMinus,
+  FileText,
+  Pencil,
+  Ban,
+  Eye,
+  FolderOpen,
 } from 'lucide-react'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import {
   Empty,
   EmptyContent,
   EmptyHeader,
   EmptyTitle,
   EmptyDescription,
-  EmptyMedia,
 } from '@/components/ui/empty'
+
+// ─── Documents level labels ────────────────────────────────────────────────────
+
+const DOCS_LEVEL_CONFIG = {
+  none: { label: 'No access', description: 'Cannot see the documents section', icon: Ban },
+  view: { label: 'View', description: 'Can read non-confidential documents', icon: Eye },
+  manage: { label: 'Manage', description: 'Can upload, edit, and delete non-confidential documents', icon: FolderOpen },
+}
 
 // ─── Invite Dialog ─────────────────────────────────────────────────────────────
 
+const INVITE_ROLE_OPTIONS = [
+  {
+    value: 'member',
+    label: 'Team Member',
+    description: 'Access to client work, posts, calendar, and documents.',
+    palette: SYSTEM_ROLE_PALETTE.member,
+  },
+  {
+    value: 'admin',
+    label: 'Team Admin',
+    description:
+      'Full access including finance, proposals, prospects, and reports.',
+    palette: SYSTEM_ROLE_PALETTE.admin,
+  },
+]
+
 export function InviteDialog({ open, onOpenChange }) {
+  const [systemRole, setSystemRole] = useState('member')
   const [inviteUrl, setInviteUrl] = useState(null)
   const [copied, setCopied] = useState(false)
+
   const generateInvite = useGenerateInvite()
 
-  useEffect(() => {
-    if (!open) {
-      setInviteUrl(null)
-      setCopied(false)
-      return
+  const handleClose = (val) => {
+    onOpenChange(val)
+    if (!val) {
+      setTimeout(() => {
+        setSystemRole('member')
+        setInviteUrl(null)
+        setCopied(false)
+      }, 200)
     }
-    generateInvite
-      .mutateAsync()
-      .then((url) => setInviteUrl(url))
-      .catch((err) => {
-        const msg =
-          err.message === 'TEAM_SEAT_LIMIT_REACHED'
-            ? 'Team seat limit reached. Upgrade your plan to invite more members.'
-            : err.message || 'Failed to generate invite link'
-        toast.error(msg)
-        onOpenChange(false)
-      })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open])
+  }
+
+  const handleGenerate = async () => {
+    try {
+      const url = await generateInvite.mutateAsync({ system_role: systemRole })
+      setInviteUrl(url)
+    } catch (err) {
+      const msg =
+        err.message === 'TEAM_SEAT_LIMIT_REACHED'
+          ? 'Team seat limit reached. Upgrade your plan to invite more members.'
+          : err.message || 'Failed to generate invite link'
+      toast.error(msg)
+    }
+  }
 
   const handleCopy = () => {
     if (!inviteUrl) return
@@ -95,22 +153,81 @@ export function InviteDialog({ open, onOpenChange }) {
     setTimeout(() => setCopied(false), 2000)
   }
 
+  const selectedOption = INVITE_ROLE_OPTIONS.find((o) => o.value === systemRole)
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Invite Team Member</DialogTitle>
           <DialogDescription>
-            Share this link with your teammate. It expires in 7 days.
+            {inviteUrl
+              ? 'Share this link. It expires in 7 days.'
+              : 'Choose the access level for this invite. The new member will set their own job title.'}
           </DialogDescription>
         </DialogHeader>
 
-        {generateInvite.isPending ? (
-          <div className="flex items-center justify-center gap-2 py-6 text-sm text-muted-foreground">
-            <Loader2 className="size-4 animate-spin" />
-            Generating link…
+        {!inviteUrl ? (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              {INVITE_ROLE_OPTIONS.map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => setSystemRole(opt.value)}
+                  className={cn(
+                    'w-full flex items-start gap-3 rounded-lg border px-4 py-3 text-left transition-colors',
+                    systemRole === opt.value
+                      ? 'border-primary bg-primary/5'
+                      : 'border-border/50 hover:border-border',
+                  )}
+                >
+                  <div
+                    className={cn(
+                      'mt-0.5 size-4 rounded-full border-2 shrink-0 flex items-center justify-center',
+                      systemRole === opt.value
+                        ? 'border-primary'
+                        : 'border-muted-foreground/40',
+                    )}
+                  >
+                    {systemRole === opt.value && (
+                      <div className="size-2 rounded-full bg-primary" />
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex justify-between items-center gap-2 mb-1">
+                      <p className="text-sm font-medium">{opt.label}</p>
+                      <Badge className={opt.palette.badge}>
+                        {opt.palette.label}
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {opt.description}
+                    </p>
+                  </div>
+                </button>
+              ))}
+            </div>
+
+            <Button
+              className="w-full"
+              onClick={handleGenerate}
+              disabled={generateInvite.isPending}
+            >
+              {generateInvite.isPending ? (
+                <>
+                  <Loader2 className="size-4 animate-spin mr-2" />
+                  Generating…
+                </>
+              ) : (
+                <>
+                  <Link className="size-4 mr-2" />
+                  Generate Invite Link
+                </>
+              )}
+            </Button>
           </div>
-        ) : inviteUrl ? (
+        ) : (
           <div className="space-y-3">
             <div className="space-y-1.5">
               <Label>Invite link</Label>
@@ -135,11 +252,288 @@ export function InviteDialog({ open, onOpenChange }) {
               </div>
             </div>
             <p className="text-xs text-muted-foreground">
-              This link expires in 7 days. Send it via WhatsApp, email, or any
-              other channel.
+              Expires in 7 days. Whoever uses this link joins as a{' '}
+              <span
+                className={cn(
+                  'font-medium',
+                  selectedOption?.palette.badge
+                    .split(' ')
+                    .find((c) => c.startsWith('text-')),
+                )}
+              >
+                {selectedOption?.label}
+              </span>
+              .
             </p>
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full"
+              onClick={() => {
+                setInviteUrl(null)
+                setSystemRole('member')
+              }}
+            >
+              Create another invite
+            </Button>
           </div>
-        ) : null}
+        )}
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+// ─── Animated height wrapper ───────────────────────────────────────────────────
+// Measures the inner content height with ResizeObserver and applies it as an
+// explicit pixel value on the outer wrapper so CSS can transition it.
+
+function AnimatedHeight({ children }) {
+  const outerRef = useRef(null)
+  const innerRef = useRef(null)
+
+  useLayoutEffect(() => {
+    if (outerRef.current && innerRef.current) {
+      outerRef.current.style.height = `${innerRef.current.offsetHeight}px`
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!innerRef.current || !outerRef.current) return
+    const ro = new ResizeObserver(() => {
+      if (outerRef.current && innerRef.current) {
+        outerRef.current.style.height = `${innerRef.current.offsetHeight}px`
+      }
+    })
+    ro.observe(innerRef.current)
+    return () => ro.disconnect()
+  }, [])
+
+  return (
+    <div
+      ref={outerRef}
+      className="overflow-hidden"
+      style={{ transition: 'height 300ms cubic-bezier(0.4, 0, 0.2, 1)' }}
+    >
+      <div ref={innerRef}>{children}</div>
+    </div>
+  )
+}
+
+// ─── Edit Member Dialog ────────────────────────────────────────────────────────
+
+export function EditAccessDialog({ member, open, onOpenChange, onSave }) {
+  const [systemRole, setSystemRole] = useState(
+    member?.system_role === 'admin' ? 'admin' : 'member',
+  )
+  const [functionalRole, setFunctionalRole] = useState(
+    member?.functional_role || '',
+  )
+  const [customRole, setCustomRole] = useState('')
+  const [docsLevel, setDocsLevel] = useState(
+    member?.permissions?.documents || 'view',
+  )
+  const [rolesAndResponsibilities, setRolesAndResponsibilities] = useState(
+    member?.roles_and_responsibilities || '',
+  )
+  const [saving, setSaving] = useState(false)
+
+  const isCustom =
+    functionalRole !== '' &&
+    !AGENCY_ROLE_GROUPS.flatMap((g) => g.roles).includes(functionalRole)
+
+  const handleSave = async () => {
+    setSaving(true)
+    try {
+      const resolvedRole =
+        functionalRole === '__custom__'
+          ? customRole.trim()
+          : functionalRole || member?.functional_role || null
+      await onSave(member.id, {
+        system_role: systemRole,
+        permissions: { documents: systemRole === 'admin' ? 'manage' : docsLevel },
+        functional_role: resolvedRole,
+        roles_and_responsibilities: rolesAndResponsibilities.trim() || null,
+      })
+      onOpenChange(false)
+    } catch (err) {
+      toast.error(err.message || 'Failed to update member')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-lg flex flex-col gap-0 p-0 max-h-[85vh] overflow-hidden">
+
+        {/* Fixed header */}
+        <DialogHeader className="px-6 pt-6 pb-4 shrink-0">
+          <div className="flex items-center gap-3">
+            <MemberAvatar
+              name={member?.full_name}
+              email={member?.email}
+              avatarUrl={member?.avatar_url}
+            />
+            <div className="flex-1 min-w-0">
+              <DialogTitle className="text-base truncate">
+                {member?.full_name || member?.email}
+              </DialogTitle>
+              <DialogDescription className="truncate">
+                {member?.email}
+                {member?.functional_role && (
+                  <span className="text-muted-foreground/60"> · {member.functional_role}</span>
+                )}
+              </DialogDescription>
+            </div>
+          </div>
+        </DialogHeader>
+
+        <div className="h-px bg-border shrink-0" />
+
+        {/* Scrollable body */}
+        <div className="overflow-y-auto px-6 py-5">
+          <AnimatedHeight>
+          <Tabs defaultValue="access" className="w-full">
+            <TabsList className="w-full">
+              <TabsTrigger value="access" className="flex-1">Access</TabsTrigger>
+              <TabsTrigger value="details" className="flex-1">Details</TabsTrigger>
+            </TabsList>
+
+            {/* ── Access tab ── */}
+            <TabsContent value="access" className="space-y-5 mt-4">
+              <div className="space-y-2">
+                <Label>Access level</Label>
+                <RadioGroup value={systemRole} onValueChange={setSystemRole} className="gap-2">
+                  {INVITE_ROLE_OPTIONS.map((opt) => (
+                    <label
+                      key={opt.value}
+                      htmlFor={`role-${opt.value}`}
+                      className={cn(
+                        'flex items-start gap-3 rounded-lg border px-4 py-3 cursor-pointer transition-colors',
+                        systemRole === opt.value
+                          ? 'border-primary bg-primary/5'
+                          : 'border-border/50 hover:border-border',
+                      )}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <p className="text-sm font-medium">{opt.label}</p>
+                          <Badge className={opt.palette.badge}>{opt.palette.label}</Badge>
+                        </div>
+                        <p className="text-xs text-muted-foreground">{opt.description}</p>
+                      </div>
+                      <RadioGroupItem value={opt.value} id={`role-${opt.value}`} className="self-start mt-0.5 data-[state=checked]:border-primary" />
+                    </label>
+                  ))}
+                </RadioGroup>
+              </div>
+
+              {systemRole === 'member' && (
+                <div className="space-y-2">
+                  <Label>Document access</Label>
+                  <RadioGroup value={docsLevel} onValueChange={setDocsLevel} className="gap-2">
+                    {Object.entries(DOCS_LEVEL_CONFIG).map(([key, cfg]) => (
+                      <label
+                        key={key}
+                        htmlFor={`docs-${key}`}
+                        className={cn(
+                          'flex items-start gap-3 rounded-lg border px-4 py-3 cursor-pointer transition-colors',
+                          docsLevel === key
+                            ? 'border-primary bg-primary/5'
+                            : 'border-border/50 hover:border-border',
+                        )}
+                      >
+                        <cfg.icon className={cn(
+                          'size-4 shrink-0 mt-0.5',
+                          docsLevel === key ? 'text-primary' : 'text-muted-foreground',
+                        )} />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium">{cfg.label}</p>
+                          <p className="text-xs text-muted-foreground">{cfg.description}</p>
+                        </div>
+                        <RadioGroupItem value={key} id={`docs-${key}`} className="self-start mt-0.5 data-[state=checked]:border-primary" />
+                      </label>
+                    ))}
+                  </RadioGroup>
+                </div>
+              )}
+            </TabsContent>
+
+            {/* ── Details tab ── */}
+            <TabsContent value="details" className="space-y-5 mt-4">
+              <div className="space-y-2">
+                <Label>Role / Job title</Label>
+                <Select
+                  value={isCustom ? '__custom__' : functionalRole}
+                  onValueChange={(v) => {
+                    setFunctionalRole(v)
+                    if (v !== '__custom__') setCustomRole('')
+                  }}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select a role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {AGENCY_ROLE_GROUPS.map((group) => (
+                      <SelectGroup key={group.label}>
+                        <SelectLabel>{group.label}</SelectLabel>
+                        {group.roles.map((role) => (
+                          <SelectItem key={role} value={role}>
+                            <span className="flex items-center gap-2">
+                              <span className={cn('size-2 rounded-full shrink-0', getRolePalette(role)?.dot ?? 'bg-muted-foreground/30')} />
+                              {role}
+                            </span>
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    ))}
+                    <SelectGroup>
+                      <SelectLabel>Other</SelectLabel>
+                      <SelectItem value="__custom__">Custom…</SelectItem>
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+                {(functionalRole === '__custom__' || isCustom) && (
+                  <Input
+                    placeholder="e.g. Paralegal, Video Producer…"
+                    value={customRole || (isCustom ? member.functional_role : '')}
+                    onChange={(e) => setCustomRole(e.target.value)}
+                    className="mt-2"
+                  />
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label>Roles &amp; Responsibilities</Label>
+                  <span className="text-[11px] text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+                    Only visible to you
+                  </span>
+                </div>
+                <Textarea
+                  placeholder="Describe this member's responsibilities, focus areas, or internal notes…"
+                  value={rolesAndResponsibilities}
+                  onChange={(e) => setRolesAndResponsibilities(e.target.value)}
+                  className="min-h-28 resize-none text-sm"
+                />
+              </div>
+            </TabsContent>
+          </Tabs>
+          </AnimatedHeight>
+        </div>
+
+        <div className="h-px bg-border shrink-0" />
+
+        {/* Fixed footer */}
+        <DialogFooter className="px-6 py-4 shrink-0">
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button onClick={handleSave} disabled={saving}>
+            {saving && <Loader2 className="size-4 animate-spin" />}
+            Save changes
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   )
@@ -175,8 +569,9 @@ function MemberAvatar({ name, email, avatarUrl }) {
 // ─── Main Component ─────────────────────────────────────────────────────────────
 
 export default function TeamSettings({ onInviteClick = () => {} }) {
-  const { user, userRole } = useAuth()
-  const isAdmin = userRole === 'admin'
+  const { user } = useAuth()
+  const { canManageTeam } = usePermissions()
+  const queryClient = useQueryClient()
 
   const { data: members = [], isLoading: membersLoading } = useTeamMembers()
   const { data: pendingInvites = [] } = usePendingInvites()
@@ -185,9 +580,11 @@ export default function TeamSettings({ onInviteClick = () => {} }) {
   const revokeInvite = useRevokeInvite()
   const restoreMember = useRestoreMember()
   const deleteMemberPermanently = useDeleteMemberPermanently()
+  const { workspaceUserId } = useAuth()
 
   const [removingMember, setRemovingMember] = useState(null)
   const [deletingMember, setDeletingMember] = useState(null)
+  const [editingMember, setEditingMember] = useState(null)
 
   const handleRemove = async () => {
     if (!removingMember) return
@@ -233,6 +630,46 @@ export default function TeamSettings({ onInviteClick = () => {} }) {
     }
   }
 
+  const handlePromote = async (member) => {
+    try {
+      await updateMemberAccess(member.id, {
+        system_role: 'admin',
+        permissions: { documents: 'manage' },
+        functional_role: null,
+      })
+      queryClient.invalidateQueries({
+        queryKey: teamKeys.members(workspaceUserId),
+      })
+      toast.success(`${member.full_name || 'Member'} promoted to Admin`)
+    } catch (err) {
+      toast.error(err.message || 'Failed to promote member')
+    }
+  }
+
+  const handleDemote = async (member) => {
+    try {
+      await updateMemberAccess(member.id, {
+        system_role: 'member',
+        permissions: { documents: 'view' },
+        functional_role: null,
+      })
+      queryClient.invalidateQueries({
+        queryKey: teamKeys.members(workspaceUserId),
+      })
+      toast.success(`${member.full_name || 'Member'} demoted to Member`)
+    } catch (err) {
+      toast.error(err.message || 'Failed to demote member')
+    }
+  }
+
+  const handleSaveAccess = async (memberId, payload) => {
+    await updateMemberAccess(memberId, payload)
+    queryClient.invalidateQueries({
+      queryKey: teamKeys.members(workspaceUserId),
+    })
+    toast.success('Access updated')
+  }
+
   const handleCopyInviteLink = (token) => {
     const baseUrl = import.meta.env.VITE_APP_URL || window.location.origin
     navigator.clipboard.writeText(`${baseUrl}/join/${token}`)
@@ -269,12 +706,8 @@ export default function TeamSettings({ onInviteClick = () => {} }) {
                   the workload.
                 </EmptyDescription>
               </EmptyHeader>
-              {isAdmin && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={onInviteClick}
-                >
+              {canManageTeam && (
+                <Button variant="outline" size="sm" onClick={onInviteClick}>
                   <UserPlus className="size-4 mr-2" />
                   Invite Team Member
                 </Button>
@@ -285,8 +718,17 @@ export default function TeamSettings({ onInviteClick = () => {} }) {
           <div className="space-y-3">
             {members.map((member) => {
               const isSelf = member.member_user_id === user?.id
-              const isOwner = member.system_role === 'admin'
+              const isOwnerRow = member.system_role === 'owner'
+              const isAdminRow = member.system_role === 'admin'
               const displayName = member.full_name || member.email
+              const rolePalette =
+                SYSTEM_ROLE_PALETTE[member.system_role] ??
+                SYSTEM_ROLE_PALETTE.member
+              const funcPalette = getRolePalette(member.functional_role)
+              const docsLevel =
+                isOwnerRow || isAdminRow
+                  ? null
+                  : (member.permissions?.documents ?? 'view')
 
               return (
                 <div
@@ -304,11 +746,25 @@ export default function TeamSettings({ onInviteClick = () => {} }) {
                       <p className="text-sm font-medium truncate">
                         {displayName}
                       </p>
-                      {isOwner && (
-                        <Badge variant="secondary" className="text-xs">
-                          Admin
+
+                      {/* System-role badge */}
+                      <Badge className={rolePalette.badge}>
+                        {rolePalette.label}
+                      </Badge>
+
+                      {/* Functional role */}
+                      {member.functional_role && funcPalette && (
+                        <Badge variant="outline" className="gap-1.5">
+                          <span
+                            className={cn(
+                              'size-1.5 rounded-full shrink-0',
+                              funcPalette.dot,
+                            )}
+                          />
+                          {member.functional_role}
                         </Badge>
                       )}
+
                       {isSelf && (
                         <Badge variant="outline" className="text-xs">
                           You
@@ -320,11 +776,12 @@ export default function TeamSettings({ onInviteClick = () => {} }) {
                     </p>
                   </div>
 
-                  <div className="hidden sm:flex items-center gap-6 shrink-0">
-                    {member.functional_role && (
+                  <div className="hidden sm:flex items-center gap-4 shrink-0">
+                    {/* Documents level chip (members only) */}
+                    {docsLevel && (
                       <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                        <Briefcase size={12} className="shrink-0" />
-                        {member.functional_role}
+                        <FileText size={12} className="shrink-0" />
+                        {DOCS_LEVEL_CONFIG[docsLevel]?.label ?? docsLevel}
                       </div>
                     )}
                     <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -333,15 +790,70 @@ export default function TeamSettings({ onInviteClick = () => {} }) {
                     </div>
                   </div>
 
-                  {isAdmin && !isOwner && !isSelf && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="size-8 text-muted-foreground hover:text-destructive shrink-0"
-                      onClick={() => setRemovingMember(member)}
-                    >
-                      <Trash2 className="size-3.5" />
-                    </Button>
+                  {/* Owner-only action buttons (not on own row, not on owner row) */}
+                  {canManageTeam && !isSelf && !isOwnerRow && (
+                    <div className="flex items-center gap-1 shrink-0">
+                      {/* Promote / Demote */}
+                      {isAdminRow ? (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="size-8 text-muted-foreground hover:text-foreground"
+                              onClick={() => handleDemote(member)}
+                            >
+                              <ShieldMinus className="size-3.5" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Demote to Member</TooltipContent>
+                        </Tooltip>
+                      ) : (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="size-8 text-muted-foreground hover:text-foreground"
+                              onClick={() => handlePromote(member)}
+                            >
+                              <ShieldCheck className="size-3.5" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Promote to Admin</TooltipContent>
+                        </Tooltip>
+                      )}
+
+                      {/* Edit member */}
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="size-8 text-muted-foreground hover:text-foreground"
+                            onClick={() => setEditingMember(member)}
+                          >
+                            <Pencil className="size-3.5" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Edit member</TooltipContent>
+                      </Tooltip>
+
+                      {/* Remove */}
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="size-8 text-muted-foreground hover:text-destructive"
+                            onClick={() => setRemovingMember(member)}
+                          >
+                            <Trash2 className="size-3.5" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Remove member</TooltipContent>
+                      </Tooltip>
+                    </div>
                   )}
                 </div>
               )
@@ -350,11 +862,10 @@ export default function TeamSettings({ onInviteClick = () => {} }) {
         )}
       </section>
 
-      {/* ── Pending Invites ── */}
-      {isAdmin && pendingInvites.length > 0 && (
+      {/* ── Pending Invites (owner only) ── */}
+      {canManageTeam && pendingInvites.length > 0 && (
         <>
           <Separator className="opacity-50" />
-
           <section className="space-y-8">
             <div className="space-y-1">
               <h2 className="text-2xl font-normal tracking-tight bricolage">
@@ -376,9 +887,22 @@ export default function TeamSettings({ onInviteClick = () => {} }) {
                   </div>
 
                   <div className="flex-1 min-w-0 space-y-1">
-                    <p className="text-sm font-mono text-muted-foreground truncate">
-                      /join/{invite.token.slice(0, 20)}…
-                    </p>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="text-sm font-mono text-muted-foreground truncate">
+                        /join/{invite.token.slice(0, 20)}…
+                      </p>
+                      {invite.system_role && (
+                        <Badge
+                          className={
+                            SYSTEM_ROLE_PALETTE[invite.system_role]?.badge ??
+                            SYSTEM_ROLE_PALETTE.member.badge
+                          }
+                        >
+                          {SYSTEM_ROLE_PALETTE[invite.system_role]?.label ??
+                            'Member'}
+                        </Badge>
+                      )}
+                    </div>
                     <div className="flex items-center gap-3 text-xs text-muted-foreground">
                       <span className="flex items-center gap-1">
                         <CalendarDays size={11} />
@@ -418,11 +942,10 @@ export default function TeamSettings({ onInviteClick = () => {} }) {
         </>
       )}
 
-      {/* ── Removed Members ── */}
-      {isAdmin && removedMembers.length > 0 && (
+      {/* ── Removed Members (owner only) ── */}
+      {canManageTeam && removedMembers.length > 0 && (
         <>
           <Separator className="opacity-50" />
-
           <section className="space-y-8">
             <div className="space-y-1">
               <h2 className="text-2xl font-normal tracking-tight bricolage">
@@ -475,7 +998,6 @@ export default function TeamSettings({ onInviteClick = () => {} }) {
                       </TooltipTrigger>
                       <TooltipContent>Restore access</TooltipContent>
                     </Tooltip>
-
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <Button
@@ -497,7 +1019,17 @@ export default function TeamSettings({ onInviteClick = () => {} }) {
         </>
       )}
 
-      {/* ── Dialogs ── */}
+      {/* ── Edit Access Dialog ── */}
+      {editingMember && (
+        <EditAccessDialog
+          member={editingMember}
+          open={!!editingMember}
+          onOpenChange={(v) => !v && setEditingMember(null)}
+          onSave={handleSaveAccess}
+        />
+      )}
+
+      {/* ── Confirm dialogs ── */}
       <AlertDialog
         open={!!deletingMember}
         onOpenChange={(open) => !open && setDeletingMember(null)}
@@ -532,7 +1064,7 @@ export default function TeamSettings({ onInviteClick = () => {} }) {
             <AlertDialogTitle>Remove team member?</AlertDialogTitle>
             <AlertDialogDescription>
               {removingMember?.full_name || 'This member'} will lose access to
-              your workspace immediately. This action cannot be undone.
+              your workspace immediately.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

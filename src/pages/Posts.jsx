@@ -16,7 +16,9 @@ import {
   Calendar as CalendarIcon,
   Building2,
   Newspaper,
+  User,
 } from 'lucide-react'
+import { useAuth } from '@/context/AuthContext'
 
 // UI Components
 import { Button } from '@/components/ui/button'
@@ -63,7 +65,7 @@ import { useGlobalPosts, usePostCounts } from '@/api/useGlobalPosts'
 import { useClients } from '@/api/clients'
 import { useCampaigns } from '@/api/campaigns'
 import { useSubscription } from '@/api/useSubscription'
-import { ClientAvatar } from '@/components/NoteRow'
+import { ClientAvatar } from '@/components/tasks/ClientAvatar'
 import { UrgencyFilter } from '@/pages/clients/ClientFilters'
 
 // ─── Deliverable type labels ────────────────────────────
@@ -110,16 +112,19 @@ const PLATFORMS = [
 ]
 
 const STATUS_TABS = [
-  { key: 'ALL', label: 'All' },
-  { key: 'DRAFT', label: 'Drafts' },
-  { key: 'PENDING_APPROVAL', label: 'Pending Approval' },
-  { key: 'APPROVED', label: 'Approved' },
-  { key: 'SCHEDULED', label: 'Scheduled' },
-  { key: 'NEEDS_REVISION', label: 'Needs Revision' },
+  { key: 'ALL',                 label: 'All' },
+  { key: 'DRAFT',               label: 'Drafts' },
+  { key: 'SUBMITTED',           label: 'Submitted' },
+  { key: 'CHANGES_REQUESTED',   label: 'Changes Requested' },
+  { key: 'READY',               label: 'Ready' },
+  { key: 'PENDING_APPROVAL',    label: 'Pending Approval' },
+  { key: 'APPROVED',            label: 'Approved' },
+  { key: 'SCHEDULED',           label: 'Scheduled' },
+  { key: 'NEEDS_REVISION',      label: 'Needs Revision' },
   { key: 'PARTIALLY_PUBLISHED', label: 'Partially Published' },
-  { key: 'DELIVERED', label: 'Delivered' },
-  { key: 'PUBLISHED', label: 'Published' },
-  { key: 'ARCHIVED', label: 'Archived' },
+  { key: 'DELIVERED',           label: 'Delivered' },
+  { key: 'PUBLISHED',           label: 'Published' },
+  { key: 'ARCHIVED',            label: 'Archived' },
 ]
 
 const PlatformIcon = ({ name, size = 14 }) => {
@@ -154,7 +159,7 @@ const PlatformIcon = ({ name, size = 14 }) => {
 export default function Posts() {
   const navigate = useNavigate()
   const { setHeader } = useHeader()
-
+  const { user } = useAuth()
 
   // View mode
   const [viewMode, setViewMode] = useState('card') // 'card' | 'table'
@@ -171,6 +176,7 @@ export default function Posts() {
   const [dateRange, setDateRange] = useState({ from: undefined, to: undefined })
   const [selectedCampaign, setSelectedCampaign] = useState('all')
   const [healthFilter, setHealthFilter] = useState('all')
+  const [myWorkOnly, setMyWorkOnly] = useState(false)
 
   // Debounce search
   useEffect(() => {
@@ -223,11 +229,13 @@ export default function Posts() {
     return c
   }, [posts])
 
-  // Apply health filter client-side on top of server-side filters
+  // Apply health + myWork filters client-side on top of server-side filters
   const filteredPosts = useMemo(() => {
-    if (healthFilter === 'all') return posts
-    return posts.filter((p) => getPostHealth(p) === healthFilter)
-  }, [posts, healthFilter])
+    let result = posts
+    if (healthFilter !== 'all') result = result.filter((p) => getPostHealth(p) === healthFilter)
+    if (myWorkOnly) result = result.filter((p) => p.created_by === user?.id)
+    return result
+  }, [posts, healthFilter, myWorkOnly, user?.id])
 
   const hasActiveFilters =
     search ||
@@ -235,7 +243,8 @@ export default function Posts() {
     platform !== 'all' ||
     dateRange.from ||
     selectedCampaign !== 'all' ||
-    healthFilter !== 'all'
+    healthFilter !== 'all' ||
+    myWorkOnly
 
   const resetFilters = () => {
     setSearch('')
@@ -245,6 +254,7 @@ export default function Posts() {
     setDateRange({ from: undefined, to: undefined })
     setSelectedCampaign('all')
     setHealthFilter('all')
+    setMyWorkOnly(false)
   }
 
   // ─── Table columns ───────────────────────────
@@ -535,6 +545,17 @@ export default function Posts() {
               />
             </PopoverContent>
           </Popover>
+
+          {/* My Work Toggle */}
+          <Button
+            variant={myWorkOnly ? 'default' : 'outline'}
+            size="sm"
+            className="h-9 gap-1.5 text-xs"
+            onClick={() => setMyWorkOnly(v => !v)}
+          >
+            <User size={13} />
+            My Work
+          </Button>
 
           {/* Clear filters */}
           {hasActiveFilters && (

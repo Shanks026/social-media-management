@@ -20,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { ClientAvatar } from '@/components/NoteRow'
+import { ClientAvatar } from '@/components/tasks/ClientAvatar'
 import { INDUSTRY_OPTIONS } from '@/lib/industries'
 import { StatBar, StatCell } from '@/components/ui/stat-bar'
 import {

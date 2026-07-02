@@ -1,126 +1,54 @@
-import {
-  Clock,
-  CalendarClock,
-  AlertTriangle,
-  CheckCircle2,
-  Archive,
-  PlayCircle,
-  UploadCloud,
-  PauseCircle,
-  Pencil,
-  CircleDashed,
-  PackageCheck,
-} from 'lucide-react'
+import { PlayCircle, PauseCircle, UploadCloud } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
+import { POST_STATUS_CONFIG } from '@/lib/post-statuses'
 
 const STATUS_CONFIG = {
-  DRAFT: {
-    label: 'Draft',
-    icon: Pencil,
-    className:
-      'bg-blue-100 text-blue-800 dark:bg-blue-500/10 dark:text-blue-400',
-  },
-  PENDING_APPROVAL: {
-    label: 'Awaiting Approval',
-    icon: Clock,
-    className:
-      'bg-orange-100 text-orange-800 dark:bg-orange-500/10 dark:text-orange-400',
-  },
-  SCHEDULED: {
-    label: 'Scheduled',
-    icon: CalendarClock,
-    className:
-      'bg-purple-100 text-purple-800 dark:bg-purple-500/10 dark:text-purple-400',
-  },
-  NEEDS_REVISION: {
-    label: 'Needs Revision',
-    icon: CircleDashed,
-    className:
-      'bg-pink-100 text-pink-800 dark:bg-pink-500/10 dark:text-pink-400',
-  },
-  APPROVED: {
-    label: 'Approved',
-    icon: CheckCircle2,
-    className:
-      'bg-green-100 text-green-800 dark:bg-green-500/10 dark:text-green-400',
-  },
-  DELIVERED: {
-    label: 'Delivered',
-    icon: PackageCheck,
-    className:
-      'bg-teal-100 text-teal-800 dark:bg-teal-500/10 dark:text-teal-400',
-  },
+  // Post / deliverable statuses — sourced from shared post-statuses.js
+  ...POST_STATUS_CONFIG,
 
-  ARCHIVED: {
-    label: 'Archived - Read Only',
-    icon: Archive,
-    className:
-      'bg-slate-100 text-slate-800 dark:bg-slate-500/20 dark:text-slate-400',
-  },
+  // Non-deliverable statuses
   ACTIVE: {
     label: 'Active',
     icon: PlayCircle,
-    className:
-      'bg-green-100 text-green-800 dark:bg-green-500/10 dark:text-green-400',
-  },
-  PUBLISHED: {
-    label: 'Published',
-    icon: UploadCloud,
-    className:
-      'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-400',
-  },
-  PARTIALLY_PUBLISHED: {
-    label: 'Partially Published',
-    icon: UploadCloud,
-    className:
-      'bg-lime-100 text-lime-800 dark:bg-lime-500/10 dark:text-lime-400',
+    className: 'bg-green-100 text-green-800 dark:bg-green-500/10 dark:text-green-400',
   },
   INACTIVE: {
     label: 'Inactive',
     icon: PauseCircle,
-    className:
-      'bg-slate-100 text-slate-800 dark:bg-slate-500/20 dark:text-slate-400',
+    className: 'bg-slate-100 text-slate-800 dark:bg-slate-500/20 dark:text-slate-400',
   },
   MONTHLY: {
     label: 'Monthly',
-    className:
-      'bg-cyan-100 text-cyan-800 dark:bg-cyan-500/10 dark:text-cyan-400',
+    className: 'bg-cyan-100 text-cyan-800 dark:bg-cyan-500/10 dark:text-cyan-400',
   },
   QUARTERLY: {
     label: 'Quarterly',
-    className:
-      'bg-teal-100 text-teal-800 dark:bg-teal-500/10 dark:text-teal-400',
+    className: 'bg-teal-100 text-teal-800 dark:bg-teal-500/10 dark:text-teal-400',
   },
   YEARLY: {
     label: 'Yearly',
-    className:
-      'bg-violet-100 text-violet-800 dark:bg-violet-500/10 dark:text-violet-400',
+    className: 'bg-violet-100 text-violet-800 dark:bg-violet-500/10 dark:text-violet-400',
   },
 
-  // Finance Statuses
+  // Finance statuses
   PAID: {
     label: 'Paid',
-    className:
-      'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-400',
+    className: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-400',
   },
   PENDING: {
     label: 'Pending',
-    className:
-      'bg-amber-100 text-amber-800 dark:bg-amber-500/10 dark:text-amber-400',
+    className: 'bg-amber-100 text-amber-800 dark:bg-amber-500/10 dark:text-amber-400',
   },
   OVERDUE: {
     label: 'Overdue',
-    className:
-      'bg-rose-100 text-rose-800 dark:bg-rose-500/10 dark:text-rose-400',
+    className: 'bg-rose-100 text-rose-800 dark:bg-rose-500/10 dark:text-rose-400',
   },
   SENT: {
     label: 'Sent',
     icon: UploadCloud,
     className: 'bg-sky-100 text-sky-800 dark:bg-sky-500/10 dark:text-sky-400',
   },
-
-  // Transaction Types (Optional if you want badges for them)
   INCOME: {
     label: 'Income',
     className: 'bg-teal-50 text-teal-700 border-teal-200',

@@ -1,6 +1,7 @@
 import { LogOut, ChevronsUpDown } from 'lucide-react'
-import { supabase } from '@/lib/supabase'
 import { useQueryClient } from '@tanstack/react-query'
+import { useAuth } from '@/context/AuthContext'
+import { SYSTEM_ROLE_PALETTE } from '@/lib/team-roles'
 import {
   SidebarMenu,
   SidebarMenuItem,
@@ -17,8 +18,15 @@ import {
 
 export function NavUser({ user }) {
   const queryClient = useQueryClient()
+  const { signOut, userRole } = useAuth()
+  const roleLabel = SYSTEM_ROLE_PALETTE[userRole]?.label ?? userRole ?? 'Member'
   const handleLogout = async () => {
-    await supabase.auth.signOut()
+    // Use the coordinated signOut: it clears auth state synchronously (session
+    // → null redirects to /login and unmounts the shell in the same render) and
+    // cancels the deferred SIGNED_OUT clear. Only then wipe the query cache —
+    // clearing it while the shell is still mounted blanks the subscription and
+    // flashes the screen.
+    await signOut()
     queryClient.clear()
   }
 
@@ -44,7 +52,7 @@ export function NavUser({ user }) {
               <div className="flex flex-col text-left min-w-0">
                 <span className="text-sm font-medium truncate">{fullName}</span>
                 <span className="text-xs text-muted-foreground truncate">
-                  {user?.email}
+                  {roleLabel}
                 </span>
               </div>
               <ChevronsUpDown className="ml-auto size-4" />

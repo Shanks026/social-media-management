@@ -12,6 +12,7 @@ import {
   Plus,
   CircleDollarSign,
   ChevronDown,
+  ListTodo,
 } from 'lucide-react'
 
 // UI Components
@@ -39,6 +40,8 @@ import { ClientBillingTab } from './ClientBillingTab'
 import DocumentsTab from '@/components/documents/DocumentsTab'
 import { CampaignTab } from '@/components/campaigns/CampaignTab'
 import { ProposalTab } from '@/components/proposals/ProposalTab'
+import TasksTab from '@/components/tasks/TasksTab'
+import { usePermissions } from '@/api/usePermissions'
 
 export default function ClientProfileView({ client }) {
   const [searchParams, setSearchParams] = useSearchParams()
@@ -46,6 +49,7 @@ export default function ClientProfileView({ client }) {
   const [createInvoiceOpen, setCreateInvoiceOpen] = useState(false)
   const [createTransactionOpen, setCreateTransactionOpen] = useState(false)
   const [invoicePrefill, setInvoicePrefill] = useState(null)
+  const { finance, proposals, hasDocuments } = usePermissions()
 
   if (!client) return null
 
@@ -71,17 +75,20 @@ export default function ClientProfileView({ client }) {
     )
   }
 
-  // Build tabs — Billing only shows for external (non-internal) clients
+  // Build tabs — Billing requires finance access + external client; Proposals requires proposals access
   const TABS_CONFIG = [
     { value: 'overview', label: 'Overview', icon: PieChart },
     { value: 'workflow', label: 'Workflow', icon: LayoutGrid },
+    { value: 'tasks', label: 'Tasks', icon: ListTodo },
     { value: 'campaigns', label: 'Campaigns', icon: Megaphone },
-    ...(!client.is_internal
+    ...(!client.is_internal && finance
       ? [{ value: 'billing', label: 'Billing', icon: Receipt }]
       : []),
 
-    { value: 'proposals', label: 'Proposals', icon: FileText },
-    { value: 'documents', label: 'Documents', icon: FolderOpen },
+    ...(proposals
+      ? [{ value: 'proposals', label: 'Proposals', icon: FileText }]
+      : []),
+    ...(hasDocuments ? [{ value: 'documents', label: 'Documents', icon: FolderOpen }] : []),
     { value: 'calendar', label: 'Calendar', icon: Calendar },
     { value: 'management', label: 'Settings', icon: Settings2 },
   ]
@@ -131,11 +138,13 @@ export default function ClientProfileView({ client }) {
                 <Plus className="size-3.5" />
                 New Post
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setCreateTransactionOpen(true)}>
-                <CircleDollarSign className="size-3.5" />
-                Record Transaction
-              </DropdownMenuItem>
-              {!client.is_internal && (
+              {finance && (
+                <DropdownMenuItem onClick={() => setCreateTransactionOpen(true)}>
+                  <CircleDollarSign className="size-3.5" />
+                  Record Transaction
+                </DropdownMenuItem>
+              )}
+              {!client.is_internal && finance && (
                 <DropdownMenuItem onClick={() => setCreateInvoiceOpen(true)}>
                   <FileText className="size-3.5" />
                   Create Invoice
@@ -194,7 +203,14 @@ export default function ClientProfileView({ client }) {
             <WorkflowTab client={client} />
           </TabsContent>
 
-          {!client.is_internal && (
+          <TabsContent
+            value="tasks"
+            className="mt-2 focus-visible:ring-0 outline-none data-[state=active]:animate-in data-[state=active]:fade-in data-[state=active]:duration-300"
+          >
+            <TasksTab clientId={client.id} />
+          </TabsContent>
+
+          {!client.is_internal && finance && (
             <TabsContent
               value="billing"
               className="mt-2 focus-visible:outline-none data-[state=active]:animate-in data-[state=active]:fade-in data-[state=active]:duration-300"
@@ -210,12 +226,14 @@ export default function ClientProfileView({ client }) {
             <CampaignTab clientId={client.id} />
           </TabsContent>
 
-          <TabsContent
-            value="proposals"
-            className="mt-2 focus-visible:outline-none data-[state=active]:animate-in data-[state=active]:fade-in data-[state=active]:duration-300"
-          >
-            <ProposalTab clientId={client.id} />
-          </TabsContent>
+          {proposals && (
+            <TabsContent
+              value="proposals"
+              className="mt-2 focus-visible:outline-none data-[state=active]:animate-in data-[state=active]:fade-in data-[state=active]:duration-300"
+            >
+              <ProposalTab clientId={client.id} />
+            </TabsContent>
+          )}
 
           <TabsContent
             value="documents"

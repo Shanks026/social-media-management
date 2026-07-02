@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { fetchAllPostsByClient, deletePost, createRevision } from '@/api/posts'
+import { useTeamMembers } from '@/api/team'
 import StatusBadge from '@/components/StatusBadge'
 import {
   MoreVertical,
@@ -10,12 +11,14 @@ import {
   ChevronLeft,
   ChevronRight,
   Play,
+  Video,
   FolderOpen,
   Megaphone,
   LayoutGrid,
   Plus,
   FileText,
 } from 'lucide-react'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { format } from 'date-fns'
@@ -144,8 +147,8 @@ const MediaItem = ({ url, className, isPreview = false }) => {
         />
         {!isPreview && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/20 pointer-events-none">
-            <div className="bg-white/20 backdrop-blur-md p-1.5 rounded-full">
-              <Play className="text-white h-4 w-4 fill-current" />
+            <div className="bg-black/40 backdrop-blur-sm p-1.5 rounded-full">
+              <Video className="text-white h-4 w-4 fill-white" />
             </div>
           </div>
         )}
@@ -183,10 +186,11 @@ const PlatformIcon = ({ name }) => {
   )
 }
 
-export default function DraftPostList({ clientId, onCreatePost, statusFilter = 'ALL' }) {
+export default function DraftPostList({ clientId, onCreatePost, statusFilter = 'ALL', myWorkOnly = false }) {
   const queryClient = useQueryClient()
   const navigate = useNavigate()
   const { user } = useAuth()
+  const { data: members = [] } = useTeamMembers()
 
   const [previewPost, setPreviewPost] = useState(null)
   const [postToDelete, setPostToDelete] = useState(null)
@@ -311,9 +315,9 @@ export default function DraftPostList({ clientId, onCreatePost, statusFilter = '
     )
   }
 
-  const filteredData = statusFilter === 'ALL'
-    ? data
-    : data.filter((p) => getPublishState(p) === statusFilter)
+  const filteredData = data
+    .filter((p) => statusFilter === 'ALL' || getPublishState(p) === statusFilter)
+    .filter((p) => !myWorkOnly || p.created_by === user?.id)
 
   if (isLoading)
     return (
@@ -502,6 +506,21 @@ export default function DraftPostList({ clientId, onCreatePost, statusFilter = '
 
               {/* Dotted Divider & Footer */}
               <div className="mt-auto">
+                {(() => {
+                  const creator = members.find(m => m.member_user_id === post.created_by)
+                  if (!creator) return null
+                  const initials = creator.full_name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) ?? '?'
+                  return (
+                    <div className="flex items-center gap-1.5 mb-3">
+                      <span className="text-xs text-muted-foreground">Created by</span>
+                      <Avatar className="size-4 shrink-0">
+                        <AvatarImage src={creator.avatar_url} />
+                        <AvatarFallback className="text-[9px]">{initials}</AvatarFallback>
+                      </Avatar>
+                      <span className="text-xs font-medium text-foreground/70 truncate">{creator.full_name}</span>
+                    </div>
+                  )
+                })()}
                 <hr className="border-t border-dashed border-border mb-4" />
 
                 <div className="flex items-center justify-between">

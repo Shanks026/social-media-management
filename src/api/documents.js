@@ -94,7 +94,7 @@ function sanitizeFilename(name) {
     || 'file'                          // fallback if everything was stripped
 }
 
-export async function uploadDocument({ clientId, prospectId, file, displayName, category, collectionId, notes }) {
+export async function uploadDocument({ clientId, prospectId, file, displayName, category, collectionId, notes, isConfidential }) {
   const { workspaceUserId } = await resolveWorkspace()
   const documentId = crypto.randomUUID()
   const safeFilename = sanitizeFilename(file.name)
@@ -123,6 +123,7 @@ export async function uploadDocument({ clientId, prospectId, file, displayName, 
       file_size_bytes: file.size,
       mime_type: file.type || 'application/octet-stream',
       category: category || 'Other',
+      is_confidential: isConfidential ?? false,
       ...(notes ? { notes } : {}),
       ...(collectionId ? { collection_id: collectionId } : {}),
     })
@@ -148,12 +149,13 @@ export async function uploadDocument({ clientId, prospectId, file, displayName, 
  * Update document display name, category, and/or collection.
  * Pass collectionId = null to remove from collection (ungrouped).
  */
-export async function updateDocument(id, { displayName, category, collectionId, notes }) {
+export async function updateDocument(id, { displayName, category, collectionId, notes, isConfidential }) {
   const payload = {}
   if (displayName !== undefined) payload.display_name = displayName
   if (category !== undefined) payload.category = category
   if (collectionId !== undefined) payload.collection_id = collectionId ?? null
   if (notes !== undefined) payload.notes = notes || null
+  if (isConfidential !== undefined) payload.is_confidential = isConfidential
   payload.updated_at = new Date().toISOString()
 
   const { data, error } = await supabase

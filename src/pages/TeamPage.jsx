@@ -59,6 +59,7 @@ import {
   ArrowDown,
   RotateCcw,
   Search,
+  Pencil,
 } from 'lucide-react'
 import {
   useTeamMembers,
@@ -68,8 +69,11 @@ import {
   useRevokeInvite,
   useRestoreMember,
   useDeleteMemberPermanently,
+  updateMemberAccess,
+  teamKeys,
 } from '@/api/team'
-import { InviteDialog } from './settings/TeamSettings'
+import { useQueryClient } from '@tanstack/react-query'
+import { InviteDialog, EditAccessDialog } from './settings/TeamSettings'
 import { formatDate } from '@/lib/helper'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
@@ -82,10 +86,11 @@ import {
 } from '@/components/ui/empty'
 
 import {
-  ADMIN_PALETTE,
+  SYSTEM_ROLE_PALETTE,
   REMOVED_PALETTE,
   getRolePalette,
 } from '@/lib/team-roles'
+import { usePermissions } from '@/api/usePermissions'
 
 // ─── Sub-components ─────────────────────────────────────────────────────────
 
@@ -134,8 +139,9 @@ const columnHelper = createColumnHelper()
 
 export default function TeamPage() {
   const { setHeader } = useHeader()
-  const { user, userRole } = useAuth()
-  const isAdmin = userRole === 'admin'
+  const { user, workspaceUserId } = useAuth()
+  const { canManageTeam } = usePermissions()
+  const queryClient = useQueryClient()
 
   const [sorting, setSorting] = useState([])
   const [globalFilter, setGlobalFilter] = useState('')
@@ -143,6 +149,7 @@ export default function TeamPage() {
   const [inviteOpen, setInviteOpen] = useState(false)
   const [removingMember, setRemovingMember] = useState(null)
   const [deletingMember, setDeletingMember] = useState(null)
+  const [editingMember, setEditingMember] = useState(null)
 
   const { data: members = [], isLoading: membersLoading } = useTeamMembers()
   const { data: pendingInvites = [] } = usePendingInvites()
@@ -203,6 +210,12 @@ export default function TeamPage() {
     }
   }, [deletingMember, deleteMemberPermanently])
 
+  const handleSaveAccess = useCallback(async (memberId, payload) => {
+    await updateMemberAccess(memberId, payload)
+    queryClient.invalidateQueries({ queryKey: teamKeys.members(workspaceUserId) })
+    toast.success('Member updated')
+  }, [queryClient, workspaceUserId])
+
   const handleCopyInviteLink = useCallback((token) => {
     const baseUrl = import.meta.env.VITE_APP_URL || window.location.origin
     navigator.clipboard.writeText(`${baseUrl}/join/${token}`)
@@ -212,26 +225,26 @@ export default function TeamPage() {
   // ── Filter chips + table data ─────────────────────────────────────────────
 
   const roleOptions = useMemo(() => {
-    const hasAdmins = members.some((m) => m.system_role === 'admin')
+    const hasOwnerOrAdmin = members.some((m) => m.system_role === 'owner' || m.system_role === 'admin')
     const functionalRoles = [
       ...new Set(
         members
-          .filter((m) => m.functional_role && m.system_role !== 'admin')
+          .filter((m) => m.functional_role && m.system_role === 'member')
           .map((m) => m.functional_role),
       ),
     ]
     const opts = [{ key: 'all', label: 'All Members', dot: null }]
-    if (hasAdmins) opts.push({ key: 'admin', label: 'Admin', dot: ADMIN_PALETTE.dot })
+    if (hasOwnerOrAdmin) opts.push({ key: 'elevated', label: 'Owner / Admin', dot: SYSTEM_ROLE_PALETTE.owner.dot })
     functionalRoles.forEach((r) => opts.push({ key: r, label: r, dot: getRolePalette(r)?.dot }))
-    if (isAdmin && removedMembers.length > 0)
+    if (canManageTeam && removedMembers.length > 0)
       opts.push({ key: 'removed', label: 'Removed', dot: REMOVED_PALETTE.dot })
     return opts
-  }, [members, removedMembers, isAdmin])
+  }, [members, removedMembers, canManageTeam])
 
   const tableData = useMemo(() => {
     if (roleFilter === 'removed') return removedMembers.map((m) => ({ ...m, _removed: true }))
     if (roleFilter === 'all') return members
-    if (roleFilter === 'admin') return members.filter((m) => m.system_role === 'admin')
+    if (roleFilter === 'elevated') return members.filter((m) => m.system_role === 'owner' || m.system_role === 'admin')
     return members.filter((m) => m.functional_role === roleFilter)
   }, [members, removedMembers, roleFilter])
 
@@ -267,30 +280,56 @@ export default function TeamPage() {
       },
     }),
 
-    columnHelper.accessor((row) => row.system_role === 'admin' ? 'Admin' : (row.functional_role || 'Member'), {
-      id: 'role',
-      header: () => <span className="text-xs font-medium text-muted-foreground">Role</span>,
+    columnHelper.accessor('system_role', {
+      id: 'system_role',
+      header: () => <span className="text-xs font-medium text-muted-foreground">Access</span>,
       cell: ({ row }) => {
         const m = row.original
-        const isOwner = m.system_role === 'admin'
-        if (isOwner) {
-          return (
-            <Badge className={cn('border-0 text-xs font-medium', ADMIN_PALETTE.badge)}>
-              Admin
-            </Badge>
-          )
-        }
-        if (m.functional_role) {
-          const palette = getRolePalette(m.functional_role)
-          return (
-            <Badge className={cn('border-0 text-xs font-medium', palette?.badge)}>
-              {m.functional_role}
-            </Badge>
-          )
-        }
-        return <span className="text-xs text-muted-foreground">Member</span>
+        const sysPalette = SYSTEM_ROLE_PALETTE[m.system_role] ?? SYSTEM_ROLE_PALETTE.member
+        return (
+          <Badge className={sysPalette.badge}>
+            {sysPalette.label}
+          </Badge>
+        )
       },
     }),
+
+    columnHelper.accessor('functional_role', {
+      id: 'job_title',
+      header: () => <span className="text-xs font-medium text-muted-foreground">Job Title</span>,
+      cell: ({ row }) => {
+        const m = row.original
+        const funcPalette = m.functional_role ? getRolePalette(m.functional_role) : null
+        if (!funcPalette) return <span className="text-xs text-muted-foreground">—</span>
+        return (
+          <Badge variant="outline" className="gap-1.5 font-normal">
+            <span className={cn('size-1.5 rounded-full shrink-0', funcPalette.dot)} />
+            {m.functional_role}
+          </Badge>
+        )
+      },
+    }),
+
+    ...(canManageTeam ? [columnHelper.accessor('roles_and_responsibilities', {
+      id: 'roles_responsibilities',
+      header: () => <span className="text-xs font-medium text-muted-foreground">Roles &amp; Responsibilities</span>,
+      cell: ({ getValue }) => {
+        const val = getValue()
+        if (!val) return <span className="text-xs text-muted-foreground">—</span>
+        return (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="text-xs text-muted-foreground truncate max-w-52 block cursor-default">
+                {val}
+              </span>
+            </TooltipTrigger>
+            <TooltipContent side="top" className="max-w-72 whitespace-pre-wrap">
+              {val}
+            </TooltipContent>
+          </Tooltip>
+        )
+      },
+    })] : []),
 
     columnHelper.accessor('joined_at', {
       id: 'joined',
@@ -316,7 +355,7 @@ export default function TeamPage() {
       cell: ({ row }) => {
         const m = row.original
         const isSelf = m.member_user_id === user?.id
-        const isOwner = m.system_role === 'admin'
+        const isOwner = m.system_role === 'owner'
 
         if (m._removed) {
           return (
@@ -351,9 +390,22 @@ export default function TeamPage() {
           )
         }
 
-        if (isAdmin && !isOwner && !isSelf) {
+        if (canManageTeam && !isOwner && !isSelf) {
           return (
-            <div className="flex justify-end">
+            <div className="flex items-center justify-end gap-0.5">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-8 text-muted-foreground hover:text-foreground"
+                    onClick={() => setEditingMember(m)}
+                  >
+                    <Pencil className="size-3.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Edit member</TooltipContent>
+              </Tooltip>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
@@ -374,7 +426,7 @@ export default function TeamPage() {
         return null
       },
     }),
-  ], [user?.id, isAdmin, handleRestore])
+  ], [user?.id, canManageTeam, handleRestore])
 
   const table = useReactTable({
     data: tableData,
@@ -404,7 +456,7 @@ export default function TeamPage() {
               </p>
             </div>
 
-            {isAdmin && (
+            {canManageTeam && (
               <div className="flex items-center gap-2 shrink-0">
                 {/* ── Pending invites popover ── */}
                 <Popover>
@@ -562,7 +614,7 @@ export default function TeamPage() {
                       : 'Try selecting a different role filter above.'}
                   </EmptyDescription>
                 </EmptyHeader>
-                {isAdmin && members.length === 0 && (
+                {canManageTeam && members.length === 0 && (
                   <Button variant="outline" size="sm" onClick={() => setInviteOpen(true)}>
                     <UserPlus className="size-4 mr-2" />
                     Invite Team Member
@@ -609,6 +661,15 @@ export default function TeamPage() {
 
           {/* ── Dialogs ── */}
           <InviteDialog open={inviteOpen} onOpenChange={setInviteOpen} />
+
+          {editingMember && (
+            <EditAccessDialog
+              member={editingMember}
+              open={!!editingMember}
+              onOpenChange={(v) => { if (!v) setEditingMember(null) }}
+              onSave={handleSaveAccess}
+            />
+          )}
 
           <AlertDialog
             open={!!removingMember}

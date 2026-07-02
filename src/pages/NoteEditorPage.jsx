@@ -41,7 +41,7 @@ import {
   removeTagFromNote,
 } from '@/api/noteTags'
 import { nextTagColor } from '@/lib/noteTags'
-import { ClientAvatar } from '@/components/NoteRow'
+import { ClientAvatar } from '@/components/tasks/ClientAvatar'
 import RichTextEditor from '@/components/notes/RichTextEditor'
 import TagPill from '@/components/notes/TagPill'
 import TagPicker from '@/components/notes/TagPicker'
@@ -284,7 +284,7 @@ export default function NoteEditorPage() {
             onClick={() =>
               printNote(
                 title || 'Untitled',
-                editorRef.current?.getHTML() || '',
+                editorRef.current?.view?.dom?.innerHTML || editorRef.current?.getHTML() || '',
                 selectedClient?.name || null,
               )
             }
@@ -403,6 +403,7 @@ export default function NoteEditorPage() {
         content={parseNoteBody(note.body)}
         onChange={handleBodyChange}
         editorRef={editorRef}
+        noteId={noteId}
       />
 
       <ManageTagsDialog

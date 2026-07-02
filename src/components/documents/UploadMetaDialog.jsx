@@ -2,6 +2,7 @@ import { useEffect, useMemo } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
+import { CONFIDENTIAL_DEFAULT_CATEGORIES } from '@/lib/permissions'
 import {
   Dialog,
   DialogContent,
@@ -37,10 +38,12 @@ import {
   FileSpreadsheet,
   FileText,
   Image as ImageIcon,
+  ShieldAlert,
   Target,
   Video,
   X,
 } from 'lucide-react'
+import { Switch } from '@/components/ui/switch'
 import { cn } from '@/lib/utils'
 import { formatFileSize } from '@/lib/helper'
 import { useClients } from '@/api/clients'
@@ -188,6 +191,7 @@ export default function UploadMetaDialog({
     displayName: z.string().min(1, 'Name is required').max(200),
     category: z.string().min(1, 'Category is required'),
     notes: z.string().max(500).optional(),
+    isConfidential: z.boolean(),
     ...(showClientSelector
       ? { linkTarget: z.string().optional() }
       : {}),
@@ -199,11 +203,20 @@ export default function UploadMetaDialog({
       displayName: '',
       category: DOCUMENT_CATEGORIES.at(-1) ?? 'Other',
       notes: '',
+      isConfidential: false,
       ...(showClientSelector ? { linkTarget: defaultLinkTarget } : {}),
     },
   })
 
   const linkTarget = useWatch({ control: form.control, name: 'linkTarget' })
+  const watchedCategory = useWatch({ control: form.control, name: 'category' })
+
+  // Auto-check confidential when category is a sensitive type
+  useEffect(() => {
+    if (CONFIDENTIAL_DEFAULT_CATEGORIES.includes(watchedCategory)) {
+      form.setValue('isConfidential', true)
+    }
+  }, [watchedCategory, form])
 
   const activeCategories = useMemo(() => {
     if (!showClientSelector) return categories
@@ -221,21 +234,23 @@ export default function UploadMetaDialog({
   useEffect(() => {
     if (file) {
       const nameWithoutExt = file.name.replace(/\.[^/.]+$/, '')
+      const defaultCat = activeCategories.at(-1) ?? 'Other'
       form.reset({
         displayName: nameWithoutExt,
-        category: activeCategories.at(-1) ?? 'Other',
+        category: defaultCat,
         notes: '',
+        isConfidential: CONFIDENTIAL_DEFAULT_CATEGORIES.includes(defaultCat),
         ...(showClientSelector ? { linkTarget: defaultLinkTarget } : {}),
       })
     }
   }, [file, defaultLinkTarget, showClientSelector, form, activeCategories])
 
-  async function handleSubmit({ linkTarget: lt, ...rest }) {
+  async function handleSubmit({ linkTarget: lt, isConfidential, ...rest }) {
     let clientId, prospectId
     if (lt?.startsWith('prospect:')) prospectId = lt.replace('prospect:', '')
     else if (lt?.startsWith('client:')) clientId = lt.replace('client:', '')
     else if (showClientSelector) clientId = internalAccount?.id
-    await onConfirm({ ...rest, clientId, prospectId })
+    await onConfirm({ ...rest, isConfidential, clientId, prospectId })
   }
 
   return (
@@ -438,6 +453,31 @@ export default function UploadMetaDialog({
                             />
                           </FormControl>
                           <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="isConfidential"
+                      render={({ field }) => (
+                        <FormItem>
+                          <div className="flex items-center justify-between rounded-lg border border-border/50 bg-muted/20 px-4 py-3">
+                            <div className="flex items-center gap-2.5">
+                              <ShieldAlert className="size-4 text-amber-500 shrink-0" />
+                              <div>
+                                <p className="text-sm font-medium">Confidential</p>
+                                <p className="text-xs text-muted-foreground">Hidden from team members — visible to admins only</p>
+                              </div>
+                            </div>
+                            <FormControl>
+                              <Switch
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                                disabled={isUploading}
+                              />
+                            </FormControl>
+                          </div>
                         </FormItem>
                       )}
                     />

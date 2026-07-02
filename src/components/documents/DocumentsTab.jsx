@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 import { FolderOpen, FolderPlus, Search, Upload, X, Lock } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { useSubscription } from '@/api/useSubscription'
+import { usePermissions } from '@/api/usePermissions'
 import {
   Tooltip,
   TooltipTrigger,
@@ -47,6 +48,8 @@ export default function DocumentsTab({ clientId }) {
   const queryClient = useQueryClient()
   const { data: sub } = useSubscription()
   const collectionsUnlocked = sub?.documents_collections ?? false
+  const { documents: docsLevel } = usePermissions()
+  const canManage = docsLevel === 'manage'
   const [searchParams, setSearchParams] = useSearchParams()
   const activeTab = searchParams.get('doc_tab') ?? 'all'
 
@@ -99,8 +102,8 @@ export default function DocumentsTab({ clientId }) {
   const [createCollectionOpen, setCreateCollectionOpen] = useState(false)
 
   const uploadMutation = useMutation({
-    mutationFn: ({ file, displayName, category, notes }) =>
-      uploadDocument({ clientId, file, displayName, category, notes }),
+    mutationFn: ({ file, displayName, category, notes, isConfidential }) =>
+      uploadDocument({ clientId, file, displayName, category, notes, isConfidential }),
     onMutate: () => setUploadProgress(10),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['documents', 'list'] })
@@ -127,10 +130,10 @@ export default function DocumentsTab({ clientId }) {
     setPendingFile(file)
   }
 
-  function handleConfirmUpload({ displayName, category, notes }) {
+  function handleConfirmUpload({ displayName, category, notes, isConfidential }) {
     if (!pendingFile) return
     setUploadProgress(30)
-    uploadMutation.mutate({ file: pendingFile, displayName, category, notes })
+    uploadMutation.mutate({ file: pendingFile, displayName, category, notes, isConfidential })
   }
 
   function handleDialogClose(open) {
@@ -243,7 +246,7 @@ export default function DocumentsTab({ clientId }) {
               <TabsTrigger value="ungrouped">Ungrouped</TabsTrigger>
             </TabsList>
 
-            {collectionsUnlocked ? (
+            {canManage && (collectionsUnlocked ? (
               <Button
                 variant="secondary"
                 className="gap-2"
@@ -269,16 +272,18 @@ export default function DocumentsTab({ clientId }) {
                   Collections are available on Velocity and above
                 </TooltipContent>
               </Tooltip>
-            )}
+            ))}
 
-            <Button
-              className="gap-2"
-              onClick={handleOpenUpload}
-              disabled={uploadMutation.isPending}
-            >
-              <Upload className="size-4" />
-              Upload Document
-            </Button>
+            {canManage && (
+              <Button
+                className="gap-2"
+                onClick={handleOpenUpload}
+                disabled={uploadMutation.isPending}
+              >
+                <Upload className="size-4" />
+                Upload Document
+              </Button>
+            )}
           </div>
         </div>
 
@@ -357,6 +362,7 @@ export default function DocumentsTab({ clientId }) {
                           allDocs.filter((d) => d.collection_id === col.id),
                         )}
                         locked={!collectionsUnlocked}
+                        canManage={canManage}
                       />
                     ))}
                   </div>
@@ -370,7 +376,7 @@ export default function DocumentsTab({ clientId }) {
                     )}
                     <div className="space-y-2">
                       {ungroupedDocs.map((doc) => (
-                        <DocumentCard key={doc.id} doc={doc} />
+                        <DocumentCard key={doc.id} doc={doc} canManage={canManage} />
                       ))}
                     </div>
                   </div>
@@ -430,6 +436,7 @@ export default function DocumentsTab({ clientId }) {
                     allDocs.filter((d) => d.collection_id === col.id),
                   )}
                   locked={!collectionsUnlocked}
+                  canManage={canManage}
                 />
               ))
             )}
@@ -475,7 +482,7 @@ export default function DocumentsTab({ clientId }) {
             ) : (
               <div className="space-y-2">
                 {ungroupedDocs.map((doc) => (
-                  <DocumentCard key={doc.id} doc={doc} />
+                  <DocumentCard key={doc.id} doc={doc} canManage={canManage} />
                 ))}
               </div>
             )}

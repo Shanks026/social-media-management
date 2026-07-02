@@ -12,6 +12,7 @@ import { useClients } from '@/api/clients'
 import { useInvoices } from '@/api/invoices'
 import { useTransactions } from '@/api/transactions'
 import { useExpenses } from '@/api/expenses'
+import { usePermissions } from '@/api/usePermissions'
 import { calculatePeriodMetrics, formatCurrency } from '@/utils/finance'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
@@ -22,6 +23,8 @@ export default function AgencyHealthBar() {
   const now = new Date()
   const monthStart = startOfMonth(now)
   const monthEnd = endOfMonth(now)
+
+  const { finance } = usePermissions()
 
   const { data: clientsData, isLoading: loadingClients } = useClients()
   const { data: invoices = [], isLoading: loadingInvoices } = useInvoices()
@@ -46,7 +49,7 @@ export default function AgencyHealthBar() {
   if (isLoading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {[1, 2, 3, 4].map((i) => (
+        {(finance ? [1, 2, 3, 4] : [1]).map((i) => (
           <Card
             key={i}
             className="rounded-2xl border-none bg-card/50 shadow-sm ring-1 ring-border/50"
@@ -67,7 +70,9 @@ export default function AgencyHealthBar() {
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-      {/* 1. NET PROFIT */}
+      {/* Cards 1–3 are finance KPIs — hidden for members */}
+      {finance && (
+      <>
       <Card className="rounded-2xl gap-4 border-none bg-card/50 shadow-sm ring-1 ring-border/50 dark:bg-card/20 group hover:ring-emerald-500/20 transition-all">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
@@ -130,7 +135,10 @@ export default function AgencyHealthBar() {
         </CardContent>
       </Card>
 
-      {/* 4. ACTIVE CLIENTS */}
+      </>
+      )}
+
+      {/* 4. ACTIVE CLIENTS (always visible) */}
       <Card className="rounded-2xl gap-4 border-none bg-card/50 shadow-sm ring-1 ring-border/50 dark:bg-card/20 group hover:ring-blue-500/20 transition-all">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">

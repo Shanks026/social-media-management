@@ -14,6 +14,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 import { formatDate } from '@/lib/helper'
 import { useUrgentClients } from '@/api/clients'
+import { NotificationBell } from '@/components/notifications/NotificationBell'
 
 function TrialStatusPill({ phase, daysRemaining, endsAt }) {
   const navigate = useNavigate()
@@ -259,6 +260,7 @@ export function AppHeader({ agencySettings }) {
         )}
         {header.actions}
         <UrgencyAlertIndicator />
+        <NotificationBell />
         <ModeToggle />
 
         {/* --- MOBILE SIDEBAR TRIGGER --- */}

@@ -20,7 +20,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 
 import { useGlobalPosts } from '@/api/useGlobalPosts'
 import { SUPPORTED_PLATFORMS } from '@/lib/platforms'
-import { ClientAvatar } from '@/components/NoteRow'
+import { ClientAvatar } from '@/components/tasks/ClientAvatar'
 
 // ─── PLATFORM IMAGE ───────────────────────────────────────────────────────────
 

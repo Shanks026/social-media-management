@@ -1,0 +1,910 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Tercero — Task Management Redesign</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:        #f4f3ef;
+    --surface:   #ffffff;
+    --border:    #e2e1dc;
+    --border-strong: #c9c8c2;
+    --ink:       #18181b;
+    --ink-2:     #52525b;
+    --ink-3:     #a1a1aa;
+    --accent:    #2563eb;
+    --accent-bg: #eff6ff;
+    --green:     #16a34a;
+    --green-bg:  #f0fdf4;
+    --amber:     #b45309;
+    --amber-bg:  #fffbeb;
+    --red:       #dc2626;
+    --red-bg:    #fef2f2;
+    --purple:    #7c3aed;
+    --purple-bg: #f5f3ff;
+
+    --r:    6px;
+    --r-lg: 10px;
+    --max:  760px;
+
+    --f-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    --f-mono: "SF Mono", "Fira Code", "Cascadia Code", Consolas, monospace;
+  }
+
+  html { background: var(--bg); color: var(--ink); font-family: var(--f-sans); font-size: 15px; line-height: 1.6; }
+
+  body { max-width: var(--max); margin: 0 auto; padding: 48px 24px 96px; }
+
+  /* ── document header ── */
+  .doc-header {
+    border-bottom: 2px solid var(--ink);
+    padding-bottom: 24px;
+    margin-bottom: 48px;
+  }
+  .doc-eyebrow {
+    font-size: 11px;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    font-weight: 600;
+    margin-bottom: 10px;
+  }
+  .doc-title {
+    font-size: 32px;
+    font-weight: 700;
+    letter-spacing: -.02em;
+    line-height: 1.2;
+    color: var(--ink);
+    text-wrap: balance;
+  }
+  .doc-subtitle {
+    font-size: 16px;
+    color: var(--ink-2);
+    margin-top: 8px;
+    max-width: 560px;
+  }
+  .doc-meta {
+    display: flex;
+    gap: 20px;
+    margin-top: 20px;
+    font-size: 12px;
+    color: var(--ink-3);
+    letter-spacing: .02em;
+  }
+  .doc-meta span { display: flex; align-items: center; gap: 5px; }
+
+  /* ── section structure ── */
+  section { margin-bottom: 52px; }
+
+  h2 {
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -.015em;
+    color: var(--ink);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  h2 .sec-num {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    font-variant-numeric: tabular-nums;
+    min-width: 28px;
+  }
+  h3 {
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: .01em;
+    color: var(--ink);
+    margin-top: 28px;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    font-size: 11px;
+    color: var(--ink-2);
+  }
+
+  p { color: var(--ink-2); margin-bottom: 12px; max-width: 640px; }
+  p:last-child { margin-bottom: 0; }
+
+  /* ── callout ── */
+  .callout {
+    border-radius: var(--r-lg);
+    padding: 16px 18px;
+    font-size: 14px;
+    line-height: 1.55;
+    margin-bottom: 20px;
+  }
+  .callout.info    { background: var(--accent-bg); border-left: 3px solid var(--accent); color: #1d4ed8; }
+  .callout.warn    { background: var(--amber-bg);  border-left: 3px solid var(--amber);  color: var(--amber); }
+  .callout.success { background: var(--green-bg);  border-left: 3px solid var(--green);  color: var(--green); }
+  .callout strong  { font-weight: 700; }
+
+  /* ── card / panel ── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    padding: 20px 22px;
+    margin-bottom: 14px;
+  }
+  .card-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--ink);
+    margin-bottom: 6px;
+  }
+  .card-body { font-size: 13.5px; color: var(--ink-2); line-height: 1.55; }
+
+  /* ── two-col card grid ── */
+  .card-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  @media (max-width: 540px) { .card-grid { grid-template-columns: 1fr; } }
+
+  /* ── table ── */
+  .tbl-wrap { overflow-x: auto; margin-bottom: 20px; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13.5px;
+    font-variant-numeric: tabular-nums;
+    background: var(--surface);
+    border-radius: var(--r-lg);
+    overflow: hidden;
+    border: 1px solid var(--border);
+  }
+  thead { background: #f9f8f5; border-bottom: 1px solid var(--border-strong); }
+  th {
+    padding: 10px 14px;
+    text-align: left;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    white-space: nowrap;
+  }
+  td {
+    padding: 10px 14px;
+    color: var(--ink-2);
+    border-top: 1px solid var(--border);
+    vertical-align: top;
+  }
+  tr:first-child td { border-top: none; }
+  td strong { color: var(--ink); font-weight: 600; }
+  td code {
+    font-family: var(--f-mono);
+    font-size: 12px;
+    background: #f2f1ed;
+    padding: 1px 5px;
+    border-radius: 3px;
+    color: var(--ink);
+    white-space: nowrap;
+  }
+
+  /* ── pill badges ── */
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .03em;
+    padding: 2px 8px;
+    border-radius: 100px;
+    white-space: nowrap;
+  }
+  .pill.owner  { background: #ede9fe; color: #5b21b6; }
+  .pill.admin  { background: #dbeafe; color: #1d4ed8; }
+  .pill.member { background: #dcfce7; color: #15803d; }
+  .pill.yes    { background: #dcfce7; color: #15803d; }
+  .pill.no     { background: #fee2e2; color: #991b1b; }
+  .pill.partial { background: #fef3c7; color: #92400e; }
+
+  /* ── check / cross glyphs ── */
+  .c-yes    { color: var(--green); font-weight: 700; }
+  .c-no     { color: var(--red);   font-weight: 700; }
+  .c-partial { color: var(--amber); font-weight: 700; }
+
+  /* ── status flow ── */
+  .status-flow {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    flex-wrap: wrap;
+    margin: 20px 0;
+  }
+  .status-node {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+  .status-box {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    padding: 7px 14px;
+    border-radius: 6px;
+    white-space: nowrap;
+  }
+  .status-desc { font-size: 10px; color: var(--ink-3); text-align: center; max-width: 80px; }
+  .status-arrow {
+    font-size: 16px;
+    color: var(--ink-3);
+    padding: 0 6px;
+    align-self: center;
+    padding-bottom: 20px;
+  }
+  .s-todo       { background: #f1f5f9; color: #334155; }
+  .s-progress   { background: #dbeafe; color: #1e40af; }
+  .s-done       { background: #dcfce7; color: #166534; }
+  .s-archived   { background: #f3f4f6; color: #6b7280; }
+
+  /* ── sql block ── */
+  pre {
+    background: #1a1a20;
+    color: #c9d1d9;
+    font-family: var(--f-mono);
+    font-size: 12.5px;
+    line-height: 1.65;
+    padding: 18px 20px;
+    border-radius: var(--r-lg);
+    overflow-x: auto;
+    margin-bottom: 16px;
+  }
+  .kw  { color: #79c0ff; }
+  .ty  { color: #ffa657; }
+  .cm  { color: #6e7681; }
+  .str { color: #a5d6ff; }
+  .fn  { color: #d2a8ff; }
+
+  /* ── comparison strip ── */
+  .compare-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .compare-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    padding: 18px 20px;
+  }
+  .compare-card.old { border-top: 3px solid #dc2626; }
+  .compare-card.new { border-top: 3px solid var(--accent); }
+  .compare-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .compare-card.old .compare-label { color: #dc2626; }
+  .compare-card.new .compare-label { color: var(--accent); }
+  .compare-list { list-style: none; }
+  .compare-list li {
+    font-size: 13px;
+    color: var(--ink-2);
+    padding: 4px 0;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .compare-list li:last-child { border-bottom: none; }
+  .compare-list li::before { flex-shrink: 0; font-size: 13px; margin-top: 1px; }
+  .compare-card.old .compare-list li::before { content: "×"; color: #dc2626; font-weight: 700; }
+  .compare-card.new .compare-list li::before { content: "✓"; color: var(--green); font-weight: 700; }
+  @media (max-width: 540px) { .compare-grid { grid-template-columns: 1fr; } }
+
+  /* ── visibility diagram ── */
+  .vis-row {
+    display: grid;
+    grid-template-columns: 140px 1fr;
+    gap: 0;
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    overflow: hidden;
+    margin-bottom: 10px;
+    background: var(--surface);
+  }
+  .vis-label {
+    background: #f9f8f5;
+    border-right: 1px solid var(--border);
+    padding: 14px 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink);
+  }
+  .vis-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .vis-body {
+    padding: 12px 16px;
+    font-size: 13px;
+    color: var(--ink-2);
+    line-height: 1.5;
+  }
+  .vis-who {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-top: 6px;
+  }
+
+  /* ── phase list ── */
+  .phase-list { list-style: none; }
+  .phase-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    padding: 16px 18px 16px 16px;
+    margin-bottom: 10px;
+    display: grid;
+    grid-template-columns: 36px 1fr;
+    gap: 12px;
+    align-items: start;
+  }
+  .phase-num {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: 1px;
+    font-variant-numeric: tabular-nums;
+  }
+  .phase-title { font-size: 14px; font-weight: 700; color: var(--ink); margin-bottom: 4px; }
+  .phase-desc { font-size: 13px; color: var(--ink-2); line-height: 1.5; }
+  .phase-tasks { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 5px; }
+  .phase-tag {
+    font-size: 11px;
+    background: #f2f1ed;
+    color: var(--ink-2);
+    padding: 2px 8px;
+    border-radius: 100px;
+    font-weight: 500;
+  }
+
+  /* ── divider ── */
+  hr { border: none; border-top: 1px solid var(--border); margin: 0 0 48px; }
+
+  /* ── footer ── */
+  .doc-footer {
+    border-top: 1px solid var(--border);
+    padding-top: 20px;
+    font-size: 12px;
+    color: var(--ink-3);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+</style>
+</head>
+<body>
+
+<!-- ── HEADER ── -->
+<header class="doc-header">
+  <div class="doc-eyebrow">Tercero · Feature Research</div>
+  <h1 class="doc-title">Team Task Management</h1>
+  <p class="doc-subtitle">A ground-up look at replacing the existing sticky-note task system with a proper role-aware, assignable task engine.</p>
+  <div class="doc-meta">
+    <span>Prepared for Chris Austin</span>
+    <span>·</span>
+    <span>July 2026</span>
+    <span>·</span>
+    <span>Operations module</span>
+  </div>
+</header>
+
+
+<!-- ── 1. CURRENT STATE ── -->
+<section id="current">
+  <h2><span class="sec-num">01</span> Where We Are Today</h2>
+
+  <p>The current "Tasks &amp; Reminders" feature is built on a table named <code>client_notes</code> — a holdover from when tasks and notes were the same concept. It was later split into separate Notes and Tasks sections, but the underlying table stayed.</p>
+
+  <div class="compare-grid">
+    <div class="compare-card old">
+      <div class="compare-label">What it is now</div>
+      <ul class="compare-list">
+        <li>Table named <code>client_notes</code> — confusing name</li>
+        <li>No assignee — tasks belong to whoever created them</li>
+        <li>No team awareness — everyone sees everything</li>
+        <li>No concept of "assigned by" vs "assigned to"</li>
+        <li>Members and owners are treated identically</li>
+        <li>No priority field</li>
+        <li>Statuses: <code>TODO</code>, <code>DONE</code>, <code>ARCHIVED</code> only</li>
+      </ul>
+    </div>
+    <div class="compare-card new">
+      <div class="compare-label">What we're building</div>
+      <ul class="compare-list">
+        <li>Clean <code>tasks</code> table — purpose-built name</li>
+        <li>First-class assignee with role-aware assignment rules</li>
+        <li>Visibility scoped by assignment (personal vs team)</li>
+        <li>Separate <code>created_by</code> and <code>assigned_to</code></li>
+        <li>Owner/admin can assign; members can only receive</li>
+        <li>Priority field: Low / Normal / High / Urgent</li>
+        <li>Adds <code>IN_PROGRESS</code> for active work tracking</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3>What the existing UI already does well</h3>
+  <p>The <code>TasksAndReminders.jsx</code> page is good. It has a grid view with date grouping (Overdue / Upcoming / Done / Archived), a kanban board with drag-and-drop between columns, client filter, search, and status tabs. <strong>None of this gets scrapped</strong> — we enhance it.</p>
+
+  <div class="callout warn">
+    <strong>Recommendation: new table, keep the UI.</strong> The <code>client_notes</code> schema can't grow into a team task system without breaking changes. A fresh <code>tasks</code> table with the right columns from day one is cleaner than bolting columns onto a mislabeled table. The page, dialogs, and kanban board are worth keeping and extending.
+  </div>
+</section>
+
+<hr />
+
+<!-- ── 2. DATA MODEL ── -->
+<section id="schema">
+  <h2><span class="sec-num">02</span> New Data Model</h2>
+
+  <p>The new <code>tasks</code> table separates the creator from the assignee, adds role-aware workspace scoping, and carries enough metadata for a proper team work queue.</p>
+
+<pre><code><span class="kw">CREATE TABLE</span> tasks (
+  id              <span class="ty">UUID</span>          <span class="kw">PRIMARY KEY DEFAULT</span> <span class="fn">gen_random_uuid()</span>,
+  workspace_id    <span class="ty">UUID</span>          <span class="kw">NOT NULL REFERENCES</span> auth.users(id),
+  <span class="cm">-- who made it and who owns the work</span>
+  created_by      <span class="ty">UUID</span>          <span class="kw">NOT NULL REFERENCES</span> auth.users(id),
+  assigned_to     <span class="ty">UUID</span>          <span class="kw">REFERENCES</span> auth.users(id),  <span class="cm">-- NULL = personal task</span>
+
+  title           <span class="ty">TEXT</span>          <span class="kw">NOT NULL</span>,
+  description     <span class="ty">TEXT</span>,
+
+  status          <span class="ty">TEXT</span>          <span class="kw">NOT NULL DEFAULT</span> <span class="str">'TODO'</span>
+                  <span class="kw">CHECK</span> (status <span class="kw">IN</span> (<span class="str">'TODO'</span>, <span class="str">'IN_PROGRESS'</span>, <span class="str">'DONE'</span>, <span class="str">'ARCHIVED'</span>)),
+  priority        <span class="ty">TEXT</span>          <span class="kw">NOT NULL DEFAULT</span> <span class="str">'NORMAL'</span>
+                  <span class="kw">CHECK</span> (priority <span class="kw">IN</span> (<span class="str">'LOW'</span>, <span class="str">'NORMAL'</span>, <span class="str">'HIGH'</span>, <span class="str">'URGENT'</span>)),
+
+  due_at          <span class="ty">TIMESTAMPTZ</span>,
+  completed_at    <span class="ty">TIMESTAMPTZ</span>,
+
+  <span class="cm">-- optional context links</span>
+  client_id       <span class="ty">UUID</span>          <span class="kw">REFERENCES</span> clients(id) <span class="kw">ON DELETE SET NULL</span>,
+  campaign_id     <span class="ty">UUID</span>          <span class="kw">REFERENCES</span> campaigns(id) <span class="kw">ON DELETE SET NULL</span>,
+
+  created_at      <span class="ty">TIMESTAMPTZ</span>   <span class="kw">NOT NULL DEFAULT</span> <span class="fn">now()</span>,
+  updated_at      <span class="ty">TIMESTAMPTZ</span>   <span class="kw">NOT NULL DEFAULT</span> <span class="fn">now()</span>
+);</code></pre>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Column</th>
+          <th>Type</th>
+          <th>Purpose</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td><code>workspace_id</code></td><td><code>UUID</code></td><td>= <code>get_my_agency_user_id()</code>. All RLS is scoped here.</td></tr>
+        <tr><td><code>created_by</code></td><td><code>UUID</code></td><td>The user who created the task. Never changes.</td></tr>
+        <tr><td><code>assigned_to</code></td><td><code>UUID?</code></td><td><strong>NULL = personal task</strong> (private to creator). Set = team task (assignee + all admins can see it).</td></tr>
+        <tr><td><code>status</code></td><td><code>TEXT</code></td><td>TODO → IN_PROGRESS → DONE → ARCHIVED</td></tr>
+        <tr><td><code>priority</code></td><td><code>TEXT</code></td><td>LOW / NORMAL / HIGH / URGENT. Affects sort order and visual treatment.</td></tr>
+        <tr><td><code>completed_at</code></td><td><code>TIMESTAMPTZ?</code></td><td>Stamped automatically when status moves to DONE. Useful for analytics.</td></tr>
+        <tr><td><code>client_id</code></td><td><code>UUID?</code></td><td>Optional link — task appears in the client's context.</td></tr>
+        <tr><td><code>campaign_id</code></td><td><code>UUID?</code></td><td>Optional link — task appears in the campaign's context.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Migration from client_notes</h3>
+  <p>Existing records in <code>client_notes</code> migrate as personal tasks: <code>created_by = user_id</code>, <code>assigned_to = NULL</code>, <code>workspace_id = get_my_agency_user_id()</code>. Status mapping: <code>TODO→TODO</code>, <code>DONE→DONE</code>, <code>ARCHIVED→ARCHIVED</code>. Priority defaults to <code>NORMAL</code>. After migration, <code>client_notes</code> can be dropped.</p>
+</section>
+
+<hr />
+
+<!-- ── 3. ASSIGNMENT RULES ── -->
+<section id="assignment">
+  <h2><span class="sec-num">03</span> Assignment Rules</h2>
+
+  <p>Assignment follows the authority chain established by RBAC. You don't assign upward — you delegate downward.</p>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Role</th>
+          <th>Can assign to…</th>
+          <th>Can be assigned by…</th>
+          <th>Can create personal tasks?</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="pill owner">Owner</span></td>
+          <td>Admins, Members</td>
+          <td class="c-no">Nobody</td>
+          <td class="c-yes">Yes</td>
+        </tr>
+        <tr>
+          <td><span class="pill admin">Admin</span></td>
+          <td>Other Admins, Members</td>
+          <td>Owner only</td>
+          <td class="c-yes">Yes</td>
+        </tr>
+        <tr>
+          <td><span class="pill member">Member</span></td>
+          <td class="c-no">Cannot assign</td>
+          <td>Owner or Admin</td>
+          <td class="c-partial">Personal only (TBD — see note)</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout warn">
+    <strong>Decision needed: can members create personal tasks?</strong> Your RBAC plan says "Create/assign: Member ❌" — but this was written to mean no assigning to others. Banning members from creating their own private to-do items would be quite restrictive. Recommendation: allow members to create personal (unassigned, private) tasks. Confirm before build.
+  </div>
+
+  <div class="callout info">
+    <strong>Why the owner can't receive assigned tasks.</strong> The owner runs the agency, not a task queue. Having subordinates assign work to the owner breaks the authority model. The owner can still create personal tasks for themselves. This matches how tools like Asana, Linear, and Monday handle founding roles.
+  </div>
+
+  <h3>Admin → Admin assignment</h3>
+  <p>Admins <em>can</em> assign tasks to other admins. Agencies often have parallel admins (Account Manager + Creative Director) who delegate work to each other. Restricting this would add unnecessary friction. Only the owner-assign-restriction is absolute.</p>
+</section>
+
+<hr />
+
+<!-- ── 4. VISIBILITY MODEL ── -->
+<section id="visibility">
+  <h2><span class="sec-num">04</span> Visibility Model</h2>
+
+  <p>No visibility toggle. Visibility is <strong>implicit from assignment</strong> — cleaner UX, no confusion about who set what to private.</p>
+
+  <div class="vis-row">
+    <div class="vis-label">
+      <div class="vis-dot" style="background:#6b7280;"></div>
+      Personal task
+    </div>
+    <div class="vis-body">
+      <code>assigned_to IS NULL</code> — Visible <strong>only to the creator</strong>. Replaces the sticky-note / reminder behavior from the old system. Nobody else sees it.
+      <div class="vis-who">
+        <span class="pill yes">Creator only</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="vis-row">
+    <div class="vis-label">
+      <div class="vis-dot" style="background:#2563eb;"></div>
+      Assigned task
+    </div>
+    <div class="vis-body">
+      <code>assigned_to IS NOT NULL</code> — Visible to the <strong>creator, the assignee, and all owners/admins</strong>. Leadership always has full visibility over assigned work.
+      <div class="vis-who">
+        <span class="pill yes">Creator</span>
+        <span class="pill yes">Assignee</span>
+        <span class="pill owner">All Owners</span>
+        <span class="pill admin">All Admins</span>
+      </div>
+    </div>
+  </div>
+
+  <p style="margin-top:14px;">This is enforced at the <strong>RLS level</strong> in Postgres, not just in the UI. A member cannot query an assigned task that isn't theirs even with direct API calls.</p>
+
+  <h3>What this means in the UI</h3>
+  <div class="card-grid">
+    <div class="card">
+      <div class="card-title">Owner / Admin view</div>
+      <div class="card-body">Sees all assigned tasks across the workspace. Personal tasks from others are invisible (by design — those are private). Has a "My Tasks" filter to narrow to tasks assigned to them.</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Member view</div>
+      <div class="card-body">Sees tasks assigned to them + their own personal tasks. Cannot see tasks assigned to others or tasks created by others. The "assign" UI is hidden entirely.</div>
+    </div>
+  </div>
+</section>
+
+<hr />
+
+<!-- ── 5. STATUS WORKFLOW ── -->
+<section id="status">
+  <h2><span class="sec-num">05</span> Status Workflow</h2>
+
+  <p>Four statuses, a linear-ish flow. The addition of <code>IN_PROGRESS</code> is the main change from the existing system — it matters for team tasks so leadership can see what's actively being worked on vs waiting.</p>
+
+  <div class="status-flow">
+    <div class="status-node">
+      <div class="status-box s-todo">TODO</div>
+      <div class="status-desc">Created, not started</div>
+    </div>
+    <div class="status-arrow">→</div>
+    <div class="status-node">
+      <div class="status-box s-progress">IN PROGRESS</div>
+      <div class="status-desc">Actively being worked</div>
+    </div>
+    <div class="status-arrow">→</div>
+    <div class="status-node">
+      <div class="status-box s-done">DONE</div>
+      <div class="status-desc">Completed, stamps <code>completed_at</code></div>
+    </div>
+    <div class="status-arrow">→</div>
+    <div class="status-node">
+      <div class="status-box s-archived">ARCHIVED</div>
+      <div class="status-desc">No longer relevant</div>
+    </div>
+  </div>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr><th>Transition</th><th>Who can do it</th><th>Notes</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>TODO → IN_PROGRESS</td><td>Assignee, Creator, Owner, Admin</td><td>Signals active work. Members can self-advance their assigned tasks.</td></tr>
+        <tr><td>IN_PROGRESS → DONE</td><td>Assignee, Creator, Owner, Admin</td><td>Stamps <code>completed_at = now()</code> automatically.</td></tr>
+        <tr><td>DONE → TODO</td><td>Creator, Owner, Admin</td><td>Reopen. Assignee can also reopen their own task.</td></tr>
+        <tr><td>Any → ARCHIVED</td><td>Creator, Owner, Admin only</td><td>Members cannot archive tasks — only the assigner or leadership cleans up.</td></tr>
+        <tr><td>ARCHIVED → TODO</td><td>Creator, Owner, Admin only</td><td>Restore from archive.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<hr />
+
+<!-- ── 6. PERMISSION MATRIX ── -->
+<section id="permissions">
+  <h2><span class="sec-num">06</span> Full Permission Matrix</h2>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Action</th>
+          <th><span class="pill owner">Owner</span></th>
+          <th><span class="pill admin">Admin</span></th>
+          <th><span class="pill member">Member</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Create personal task (no assignee)</td>
+          <td class="c-yes">✓</td>
+          <td class="c-yes">✓</td>
+          <td class="c-partial">✓ (TBD)</td>
+        </tr>
+        <tr>
+          <td>Assign task to others</td>
+          <td class="c-yes">✓</td>
+          <td class="c-yes">✓ (not to Owner)</td>
+          <td class="c-no">✗</td>
+        </tr>
+        <tr>
+          <td>View all assigned tasks (workspace-wide)</td>
+          <td class="c-yes">✓</td>
+          <td class="c-yes">✓</td>
+          <td class="c-no">✗ (own only)</td>
+        </tr>
+        <tr>
+          <td>Change status (TODO / IN_PROGRESS / DONE)</td>
+          <td class="c-yes">✓</td>
+          <td class="c-yes">✓</td>
+          <td class="c-yes">✓ (on assigned tasks)</td>
+        </tr>
+        <tr>
+          <td>Archive / restore tasks</td>
+          <td class="c-yes">✓</td>
+          <td class="c-yes">✓</td>
+          <td class="c-no">✗</td>
+        </tr>
+        <tr>
+          <td>Edit task details (title / desc / due date)</td>
+          <td class="c-yes">✓</td>
+          <td class="c-yes">✓</td>
+          <td class="c-no">✗ (read-only)</td>
+        </tr>
+        <tr>
+          <td>Delete task</td>
+          <td class="c-yes">✓</td>
+          <td class="c-yes">✓ (not owner's tasks)</td>
+          <td class="c-no">✗</td>
+        </tr>
+        <tr>
+          <td>Reassign task to someone else</td>
+          <td class="c-yes">✓</td>
+          <td class="c-yes">✓</td>
+          <td class="c-no">✗</td>
+        </tr>
+        <tr>
+          <td>Set priority</td>
+          <td class="c-yes">✓</td>
+          <td class="c-yes">✓</td>
+          <td class="c-no">✗</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<hr />
+
+<!-- ── 7. UI APPROACH ── -->
+<section id="ui">
+  <h2><span class="sec-num">07</span> UI Approach</h2>
+
+  <p>The existing page already has the right bones. Here's what stays and what changes:</p>
+
+  <h3>Keep from the existing UI</h3>
+  <div class="card-grid">
+    <div class="card">
+      <div class="card-title">Grid view with date grouping</div>
+      <div class="card-body">Overdue / Upcoming / Done / Archived grouping is genuinely useful. Keep it. Add priority indicators to cards.</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Kanban board</div>
+      <div class="card-body">Drag-and-drop between status columns is good for team management. Extend columns from 3 to 4 to include IN_PROGRESS.</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Client + campaign linking</div>
+      <div class="card-body">Optional context linking to clients and campaigns is a real differentiator. Keep and display prominently on cards.</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Client filter dropdown</div>
+      <div class="card-body">Filter the task list to a single client. Already works well.</div>
+    </div>
+  </div>
+
+  <h3>New additions</h3>
+  <div class="card-grid">
+    <div class="card">
+      <div class="card-title">Assignee picker in create dialog</div>
+      <div class="card-body">Owner/admin see a team member dropdown when creating a task. Members don't see it. Shows avatar + name. "Assign to myself" shortcut.</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Assigned by / to display on cards</div>
+      <div class="card-body">Cards show assignee avatar. If you're looking at someone else's assigned task, show "from [Creator]". Makes delegation visible at a glance.</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Priority badge</div>
+      <div class="card-body">Urgent = red chip, High = amber, Normal = no badge (reduces noise), Low = muted. Urgent tasks float to the top of each group.</div>
+    </div>
+    <div class="card">
+      <div class="card-title">"Assigned to me" filter</div>
+      <div class="card-body">Quick filter chip to show only tasks where you are the assignee. Useful for members who only need to see their work queue.</div>
+    </div>
+    <div class="card">
+      <div class="card-title">"My personal tasks" section</div>
+      <div class="card-body">Personal (unassigned) tasks render in a separate section below assigned tasks — so private to-dos don't clutter the team work queue.</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Member restricted UI</div>
+      <div class="card-body">For members, create button creates personal task only. Assign field is hidden. Edit/delete/archive buttons are hidden. Status toggle is shown for their assigned tasks.</div>
+    </div>
+  </div>
+</section>
+
+<hr />
+
+<!-- ── 8. PHASED BUILD ── -->
+<section id="phases">
+  <h2><span class="sec-num">08</span> Proposed Build Phases</h2>
+
+  <p>Four phases. Each is independently shippable. Phases 1–2 replace the existing system; Phases 3–4 add team-specific power.</p>
+
+  <ul class="phase-list">
+    <li class="phase-item">
+      <div class="phase-num">1</div>
+      <div>
+        <div class="phase-title">Schema Migration</div>
+        <div class="phase-desc">Create the <code>tasks</code> table with the full column set. Write RLS policies for personal vs assigned visibility. Migrate existing <code>client_notes</code> records as personal tasks. Drop or archive <code>client_notes</code>. Update <code>src/api/tasks.js</code> (new file, replaces <code>src/api/notes.js</code> for task-related functions).</div>
+        <div class="phase-tasks">
+          <span class="phase-tag">DB migration</span>
+          <span class="phase-tag">RLS policies</span>
+          <span class="phase-tag">Data migration</span>
+          <span class="phase-tag">API layer</span>
+        </div>
+      </div>
+    </li>
+    <li class="phase-item">
+      <div class="phase-num">2</div>
+      <div>
+        <div class="phase-title">Core UI — Personal Tasks</div>
+        <div class="phase-desc">Update <code>TasksAndReminders.jsx</code> to use the new <code>tasks</code> API. Add IN_PROGRESS status to kanban (4 columns). Add priority badge to cards. Ensure personal tasks work identically to the old system from a user perspective. Smoke test: existing tasks should appear, CRUD should work.</div>
+        <div class="phase-tasks">
+          <span class="phase-tag">TasksAndReminders.jsx</span>
+          <span class="phase-tag">CreateTaskDialog</span>
+          <span class="phase-tag">Kanban + Grid</span>
+        </div>
+      </div>
+    </li>
+    <li class="phase-item">
+      <div class="phase-num">3</div>
+      <div>
+        <div class="phase-title">Assignment &amp; Team Visibility</div>
+        <div class="phase-desc">Add assignee picker (owner/admin only) to the create and edit dialogs. Show assignee avatar on task cards. Add "assigned to me" filter. Enforce the member read-only UI (hide create-assigned, hide edit/delete/archive). Wire the full permission matrix in both UI and RLS. Leadership sees all assigned tasks workspace-wide.</div>
+        <div class="phase-tasks">
+          <span class="phase-tag">Assignee picker</span>
+          <span class="phase-tag">RBAC UI gates</span>
+          <span class="phase-tag">usePermissions()</span>
+          <span class="phase-tag">Card updates</span>
+        </div>
+      </div>
+    </li>
+    <li class="phase-item">
+      <div class="phase-num">4</div>
+      <div>
+        <div class="phase-title">Context Integration &amp; Dashboard Widget</div>
+        <div class="phase-desc">Surface tasks in client detail (tasks tab or sidebar widget scoped to that client), campaign detail page, and the dashboard. Add a "My Tasks" widget to the dashboard showing the 5 most urgent/overdue tasks. Update the existing "Go to tasks" deep-links from client/campaign pages to carry a filter pre-applied.</div>
+        <div class="phase-tasks">
+          <span class="phase-tag">Client detail tab</span>
+          <span class="phase-tag">Campaign context</span>
+          <span class="phase-tag">Dashboard widget</span>
+          <span class="phase-tag">Deep-links</span>
+        </div>
+      </div>
+    </li>
+  </ul>
+</section>
+
+<hr />
+
+<!-- ── 9. OPEN QUESTIONS ── -->
+<section id="questions">
+  <h2><span class="sec-num">09</span> Open Questions Before Build</h2>
+
+  <div class="card">
+    <div class="card-title">1 — Can members create personal tasks?</div>
+    <div class="card-body">The RBAC plan says "Create/assign: Member ❌" but that was written before dedicated task management was scoped. Banning private to-dos is very restrictive. Recommendation: <strong>yes, allow it</strong> — members can create unassigned personal tasks, just not assign to others. Confirm this call before Phase 1.</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">2 — Do members need an IN_PROGRESS status?</div>
+    <div class="card-body">Members can advance their assigned tasks from TODO → IN_PROGRESS → DONE. This is the main reason the status exists from a team perspective. If the answer to Q1 is yes (personal tasks for members), they'd also be able to self-advance those. Probably the right call — but confirm.</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">3 — Tasks in client/campaign detail pages</div>
+    <div class="card-body">Currently "Go to tasks" is a nav link from the client overview. Phase 4 proposes a proper in-context task list in the client detail page. This is a worthwhile UX improvement but out of scope for the core feature. Should it be in Phase 4 or a later standalone feature? Affects scope estimate.</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">4 — Notifications for assigned tasks</div>
+    <div class="card-body">When an owner/admin assigns a task to a member, should the member get notified? This isn't in scope for the initial build but should be designed for — particularly the edge-function pattern already used elsewhere in the codebase. Out of scope for now, but flag it as Phase 5 material.</div>
+  </div>
+</section>
+
+
+<!-- ── FOOTER ── -->
+<footer class="doc-footer">
+  <span>Tercero · Task Management Design Research · July 2026</span>
+  <span>Phase ready: pending Q1 + Q3 decisions</span>
+</footer>
+
+</body>
+</html>

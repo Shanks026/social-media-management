@@ -31,7 +31,8 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
-import { Building2, Loader2, CalendarDays, Link, Megaphone } from 'lucide-react'
+import { Building2, Loader2, CalendarDays, Link, Megaphone, Globe, Lock } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { useClients } from '@/api/clients'
 import { createMeeting, updateMeeting } from '@/api/meetings'
 import { fetchActiveCampaignsByClient } from '@/api/campaigns'
@@ -69,6 +70,7 @@ const formSchema = z.object({
     z.string().url('Please enter a valid URL'),
     z.literal(''),
   ]).optional(),
+  visibility: z.enum(['public', 'private']).default('public'),
 })
 
 export default function CreateMeetingDialog({
@@ -119,6 +121,7 @@ export default function CreateMeetingDialog({
       datetime: localDatetime,
       notes: editMeeting?.notes || '',
       meeting_link: editMeeting?.meeting_link || '',
+      visibility: editMeeting?.visibility || 'public',
     },
   })
 
@@ -145,6 +148,7 @@ export default function CreateMeetingDialog({
         datetime: editLocalDatetime,
         notes: editMeeting.notes || '',
         meeting_link: editMeeting.meeting_link || '',
+        visibility: editMeeting.visibility || 'public',
       })
     } else if (open && !editMeeting) {
       form.reset({
@@ -156,6 +160,7 @@ export default function CreateMeetingDialog({
         ).toISOString().slice(0, 16),
         notes: '',
         meeting_link: '',
+        visibility: 'public',
       })
     }
   }, [open, editMeeting, defaultClientId])
@@ -359,6 +364,51 @@ export default function CreateMeetingDialog({
                         </SelectContent>
                       </Select>
                     )}
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Visibility */}
+              <FormField
+                control={form.control}
+                name="visibility"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-sm font-semibold">Visibility</FormLabel>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => field.onChange('public')}
+                        className={cn(
+                          'flex items-center justify-center gap-2 h-9 rounded-md border text-sm font-medium transition-colors',
+                          field.value === 'public'
+                            ? 'border-primary bg-primary/10 text-primary'
+                            : 'border-border bg-muted/30 text-muted-foreground hover:bg-muted/50',
+                        )}
+                      >
+                        <Globe className="size-3.5" />
+                        Public
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => field.onChange('private')}
+                        className={cn(
+                          'flex items-center justify-center gap-2 h-9 rounded-md border text-sm font-medium transition-colors',
+                          field.value === 'private'
+                            ? 'border-primary bg-primary/10 text-primary'
+                            : 'border-border bg-muted/30 text-muted-foreground hover:bg-muted/50',
+                        )}
+                      >
+                        <Lock className="size-3.5" />
+                        Private
+                      </button>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground">
+                      {field.value === 'public'
+                        ? 'All workspace members can see this meeting'
+                        : 'Only visible to you'}
+                    </p>
                     <FormMessage />
                   </FormItem>
                 )}

@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import {
   Plus,
@@ -47,16 +47,19 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { fetchAllPostsByClient } from '@/api/posts'
 import { fetchUpcomingMeetings, deleteMeeting } from '@/api/meetings'
 import { useTransactions } from '@/api/transactions'
+import { usePermissions } from '@/api/usePermissions'
 import { toast } from 'sonner'
 import { formatCurrency } from '@/utils/finance'
 import { format } from 'date-fns'
 import { getPublishState } from '@/lib/helper'
 import MeetingRow from '@/components/MeetingRow'
-import { fetchClientNotes, fetchInternalClientNotes } from '@/api/notes'
+import { useTasks } from '@/api/tasks'
+import { useTeamMembers } from '@/api/team'
+import { useAuth } from '@/context/AuthContext'
 
 import CreateMeetingDialog from '@/components/CreateMeetingDialog'
-import CreateNoteDialog from '@/components/CreateNoteDialog'
-import NoteRow from '@/components/NoteRow'
+import CreateTaskDialog from '@/components/tasks/CreateTaskDialog'
+import TaskCard from '@/components/tasks/TaskCard'
 import ClientWeekTimeline from './ClientWeekTimeline'
 
 const platformChartConfig = {
@@ -70,40 +73,11 @@ const platformChartConfig = {
   }, {}),
 }
 
-// Chart config — keyed by display name, matching post_status enum
-const chartConfig = {
-  DRAFT: { label: 'Draft', color: '#3b82f6' },
-  'PENDING APPROVAL': { label: 'Pending Approval', color: '#f97316' },
-  APPROVED: { label: 'Approved', color: '#22c55e' },
-  'NEEDS REVISION': { label: 'Needs Revision', color: '#ec4899' },
-  SCHEDULED: { label: 'Scheduled', color: '#a855f7' },
-  DELIVERED: { label: 'Delivered', color: '#14b8a6' },
-  'PARTIALLY PUBLISHED': { label: 'Partially Published', color: '#84cc16' },
-  PUBLISHED: { label: 'Published', color: '#10b981' },
-}
-
-const ALLOWED_STATUSES = [
-  'DRAFT',
-  'PENDING APPROVAL',
-  'APPROVED',
-  'NEEDS REVISION',
-  'SCHEDULED',
-  'DELIVERED',
-  'PARTIALLY PUBLISHED',
-  'PUBLISHED',
-]
-
-// Maps DB enum values → display names (ARCHIVED excluded from chart)
-const STATUS_DISPLAY_MAP = {
-  DRAFT: 'DRAFT',
-  PENDING_APPROVAL: 'PENDING APPROVAL',
-  APPROVED: 'APPROVED',
-  NEEDS_REVISION: 'NEEDS REVISION',
-  SCHEDULED: 'SCHEDULED',
-  DELIVERED: 'DELIVERED',
-  PARTIALLY_PUBLISHED: 'PARTIALLY PUBLISHED',
-  PUBLISHED: 'PUBLISHED',
-}
+import {
+  POST_CHART_CONFIG as chartConfig,
+  ALLOWED_CHART_STATUSES as ALLOWED_STATUSES,
+  STATUS_DISPLAY_MAP,
+} from '@/lib/post-statuses'
 
 function normalizeStatus(raw) {
   if (!raw) return 'DRAFT'
@@ -124,7 +98,25 @@ const CustomPlatformTick = ({ x, y, payload }) => {
 }
 
 export default function OverviewTab({ client }) {
-  const [activeEngagementTab, setActiveEngagementTab] = useState('meetings')
+  const [activeEngagementTab, setActiveEngagementTab] = useState('notes')
+  const { finance } = usePermissions()
+  const { user } = useAuth()
+  const { data: teamMembers = [] } = useTeamMembers()
+
+  const memberMap = useMemo(() => {
+    const map = Object.fromEntries(teamMembers.map((m) => [m.member_user_id, m]))
+    if (user && !map[user.id]) {
+      map[user.id] = {
+        member_user_id: user.id,
+        full_name: user.user_metadata?.full_name || user.user_metadata?.name || null,
+        email: user.email,
+        avatar_url: user.user_metadata?.avatar_url || null,
+      }
+    }
+    return map
+  }, [teamMembers, user])
+
+  const clientMap = useMemo(() => ({ [String(client.id)]: client }), [client])
 
   const [, setSearchParams] = useSearchParams()
   const navigate = useNavigate()
@@ -176,14 +168,7 @@ export default function OverviewTab({ client }) {
       queryFn: () => fetchUpcomingMeetings(client.id, 50),
     })
 
-  // Notes — internal client also pulls in legacy notes with client_id IS NULL
-  const { data: notes = [], isLoading: isLoadingNotes } = useQuery({
-    queryKey: ['client-notes', client.id],
-    queryFn: () =>
-      client.is_internal
-        ? fetchInternalClientNotes(client.id)
-        : fetchClientNotes(client.id),
-  })
+  const { data: notes = [], isLoading: isLoadingNotes } = useTasks({ clientId: client.id })
 
   // Toast logic for reminders
   const notifiedNotesRef = React.useRef(
@@ -193,7 +178,7 @@ export default function OverviewTab({ client }) {
     if (!notes || notes.length === 0) return
 
     notes.forEach((note) => {
-      if (note.status === 'TODO' && note.due_at) {
+      if ((note.status === 'TODO' || note.status === 'IN_PROGRESS') && note.due_at) {
         const dueDate = new Date(note.due_at)
         const timeDiffMs = dueDate.getTime() - new Date().getTime()
         const hoursDiff = timeDiffMs / (1000 * 60 * 60)
@@ -232,7 +217,7 @@ export default function OverviewTab({ client }) {
 
   // --- Calculations ---
 
-  // 1. Workflow Health
+  // 1. Workflow Health — internal accounts skip the external client-approval loop
   const INTERNAL_EXCLUDED = ['PENDING APPROVAL', 'NEEDS REVISION']
   const visibleStatuses = client.is_internal
     ? ALLOWED_STATUSES.filter((s) => !INTERNAL_EXCLUDED.includes(s))
@@ -265,7 +250,9 @@ export default function OverviewTab({ client }) {
   }).length
 
   const needsRevisionCount = postCounts['NEEDS REVISION'] || 0
+  const changesRequestedCount = postCounts['CHANGES REQUESTED'] || 0
   const pendingApprovalCount = postCounts['PENDING APPROVAL'] || 0
+  const submittedCount = postCounts['SUBMITTED'] || 0
 
   // 3. Mutations
   const { mutate: markMeetingDone, isPending: isCompletingMeeting } =
@@ -284,8 +271,8 @@ export default function OverviewTab({ client }) {
       },
     })
 
-  const visibleNotes = notes.filter((n) => n.status !== 'ARCHIVED').slice(0, 3)
-  const extraNotes = notes.filter((n) => n.status !== 'ARCHIVED').length - 3
+  const visibleNotes = notes.filter((n) => n.status !== 'ARCHIVED').slice(0, 2)
+  const extraNotes = notes.filter((n) => n.status !== 'ARCHIVED').length - 2
 
   const visibleMeetings = upcomingMeetings.slice(0, 2)
   const extraMeetings = upcomingMeetings.length - 2
@@ -303,11 +290,11 @@ export default function OverviewTab({ client }) {
           >
             <CardHeader className="pb-3 flex flex-row items-center justify-between space-y-0 shrink-0">
               <TabsList className="h-9">
-                <TabsTrigger value="meetings" className="gap-1.5 text-xs">
-                  <CalendarIcon className="size-3.5" /> Meetings
-                </TabsTrigger>
                 <TabsTrigger value="notes" className="gap-1.5 text-xs">
                   <ClipboardCheck className="size-3.5" /> Tasks
+                </TabsTrigger>
+                <TabsTrigger value="meetings" className="gap-1.5 text-xs">
+                  <CalendarIcon className="size-3.5" /> Meetings
                 </TabsTrigger>
               </TabsList>
               <div className="flex items-center gap-1">
@@ -337,11 +324,11 @@ export default function OverviewTab({ client }) {
                     )}
                   </Tooltip>
                 ) : (
-                  <CreateNoteDialog clientId={client.id} lockClient={true}>
+                  <CreateTaskDialog clientId={client.id} lockClient={true}>
                     <Button variant="ghost" size="icon" className="h-8 w-8">
                       <Plus className="h-4 w-4" />
                     </Button>
-                  </CreateNoteDialog>
+                  </CreateTaskDialog>
                 )}
               </div>
             </CardHeader>
@@ -429,17 +416,19 @@ export default function OverviewTab({ client }) {
                   <div className="flex flex-col flex-1">
                     <div className="flex flex-col gap-3">
                       {visibleNotes.map((note) => (
-                        <NoteRow
+                        <TaskCard
                           key={note.id}
-                          note={note}
-                          variant="client-card"
+                          task={note}
+                          clientMap={clientMap}
+                          memberMap={memberMap}
+                          currentUserId={user?.id}
                         />
                       ))}
                     </div>
                     <div className="flex items-center justify-between mt-auto pt-3 border-t border-dashed border-border/40">
                       {extraNotes > 0 ? (
                         <span className="text-xs text-muted-foreground">
-                          +{extraNotes} more note{extraNotes !== 1 && 's'}
+                          +{extraNotes} more task{extraNotes !== 1 && 's'}
                         </span>
                       ) : (
                         <span />
@@ -448,9 +437,9 @@ export default function OverviewTab({ client }) {
                         variant="ghost"
                         size="sm"
                         className="h-7 text-xs px-2 text-muted-foreground hover:text-foreground"
-                        onClick={() => navigate('/operations/tasks')}
+                        onClick={() => navigate('/tasks')}
                       >
-                        View all notes <ArrowUpRight className="ml-1 h-3 w-3" />
+                        View all tasks <ArrowUpRight className="ml-1 h-3 w-3" />
                       </Button>
                     </div>
                   </div>
@@ -587,17 +576,28 @@ export default function OverviewTab({ client }) {
                       <div className="flex items-center gap-2 border-l-2 border-destructive pl-3">
                         <AlertCircle className="h-3.5 w-3.5 text-destructive shrink-0" />
                         <span className="text-xs text-destructive font-medium">
-                          {needsRevisionCount} post
-                          {needsRevisionCount !== 1 && 's'} require immediate
-                          revision
+                          {needsRevisionCount} deliverable{needsRevisionCount !== 1 && 's'} require client revision
                         </span>
                       </div>
-                    ) : pendingApprovalCount > 0 ? (
+                    ) : changesRequestedCount > 0 ? (
                       <div className="flex items-center gap-2 border-l-2 border-amber-500 pl-3">
                         <AlertCircle className="h-3.5 w-3.5 text-amber-500 shrink-0" />
                         <span className="text-xs text-amber-600 dark:text-amber-400 font-medium">
-                          {pendingApprovalCount} post
-                          {pendingApprovalCount !== 1 && 's'} awaiting approval
+                          {changesRequestedCount} deliverable{changesRequestedCount !== 1 && 's'} need internal changes
+                        </span>
+                      </div>
+                    ) : pendingApprovalCount > 0 ? (
+                      <div className="flex items-center gap-2 border-l-2 border-orange-500 pl-3">
+                        <AlertCircle className="h-3.5 w-3.5 text-orange-500 shrink-0" />
+                        <span className="text-xs text-orange-600 dark:text-orange-400 font-medium">
+                          {pendingApprovalCount} deliverable{pendingApprovalCount !== 1 && 's'} awaiting client approval
+                        </span>
+                      </div>
+                    ) : submittedCount > 0 ? (
+                      <div className="flex items-center gap-2 border-l-2 border-violet-500 pl-3">
+                        <AlertCircle className="h-3.5 w-3.5 text-violet-500 shrink-0" />
+                        <span className="text-xs text-violet-600 dark:text-violet-400 font-medium">
+                          {submittedCount} deliverable{submittedCount !== 1 && 's'} pending internal review
                         </span>
                       </div>
                     ) : (
@@ -618,7 +618,7 @@ export default function OverviewTab({ client }) {
         {/* COLUMN 3: WEEK TIMELINE (external) or RECENT TRANSACTIONS (internal) */}
         {!client.is_internal ? (
           <ClientWeekTimeline clientId={client.id} />
-        ) : (
+        ) : finance ? (
           <Card className="border-none shadow-sm ring-1 ring-border/50 bg-card/50 flex flex-col gap-2 h-full">
             <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
               <CardTitle className="text-lg font-medium bricolage">
@@ -704,11 +704,11 @@ export default function OverviewTab({ client }) {
               )}
             </CardContent>
           </Card>
-        )}
+        ) : null}
       </div>
 
-      {/* ROW 2: SOCIAL MEDIA USAGE (+ RECENT TRANSACTIONS for external) */}
-      {!client.is_internal ? (
+      {/* ROW 2: SOCIAL MEDIA USAGE (+ RECENT TRANSACTIONS for external w/ finance) */}
+      {!client.is_internal && finance ? (
         <div className="grid gap-4" style={{ gridTemplateColumns: '50% 1fr' }}>
           <Card className="border-none shadow-sm ring-1 ring-border/50 bg-card/50 flex flex-col">
             <CardHeader>

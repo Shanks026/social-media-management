@@ -28,7 +28,8 @@ export async function fetchAllPostsByClient(clientId) {
         target_date,
         admin_notes,
         platform_schedules,
-        deliverable_type
+        deliverable_type,
+        created_by
       )
     `,
     )
@@ -50,6 +51,7 @@ export async function fetchAllPostsByClient(clientId) {
       display_date: latest.created_at || new Date().toISOString(),
       campaign_id: post.campaign_id,
       campaign_name: post.campaigns?.name,
+      created_by: latest.created_by || null,
     }
   })
 }
@@ -254,13 +256,13 @@ export async function updatePost(
       deliverable_type: deliverableType ?? null,
     })
     .eq('id', versionId)
-    .in('status', ['DRAFT', 'PENDING_APPROVAL'])
+    .in('status', ['DRAFT', 'PENDING_APPROVAL', 'CHANGES_REQUESTED'])
     .select()
 
   if (error) throw error
 
   if (data?.length === 0) {
-    throw new Error('Update failed: Only drafts and pending approval posts can be modified.')
+    throw new Error('Update failed: Only editable posts can be modified.')
   }
 
   // Update campaign_id on the posts row when postId is provided
@@ -483,6 +485,168 @@ export async function regeneratePostShareToken(versionId) {
 
   if (error) throw error
   return data
+}
+
+// ── Phase 5: Internal approval workflow ──────────────────────────────────────
+
+export async function submitForInternalApproval(versionId) {
+  const { error } = await supabase.rpc('submit_for_internal_approval', {
+    p_post_version_id: versionId,
+  })
+  if (error) throw error
+}
+
+export async function approveInternally(versionId) {
+  const { error } = await supabase.rpc('approve_internally', {
+    p_post_version_id: versionId,
+  })
+  if (error) throw error
+}
+
+export async function requestInternalChanges(versionId, notes) {
+  const { error } = await supabase.rpc('request_internal_changes', {
+    p_post_version_id: versionId,
+    p_notes: notes || null,
+  })
+  if (error) throw error
+}
+
+import { useQuery } from '@tanstack/react-query'
+import { useAuth } from '@/context/AuthContext'
+
+export function usePendingApprovals() {
+  const { workspaceUserId } = useAuth()
+  return useQuery({
+    queryKey: ['pending-approvals', workspaceUserId],
+    enabled: !!workspaceUserId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('post_versions')
+        .select(`
+          id,
+          title,
+          content,
+          media_urls,
+          platform,
+          target_date,
+          admin_notes,
+          updated_at,
+          submitted_by,
+          deliverable_type,
+          posts!post_versions_post_id_fkey (
+            id,
+            client_id,
+            clients ( id, name, logo_url, is_internal )
+          )
+        `)
+        .eq('status', 'SUBMITTED')
+        .order('updated_at', { ascending: true })
+
+      if (error) throw error
+
+      return (data || []).map((v) => ({
+        ...v,
+        actual_post_id: v.posts?.id,
+        client_id: v.posts?.client_id,
+        client: v.posts?.clients,
+        platforms: v.platform || [],
+      }))
+    },
+  })
+}
+
+export function usePendingApprovalsCount() {
+  const { workspaceUserId } = useAuth()
+  return useQuery({
+    queryKey: ['pending-approvals-count', workspaceUserId],
+    enabled: !!workspaceUserId,
+    refetchInterval: 60_000,
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from('post_versions')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'SUBMITTED')
+
+      if (error) throw error
+      return count ?? 0
+    },
+  })
+}
+
+export function useApprovalLog({ action = null, page = 0, pageSize = 25 } = {}) {
+  const { workspaceUserId } = useAuth()
+  return useQuery({
+    queryKey: ['approval-log', workspaceUserId, action, page],
+    enabled: !!workspaceUserId,
+    queryFn: async () => {
+      const [{ data, error }, { data: countData, error: countError }] = await Promise.all([
+        supabase.rpc('get_approval_log', {
+          p_action: action ?? null,
+          p_limit: pageSize,
+          p_offset: page * pageSize,
+        }),
+        supabase.rpc('get_approval_log_count', { p_action: action ?? null }),
+      ])
+      if (error) throw error
+      if (countError) throw countError
+      return { events: data ?? [], total: Number(countData ?? 0) }
+    },
+  })
+}
+
+export function useApprovalLogCount(action) {
+  const { workspaceUserId } = useAuth()
+  return useQuery({
+    queryKey: ['approval-log', workspaceUserId, action, 'count'],
+    enabled: !!workspaceUserId,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('get_approval_log_count', {
+        p_action: action ?? null,
+      })
+      if (error) throw error
+      return Number(data ?? 0)
+    },
+  })
+}
+
+export async function deleteApprovalEvents(ids) {
+  const { error } = await supabase.rpc('delete_approval_events', { p_ids: ids })
+  if (error) throw error
+}
+
+export function useMySubmissions({ status = null, page = 0, pageSize = 25 } = {}) {
+  const { workspaceUserId } = useAuth()
+  return useQuery({
+    queryKey: ['my-submissions', workspaceUserId, status, page],
+    enabled: !!workspaceUserId,
+    staleTime: 30_000,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('get_my_submissions', {
+        p_status: status ?? null,
+        p_page: page,
+        p_page_size: pageSize,
+      })
+      if (error) throw error
+      return data ?? []
+    },
+  })
+}
+
+export function useMySubmissionsCount(status = null) {
+  const { workspaceUserId } = useAuth()
+  return useQuery({
+    queryKey: ['my-submissions', workspaceUserId, status, 'count'],
+    enabled: !!workspaceUserId,
+    staleTime: 30_000,
+    refetchInterval: 60_000,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('get_my_submissions_count', {
+        p_status: status ?? null,
+      })
+      if (error) throw error
+      return Number(data ?? 0)
+    },
+  })
 }
 
 import { useMutation, useQueryClient } from '@tanstack/react-query'
