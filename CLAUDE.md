@@ -26,24 +26,25 @@ Full architecture reference: **`.claude/CLAUDE.md`** (auto-loaded). Feature plan
 ### Multi-tenant workspace model
 Every team member shares the same `workspaceUserId` (the agency owner's UID). **Never use `user.id` for DB queries** — always use `workspaceUserId` from `useAuth()` or `resolveWorkspace()`. The `get_my_agency_user_id()` SQL function enforces this in RLS policies.
 
+One exception: the `created_by` field on records should be `auth.uid()` (the actual caller's UID), **not** `workspaceUserId` — they differ for invited members. In mutation functions, get the caller UID via `(await supabase.auth.getUser()).data.user.id`.
+
 ### API layer split
 - **Reads** → React Query hooks (`useXxxList()`, `useXxxById()`) in `src/api/`
 - **Mutations** → plain async functions (`createXxx`, `updateXxx`, `deleteXxx`) called via `useMutation`
 - Never call `supabase` directly inside components — everything goes through `src/api/`
 
-### Feature gating
-Use `useSubscription()` from `src/api/useSubscription.js` for all plan/tier checks. Never query `agency_subscriptions` directly. Canonical feature matrix: `documentation/subscription-features.md`.
+### RBAC and permissions
+Two separate gating systems — use both correctly:
+- **`useSubscription()`** (`src/api/useSubscription.js`) — plan/tier feature flags (`data?.campaigns`, `data?.calendar_export`, etc.). Never query `agency_subscriptions` directly. Canonical feature matrix: `documentation/subscription-features.md`.
+- **`usePermissions()`** (`src/api/usePermissions.js`) — role-based capabilities (`canAssignTasks`, `finance`, `proposals`, etc.) derived from the user's role in `agency_members`. Use for actions gated by role, not plan.
 
 ### Reusable tab pattern
-Feature tabs (`CampaignTab`, `DocumentsTab`, etc.) accept an optional `clientId` prop. Without it they show all records (global page); with it they scope to that client (used inside `ClientProfileView`).
+Feature tabs (`CampaignTab`, `DocumentsTab`, `TasksTab`, etc.) accept an optional `clientId` prop. Without it they show all records (global page); with it they scope to that client (used inside `ClientProfileView`). `ClientProfileView` itself uses URL-driven tab state via `useSearchParams` (`?tab=tasks`).
 
 ### Storage buckets
 - `post-media` — post attachments (public URLs)
 - `client-documents` — client file storage (signed URLs, private)
 - `note-media` — note image/video uploads (signed URLs, private, 50 MB limit)
-
-### Notes editor
-Tiptap v2 with custom nodes in `src/components/notes/editor/`. Slash commands via `slash-command.js`. Custom nodes: `TableContainer`, `TableTitle`, `ImageNode` (with drag-to-resize), `VideoNode` (with width presets). Node content persisted as Tiptap JSON in `notes.body`. Auto-save via `dirtyRef` + debounced `scheduleSave` — tag mutations deliberately bypass this.
 
 ## Environment Variables
 
