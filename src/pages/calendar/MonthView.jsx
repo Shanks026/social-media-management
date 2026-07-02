@@ -22,11 +22,16 @@ const PLATFORM_ICONS = {
 }
 
 const STATUS_STYLES = {
-  DRAFT: 'border-l-blue-600',
-  PENDING_APPROVAL: 'border-l-orange-600',
-  NEEDS_REVISION: 'border-l-pink-600 animate-pulse',
-  SCHEDULED: 'border-l-purple-600',
-  PUBLISHED: 'border-l-emerald-600',
+  DRAFT:               'border-l-blue-600',
+  SUBMITTED:           'border-l-amber-600',
+  CHANGES_REQUESTED:   'border-l-rose-600 animate-pulse',
+  READY:               'border-l-violet-600',
+  PENDING_APPROVAL:    'border-l-orange-600',
+  APPROVED:            'border-l-green-600',
+  NEEDS_REVISION:      'border-l-pink-600 animate-pulse',
+  SCHEDULED:           'border-l-purple-600',
+  DELIVERED:           'border-l-teal-600',
+  PUBLISHED:           'border-l-emerald-600',
   PARTIALLY_PUBLISHED: 'border-l-lime-600',
 }
 

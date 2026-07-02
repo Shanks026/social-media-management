@@ -71,18 +71,17 @@ import MonthView from './MonthView'
 import WeekView from './WeekView'
 
 const STATUS_LEGEND = [
-  { id: 'DRAFT', label: 'Draft', color: 'bg-blue-600' },
-  { id: 'PENDING_APPROVAL', label: 'Pending Approval', color: 'bg-orange-600' },
-  { id: 'NEEDS_REVISION', label: 'Needs Revision', color: 'bg-pink-600' },
-  { id: 'APPROVED', label: 'Approved', color: 'bg-green-600' },
-  { id: 'SCHEDULED', label: 'Scheduled', color: 'bg-purple-600' },
-  { id: 'DELIVERED', label: 'Delivered', color: 'bg-teal-600' },
-  { id: 'PUBLISHED', label: 'Published', color: 'bg-emerald-600' },
-  {
-    id: 'PARTIALLY_PUBLISHED',
-    label: 'Partially Published',
-    color: 'bg-lime-600',
-  },
+  { id: 'DRAFT',               label: 'Draft',               color: 'bg-blue-600'    },
+  { id: 'SUBMITTED',           label: 'Submitted',           color: 'bg-amber-600'   },
+  { id: 'CHANGES_REQUESTED',   label: 'Changes Requested',   color: 'bg-rose-600'    },
+  { id: 'READY',               label: 'Ready',               color: 'bg-violet-600'  },
+  { id: 'PENDING_APPROVAL',    label: 'Pending Approval',    color: 'bg-orange-600'  },
+  { id: 'APPROVED',            label: 'Approved',            color: 'bg-green-600'   },
+  { id: 'NEEDS_REVISION',      label: 'Needs Revision',      color: 'bg-pink-600'    },
+  { id: 'SCHEDULED',           label: 'Scheduled',           color: 'bg-purple-600'  },
+  { id: 'DELIVERED',           label: 'Delivered',           color: 'bg-teal-600'    },
+  { id: 'PUBLISHED',           label: 'Published',           color: 'bg-emerald-600' },
+  { id: 'PARTIALLY_PUBLISHED', label: 'Partially Published', color: 'bg-lime-600'    },
 ]
 
 const PLATFORMS = [

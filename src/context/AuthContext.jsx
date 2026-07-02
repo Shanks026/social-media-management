@@ -171,6 +171,32 @@ export const AuthProvider = ({ children }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // When the current user's own agency_members row is updated by the owner
+  // (role change, permission change), refresh workspace so capabilities update
+  // immediately without requiring a page reload.
+  useEffect(() => {
+    const uid = user?.id
+    if (!uid) return
+
+    const channel = supabase
+      .channel(`my-member-row:${uid}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'agency_members',
+          filter: `member_user_id=eq.${uid}`,
+        },
+        () => refreshWorkspace(),
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [user?.id, refreshWorkspace])
+
   const value = useMemo(
     () => ({ user, session, loading, workspaceUserId, userRole, userPermissions, refreshWorkspace, signOut }),
     [user, session, loading, workspaceUserId, userRole, userPermissions, refreshWorkspace, signOut]

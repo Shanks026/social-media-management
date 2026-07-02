@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect, useLayoutEffect } from 'react'
 import { useAuth } from '@/context/AuthContext'
 import { usePermissions } from '@/api/usePermissions'
 import {
@@ -31,7 +31,9 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
+  DialogFooter,
 } from '@/components/ui/dialog'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -74,7 +76,11 @@ import {
   ShieldMinus,
   FileText,
   Pencil,
+  Ban,
+  Eye,
+  FolderOpen,
 } from 'lucide-react'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import {
   Empty,
   EmptyContent,
@@ -86,12 +92,9 @@ import {
 // ─── Documents level labels ────────────────────────────────────────────────────
 
 const DOCS_LEVEL_CONFIG = {
-  none: { label: 'No access', description: 'Cannot see the documents section' },
-  view: { label: 'View', description: 'Can read non-confidential documents' },
-  manage: {
-    label: 'Manage',
-    description: 'Can upload, edit, and delete non-confidential documents',
-  },
+  none: { label: 'No access', description: 'Cannot see the documents section', icon: Ban },
+  view: { label: 'View', description: 'Can read non-confidential documents', icon: Eye },
+  manage: { label: 'Manage', description: 'Can upload, edit, and delete non-confidential documents', icon: FolderOpen },
 }
 
 // ─── Invite Dialog ─────────────────────────────────────────────────────────────
@@ -280,9 +283,48 @@ export function InviteDialog({ open, onOpenChange }) {
   )
 }
 
+// ─── Animated height wrapper ───────────────────────────────────────────────────
+// Measures the inner content height with ResizeObserver and applies it as an
+// explicit pixel value on the outer wrapper so CSS can transition it.
+
+function AnimatedHeight({ children }) {
+  const outerRef = useRef(null)
+  const innerRef = useRef(null)
+
+  useLayoutEffect(() => {
+    if (outerRef.current && innerRef.current) {
+      outerRef.current.style.height = `${innerRef.current.offsetHeight}px`
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!innerRef.current || !outerRef.current) return
+    const ro = new ResizeObserver(() => {
+      if (outerRef.current && innerRef.current) {
+        outerRef.current.style.height = `${innerRef.current.offsetHeight}px`
+      }
+    })
+    ro.observe(innerRef.current)
+    return () => ro.disconnect()
+  }, [])
+
+  return (
+    <div
+      ref={outerRef}
+      className="overflow-hidden"
+      style={{ transition: 'height 300ms cubic-bezier(0.4, 0, 0.2, 1)' }}
+    >
+      <div ref={innerRef}>{children}</div>
+    </div>
+  )
+}
+
 // ─── Edit Member Dialog ────────────────────────────────────────────────────────
 
 export function EditAccessDialog({ member, open, onOpenChange, onSave }) {
+  const [systemRole, setSystemRole] = useState(
+    member?.system_role === 'admin' ? 'admin' : 'member',
+  )
   const [functionalRole, setFunctionalRole] = useState(
     member?.functional_role || '',
   )
@@ -307,8 +349,8 @@ export function EditAccessDialog({ member, open, onOpenChange, onSave }) {
           ? customRole.trim()
           : functionalRole || member?.functional_role || null
       await onSave(member.id, {
-        system_role: member.system_role,
-        permissions: { documents: docsLevel },
+        system_role: systemRole,
+        permissions: { documents: systemRole === 'admin' ? 'manage' : docsLevel },
         functional_role: resolvedRole,
         roles_and_responsibilities: rolesAndResponsibilities.trim() || null,
       })
@@ -322,126 +364,176 @@ export function EditAccessDialog({ member, open, onOpenChange, onSave }) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle>Edit member</DialogTitle>
-          <DialogDescription>
-            Update details for {member?.full_name || 'this member'}. Roles &amp;
-            responsibilities are only visible to you.
-          </DialogDescription>
+      <DialogContent className="sm:max-w-lg flex flex-col gap-0 p-0 max-h-[85vh] overflow-hidden">
+
+        {/* Fixed header */}
+        <DialogHeader className="px-6 pt-6 pb-4 shrink-0">
+          <div className="flex items-center gap-3">
+            <MemberAvatar
+              name={member?.full_name}
+              email={member?.email}
+              avatarUrl={member?.avatar_url}
+            />
+            <div className="flex-1 min-w-0">
+              <DialogTitle className="text-base truncate">
+                {member?.full_name || member?.email}
+              </DialogTitle>
+              <DialogDescription className="truncate">
+                {member?.email}
+                {member?.functional_role && (
+                  <span className="text-muted-foreground/60"> · {member.functional_role}</span>
+                )}
+              </DialogDescription>
+            </div>
+          </div>
         </DialogHeader>
 
-        <div className="space-y-5">
-          {/* Job title / functional role */}
-          <div className="space-y-2">
-            <Label>Role / Job title</Label>
-            <Select
-              value={isCustom ? '__custom__' : functionalRole}
-              onValueChange={(v) => {
-                setFunctionalRole(v)
-                if (v !== '__custom__') setCustomRole('')
-              }}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select a role" />
-              </SelectTrigger>
-              <SelectContent>
-                {AGENCY_ROLE_GROUPS.map((group) => (
-                  <SelectGroup key={group.label}>
-                    <SelectLabel>{group.label}</SelectLabel>
-                    {group.roles.map((role) => (
-                      <SelectItem key={role} value={role}>
-                        <span className="flex items-center gap-2">
-                          <span className={cn('size-2 rounded-full shrink-0', getRolePalette(role)?.dot ?? 'bg-muted-foreground/30')} />
-                          {role}
-                        </span>
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                ))}
-                <SelectGroup>
-                  <SelectLabel>Other</SelectLabel>
-                  <SelectItem value="__custom__">Custom…</SelectItem>
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-            {(functionalRole === '__custom__' || isCustom) && (
-              <Input
-                placeholder="e.g. Paralegal, Video Producer…"
-                value={customRole || (isCustom ? member.functional_role : '')}
-                onChange={(e) => setCustomRole(e.target.value)}
-                className="mt-2"
-              />
-            )}
-          </div>
+        <div className="h-px bg-border shrink-0" />
 
-          {/* Document access (members only) */}
-          {member?.system_role === 'member' && (
-            <div className="space-y-2">
-              <Label>Document access</Label>
+        {/* Scrollable body */}
+        <div className="overflow-y-auto px-6 py-5">
+          <AnimatedHeight>
+          <Tabs defaultValue="access" className="w-full">
+            <TabsList className="w-full">
+              <TabsTrigger value="access" className="flex-1">Access</TabsTrigger>
+              <TabsTrigger value="details" className="flex-1">Details</TabsTrigger>
+            </TabsList>
+
+            {/* ── Access tab ── */}
+            <TabsContent value="access" className="space-y-5 mt-4">
               <div className="space-y-2">
-                {Object.entries(DOCS_LEVEL_CONFIG).map(([key, cfg]) => (
-                  <button
-                    key={key}
-                    type="button"
-                    onClick={() => setDocsLevel(key)}
-                    className={cn(
-                      'w-full flex items-start gap-3 rounded-lg border px-4 py-3 text-left transition-colors',
-                      docsLevel === key
-                        ? 'border-primary bg-primary/5'
-                        : 'border-border/50 hover:border-border',
-                    )}
-                  >
-                    <div
+                <Label>Access level</Label>
+                <RadioGroup value={systemRole} onValueChange={setSystemRole} className="gap-2">
+                  {INVITE_ROLE_OPTIONS.map((opt) => (
+                    <label
+                      key={opt.value}
+                      htmlFor={`role-${opt.value}`}
                       className={cn(
-                        'mt-0.5 size-4 rounded-full border-2 shrink-0 flex items-center justify-center',
-                        docsLevel === key
-                          ? 'border-primary'
-                          : 'border-muted-foreground/40',
+                        'flex items-start gap-3 rounded-lg border px-4 py-3 cursor-pointer transition-colors',
+                        systemRole === opt.value
+                          ? 'border-primary bg-primary/5'
+                          : 'border-border/50 hover:border-border',
                       )}
                     >
-                      {docsLevel === key && (
-                        <div className="size-2 rounded-full bg-primary" />
-                      )}
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium">{cfg.label}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {cfg.description}
-                      </p>
-                    </div>
-                  </button>
-                ))}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <p className="text-sm font-medium">{opt.label}</p>
+                          <Badge className={opt.palette.badge}>{opt.palette.label}</Badge>
+                        </div>
+                        <p className="text-xs text-muted-foreground">{opt.description}</p>
+                      </div>
+                      <RadioGroupItem value={opt.value} id={`role-${opt.value}`} className="self-start mt-0.5 data-[state=checked]:border-primary" />
+                    </label>
+                  ))}
+                </RadioGroup>
               </div>
-            </div>
-          )}
 
-          {/* Roles & Responsibilities — owner-only internal note */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label>Roles &amp; Responsibilities</Label>
-              <span className="text-[11px] text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
-                Only visible to you
-              </span>
-            </div>
-            <Textarea
-              placeholder="Describe this member's responsibilities, focus areas, or internal notes…"
-              value={rolesAndResponsibilities}
-              onChange={(e) => setRolesAndResponsibilities(e.target.value)}
-              className="min-h-24 resize-none text-sm"
-            />
-          </div>
+              {systemRole === 'member' && (
+                <div className="space-y-2">
+                  <Label>Document access</Label>
+                  <RadioGroup value={docsLevel} onValueChange={setDocsLevel} className="gap-2">
+                    {Object.entries(DOCS_LEVEL_CONFIG).map(([key, cfg]) => (
+                      <label
+                        key={key}
+                        htmlFor={`docs-${key}`}
+                        className={cn(
+                          'flex items-start gap-3 rounded-lg border px-4 py-3 cursor-pointer transition-colors',
+                          docsLevel === key
+                            ? 'border-primary bg-primary/5'
+                            : 'border-border/50 hover:border-border',
+                        )}
+                      >
+                        <cfg.icon className={cn(
+                          'size-4 shrink-0 mt-0.5',
+                          docsLevel === key ? 'text-primary' : 'text-muted-foreground',
+                        )} />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium">{cfg.label}</p>
+                          <p className="text-xs text-muted-foreground">{cfg.description}</p>
+                        </div>
+                        <RadioGroupItem value={key} id={`docs-${key}`} className="self-start mt-0.5 data-[state=checked]:border-primary" />
+                      </label>
+                    ))}
+                  </RadioGroup>
+                </div>
+              )}
+            </TabsContent>
 
-          <div className="flex gap-2 justify-end">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleSave} disabled={saving}>
-              {saving && <Loader2 className="size-4 animate-spin mr-2" />}
-              Save changes
-            </Button>
-          </div>
+            {/* ── Details tab ── */}
+            <TabsContent value="details" className="space-y-5 mt-4">
+              <div className="space-y-2">
+                <Label>Role / Job title</Label>
+                <Select
+                  value={isCustom ? '__custom__' : functionalRole}
+                  onValueChange={(v) => {
+                    setFunctionalRole(v)
+                    if (v !== '__custom__') setCustomRole('')
+                  }}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select a role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {AGENCY_ROLE_GROUPS.map((group) => (
+                      <SelectGroup key={group.label}>
+                        <SelectLabel>{group.label}</SelectLabel>
+                        {group.roles.map((role) => (
+                          <SelectItem key={role} value={role}>
+                            <span className="flex items-center gap-2">
+                              <span className={cn('size-2 rounded-full shrink-0', getRolePalette(role)?.dot ?? 'bg-muted-foreground/30')} />
+                              {role}
+                            </span>
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    ))}
+                    <SelectGroup>
+                      <SelectLabel>Other</SelectLabel>
+                      <SelectItem value="__custom__">Custom…</SelectItem>
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+                {(functionalRole === '__custom__' || isCustom) && (
+                  <Input
+                    placeholder="e.g. Paralegal, Video Producer…"
+                    value={customRole || (isCustom ? member.functional_role : '')}
+                    onChange={(e) => setCustomRole(e.target.value)}
+                    className="mt-2"
+                  />
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label>Roles &amp; Responsibilities</Label>
+                  <span className="text-[11px] text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+                    Only visible to you
+                  </span>
+                </div>
+                <Textarea
+                  placeholder="Describe this member's responsibilities, focus areas, or internal notes…"
+                  value={rolesAndResponsibilities}
+                  onChange={(e) => setRolesAndResponsibilities(e.target.value)}
+                  className="min-h-28 resize-none text-sm"
+                />
+              </div>
+            </TabsContent>
+          </Tabs>
+          </AnimatedHeight>
         </div>
+
+        <div className="h-px bg-border shrink-0" />
+
+        {/* Fixed footer */}
+        <DialogFooter className="px-6 py-4 shrink-0">
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button onClick={handleSave} disabled={saving}>
+            {saving && <Loader2 className="size-4 animate-spin" />}
+            Save changes
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   )
