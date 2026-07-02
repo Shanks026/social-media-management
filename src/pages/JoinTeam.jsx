@@ -5,7 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { supabase } from '@/lib/supabase'
 import { fetchInviteByToken, joinTeam } from '@/api/team'
-import { SYSTEM_ROLE_PALETTE, AGENCY_ROLE_GROUPS } from '@/lib/team-roles'
+import { SYSTEM_ROLE_PALETTE, AGENCY_ROLE_GROUPS, getRolePalette } from '@/lib/team-roles'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/context/AuthContext'
 import { Button } from '@/components/ui/button'
@@ -241,7 +241,12 @@ export default function JoinTeam() {
                     <SelectGroup key={group.label}>
                       <SelectLabel>{group.label}</SelectLabel>
                       {group.roles.map((role) => (
-                        <SelectItem key={role} value={role}>{role}</SelectItem>
+                        <SelectItem key={role} value={role}>
+                          <span className="flex items-center gap-2">
+                            <span className={`size-2 rounded-full shrink-0 ${getRolePalette(role)?.dot ?? 'bg-muted-foreground/30'}`} />
+                            {role}
+                          </span>
+                        </SelectItem>
                       ))}
                     </SelectGroup>
                   ))}

@@ -352,12 +352,13 @@ export async function joinTeam({ token, firstName, lastName, functional_role }) 
  * permissions: { documents: 'none' | 'view' | 'manage' }
  * functional_role: optional string (null = keep current)
  */
-export async function updateMemberAccess(memberId, { system_role, permissions, functional_role }) {
+export async function updateMemberAccess(memberId, { system_role, permissions, functional_role, roles_and_responsibilities }) {
   const { error } = await supabase.rpc('update_member_access', {
     p_member_id: memberId,
     p_system_role: system_role,
     p_permissions: permissions,
     p_functional_role: functional_role ?? null,
+    p_roles_and_responsibilities: roles_and_responsibilities ?? null,
   })
   if (error) throw error
 }

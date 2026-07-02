@@ -59,6 +59,7 @@ import {
   ArrowDown,
   RotateCcw,
   Search,
+  Pencil,
 } from 'lucide-react'
 import {
   useTeamMembers,
@@ -68,8 +69,11 @@ import {
   useRevokeInvite,
   useRestoreMember,
   useDeleteMemberPermanently,
+  updateMemberAccess,
+  teamKeys,
 } from '@/api/team'
-import { InviteDialog } from './settings/TeamSettings'
+import { useQueryClient } from '@tanstack/react-query'
+import { InviteDialog, EditAccessDialog } from './settings/TeamSettings'
 import { formatDate } from '@/lib/helper'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
@@ -135,8 +139,9 @@ const columnHelper = createColumnHelper()
 
 export default function TeamPage() {
   const { setHeader } = useHeader()
-  const { user } = useAuth()
+  const { user, workspaceUserId } = useAuth()
   const { canManageTeam } = usePermissions()
+  const queryClient = useQueryClient()
 
   const [sorting, setSorting] = useState([])
   const [globalFilter, setGlobalFilter] = useState('')
@@ -144,6 +149,7 @@ export default function TeamPage() {
   const [inviteOpen, setInviteOpen] = useState(false)
   const [removingMember, setRemovingMember] = useState(null)
   const [deletingMember, setDeletingMember] = useState(null)
+  const [editingMember, setEditingMember] = useState(null)
 
   const { data: members = [], isLoading: membersLoading } = useTeamMembers()
   const { data: pendingInvites = [] } = usePendingInvites()
@@ -203,6 +209,12 @@ export default function TeamPage() {
       setDeletingMember(null)
     }
   }, [deletingMember, deleteMemberPermanently])
+
+  const handleSaveAccess = useCallback(async (memberId, payload) => {
+    await updateMemberAccess(memberId, payload)
+    queryClient.invalidateQueries({ queryKey: teamKeys.members(workspaceUserId) })
+    toast.success('Member updated')
+  }, [queryClient, workspaceUserId])
 
   const handleCopyInviteLink = useCallback((token) => {
     const baseUrl = import.meta.env.VITE_APP_URL || window.location.origin
@@ -290,13 +302,34 @@ export default function TeamPage() {
         const funcPalette = m.functional_role ? getRolePalette(m.functional_role) : null
         if (!funcPalette) return <span className="text-xs text-muted-foreground">—</span>
         return (
-          <Badge variant="outline" className="gap-1.5">
+          <Badge variant="outline" className="gap-1.5 font-normal">
             <span className={cn('size-1.5 rounded-full shrink-0', funcPalette.dot)} />
             {m.functional_role}
           </Badge>
         )
       },
     }),
+
+    ...(canManageTeam ? [columnHelper.accessor('roles_and_responsibilities', {
+      id: 'roles_responsibilities',
+      header: () => <span className="text-xs font-medium text-muted-foreground">Roles &amp; Responsibilities</span>,
+      cell: ({ getValue }) => {
+        const val = getValue()
+        if (!val) return <span className="text-xs text-muted-foreground">—</span>
+        return (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="text-xs text-muted-foreground truncate max-w-52 block cursor-default">
+                {val}
+              </span>
+            </TooltipTrigger>
+            <TooltipContent side="top" className="max-w-72 whitespace-pre-wrap">
+              {val}
+            </TooltipContent>
+          </Tooltip>
+        )
+      },
+    })] : []),
 
     columnHelper.accessor('joined_at', {
       id: 'joined',
@@ -359,7 +392,20 @@ export default function TeamPage() {
 
         if (canManageTeam && !isOwner && !isSelf) {
           return (
-            <div className="flex justify-end">
+            <div className="flex items-center justify-end gap-0.5">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-8 text-muted-foreground hover:text-foreground"
+                    onClick={() => setEditingMember(m)}
+                  >
+                    <Pencil className="size-3.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Edit member</TooltipContent>
+              </Tooltip>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
@@ -615,6 +661,15 @@ export default function TeamPage() {
 
           {/* ── Dialogs ── */}
           <InviteDialog open={inviteOpen} onOpenChange={setInviteOpen} />
+
+          {editingMember && (
+            <EditAccessDialog
+              member={editingMember}
+              open={!!editingMember}
+              onOpenChange={(v) => { if (!v) setEditingMember(null) }}
+              onSave={handleSaveAccess}
+            />
+          )}
 
           <AlertDialog
             open={!!removingMember}
