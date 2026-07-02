@@ -46,7 +46,7 @@ import { usePermissions } from '@/api/usePermissions'
 import { useCampaignTransactions } from '@/api/transactions'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { fetchCampaignMeetings, deleteMeeting } from '@/api/meetings'
-import { fetchCampaignNotes } from '@/api/notes'
+import { useTasks } from '@/api/tasks'
 import { AddTransactionDialog } from '@/pages/finance/AddTransactionDialog'
 import DraftPostForm from '@/pages/posts/DraftPostForm'
 import { LinkPostsToCampaignDialog } from '@/components/campaigns/LinkPostsToCampaignDialog'
@@ -54,9 +54,9 @@ import { CampaignDialog } from '@/components/campaigns/CampaignDialog'
 import { CreateInvoiceDialog } from '@/pages/finance/CreateInvoiceDialog'
 import CampaignReportPDF from '@/components/campaigns/CampaignReportPDF'
 import MeetingRow from '@/components/MeetingRow'
-import NoteRow from '@/components/NoteRow'
+import TaskRow from '@/components/TaskRow'
 import CreateMeetingDialog from '@/components/CreateMeetingDialog'
-import CreateNoteDialog from '@/components/CreateNoteDialog'
+import CreateTaskDialog from '@/components/tasks/CreateTaskDialog'
 import StatusBadge from '@/components/StatusBadge'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -191,11 +191,7 @@ export default function CampaignDetailPage() {
     enabled: !!campaignId,
   })
 
-  const { data: campaignNotes = [], isLoading: notesLoading } = useQuery({
-    queryKey: ['campaign-notes', campaignId],
-    queryFn: () => fetchCampaignNotes(campaignId),
-    enabled: !!campaignId,
-  })
+  const { data: campaignNotes = [], isLoading: notesLoading } = useTasks({ campaignId })
 
   const { mutate: markMeetingDone, isPending: isCompletingMeeting } =
     useMutation({
@@ -1076,11 +1072,11 @@ export default function CampaignDetailPage() {
                     <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground" onClick={() => notesCarouselApi?.scrollNext()}>
                       <ChevronRight className="size-4" />
                     </Button>
-                    <CreateNoteDialog clientId={campaign.client_id} lockClient={true} campaignId={campaignId} campaignName={campaign.name}>
+                    <CreateTaskDialog clientId={campaign.client_id} lockClient={true} campaignId={campaignId} campaignName={campaign.name}>
                       <Button variant="ghost" size="icon" className="h-8 w-8">
                         <Plus className="h-4 w-4" />
                       </Button>
-                    </CreateNoteDialog>
+                    </CreateTaskDialog>
                     <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" onClick={() => navigate('/operations/tasks')}>
                       <ArrowUpRight className="h-4 w-4" />
                     </Button>
@@ -1104,7 +1100,7 @@ export default function CampaignDetailPage() {
                       <CarouselContent>
                         {campaignNotes.filter((n) => n.status !== 'ARCHIVED').map((note) => (
                           <CarouselItem key={note.id} className="basis-[340px]">
-                            <NoteRow note={note} variant="client-card" />
+                            <TaskRow task={note} variant="client-card" />
                           </CarouselItem>
                         ))}
                       </CarouselContent>

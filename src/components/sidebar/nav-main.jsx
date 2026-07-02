@@ -10,7 +10,7 @@ import {
   Megaphone,
   Layers,
   Send,
-  Bell,
+  ListTodo,
   NotebookPen,
   Video,
   FolderOpen,
@@ -59,6 +59,7 @@ import {
 import { useSubscription } from '@/api/useSubscription'
 import { usePermissions } from '@/api/usePermissions'
 import { usePendingApprovalsCount, useMySubmissionsCount } from '@/api/posts'
+import { useMyOverdueTaskCount } from '@/api/tasks'
 import {
   Tooltip,
   TooltipContent,
@@ -104,12 +105,12 @@ const BASE_NAV_ITEMS = [
     requiresFlag: 'campaigns',
   },
   // { title: 'Ads', url: '/ads', icon: BadgeDollarSign },
+  { title: 'Tasks & Todos', url: '/operations/tasks', icon: ListTodo, showTodoCount: true },
   {
     title: 'Operations',
     url: '/operations',
     icon: Layers,
     items: [
-      { title: 'Tasks & Reminders', url: '/operations/tasks', icon: Bell },
       { title: 'Notes', url: '/operations/notes', icon: NotebookPen },
       { title: 'Meetings', url: '/operations/meetings', icon: Video },
       { title: 'Documents', url: '/documents', icon: FolderOpen, requiresPermission: 'hasDocuments' },
@@ -207,6 +208,7 @@ export function NavMain() {
   const perms = usePermissions()
   const { data: approvalCount = 0 } = usePendingApprovalsCount()
   const { data: submissionsChangesCount = 0 } = useMySubmissionsCount('CHANGES_REQUESTED')
+  const { data: overdueCount = 0 } = useMyOverdueTaskCount()
   const [openPopover, setOpenPopover] = useState(null)
   const [suppressedTooltip, setSuppressedTooltip] = useState(null)
 
@@ -365,6 +367,7 @@ export function NavMain() {
 
             const itemCount = item.showCount ? approvalCount : 0
             const changesCount = item.showChangesCount ? submissionsChangesCount : 0
+            const myTodos = item.showTodoCount ? overdueCount : 0
             return (
               <SidebarMenuItem key={item.title}>
                 <SidebarMenuButton
@@ -383,6 +386,11 @@ export function NavMain() {
                     {!isCollapsed && changesCount > 0 && (
                       <span className="ml-auto flex h-4 min-w-4 items-center justify-center rounded-full bg-pink-500 px-1 text-[10px] font-bold text-white">
                         {changesCount > 99 ? '99+' : changesCount}
+                      </span>
+                    )}
+                    {!isCollapsed && myTodos > 0 && (
+                      <span className="ml-auto flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-500 px-1 text-[10px] font-bold text-white">
+                        {myTodos > 99 ? '99+' : myTodos}
                       </span>
                     )}
                     {!isCollapsed && isTopLocked && (

@@ -53,11 +53,11 @@ import { formatCurrency } from '@/utils/finance'
 import { format } from 'date-fns'
 import { getPublishState } from '@/lib/helper'
 import MeetingRow from '@/components/MeetingRow'
-import { fetchClientNotes, fetchInternalClientNotes } from '@/api/notes'
+import { useTasks } from '@/api/tasks'
 
 import CreateMeetingDialog from '@/components/CreateMeetingDialog'
-import CreateNoteDialog from '@/components/CreateNoteDialog'
-import NoteRow from '@/components/NoteRow'
+import CreateTaskDialog from '@/components/tasks/CreateTaskDialog'
+import TaskRow from '@/components/TaskRow'
 import ClientWeekTimeline from './ClientWeekTimeline'
 
 const platformChartConfig = {
@@ -149,14 +149,7 @@ export default function OverviewTab({ client }) {
       queryFn: () => fetchUpcomingMeetings(client.id, 50),
     })
 
-  // Notes — internal client also pulls in legacy notes with client_id IS NULL
-  const { data: notes = [], isLoading: isLoadingNotes } = useQuery({
-    queryKey: ['client-notes', client.id],
-    queryFn: () =>
-      client.is_internal
-        ? fetchInternalClientNotes(client.id)
-        : fetchClientNotes(client.id),
-  })
+  const { data: notes = [], isLoading: isLoadingNotes } = useTasks({ clientId: client.id })
 
   // Toast logic for reminders
   const notifiedNotesRef = React.useRef(
@@ -166,7 +159,7 @@ export default function OverviewTab({ client }) {
     if (!notes || notes.length === 0) return
 
     notes.forEach((note) => {
-      if (note.status === 'TODO' && note.due_at) {
+      if ((note.status === 'TODO' || note.status === 'IN_PROGRESS') && note.due_at) {
         const dueDate = new Date(note.due_at)
         const timeDiffMs = dueDate.getTime() - new Date().getTime()
         const hoursDiff = timeDiffMs / (1000 * 60 * 60)
@@ -312,11 +305,11 @@ export default function OverviewTab({ client }) {
                     )}
                   </Tooltip>
                 ) : (
-                  <CreateNoteDialog clientId={client.id} lockClient={true}>
+                  <CreateTaskDialog clientId={client.id} lockClient={true}>
                     <Button variant="ghost" size="icon" className="h-8 w-8">
                       <Plus className="h-4 w-4" />
                     </Button>
-                  </CreateNoteDialog>
+                  </CreateTaskDialog>
                 )}
               </div>
             </CardHeader>
@@ -404,9 +397,9 @@ export default function OverviewTab({ client }) {
                   <div className="flex flex-col flex-1">
                     <div className="flex flex-col gap-3">
                       {visibleNotes.map((note) => (
-                        <NoteRow
+                        <TaskRow
                           key={note.id}
-                          note={note}
+                          task={note}
                           variant="client-card"
                         />
                       ))}
@@ -414,7 +407,7 @@ export default function OverviewTab({ client }) {
                     <div className="flex items-center justify-between mt-auto pt-3 border-t border-dashed border-border/40">
                       {extraNotes > 0 ? (
                         <span className="text-xs text-muted-foreground">
-                          +{extraNotes} more note{extraNotes !== 1 && 's'}
+                          +{extraNotes} more task{extraNotes !== 1 && 's'}
                         </span>
                       ) : (
                         <span />
@@ -425,7 +418,7 @@ export default function OverviewTab({ client }) {
                         className="h-7 text-xs px-2 text-muted-foreground hover:text-foreground"
                         onClick={() => navigate('/operations/tasks')}
                       >
-                        View all notes <ArrowUpRight className="ml-1 h-3 w-3" />
+                        View all tasks <ArrowUpRight className="ml-1 h-3 w-3" />
                       </Button>
                     </div>
                   </div>

@@ -3,14 +3,15 @@ import { format } from 'date-fns'
 import {
   Bell,
   Circle,
+  CircleDashed,
   CheckCircle2,
   Archive,
   RotateCcw,
   Pencil,
   Trash2,
-  Building2,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { ClientAvatar } from '@/components/tasks/ClientAvatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -29,50 +30,40 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { updateNoteStatus, deleteNote } from '@/api/notes'
+import { updateTaskStatus, deleteTask } from '@/api/tasks'
 import { toast } from 'sonner'
-import EditNoteDialog from '@/components/EditNoteDialog'
+import EditTaskDialog from '@/components/tasks/EditTaskDialog'
 
-// ─── Lifecycle ────────────────────────────────────────────────────────────────
-//  TODO  →  DONE  (check circle)
-//  TODO  →  ARCHIVED  (archive button)
-//  DONE  →  TODO  (uncheck)
-//  DONE  →  ARCHIVED  (archive button)
-//  ARCHIVED  →  TODO  (restore button)
+// Re-export ClientAvatar from its canonical location so existing import sites still work
+export { ClientAvatar }
 
-// ─── Client Avatar ────────────────────────────────────────────────────────────
+// ─── Priority dot config (compact indicator for row/card modes) ───────────────
 
-export function ClientAvatar({ client, size = 'sm' }) {
-  const dim = size === 'sm' ? 'size-5' : 'size-7'
-  if (client?.logo_url) {
-    return (
-      <img
-        src={client.logo_url}
-        alt=""
-        className={`${dim} rounded-full object-cover ring-1 ring-border shrink-0`}
-      />
-    )
-  }
-  return (
-    <div
-      className={`${dim} rounded-full bg-muted flex items-center justify-center shrink-0`}
-    >
-      <Building2 className="size-3 text-muted-foreground" />
-    </div>
-  )
+const PRIORITY_DOT = {
+  URGENT: 'bg-red-500',
+  HIGH: 'bg-amber-500',
+  LOW: 'bg-zinc-400',
 }
 
-// ─── NoteRow ──────────────────────────────────────────────────────────────────
+// ─── Status icon helper ───────────────────────────────────────────────────────
+
+function StatusIcon({ status, className }) {
+  if (status === 'COMPLETED') return <CheckCircle2 className={cn('size-5 text-emerald-500 stroke-[2]', className)} />
+  if (status === 'IN_PROGRESS') return <CircleDashed className={cn('size-5 text-amber-500 stroke-[2]', className)} />
+  return <Circle className={cn('size-5 stroke-[2]', className)} />
+}
+
+// ─── TaskRow ──────────────────────────────────────────────────────────────────
 
 /**
  * Props:
- *  - note        — the note object
+ *  - task        — the task object
  *  - clientMap   — { [clientId]: client } — optional, omit on OverviewTab
  *  - showClient  — boolean, show the client chip (global page only)
- *  - variant       — 'row' (default), 'dashboard-card' (dashboard), 'client-card' (client explicit card)
+ *  - variant       — 'row' (default), 'dashboard-card' (dashboard), 'client-card' (client/campaign card)
  */
-export default function NoteRow({
-  note,
+export default function TaskRow({
+  task,
   clientMap = {},
   showClient = false,
   variant = 'row',
@@ -83,56 +74,50 @@ export default function NoteRow({
   const [deleteOpen, setDeleteOpen] = useState(false)
 
   const invalidate = () => {
-    queryClient.invalidateQueries({ queryKey: ['global-notes'] })
-    queryClient.invalidateQueries({
-      queryKey: ['client-notes', note.client_id],
-    })
-    queryClient.invalidateQueries({ queryKey: ['notes', 'week-timeline'] })
-    if (note.campaign_id) {
-      queryClient.invalidateQueries({
-        queryKey: ['campaign-notes', note.campaign_id],
-      })
-    }
+    queryClient.invalidateQueries({ queryKey: ['tasks', 'list'], exact: false })
   }
 
   const STATUS_TOASTS = {
-    DONE: 'Note marked as done',
-    TODO: 'Note reopened',
-    ARCHIVED: 'Note archived',
+    IN_PROGRESS: 'Task started',
+    COMPLETED: 'Task completed',
+    TODO: 'Task reopened',
+    ARCHIVED: 'Task archived',
   }
 
   const { mutate: setStatus, isPending: isSettingStatus } = useMutation({
-    mutationFn: (newStatus) => updateNoteStatus(note.id, newStatus),
+    mutationFn: (newStatus) => updateTaskStatus(task.id, newStatus),
     onSuccess: (_, newStatus) => {
       invalidate()
-      toast.success(STATUS_TOASTS[newStatus] ?? 'Note updated')
+      toast.success(STATUS_TOASTS[newStatus] ?? 'Task updated')
     },
-    onError: (err) => toast.error('Failed to update note: ' + err.message),
+    onError: (err) => toast.error('Failed to update task: ' + err.message),
   })
 
   const { mutate: remove, isPending: isDeleting } = useMutation({
-    mutationFn: () => deleteNote(note.id),
+    mutationFn: () => deleteTask(task.id),
     onSuccess: () => {
       invalidate()
-      toast.success('Note deleted')
+      toast.success('Task deleted')
     },
-    onError: (err) => toast.error('Failed to delete note: ' + err.message),
+    onError: (err) => toast.error('Failed to delete task: ' + err.message),
   })
 
   const isBusy = isSettingStatus || isDeleting
 
   const overdue = useMemo(() => {
-    if (!note.due_at || note.status !== 'TODO') return false
-    return new Date(note.due_at).getTime() < Date.now()
-  }, [note.due_at, note.status])
+    if (!task.due_at) return false
+    if (task.status !== 'TODO' && task.status !== 'IN_PROGRESS') return false
+    return new Date(task.due_at).getTime() < Date.now()
+  }, [task.due_at, task.status])
 
-  const client = clientMap[note.client_id]
+  const client = clientMap[task.client_id]
 
   const handleCircleClick = () => {
-    if (note.status === 'TODO') setStatus('DONE')
-    else if (note.status === 'DONE') setStatus('TODO')
+    if (task.status === 'COMPLETED') setStatus('TODO')
+    else if (task.status !== 'ARCHIVED') setStatus('COMPLETED')
   }
 
+  const isActive = task.status === 'TODO' || task.status === 'IN_PROGRESS'
   const isCard = variant === 'dashboard-card' || variant === 'client-card'
 
   // ─── Card Modes ───────────────────────────────────────────────────────────
@@ -144,36 +129,34 @@ export default function NoteRow({
           <div className="px-5 pt-5 pb-4 flex flex-col flex-1">
             {/* Title row */}
             <div className="flex items-start gap-3 mb-1">
-              {note.status !== 'ARCHIVED' ? (
+              {task.status !== 'ARCHIVED' ? (
                 <button
                   onClick={handleCircleClick}
                   disabled={isBusy}
                   className="mt-0.5 shrink-0 text-foreground hover:text-primary transition-colors disabled:opacity-50"
                 >
-                  {note.status === 'TODO' ? (
-                    <Circle className="size-5 stroke-[2]" />
-                  ) : (
-                    <CheckCircle2 className="size-5 text-emerald-500 stroke-[2]" />
-                  )}
+                  <StatusIcon status={task.status} />
                 </button>
               ) : (
                 <div className="size-5 mt-0.5 shrink-0" />
               )}
               <p
                 className={`font-medium text-sm leading-snug ${
-                  note.status !== 'TODO'
+                  !isActive && task.status !== 'ARCHIVED'
                     ? 'line-through text-muted-foreground'
-                    : 'text-foreground'
+                    : task.status === 'ARCHIVED'
+                      ? 'text-muted-foreground'
+                      : 'text-foreground'
                 }`}
               >
-                {note.title}
+                {task.title}
               </p>
             </div>
 
             {/* Description */}
-            {note.content && (
+            {task.description && (
               <p className="text-xs text-muted-foreground line-clamp-2 pl-8">
-                {note.content}
+                {task.description}
               </p>
             )}
 
@@ -206,7 +189,7 @@ export default function NoteRow({
                 </div>
               ) : variant === 'client-card' ? (
                 <div className="flex items-center gap-1 -ml-3">
-                  {note.status === 'ARCHIVED' ? (
+                  {task.status === 'ARCHIVED' ? (
                     <Button
                       variant="ghost"
                       size="icon"
@@ -229,7 +212,7 @@ export default function NoteRow({
                       <Archive className="size-3.5" />
                     </Button>
                   )}
-                  {note.status !== 'ARCHIVED' && (
+                  {task.status !== 'ARCHIVED' && (
                     <Button
                       variant="ghost"
                       size="icon"
@@ -262,11 +245,11 @@ export default function NoteRow({
                 }`}
               >
                 <Bell className="size-3.5 shrink-0" />
-                {note.due_at ? (
+                {task.due_at ? (
                   <>
-                    <span>{format(new Date(note.due_at), 'dd MMMM yyyy')}</span>
+                    <span>{format(new Date(task.due_at), 'dd MMMM yyyy')}</span>
                     <span className="w-1 h-1 rounded-full bg-current opacity-50" />
-                    <span>{format(new Date(note.due_at), 'h:mma')}</span>
+                    <span>{format(new Date(task.due_at), 'h:mma')}</span>
                     {overdue && (
                       <Badge
                         variant="destructive"
@@ -296,7 +279,7 @@ export default function NoteRow({
               <div className="overflow-hidden">
                 <div className="flex items-center justify-between px-4 py-2 border-t border-border/40 bg-muted/30">
                   <div className="flex items-center gap-1">
-                    {note.status === 'ARCHIVED' ? (
+                    {task.status === 'ARCHIVED' ? (
                       <Tooltip delayDuration={400}>
                         <TooltipTrigger asChild>
                           <Button
@@ -331,7 +314,7 @@ export default function NoteRow({
                         </TooltipContent>
                       </Tooltip>
                     )}
-                    {note.status !== 'ARCHIVED' && (
+                    {task.status !== 'ARCHIVED' && (
                       <Tooltip delayDuration={400}>
                         <TooltipTrigger asChild>
                           <Button
@@ -372,8 +355,8 @@ export default function NoteRow({
           )}
         </div>
 
-        <EditNoteDialog
-          note={note}
+        <EditTaskDialog
+          task={task}
           open={editOpen}
           onOpenChange={setEditOpen}
         />
@@ -381,9 +364,9 @@ export default function NoteRow({
         <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Delete note?</AlertDialogTitle>
+              <AlertDialogTitle>Delete task?</AlertDialogTitle>
               <AlertDialogDescription>
-                "{note.title}" will be permanently deleted. This cannot be
+                "{task.title}" will be permanently deleted. This cannot be
                 undone.
               </AlertDialogDescription>
             </AlertDialogHeader>
@@ -405,49 +388,53 @@ export default function NoteRow({
     )
   }
 
-  // ─── Row Mode (Client page / Notes page) ─────────────────────────────────
+  // ─── Row Mode ─────────────────────────────────────────────────────────────
   return (
     <>
       <div className="flex items-start gap-3 px-4 py-3 hover:bg-muted/40 transition-colors rounded-lg group">
-        {note.status !== 'ARCHIVED' ? (
+        {task.status !== 'ARCHIVED' ? (
           <button
             onClick={handleCircleClick}
             disabled={isBusy}
             className="mt-0.5 shrink-0 text-muted-foreground hover:text-primary transition-colors disabled:opacity-50"
           >
-            {note.status === 'TODO' ? (
-              <Circle className="size-5" />
-            ) : (
-              <CheckCircle2 className="size-5 text-emerald-500" />
-            )}
+            <StatusIcon status={task.status} />
           </button>
         ) : (
           <div className="size-5 mt-0.5 shrink-0" />
         )}
 
         <div
-          className={`min-w-0 flex-1 ${note.status !== 'TODO' ? 'opacity-50' : ''}`}
+          className={`min-w-0 flex-1 ${!isActive && task.status !== 'ARCHIVED' ? 'opacity-50' : ''}`}
         >
-          <p
-            className={`font-medium text-sm ${
-              note.status !== 'TODO' ? 'line-through text-muted-foreground' : ''
-            }`}
-          >
-            {note.title}
-          </p>
-          {note.content && (
+          <div className="flex items-center gap-2 min-w-0">
+            <p
+              className={`font-medium text-sm truncate ${
+                task.status === 'COMPLETED' ? 'line-through text-muted-foreground' : ''
+              }`}
+            >
+              {task.title}
+            </p>
+            {task.priority && PRIORITY_DOT[task.priority] && (
+              <span
+                className={cn('size-1.5 rounded-full shrink-0', PRIORITY_DOT[task.priority])}
+                title={task.priority.charAt(0) + task.priority.slice(1).toLowerCase()}
+              />
+            )}
+          </div>
+          {task.description && (
             <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
-              {note.content}
+              {task.description}
             </p>
           )}
-          {note.due_at && (
+          {task.due_at && (
             <div
               className={`flex items-center gap-1 mt-1.5 text-[10px] font-medium ${
                 overdue ? 'text-destructive' : 'text-muted-foreground'
               }`}
             >
               <Bell className="size-3" />
-              {format(new Date(note.due_at), 'MMM d, h:mm a')}
+              {format(new Date(task.due_at), 'MMM d, h:mm a')}
               {overdue && (
                 <Badge
                   variant="destructive"
@@ -475,7 +462,7 @@ export default function NoteRow({
         )}
 
         <div className="flex items-center gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-          {note.status === 'ARCHIVED' ? (
+          {task.status === 'ARCHIVED' ? (
             <Button
               variant="ghost"
               size="icon"
@@ -499,7 +486,7 @@ export default function NoteRow({
             </Button>
           )}
 
-          {note.status !== 'ARCHIVED' && (
+          {task.status !== 'ARCHIVED' && (
             <Button
               variant="ghost"
               size="icon"
@@ -525,14 +512,14 @@ export default function NoteRow({
         </div>
       </div>
 
-      <EditNoteDialog note={note} open={editOpen} onOpenChange={setEditOpen} />
+      <EditTaskDialog task={task} open={editOpen} onOpenChange={setEditOpen} />
 
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete note?</AlertDialogTitle>
+            <AlertDialogTitle>Delete task?</AlertDialogTitle>
             <AlertDialogDescription>
-              "{note.title}" will be permanently deleted. This cannot be undone.
+              "{task.title}" will be permanently deleted. This cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

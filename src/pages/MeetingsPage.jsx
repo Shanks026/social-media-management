@@ -59,7 +59,7 @@ import {
   unmarkMeetingCompleted,
 } from '@/api/meetings'
 import CreateMeetingDialog from '@/components/CreateMeetingDialog'
-import { ClientAvatar } from '@/components/NoteRow'
+import { ClientAvatar } from '@/components/TaskRow'
 import {
   Tooltip,
   TooltipContent,

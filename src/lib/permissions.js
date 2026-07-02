@@ -44,6 +44,7 @@ export function resolveCapabilities({ role, permissions }) {
     canCreateCampaigns: full,
     canSendDeliverables: full,
     viewConfidentialDocs: full,
+    canAssignTasks: full,
 
     // Per-member tunable (owner/admin always 'manage')
     documents: full ? 'manage' : (permissions?.documents ?? 'view'),
