@@ -100,7 +100,7 @@ export default function TasksTab({ clientId }) {
           <Skeleton className="h-6 w-32" />
           <Skeleton className="h-8 w-24" />
         </div>
-        <div className="grid gap-4 grid-cols-[repeat(auto-fill,minmax(min(100%,360px),1fr))]">
+        <div className="grid gap-4 grid-cols-[repeat(auto-fill,minmax(min(100%,420px),1fr))]">
           {[...Array(3)].map((_, i) => (
             <Skeleton key={i} className="h-52 rounded-xl" />
           ))}
@@ -211,7 +211,7 @@ export default function TasksTab({ clientId }) {
           </p>
         </div>
       ) : (
-        <div className="grid gap-4 grid-cols-[repeat(auto-fill,minmax(min(100%,360px),1fr))]">
+        <div className="grid gap-4 grid-cols-[repeat(auto-fill,minmax(min(100%,420px),1fr))]">
           {filteredTasks.map((task) => (
             <TaskCard
               key={task.id}

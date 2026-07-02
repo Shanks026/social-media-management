@@ -1105,7 +1105,7 @@ export default function CampaignDetailPage() {
                 <CardContent className="pt-0">
                   {notesLoading ? (
                     <div className="flex gap-3">
-                      {[1, 2, 3].map((i) => <Skeleton key={i} className="w-80 h-44 rounded-xl shrink-0" />)}
+                      {[1, 2, 3].map((i) => <Skeleton key={i} className="w-[480px] h-44 rounded-xl shrink-0" />)}
                     </div>
                   ) : campaignNotes.filter((n) => n.status !== 'ARCHIVED').length === 0 ? (
                     <div className="flex flex-col items-center justify-center text-center py-10 gap-2 rounded-xl border border-dashed border-border/50">
@@ -1119,7 +1119,7 @@ export default function CampaignDetailPage() {
                     <Carousel setApi={setNotesCarouselApi} opts={{ align: 'start', dragFree: true }}>
                       <CarouselContent>
                         {campaignNotes.filter((n) => n.status !== 'ARCHIVED').map((note) => (
-                          <CarouselItem key={note.id} className="basis-[340px]">
+                          <CarouselItem key={note.id} className="basis-[480px]">
                             <TaskCard task={note} clientMap={clientMap} memberMap={memberMap} currentUserId={user?.id} />
                           </CarouselItem>
                         ))}
