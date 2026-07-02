@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/context/AuthContext'
@@ -17,22 +17,23 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 
-import TaskRow from '@/components/TaskRow'
 import MeetingRow from '@/components/MeetingRow'
 import CreateMeetingDialog from '@/components/CreateMeetingDialog'
 import CreateTaskDialog from '@/components/tasks/CreateTaskDialog'
+import TaskCard from '@/components/tasks/TaskCard'
 import { deleteMeeting } from '@/api/meetings'
-import { useTasks } from '@/api/tasks'
+import { useMyTasks } from '@/api/tasks'
+import { useTeamMembers } from '@/api/team'
 import { useSubscription } from '@/api/useSubscription'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 
 // ─── MAIN COMPONENT ───────────────────────────────────────────────────────────
 
 export default function DashboardMeetingsNotes() {
-  const [activeTab, setActiveTab] = useState('meetings')
+  const [activeTab, setActiveTab] = useState('notes')
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const { workspaceUserId } = useAuth()
+  const { workspaceUserId, user } = useAuth()
   const { data: sub } = useSubscription()
   const hasNoExternalClients = (sub?.client_count ?? 1) === 0
 
@@ -83,22 +84,26 @@ export default function DashboardMeetingsNotes() {
         toast.error('Failed to update meeting: ' + error.message),
     })
 
-  const { data: allTasks = [], isLoading: loadingTasks } = useTasks()
+  const { data: activeTasks = [], isLoading: loadingTasks } = useMyTasks()
+  const { data: teamMembers = [] } = useTeamMembers()
 
-  // Dashboard shows only active tasks (TODO + IN_PROGRESS), ordered by due date
-  const activeTasks = allTasks
-    .filter((t) => t.status === 'TODO' || t.status === 'IN_PROGRESS')
-    .sort((a, b) => {
-      if (!a.due_at && !b.due_at) return 0
-      if (!a.due_at) return 1
-      if (!b.due_at) return -1
-      return new Date(a.due_at) - new Date(b.due_at)
-    })
+  const memberMap = useMemo(() => {
+    const map = Object.fromEntries(teamMembers.map((m) => [m.member_user_id, m]))
+    if (user && !map[user.id]) {
+      map[user.id] = {
+        member_user_id: user.id,
+        full_name: user.user_metadata?.full_name || user.user_metadata?.name || null,
+        email: user.email,
+        avatar_url: user.user_metadata?.avatar_url || null,
+      }
+    }
+    return map
+  }, [teamMembers, user])
 
   const visibleMeetings = upcomingMeetings.slice(0, 3)
   const extraMeetings = upcomingMeetings.length - 3
-  const visibleTasks = activeTasks.slice(0, 3)
-  const extraTasks = activeTasks.length - 3
+  const visibleTasks = activeTasks.slice(0, 2)
+  const extraTasks = activeTasks.length - 2
 
   return (
     <Card className="border-none shadow-sm ring-1 ring-border/50 bg-card/50 dark:bg-card/30 flex flex-col h-full">
@@ -109,11 +114,11 @@ export default function DashboardMeetingsNotes() {
       >
         <CardHeader className="pb-3 flex flex-row items-center justify-between space-y-0 shrink-0">
           <TabsList className="h-9">
-            <TabsTrigger value="meetings" className="gap-1.5 text-xs">
-              <CalendarIcon className="size-3.5" /> Meetings
-            </TabsTrigger>
             <TabsTrigger value="notes" className="gap-1.5 text-xs">
               <ClipboardCheck className="size-3.5" /> Tasks
+            </TabsTrigger>
+            <TabsTrigger value="meetings" className="gap-1.5 text-xs">
+              <CalendarIcon className="size-3.5" /> Meetings
             </TabsTrigger>
           </TabsList>
 
@@ -241,13 +246,12 @@ export default function DashboardMeetingsNotes() {
               <div className="flex flex-col flex-1">
                 <div className="flex flex-col gap-3">
                   {visibleTasks.map((task) => (
-                    <TaskRow
+                    <TaskCard
                       key={task.id}
                       task={task}
                       clientMap={clientsMap}
-                      showClient={true}
-                      variant="dashboard-card"
-                      alwaysShowActions
+                      memberMap={memberMap}
+                      currentUserId={user?.id}
                     />
                   ))}
                 </div>

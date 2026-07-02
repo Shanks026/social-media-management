@@ -12,6 +12,7 @@ import {
   Plus,
   CircleDollarSign,
   ChevronDown,
+  ListTodo,
 } from 'lucide-react'
 
 // UI Components
@@ -39,6 +40,7 @@ import { ClientBillingTab } from './ClientBillingTab'
 import DocumentsTab from '@/components/documents/DocumentsTab'
 import { CampaignTab } from '@/components/campaigns/CampaignTab'
 import { ProposalTab } from '@/components/proposals/ProposalTab'
+import TasksTab from '@/components/tasks/TasksTab'
 import { usePermissions } from '@/api/usePermissions'
 
 export default function ClientProfileView({ client }) {
@@ -77,6 +79,7 @@ export default function ClientProfileView({ client }) {
   const TABS_CONFIG = [
     { value: 'overview', label: 'Overview', icon: PieChart },
     { value: 'workflow', label: 'Workflow', icon: LayoutGrid },
+    { value: 'tasks', label: 'Tasks', icon: ListTodo },
     { value: 'campaigns', label: 'Campaigns', icon: Megaphone },
     ...(!client.is_internal && finance
       ? [{ value: 'billing', label: 'Billing', icon: Receipt }]
@@ -198,6 +201,13 @@ export default function ClientProfileView({ client }) {
             className="mt-2 focus-visible:ring-0 outline-none data-[state=active]:animate-in data-[state=active]:fade-in data-[state=active]:duration-300"
           >
             <WorkflowTab client={client} />
+          </TabsContent>
+
+          <TabsContent
+            value="tasks"
+            className="mt-2 focus-visible:ring-0 outline-none data-[state=active]:animate-in data-[state=active]:fade-in data-[state=active]:duration-300"
+          >
+            <TasksTab clientId={client.id} />
           </TabsContent>
 
           {!client.is_internal && finance && (

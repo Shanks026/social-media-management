@@ -19,7 +19,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { ClientAvatar } from '@/components/TaskRow'
+import { ClientAvatar } from '@/components/tasks/ClientAvatar'
 import { getNoteExcerpt } from '@/components/notes/noteContent'
 import TagPill from '@/components/notes/TagPill'
 

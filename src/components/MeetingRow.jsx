@@ -8,7 +8,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import CreateMeetingDialog from '@/components/CreateMeetingDialog'
-import { ClientAvatar } from '@/components/TaskRow'
+import { ClientAvatar } from '@/components/tasks/ClientAvatar'
 
 /**
  * Props:

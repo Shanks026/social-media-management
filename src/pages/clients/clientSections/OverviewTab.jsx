@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import {
   Plus,
@@ -54,10 +54,12 @@ import { format } from 'date-fns'
 import { getPublishState } from '@/lib/helper'
 import MeetingRow from '@/components/MeetingRow'
 import { useTasks } from '@/api/tasks'
+import { useTeamMembers } from '@/api/team'
+import { useAuth } from '@/context/AuthContext'
 
 import CreateMeetingDialog from '@/components/CreateMeetingDialog'
 import CreateTaskDialog from '@/components/tasks/CreateTaskDialog'
-import TaskRow from '@/components/TaskRow'
+import TaskCard from '@/components/tasks/TaskCard'
 import ClientWeekTimeline from './ClientWeekTimeline'
 
 const platformChartConfig = {
@@ -96,8 +98,25 @@ const CustomPlatformTick = ({ x, y, payload }) => {
 }
 
 export default function OverviewTab({ client }) {
-  const [activeEngagementTab, setActiveEngagementTab] = useState('meetings')
+  const [activeEngagementTab, setActiveEngagementTab] = useState('notes')
   const { finance } = usePermissions()
+  const { user } = useAuth()
+  const { data: teamMembers = [] } = useTeamMembers()
+
+  const memberMap = useMemo(() => {
+    const map = Object.fromEntries(teamMembers.map((m) => [m.member_user_id, m]))
+    if (user && !map[user.id]) {
+      map[user.id] = {
+        member_user_id: user.id,
+        full_name: user.user_metadata?.full_name || user.user_metadata?.name || null,
+        email: user.email,
+        avatar_url: user.user_metadata?.avatar_url || null,
+      }
+    }
+    return map
+  }, [teamMembers, user])
+
+  const clientMap = useMemo(() => ({ [String(client.id)]: client }), [client])
 
   const [, setSearchParams] = useSearchParams()
   const navigate = useNavigate()
@@ -252,8 +271,8 @@ export default function OverviewTab({ client }) {
       },
     })
 
-  const visibleNotes = notes.filter((n) => n.status !== 'ARCHIVED').slice(0, 3)
-  const extraNotes = notes.filter((n) => n.status !== 'ARCHIVED').length - 3
+  const visibleNotes = notes.filter((n) => n.status !== 'ARCHIVED').slice(0, 2)
+  const extraNotes = notes.filter((n) => n.status !== 'ARCHIVED').length - 2
 
   const visibleMeetings = upcomingMeetings.slice(0, 2)
   const extraMeetings = upcomingMeetings.length - 2
@@ -271,11 +290,11 @@ export default function OverviewTab({ client }) {
           >
             <CardHeader className="pb-3 flex flex-row items-center justify-between space-y-0 shrink-0">
               <TabsList className="h-9">
-                <TabsTrigger value="meetings" className="gap-1.5 text-xs">
-                  <CalendarIcon className="size-3.5" /> Meetings
-                </TabsTrigger>
                 <TabsTrigger value="notes" className="gap-1.5 text-xs">
                   <ClipboardCheck className="size-3.5" /> Tasks
+                </TabsTrigger>
+                <TabsTrigger value="meetings" className="gap-1.5 text-xs">
+                  <CalendarIcon className="size-3.5" /> Meetings
                 </TabsTrigger>
               </TabsList>
               <div className="flex items-center gap-1">
@@ -397,10 +416,12 @@ export default function OverviewTab({ client }) {
                   <div className="flex flex-col flex-1">
                     <div className="flex flex-col gap-3">
                       {visibleNotes.map((note) => (
-                        <TaskRow
+                        <TaskCard
                           key={note.id}
                           task={note}
-                          variant="client-card"
+                          clientMap={clientMap}
+                          memberMap={memberMap}
+                          currentUserId={user?.id}
                         />
                       ))}
                     </div>

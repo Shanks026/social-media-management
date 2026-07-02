@@ -47,6 +47,8 @@ import { useCampaignTransactions } from '@/api/transactions'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { fetchCampaignMeetings, deleteMeeting } from '@/api/meetings'
 import { useTasks } from '@/api/tasks'
+import { useTeamMembers } from '@/api/team'
+import { useAuth } from '@/context/AuthContext'
 import { AddTransactionDialog } from '@/pages/finance/AddTransactionDialog'
 import DraftPostForm from '@/pages/posts/DraftPostForm'
 import { LinkPostsToCampaignDialog } from '@/components/campaigns/LinkPostsToCampaignDialog'
@@ -54,7 +56,7 @@ import { CampaignDialog } from '@/components/campaigns/CampaignDialog'
 import { CreateInvoiceDialog } from '@/pages/finance/CreateInvoiceDialog'
 import CampaignReportPDF from '@/components/campaigns/CampaignReportPDF'
 import MeetingRow from '@/components/MeetingRow'
-import TaskRow from '@/components/TaskRow'
+import TaskCard from '@/components/tasks/TaskCard'
 import CreateMeetingDialog from '@/components/CreateMeetingDialog'
 import CreateTaskDialog from '@/components/tasks/CreateTaskDialog'
 import StatusBadge from '@/components/StatusBadge'
@@ -192,6 +194,24 @@ export default function CampaignDetailPage() {
   })
 
   const { data: campaignNotes = [], isLoading: notesLoading } = useTasks({ campaignId })
+
+  const { user } = useAuth()
+  const { data: teamMembers = [] } = useTeamMembers()
+  const memberMap = useMemo(() => {
+    const map = Object.fromEntries(teamMembers.map((m) => [m.member_user_id, m]))
+    if (user && !map[user.id]) {
+      map[user.id] = {
+        member_user_id: user.id,
+        full_name: user.user_metadata?.full_name || user.user_metadata?.name || null,
+        email: user.email,
+        avatar_url: user.user_metadata?.avatar_url || null,
+      }
+    }
+    return map
+  }, [teamMembers, user])
+  const clientMap = useMemo(() =>
+    campaign?.clients ? { [String(campaign.clients.id)]: campaign.clients } : {},
+  [campaign])
 
   const { mutate: markMeetingDone, isPending: isCompletingMeeting } =
     useMutation({
@@ -1100,7 +1120,7 @@ export default function CampaignDetailPage() {
                       <CarouselContent>
                         {campaignNotes.filter((n) => n.status !== 'ARCHIVED').map((note) => (
                           <CarouselItem key={note.id} className="basis-[340px]">
-                            <TaskRow task={note} variant="client-card" />
+                            <TaskCard task={note} clientMap={clientMap} memberMap={memberMap} currentUserId={user?.id} />
                           </CarouselItem>
                         ))}
                       </CarouselContent>

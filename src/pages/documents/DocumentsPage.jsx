@@ -45,7 +45,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { ClientAvatar } from '@/components/TaskRow'
+import { ClientAvatar } from '@/components/tasks/ClientAvatar'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
   Empty,

@@ -65,7 +65,7 @@ import { useGlobalPosts, usePostCounts } from '@/api/useGlobalPosts'
 import { useClients } from '@/api/clients'
 import { useCampaigns } from '@/api/campaigns'
 import { useSubscription } from '@/api/useSubscription'
-import { ClientAvatar } from '@/components/TaskRow'
+import { ClientAvatar } from '@/components/tasks/ClientAvatar'
 import { UrgencyFilter } from '@/pages/clients/ClientFilters'
 
 // ─── Deliverable type labels ────────────────────────────

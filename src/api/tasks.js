@@ -65,6 +65,27 @@ export async function deleteTask(id) {
   if (error) throw error
 }
 
+export function useMyTasks() {
+  const { workspaceUserId, user } = useAuth()
+  return useQuery({
+    queryKey: ['tasks', 'list', 'my-tasks', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return []
+      const { data, error } = await supabase
+        .from('tasks')
+        .select('*')
+        .eq('workspace_id', workspaceUserId)
+        .not('status', 'in', '("COMPLETED","ARCHIVED")')
+        .or(`assigned_to.eq.${user.id},created_by.eq.${user.id}`)
+        .order('due_at', { ascending: true, nullsFirst: false })
+        .order('created_at', { ascending: false })
+      if (error) throw error
+      return data ?? []
+    },
+    enabled: !!workspaceUserId && !!user?.id,
+  })
+}
+
 export function useMyOverdueTaskCount() {
   const { workspaceUserId, user } = useAuth()
   return useQuery({

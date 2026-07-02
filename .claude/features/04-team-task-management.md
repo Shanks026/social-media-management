@@ -1,7 +1,7 @@
 # Feature: Team Task Management
 **Product**: Tercero — Social Media Agency Management SaaS  
 **File**: `.claude/features/04-team-task-management.md`  
-**Status**: Phase 1 Complete — Phase 2 Planned  
+**Status**: Phases 1–3 Complete + UI Polish Complete — Phase 4 Pending Approval  
 **Last Updated**: July 2026
 
 ---
@@ -15,19 +15,23 @@ The existing "Tasks & Reminders" feature is built on a table called `client_note
 ## Phase Overview
 
 ```
-Phase 1 — Schema, Migration & API
+Phase 1 — Schema, Migration & API ✅
   Drop client_notes; create tasks table with full schema; migrate existing data;
   build src/api/tasks.js; rewire all consumers to the new API and new statuses.
 
-Phase 2 — Core UI Enhancement
+Phase 2 — Core UI Enhancement ✅
   Priority field in dialogs; priority badges on cards; personal vs assigned grid
   sections; "Assigned to me" quick filter; redesigned task cards with assignee info.
 
-Phase 3 — Assignment & RBAC Enforcement
+Phase 3 — Assignment & RBAC Enforcement ✅
   Assignee picker in create/edit dialogs (owner/admin only); member-restricted UI
   (status-only controls on assigned tasks); RBAC flags wired throughout.
 
-Phase 4 — Context Integration
+UI Polish — Dialog redesign, filter refinements, sidebar badge ✅
+  Notion-style dialogs; "(You)" tags; atomic URL filter state; "Created by me"
+  filter; overdue-only sidebar badge; kanban equal-height columns.
+
+Phase 4 — Context Integration ⏳ Pending Approval
   Tasks tab on Client Detail page; inline task widget on Campaign Detail;
   "My Tasks" widget on Dashboard.
 ```
@@ -642,8 +646,58 @@ Result: members see the status toggle on tasks assigned to them, and full contro
 - `canToggle = isCreator || isAssignee || canAssignTasks` gates the status circle; `canEdit = canAssignTasks || isCreator` gates the entire actions bar.
 - Assignee picker uses `full_name || email` fallback — matches the pattern in `TeamSettings.jsx` and `TasksAndReminders.jsx`. The Phase 3 spec referenced `first_name`/`last_name` but the RPC returns `full_name` as a single field.
 - DB-level RLS test left unchecked — requires a member-role test account; the policy itself was applied in Phase 1 and has not changed.
+- Dropdown menu always rendered when `canToggle || canEdit`; status items gated by `canToggle`; edit/delete gated by `canEdit`. This avoids the empty dropdown problem where members saw no menu at all.
 
-**→ Stop here. Show the result and wait for approval.**
+---
+
+## UI Polish ✅ Complete
+
+Additional refinements applied after Phase 3 approval. Not a formal phase — these were incremental improvements made during review.
+
+### Dialog Redesign (CreateTaskDialog + EditTaskDialog)
+
+Both dialogs replaced with a Notion-style document layout:
+- Top section: bare `<input>` for title (no border, no label, `text-xl font-semibold`) + `<textarea>` for description (auto-resize, no border)
+- `MetaRow` pattern for metadata: label (`w-20 shrink-0 text-xs text-muted-foreground`) + value in a flex row
+- Metadata fields in order: Client → Assignee (owner/admin only) → Priority → Due date → Campaign
+- `DialogHeader` with `DialogTitle` + `DialogDescription` added above the writing area
+- Priority rendered as colored dot pill buttons (`PRIORITY_CONFIG` with `dot` and `active` classes per level) — not a Select or radio group
+- Assignee options show: avatar (or initial fallback) + name + `(You)` tag + `SYSTEM_ROLE_PALETTE` role badge at right edge
+- Footer: Cancel (ghost) + Save (primary), Save disabled when title is empty
+- Red asterisk on mandatory fields was added then removed at user request — no asterisks
+
+### Filter & URL State Refinements
+
+- **`setParams` atomic helper** in `TasksAndReminders.jsx`: fixes React 18 batching bug where two sequential `setSearchParams` calls both read the original `prev`. All multi-param URL updates now go through one `setParams(updates)` call.
+- **"Created by me" filter** (`?creator=1` URL param): toggle button in filter bar, visible only when `canAssignTasks` (owner/admin). Filters `filteredTasks` by `task.created_by === currentUserId`.
+- **Client select truncation fix**: trigger uses `min-w-0` + `truncate` on inner span; filter icon is `shrink-0`.
+- **`selectedClient` and `assignedToMe` params** now reset atomically when switching client filter (single `setParams` call).
+
+### "(You)" Tag
+
+Added in three surfaces when `task.assigned_to === currentUserId` (or `member_user_id === user.id` in option lists):
+- **Task card** (grid view): inline after assignee name
+- **Kanban card**: same
+- **Table view**: same, in the assignee cell
+- **Assignee select options** in CreateTaskDialog + EditTaskDialog: inline after name in dropdown option
+
+`memberMap` in `TasksAndReminders.jsx` includes a synthetic entry for the workspace owner (who is not in `agency_members`) built from `user.user_metadata`.
+
+### Kanban Equal Heights
+
+`grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 items-stretch` — all columns stretch to match the tallest. Each `KanbanColumn` uses `flex flex-col h-full`.
+
+### Sidebar Overdue Badge
+
+- New hook `useMyOverdueTaskCount()` in `src/api/tasks.js`
+- Query: `status NOT IN ('COMPLETED','ARCHIVED') AND due_at < now() AND (assigned_to = me OR created_by = me)`
+- Query key: `['tasks', 'list', 'overdue-count', user.id]` — nested under `'list'` so existing `['tasks', 'list']` invalidations catch it automatically
+- Badge: `bg-amber-500 text-white` on the Tasks & Todos nav item — amber distinguishes "your own overdue" from rose (external approvals) and pink (submissions changes requested)
+- A generic TODO count was considered and rejected: it would never reach zero (user controls it themselves), making it noise. Overdue is meaningful because it goes to zero when caught up.
+
+### Tags Decision — Deferred
+
+Tags on tasks were discussed and deferred indefinitely. Tasks have enough structure (client / campaign / priority / status / assignee) to cover most categorization needs. Tags would only be worth revisiting if cross-cutting labels like "blocked" or "waiting-on-client" emerge as a recurring pain point, and even then a fixed label/flag field would be preferable over free-form tags.
 
 ---
 

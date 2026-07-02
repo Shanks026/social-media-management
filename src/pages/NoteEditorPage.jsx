@@ -41,7 +41,7 @@ import {
   removeTagFromNote,
 } from '@/api/noteTags'
 import { nextTagColor } from '@/lib/noteTags'
-import { ClientAvatar } from '@/components/TaskRow'
+import { ClientAvatar } from '@/components/tasks/ClientAvatar'
 import RichTextEditor from '@/components/notes/RichTextEditor'
 import TagPill from '@/components/notes/TagPill'
 import TagPicker from '@/components/notes/TagPicker'
