@@ -178,7 +178,7 @@ function AppRoutes() {
           <Route path="/campaigns/:campaignId" element={<CampaignDetailPage />} />
           <Route path="/ads" element={<AdsPage />} />
           <Route path="/posts" element={<Posts />} />
-          <Route path="/operations/tasks" element={<TasksAndReminders />} />
+          <Route path="/tasks" element={<TasksAndReminders />} />
           <Route path="/operations/notes" element={<Notes />} />
           <Route path="/operations/notes/:noteId" element={<NoteEditorPage />} />
           <Route path="/operations/meetings" element={<MeetingsPage />} />

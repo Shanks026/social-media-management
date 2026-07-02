@@ -105,7 +105,7 @@ const BASE_NAV_ITEMS = [
     requiresFlag: 'campaigns',
   },
   // { title: 'Ads', url: '/ads', icon: BadgeDollarSign },
-  { title: 'Tasks & Todos', url: '/operations/tasks', icon: ListTodo, showTodoCount: true },
+  { title: 'Tasks & Todos', url: '/tasks', icon: ListTodo, showTodoCount: true },
   {
     title: 'Operations',
     url: '/operations',

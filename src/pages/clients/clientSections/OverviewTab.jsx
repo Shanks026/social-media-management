@@ -437,7 +437,7 @@ export default function OverviewTab({ client }) {
                         variant="ghost"
                         size="sm"
                         className="h-7 text-xs px-2 text-muted-foreground hover:text-foreground"
-                        onClick={() => navigate('/operations/tasks')}
+                        onClick={() => navigate('/tasks')}
                       >
                         View all tasks <ArrowUpRight className="ml-1 h-3 w-3" />
                       </Button>

@@ -1097,7 +1097,7 @@ export default function CampaignDetailPage() {
                         <Plus className="h-4 w-4" />
                       </Button>
                     </CreateTaskDialog>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" onClick={() => navigate('/operations/tasks')}>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" onClick={() => navigate('/tasks')}>
                       <ArrowUpRight className="h-4 w-4" />
                     </Button>
                   </div>

@@ -627,7 +627,7 @@ export default function TasksAndReminders() {
       title: 'Tasks & Todos',
       breadcrumbs: [
         { label: 'Operations', href: '/operations' },
-        { label: 'Tasks & Todos', href: '/operations/tasks' },
+        { label: 'Tasks & Todos', href: '/tasks' },
       ],
     })
   }, [setHeader])

@@ -20,7 +20,7 @@ A notification bell in the `AppShell` header that surfaces real-time activity re
 |---|---|
 | 1 | **Email is untouched.** In-app notifications are purely additive. We decide later, per-type, which ones also warrant an email. |
 | 2 | **One personal notification model for all roles in v1.** No separate owner "activity feed" — the owner gets the same per-recipient bell as everyone else (and is naturally a recipient of the broad operational events). A workspace-wide activity log is a deferred future extension. |
-| 3 | **Notification rows are created inside the `src/api/` mutation functions** (explicit), not via DB triggers. A shared `notify()` helper keeps it one-line per call site. |
+| 3 | **REVISED in Phase 3 → notification creation lives wherever the state change lives.** The original plan (client-side `notify()` in every mutation) doesn't survive the codebase: most state changes happen inside `SECURITY DEFINER` RPCs, and two flows (client review via token, team join) are unauthenticated / run as another user, where a client-side insert cannot satisfy RLS. So: client-side `notify()` for plain table writes; a SQL `emit_notifications()` helper called inside the RPC/trigger for everything else. Both helpers enforce the same rules (de-dupe, strip actor). |
 | 4 | **30-day retention with auto-delete** of read+old notifications. |
 
 ## Design Principles (from codebase review)
@@ -114,17 +114,40 @@ A scheduled cleanup (Supabase cron / `pg_cron` or edge function) deletes notific
 - Realtime badge increment verified live.
 - **Deliverable:** working bell, but only fed by whatever triggers exist. Wire one trigger (task assignment) as the proof-of-life.
 
-### Phase 3 — Trigger wiring (fan-out)
-Wire `notify(...)` into mutation call sites, one domain at a time, each excluding the actor:
-- Tasks: `createTask` (assign), `updateTaskStatus`, reassignment in `updateTask`.
-- Posts: status-change path in `PostDetails` (alongside `send-approval-email`).
-- Campaigns: review shared; approve / request-revision via token flow.
-- Team: member joined (in the join/accept flow).
-- Finance: invoice overdue (evaluated on invoice load or a scheduled check).
-- **Deliverable:** full notification coverage across existing features.
+### Phase 3 — Trigger wiring (fan-out) ✅ SHIPPED
+Implemented at the DB level (see revised Decision 3). A shared SQL helper
+`emit_notifications(workspace_id, actor, recipients[], type, title, body, entity_type, entity_id, link)`
+de-dupes recipients and strips the actor; a companion `workspace_admin_uids(workspace_id)`
+resolves the owner+admin recipient set. Both are `SECURITY DEFINER` with EXECUTE revoked
+from `public`/`anon`/`authenticated` (only internal definer callers invoke them).
+
+Wired triggers:
+- **Tasks** → `tg_notify_task_changes` trigger on `public.tasks` (AFTER INSERT/UPDATE):
+  - `task_assigned` on insert-with-assignee and on reassignment (`assigned_to` change).
+  - `task_updated` on status change → assignee + creator.
+  - A trigger (not client-side) because the edit form resends `assigned_to` every save;
+    only `OLD IS DISTINCT FROM NEW` is spam-proof.
+- **Post workflow** (RPCs extended): `submit_for_internal_approval` → notifies owner+admins
+  ("needs review"); `approve_internally` → notifies creator ("approved");
+  `request_internal_changes` → notifies creator ("changes requested").
+- **Client review via token** (`update_post_status_by_token`, unauthenticated): on
+  `SCHEDULED`/`NEEDS_REVISION`, `campaign_reviewed` → post creator + workspace owner
+  (actor NULL — external client). Wrapped in its own exception block so it can never
+  block the client's decision.
+- **Team join** (`join_team`): `team_member_joined` → owner + admins (new member excluded).
+
+Verified end-to-end via rolled-back/cleaned-up smoke test (assign + status change fired,
+dedup confirmed). Security advisors cleared for the new objects (trigger fn RPC-revoked,
+`notifications` policies scoped `to authenticated`).
+
+**Deferred to Phase 4:** `invoice_overdue` — time-based, no mutation fires it; needs a
+scheduled (pg_cron) check. `campaign_review_shared` — intentionally dropped as low-value
+noise (actor is usually the owner → self-excludes to zero recipients).
 
 ### Phase 4 — Retention + polish
-- Scheduled 30-day cleanup job.
+- Scheduled 30-day cleanup job (pg_cron).
+- `invoice_overdue` notification via the same scheduled job (evaluate invoices past due,
+  fan out to `workspace_admin_uids`, guard against re-notifying the same invoice).
 - Loading/skeleton states, error states, accessibility pass on the panel.
 - Tests: fan-out rules (correct recipients, actor excluded), read/unread transitions.
 - **Deliverable:** production-ready feature.

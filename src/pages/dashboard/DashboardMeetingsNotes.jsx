@@ -163,7 +163,7 @@ export default function DashboardMeetingsNotes() {
                 navigate(
                   activeTab === 'meetings'
                     ? '/operations/meetings'
-                    : '/operations/tasks',
+                    : '/tasks',
                 )
               }
             >
@@ -267,7 +267,7 @@ export default function DashboardMeetingsNotes() {
                     variant="ghost"
                     size="sm"
                     className="h-7 text-xs px-2 text-muted-foreground hover:text-foreground -mr-2"
-                    onClick={() => navigate('/operations/tasks')}
+                    onClick={() => navigate('/tasks')}
                   >
                     View all <ArrowUpRight className="ml-1 h-3 w-3" />
                   </Button>
