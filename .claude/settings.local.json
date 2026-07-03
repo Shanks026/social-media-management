@@ -148,7 +148,13 @@
       "Bash(npx vitest *)",
       "Bash(node -e \"const p=require\\('./package.json'\\);console.log\\('react-query:', \\(p.dependencies||{}\\)['@tanstack/react-query']||\\(p.devDependencies||{}\\)['@tanstack/react-query']\\); console.log\\('react:', p.dependencies.react\\)\")",
       "Bash(grep -r \"login\\\\.jsx\\\\|from.*\\\\/login\\\\|import.*\\\\/login\" src --include=\"*.jsx\" --include=\"*.js\")",
-      "Bash(npm run *)"
+      "Bash(npm run *)",
+      "Bash(npx shadcn@latest mcp init --client claude)",
+      "mcp__shadcn__get_project_registries",
+      "mcp__shadcn__search_items_in_registries",
+      "mcp__shadcn__view_items_in_registries",
+      "WebFetch(domain:ui.shadcn.com)",
+      "Bash(node -e \"const icons = require\\('lucide-react'\\); console.log\\(Object.keys\\(icons\\).filter\\(k => /chess/i.test\\(k\\)\\)\\)\")"
     ]
   }
 }

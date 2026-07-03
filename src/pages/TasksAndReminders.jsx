@@ -625,10 +625,7 @@ export default function TasksAndReminders() {
   useEffect(() => {
     setHeader({
       title: 'Tasks & Todos',
-      breadcrumbs: [
-        { label: 'Operations', href: '/operations' },
-        { label: 'Tasks & Todos', href: '/tasks' },
-      ],
+      breadcrumbs: [{ label: 'Tasks & Todos' }],
     })
   }, [setHeader])
 

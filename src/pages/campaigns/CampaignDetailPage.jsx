@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { pdf } from '@react-pdf/renderer'
 import { BarChart, Bar, XAxis, YAxis, Cell } from 'recharts'
 import { format, parseISO } from 'date-fns'
@@ -29,6 +29,7 @@ import {
   CalendarDays,
   ChevronLeft,
   ChevronRight,
+  MessageSquare,
 } from 'lucide-react'
 
 import { supabase } from '@/lib/supabase'
@@ -56,6 +57,7 @@ import { CampaignDialog } from '@/components/campaigns/CampaignDialog'
 import { CreateInvoiceDialog } from '@/pages/finance/CreateInvoiceDialog'
 import CampaignReportPDF from '@/components/campaigns/CampaignReportPDF'
 import MeetingRow from '@/components/MeetingRow'
+import { CommentThread } from '@/components/comments/CommentThread'
 import TaskCard from '@/components/tasks/TaskCard'
 import CreateMeetingDialog from '@/components/CreateMeetingDialog'
 import CreateTaskDialog from '@/components/tasks/CreateTaskDialog'
@@ -152,10 +154,12 @@ function formatDateRange(start, end) {
 
 export default function CampaignDetailPage() {
   const { campaignId } = useParams()
+  const [searchParams] = useSearchParams()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
 
-  const [activeTab, setActiveTab] = useState('posts')
+  // Auto-switch to Discussion when a notification deep-links to a specific comment
+  const [activeTab, setActiveTab] = useState(() => (searchParams.has('comment') ? 'discussion' : 'posts'))
   const [editOpen, setEditOpen] = useState(false)
   const [exportingPdf, setExportingPdf] = useState(false)
   const [createPostOpen, setCreatePostOpen] = useState(false)
@@ -521,6 +525,7 @@ export default function CampaignDetailPage() {
                 { value: 'posts',    label: 'Deliverables', icon: Activity },
                 ...(finance ? [{ value: 'finance', label: 'Finance', icon: Receipt }] : []),
                 { value: 'activity', label: 'Activity',     icon: CalendarDays },
+                { value: 'discussion', label: 'Discussion', icon: MessageSquare },
               ].map((tab) => (
                 <TabsTrigger
                   key={tab.value}
@@ -1246,6 +1251,17 @@ export default function CampaignDetailPage() {
                 </CardContent>
               </Card>
             </div>
+          </TabsContent>
+
+          {/* ── Discussion tab ── */}
+          <TabsContent value="discussion" className="mt-0">
+            <Card className="border-none shadow-sm ring-1 ring-border/50 bg-card/50">
+              <CardContent className="p-4">
+                <div className="h-[600px]">
+                  <CommentThread entityType="campaign" entityId={campaignId} />
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
 

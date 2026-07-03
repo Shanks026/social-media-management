@@ -16,6 +16,7 @@ import {
   CheckCircle2,
   Trash2,
   History,
+  MessageSquare,
   Play,
   ChevronDownIcon,
   RefreshCw,
@@ -197,6 +198,8 @@ export default function PostContent({
   canSendDeliverables,
   showHistory,
   setShowHistory,
+  showComments,
+  onToggleComments,
   onSendForApproval,
   onApproveAndSchedule,
   onPublish,
@@ -587,6 +590,19 @@ export default function PostContent({
               Mark as Delivered
             </Button>
           )}
+
+          {/* Comments */}
+          <Button
+            variant="outline"
+            size="sm"
+            className={cn('gap-1.5', showComments && 'bg-accent')}
+            onClick={onToggleComments}
+            aria-label="Comments"
+            title="Comments"
+          >
+            <MessageSquare size={14} />
+            <span className="hidden sm:inline">Comments</span>
+          </Button>
 
           {/* More Actions dropdown */}
           <DropdownMenu>

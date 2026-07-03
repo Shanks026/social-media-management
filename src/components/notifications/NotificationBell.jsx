@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { formatDistanceToNow } from 'date-fns'
 import { useQueryClient } from '@tanstack/react-query'
@@ -31,6 +31,7 @@ import {
   markAllNotificationsRead,
   notificationKeys,
 } from '@/api/notifications'
+import { useTeamMembers } from '@/api/team'
 import { useAuth } from '@/context/AuthContext'
 
 // ─── Type config ───────────────────────────────────────────────────────────────
@@ -44,6 +45,18 @@ const TYPE_CONFIG = {
   team_member_joined:     { icon: UserPlus,        color: 'text-teal-500',   bg: 'bg-teal-100 dark:bg-teal-950' },
   invoice_overdue:        { icon: AlertCircle,     color: 'text-destructive', bg: 'bg-red-100 dark:bg-red-950' },
   comment_added:          { icon: MessageCircle,   color: 'text-sky-500',    bg: 'bg-sky-100 dark:bg-sky-950' },
+}
+
+// Label to show when a notification has no human actor (actor_user_id is null).
+const SYSTEM_ACTOR_LABEL = {
+  invoice_overdue:   'System',
+  campaign_reviewed: 'A client',
+}
+
+function getInitials(name) {
+  if (!name) return '?'
+  const [first = '', second = ''] = name.trim().split(/\s+/)
+  return ((first[0] ?? '') + (second[0] ?? '')).toUpperCase() || '?'
 }
 
 function resolveRoute(notification) {
@@ -62,12 +75,17 @@ function resolveRoute(notification) {
 
 // ─── Single row ────────────────────────────────────────────────────────────────
 
-function NotificationRow({ notification, onRead }) {
+function NotificationRow({ notification, memberMap, onRead }) {
   const navigate = useNavigate()
   const config = TYPE_CONFIG[notification.type] ?? { icon: Bell, color: 'text-muted-foreground', bg: 'bg-muted' }
   const Icon = config.icon
   const isUnread = !notification.read_at
   const route = resolveRoute(notification)
+
+  // Resolve the acting account. Null actor = system/external event (no person).
+  const actor = notification.actor_user_id ? memberMap[notification.actor_user_id] : null
+  const actorName =
+    actor?.full_name || actor?.email || SYSTEM_ACTOR_LABEL[notification.type] || null
 
   const handleClick = async () => {
     if (isUnread) {
@@ -80,15 +98,33 @@ function NotificationRow({ notification, onRead }) {
   return (
     <button
       onClick={handleClick}
-      aria-label={`${notification.title}${isUnread ? ' (unread)' : ''}`}
+      aria-label={`${actorName ? `${actorName}: ` : ''}${notification.title}${isUnread ? ' (unread)' : ''}`}
       className={cn(
         'w-full flex items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/60 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring',
         isUnread && 'bg-muted/40',
       )}
     >
-      {/* Type icon */}
-      <span aria-hidden="true" className={cn('mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg', config.bg)}>
-        <Icon className={cn('size-4', config.color)} />
+      {/* Actor avatar with type-icon corner badge; falls back to the type icon
+          alone for system/external events that have no human actor. */}
+      <span aria-hidden="true" className="relative mt-0.5 shrink-0">
+        {actor ? (
+          actor.avatar_url ? (
+            <img src={actor.avatar_url} alt="" className="size-8 rounded-full object-cover" />
+          ) : (
+            <span className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-[11px] font-semibold text-primary">
+              {getInitials(actorName)}
+            </span>
+          )
+        ) : (
+          <span className={cn('flex size-8 items-center justify-center rounded-lg', config.bg)}>
+            <Icon className={cn('size-4', config.color)} />
+          </span>
+        )}
+        {actor && (
+          <span className={cn('absolute -bottom-1 -right-1 flex size-4 items-center justify-center rounded-full ring-2 ring-background', config.bg)}>
+            <Icon className={cn('size-2.5', config.color)} />
+          </span>
+        )}
       </span>
 
       {/* Content */}
@@ -107,6 +143,8 @@ function NotificationRow({ notification, onRead }) {
           </p>
         )}
         <p className="mt-1 text-[11px] text-muted-foreground/70">
+          {actorName && <span className="font-medium text-muted-foreground">{actorName}</span>}
+          {actorName && ' · '}
           {formatDistanceToNow(new Date(notification.created_at), { addSuffix: true })}
         </p>
       </div>
@@ -121,6 +159,13 @@ function NotificationPanel() {
   const queryClient = useQueryClient()
   const { data: notifications = [], isLoading } = useNotifications()
   const { data: unreadCount = 0 } = useUnreadNotificationCount()
+  const { data: teamMembers = [] } = useTeamMembers()
+
+  // actor_user_id → member record (full_name, avatar_url, email) for avatar/name display.
+  const memberMap = useMemo(
+    () => Object.fromEntries(teamMembers.map((m) => [m.member_user_id, m])),
+    [teamMembers],
+  )
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: notificationKeys.count(user?.id) })
@@ -189,6 +234,7 @@ function NotificationPanel() {
               <NotificationRow
                 key={n.id}
                 notification={n}
+                memberMap={memberMap}
                 onRead={invalidate}
               />
             ))}
