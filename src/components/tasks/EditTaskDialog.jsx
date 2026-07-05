@@ -16,9 +16,12 @@ import {
 } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { updateTask } from '@/api/tasks'
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query'
+import { Megaphone } from 'lucide-react'
+import { updateTask, fetchTaskPostIds } from '@/api/tasks'
 import { useClients } from '@/api/clients'
+import { fetchActiveCampaignsByClient } from '@/api/campaigns'
+import { fetchAllPostsByClient, fetchAllDeliverables } from '@/api/posts'
 import { useTeamMembers } from '@/api/team'
 import { usePermissions } from '@/api/usePermissions'
 import { useAuth } from '@/context/AuthContext'
@@ -26,6 +29,7 @@ import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { SYSTEM_ROLE_PALETTE } from '@/lib/team-roles'
 import { ClientAvatar } from '@/components/tasks/ClientAvatar'
+import { DeliverablePickerSection } from '@/components/tasks/DeliverablePickerSection'
 
 const NONE = '__none__'
 
@@ -87,6 +91,10 @@ export default function EditTaskDialog({
   const [selectedClientId, setSelectedClientId] = useState(
     task?.client_id || '',
   )
+  const [selectedCampaignId, setSelectedCampaignId] = useState(
+    task?.campaign_id || '',
+  )
+  const [selectedPostIds, setSelectedPostIds] = useState([])
   const [assignedTo, setAssignedTo] = useState(task?.assigned_to || '')
   const [title, setTitle] = useState(task?.title ?? '')
   const [description, setDescription] = useState(task?.description ?? '')
@@ -94,7 +102,7 @@ export default function EditTaskDialog({
   const [priority, setPriority] = useState(task?.priority ?? 'NORMAL')
 
   const { canAssignTasks } = usePermissions()
-  const { user } = useAuth()
+  const { user, workspaceUserId } = useAuth()
   const { data: teamMembers = [] } = useTeamMembers()
   const assigneeOptions = useMemo(
     () =>
@@ -107,6 +115,7 @@ export default function EditTaskDialog({
   useEffect(() => {
     if (open && task) {
       setSelectedClientId(task.client_id || '')
+      setSelectedCampaignId(task.campaign_id || '')
       setAssignedTo(task.assigned_to || '')
       setTitle(task.title)
       setDescription(task.description ?? '')
@@ -118,7 +127,50 @@ export default function EditTaskDialog({
     }
   }, [open, task])
 
+  // Linked deliverables live in the task_posts join table, not on the task row.
+  const { data: linkedPostIds, isSuccess: linkedIdsLoaded } = useQuery({
+    queryKey: ['task-post-ids', task?.id],
+    queryFn: () => fetchTaskPostIds(task.id),
+    enabled: !!task?.id && open,
+  })
+
+  // Seed the selection once per open, so a background refetch never clobbers
+  // edits the user has already made in the dialog.
+  const seededRef = useRef(false)
+  useEffect(() => {
+    if (!open) {
+      seededRef.current = false
+      return
+    }
+    if (!seededRef.current && linkedIdsLoaded) {
+      setSelectedPostIds(linkedPostIds)
+      seededRef.current = true
+    }
+  }, [open, linkedIdsLoaded, linkedPostIds])
+
   const { data: clientsData, isLoading: isLoadingClients } = useClients()
+
+  const { data: availableCampaigns = [], isLoading: loadingCampaigns } =
+    useQuery({
+      queryKey: ['campaigns', 'active-by-client', selectedClientId],
+      queryFn: () => fetchActiveCampaignsByClient(selectedClientId),
+      enabled: !!selectedClientId,
+    })
+
+  // Client selected → scope to that client's posts. No client ("General") →
+  // all deliverables across every client, each labelled with its client.
+  const { data: availablePosts = [], isLoading: loadingPosts } = useQuery({
+    queryKey: selectedClientId
+      ? ['posts', 'by-client', selectedClientId]
+      : ['posts', 'all-deliverables', workspaceUserId],
+    queryFn: () =>
+      selectedClientId
+        ? fetchAllPostsByClient(selectedClientId)
+        : fetchAllDeliverables(workspaceUserId),
+    enabled: open && (!!selectedClientId || !!workspaceUserId),
+  })
+
+  const selectedPosts = availablePosts.filter((p) => selectedPostIds.includes(p.id))
 
   const allClients = useMemo(() => {
     if (!clientsData) return []
@@ -128,11 +180,6 @@ export default function EditTaskDialog({
     ]
   }, [clientsData])
 
-  const selectedClient = allClients.find((c) => c.id === selectedClientId)
-  const selectedAssignee = assigneeOptions.find(
-    (m) => m.member_user_id === assignedTo,
-  )
-
   const mutation = useMutation({
     mutationFn: (updates) => updateTask(task.id, updates),
     onSuccess: () => {
@@ -140,6 +187,8 @@ export default function EditTaskDialog({
         queryKey: ['tasks', 'list'],
         exact: false,
       })
+      queryClient.invalidateQueries({ queryKey: ['task-post-ids', task.id] })
+      queryClient.invalidateQueries({ queryKey: ['task-deliverables', task.id] })
       toast.success('Task updated successfully')
       onOpenChange(false)
       onSuccess?.()
@@ -151,8 +200,7 @@ export default function EditTaskDialog({
     e.preventDefault()
     if (!title.trim()) return
 
-    const finalClientId =
-      selectedClientId || clientsData?.internalAccount?.id || null
+    const finalClientId = selectedClientId || null
 
     mutation.mutate({
       client_id: finalClientId,
@@ -161,6 +209,11 @@ export default function EditTaskDialog({
       due_at: dueAt ? new Date(dueAt).toISOString() : null,
       priority,
       assigned_to: assignedTo && assignedTo !== NONE ? assignedTo : null,
+      campaign_id:
+        selectedCampaignId && selectedCampaignId !== NONE
+          ? selectedCampaignId
+          : null,
+      post_ids: selectedPostIds,
     })
   }
 
@@ -171,15 +224,16 @@ export default function EditTaskDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg p-0 gap-0 overflow-hidden">
-        <DialogHeader className="px-6 pt-6 pb-4 border-b border-border/50 space-y-0.5">
+      <DialogContent className="sm:max-w-lg p-0 gap-0 overflow-hidden max-h-[85vh] flex flex-col">
+        <DialogHeader className="px-6 pt-6 pb-4 border-b border-border/50 space-y-0.5 shrink-0">
           <DialogTitle>Edit Task</DialogTitle>
           <DialogDescription>
             Track work, set deadlines, and stay on top of what needs to get done.
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+        <div className="flex-1 overflow-y-auto min-h-0">
           {/* ── Writing area ── */}
           <div className="px-6 pt-6 pb-6">
             <input
@@ -207,14 +261,21 @@ export default function EditTaskDialog({
             {/* Client */}
             <MetaRow label="Client">
               <Select
-                value={selectedClientId}
-                onValueChange={setSelectedClientId}
+                value={selectedClientId || NONE}
+                onValueChange={(val) => {
+                  setSelectedClientId(val === NONE ? '' : val)
+                  setSelectedCampaignId('')
+                  setSelectedPostIds([])
+                }}
                 disabled={isLoadingClients}
               >
                 <SelectTrigger className="h-7 border-0 shadow-none bg-transparent hover:bg-muted/60 focus:ring-0 px-2 text-sm w-auto max-w-full">
                   <SelectValue placeholder="Select client" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value={NONE}>
+                    <span className="text-muted-foreground">General (no client)</span>
+                  </SelectItem>
                   {allClients.map((c) => (
                     <SelectItem key={c.id} value={c.id}>
                       <div className="flex items-center gap-2">
@@ -328,10 +389,56 @@ export default function EditTaskDialog({
                 className="h-7 text-sm bg-transparent border-0 outline-none text-muted-foreground hover:text-foreground transition-colors px-2 rounded-md hover:bg-muted/60 cursor-pointer"
               />
             </MetaRow>
+
+            {/* Campaign */}
+            <MetaRow label="Campaign">
+              <Select
+                value={selectedCampaignId || NONE}
+                onValueChange={(v) => setSelectedCampaignId(v === NONE ? '' : v)}
+                disabled={!selectedClientId || loadingCampaigns}
+              >
+                <SelectTrigger className="h-7 border-0 shadow-none bg-transparent hover:bg-muted/60 focus:ring-0 px-2 text-sm w-auto max-w-full">
+                  <SelectValue placeholder="None" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NONE}>
+                    <span className="text-muted-foreground">None</span>
+                  </SelectItem>
+                  {availableCampaigns.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      <div className="flex items-center gap-2">
+                        <Megaphone className="size-3.5 text-muted-foreground shrink-0" />
+                        <span className="truncate">{c.name}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </MetaRow>
+
+            {/* Deliverable — own row, full width */}
+            <div className="space-y-1.5 pt-1">
+              <span className="text-xs text-muted-foreground">Deliverable</span>
+              <DeliverablePickerSection
+                posts={availablePosts}
+                selectedPosts={selectedPosts}
+                onToggle={(post) =>
+                  setSelectedPostIds((ids) =>
+                    ids.includes(post.id)
+                      ? ids.filter((id) => id !== post.id)
+                      : [...ids, post.id],
+                  )
+                }
+                onClear={() => setSelectedPostIds([])}
+                showClient={!selectedClientId}
+                disabled={loadingPosts}
+              />
+            </div>
           </div>
+        </div>
 
           {/* ── Footer ── */}
-          <div className="border-t border-border/50 px-6 py-4 flex items-center justify-end gap-2">
+          <div className="border-t border-border/50 px-6 py-4 flex items-center justify-end gap-2 shrink-0">
             <Button
               type="button"
               variant="ghost"

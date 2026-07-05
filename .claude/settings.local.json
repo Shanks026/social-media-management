@@ -154,7 +154,13 @@
       "mcp__shadcn__search_items_in_registries",
       "mcp__shadcn__view_items_in_registries",
       "WebFetch(domain:ui.shadcn.com)",
-      "Bash(node -e \"const icons = require\\('lucide-react'\\); console.log\\(Object.keys\\(icons\\).filter\\(k => /chess/i.test\\(k\\)\\)\\)\")"
+      "Bash(node -e \"const icons = require\\('lucide-react'\\); console.log\\(Object.keys\\(icons\\).filter\\(k => /chess/i.test\\(k\\)\\)\\)\")",
+      "PowerShell(npx eslint src/api/tasks.js src/components/tasks/DeliverablePickerSection.jsx src/components/tasks/CreateTaskDialog.jsx src/components/tasks/EditTaskDialog.jsx src/components/tasks/TaskCard.jsx)",
+      "Bash(grep -oE \"\\(public\\\\.\\)?\\(tasks|notifications|comments|clients\\)\\\\` has policies\" \"C:\\\\Users\\\\chris_austin\\\\.claude\\\\projects\\\\c--Users-chris-austin-Desktop-social-media-management\\\\78db0501-a62d-486e-b5a2-768d9fb33373\\\\tool-results\\\\mcp-supabase-get_advisors-1783235023540.txt\")",
+      "PowerShell(npx eslint src/components/tasks/TaskCard.jsx)",
+      "PowerShell(npx eslint src/api/posts.js src/api/tasks.js src/components/tasks/DeliverablePickerSection.jsx src/components/tasks/CreateTaskDialog.jsx src/components/tasks/EditTaskDialog.jsx src/components/tasks/TaskCard.jsx)",
+      "PowerShell(npx eslint src/components/tasks/TaskCard.jsx src/pages/TasksAndReminders.jsx)",
+      "PowerShell(npx eslint src/lib/post-statuses.js src/pages/posts/postDetails/PostContent.jsx src/pages/posts/DraftPostList.jsx src/pages/calendar/CalendarPostCard.jsx)"
     ]
   }
 }

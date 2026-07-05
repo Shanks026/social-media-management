@@ -54,6 +54,7 @@ import { format } from 'date-fns'
 import { getPublishState } from '@/lib/helper'
 import MeetingRow from '@/components/MeetingRow'
 import { useTasks } from '@/api/tasks'
+import { useCampaigns } from '@/api/campaigns'
 import { useTeamMembers } from '@/api/team'
 import { useAuth } from '@/context/AuthContext'
 
@@ -117,6 +118,12 @@ export default function OverviewTab({ client }) {
   }, [teamMembers, user])
 
   const clientMap = useMemo(() => ({ [String(client.id)]: client }), [client])
+
+  const { data: clientCampaigns = [] } = useCampaigns({ clientId: client.id })
+  const campaignMap = useMemo(
+    () => Object.fromEntries(clientCampaigns.map((c) => [String(c.id), c])),
+    [clientCampaigns],
+  )
 
   const [, setSearchParams] = useSearchParams()
   const navigate = useNavigate()
@@ -420,6 +427,7 @@ export default function OverviewTab({ client }) {
                           key={note.id}
                           task={note}
                           clientMap={clientMap}
+                          campaignMap={campaignMap}
                           memberMap={memberMap}
                           currentUserId={user?.id}
                         />

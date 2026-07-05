@@ -60,6 +60,8 @@ import {
 import { toast } from 'sonner'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
+import { usePermissions } from '@/api/usePermissions'
+import { DELETABLE_POST_STATUSES } from '@/lib/post-statuses'
 import { cn } from '@/lib/utils'
 import { getUrgencyStatus } from '@/lib/client-helpers'
 import { getPublishState, renderCaption, isDocumentUrl, getDocumentExtension, getDocumentPreviewUrl } from '@/lib/helper'
@@ -190,6 +192,7 @@ export default function DraftPostList({ clientId, onCreatePost, statusFilter = '
   const queryClient = useQueryClient()
   const navigate = useNavigate()
   const { user } = useAuth()
+  const { isAdmin } = usePermissions()
   const { data: members = [] } = useTeamMembers()
 
   const [previewPost, setPreviewPost] = useState(null)
@@ -456,15 +459,19 @@ export default function DraftPostList({ clientId, onCreatePost, statusFilter = '
                         </DropdownMenuItem>
                       )}
 
-                      <DropdownMenuItem
-                        variant="destructive"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          setPostToDelete(post)
-                        }}
-                      >
-                        <Trash2 className="h-4 w-4" /> Delete Post
-                      </DropdownMenuItem>
+                      {(isAdmin ||
+                        (post.deliverable_creator_id === user?.id &&
+                          DELETABLE_POST_STATUSES.includes(post.status))) && (
+                        <DropdownMenuItem
+                          variant="destructive"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setPostToDelete(post)
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" /> Delete Post
+                        </DropdownMenuItem>
+                      )}
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>

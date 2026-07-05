@@ -91,6 +91,11 @@ export const POST_STATUS_CONFIG = {
   },
 }
 
+// Statuses a deliverable may be deleted in by its *creator* (a non-admin member).
+// Everything from READY onward represents a committed agency/client action, so
+// deletion is blocked there for members. Owner/admin can delete in any status.
+export const DELETABLE_POST_STATUSES = ['DRAFT', 'SUBMITTED', 'ARCHIVED']
+
 // Chart statuses in render order — ARCHIVED intentionally excluded from charts.
 const CHART_STATUS_KEYS = [
   'DRAFT',

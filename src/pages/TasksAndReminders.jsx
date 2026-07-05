@@ -38,6 +38,7 @@ import {
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
+  Megaphone,
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { toast } from 'sonner'
@@ -93,13 +94,14 @@ import { useSearchParams } from 'react-router-dom'
 import { useHeader } from '@/components/misc/header-context'
 import { useAuth } from '@/context/AuthContext'
 import { useClients } from '@/api/clients'
+import { useCampaigns } from '@/api/campaigns'
 import { useTasks, updateTaskStatus } from '@/api/tasks'
 import { useTeamMembers } from '@/api/team'
 import { usePermissions } from '@/api/usePermissions'
 import CreateTaskDialog from '@/components/tasks/CreateTaskDialog'
 import EditTaskDialog from '@/components/tasks/EditTaskDialog'
 import { ClientAvatar } from '@/components/tasks/ClientAvatar'
-import TaskCard, { STATUS_CONFIG, PRIORITY_CONFIG, STATUS_DOT } from '@/components/tasks/TaskCard'
+import TaskCard, { TaskDetailSheet, STATUS_CONFIG, PRIORITY_CONFIG, STATUS_DOT } from '@/components/tasks/TaskCard'
 import AssigneeFilterPopover from '@/components/tasks/AssigneeFilterPopover'
 import { cn } from '@/lib/utils'
 import {
@@ -123,8 +125,6 @@ const STATUS_TABS = [
 const PRIORITY_DOT = Object.fromEntries(Object.entries(PRIORITY_CONFIG).map(([k, v]) => [k, v.dot]))
 const PRIORITY_LABELS = Object.fromEntries(Object.entries(PRIORITY_CONFIG).map(([k, v]) => [k, v.label]))
 
-const PRIORITY_ORDER = { URGENT: 0, HIGH: 1, NORMAL: 2, LOW: 3 }
-
 const TAB_TRIGGER_CLASS =
   'relative rounded-none bg-transparent px-0 pb-3 pt-0 text-sm font-medium transition-none shadow-none border-b-2 border-transparent text-muted-foreground flex-none w-fit gap-2 data-[state=active]:bg-transparent dark:data-[state=active]:bg-transparent data-[state=active]:text-black dark:data-[state=active]:text-white data-[state=active]:border-black dark:data-[state=active]:border-white data-[state=active]:shadow-none data-[state=active]:border-x-0 data-[state=active]:border-t-0 focus-visible:ring-0'
 
@@ -132,12 +132,6 @@ const TAB_TRIGGER_CLASS =
 const GLOBAL_TASKS_QK = ['tasks', 'list', { clientId: null, campaignId: null }]
 
 // --- Helpers ---
-
-function sortByPriority(tasks) {
-  return [...tasks].sort(
-    (a, b) => (PRIORITY_ORDER[a.priority] ?? 2) - (PRIORITY_ORDER[b.priority] ?? 2),
-  )
-}
 
 function ColHeader({ label }) {
   return <span className="text-xs font-medium text-muted-foreground">{label}</span>
@@ -159,7 +153,7 @@ function SortableColHeader({ column, label }) {
 }
 
 
-function TasksGroup({ title, tasks, clientMap, memberMap, currentUserId }) {
+function TasksGroup({ title, tasks, clientMap, campaignMap, memberMap, currentUserId }) {
   if (tasks.length === 0) return null
   return (
     <div className="space-y-3">
@@ -172,6 +166,7 @@ function TasksGroup({ title, tasks, clientMap, memberMap, currentUserId }) {
             key={task.id}
             task={task}
             clientMap={clientMap}
+            campaignMap={campaignMap}
             memberMap={memberMap}
             currentUserId={currentUserId}
           />
@@ -275,7 +270,7 @@ function KanbanColumn({
 
 // --- Kanban View ---
 
-function KanbanTasksView({ tasks, clientMap, memberMap, currentUserId, queryClient }) {
+function KanbanTasksView({ tasks, clientMap, campaignMap, memberMap, currentUserId, queryClient }) {
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
   )
@@ -324,7 +319,7 @@ function KanbanTasksView({ tasks, clientMap, memberMap, currentUserId, queryClie
         >
           {todoTasks.map((task) => (
             <DraggableCard key={task.id} id={task.id}>
-              <TaskCard task={task} clientMap={clientMap} memberMap={memberMap} currentUserId={currentUserId} />
+              <TaskCard task={task} clientMap={clientMap} campaignMap={campaignMap} memberMap={memberMap} currentUserId={currentUserId} />
             </DraggableCard>
           ))}
         </KanbanColumn>
@@ -337,7 +332,7 @@ function KanbanTasksView({ tasks, clientMap, memberMap, currentUserId, queryClie
         >
           {inProgressTasks.map((task) => (
             <DraggableCard key={task.id} id={task.id}>
-              <TaskCard task={task} clientMap={clientMap} memberMap={memberMap} currentUserId={currentUserId} />
+              <TaskCard task={task} clientMap={clientMap} campaignMap={campaignMap} memberMap={memberMap} currentUserId={currentUserId} />
             </DraggableCard>
           ))}
         </KanbanColumn>
@@ -350,7 +345,7 @@ function KanbanTasksView({ tasks, clientMap, memberMap, currentUserId, queryClie
         >
           {completedTasks.map((task) => (
             <DraggableCard key={task.id} id={task.id}>
-              <TaskCard task={task} clientMap={clientMap} memberMap={memberMap} currentUserId={currentUserId} />
+              <TaskCard task={task} clientMap={clientMap} campaignMap={campaignMap} memberMap={memberMap} currentUserId={currentUserId} />
             </DraggableCard>
           ))}
         </KanbanColumn>
@@ -364,7 +359,7 @@ function KanbanTasksView({ tasks, clientMap, memberMap, currentUserId, queryClie
         >
           {archivedTasks.map((task) => (
             <DraggableCard key={task.id} id={task.id}>
-              <TaskCard task={task} clientMap={clientMap} memberMap={memberMap} currentUserId={currentUserId} />
+              <TaskCard task={task} clientMap={clientMap} campaignMap={campaignMap} memberMap={memberMap} currentUserId={currentUserId} />
             </DraggableCard>
           ))}
         </KanbanColumn>
@@ -390,7 +385,7 @@ function TaskTableRowSkeleton() {
   )
 }
 
-function TasksTableView({ tasks, isLoading, clientMap, memberMap, currentUserId }) {
+function TasksTableView({ tasks, isLoading, clientMap, campaignMap, memberMap, currentUserId }) {
   const { isOwner } = usePermissions()
   const [sorting, setSorting] = useState([])
   const [selectedTask, setSelectedTask] = useState(null)
@@ -478,11 +473,27 @@ function TasksTableView({ tasks, isLoading, clientMap, memberMap, currentUserId 
       },
       cell: ({ getValue }) => {
         const client = clientMap[String(getValue())]
-        if (!client) return <span className="text-xs text-muted-foreground">—</span>
+        if (!client)
+          return <span className="text-sm text-muted-foreground">General (no client)</span>
         return (
           <div className="flex items-center gap-2 min-w-0">
             <ClientAvatar client={client} size="sm" />
             <span className="text-sm truncate max-w-32">{client.name}</span>
+          </div>
+        )
+      },
+    }),
+    taskCol.accessor('campaign_id', {
+      id: 'campaign',
+      header: () => <ColHeader label="Campaign" />,
+      enableSorting: false,
+      cell: ({ getValue }) => {
+        const campaign = getValue() ? campaignMap[String(getValue())] : null
+        if (!campaign) return <span className="text-xs text-muted-foreground">—</span>
+        return (
+          <div className="flex items-center gap-1.5 min-w-0">
+            <Megaphone className="size-3.5 text-muted-foreground shrink-0" />
+            <span className="text-sm truncate max-w-32">{campaign.name}</span>
           </div>
         )
       },
@@ -508,7 +519,7 @@ function TasksTableView({ tasks, isLoading, clientMap, memberMap, currentUserId 
         )
       },
     }),
-  ], [clientMap, memberMap, currentUserId])
+  ], [clientMap, campaignMap, memberMap, currentUserId])
 
   const table = useReactTable({
     data: tasks,
@@ -565,6 +576,7 @@ function TasksTableView({ tasks, isLoading, clientMap, memberMap, currentUserId 
         open={!!selectedTask}
         onOpenChange={(open) => { if (!open) setSelectedTask(null) }}
         clientMap={clientMap}
+        campaignMap={campaignMap}
         memberMap={memberMap}
         currentUserId={currentUserId}
         canEdit={selCanEdit}
@@ -641,16 +653,19 @@ export default function TasksAndReminders() {
     ]
   }, [clientsData])
 
-  const clientMap = useMemo(() => {
-    const map = Object.fromEntries(allClients.map((c) => [c.id, c]))
-    map['null'] = clientsData?.internalAccount
-      ? {
-          ...clientsData.internalAccount,
-          name: clientsData.internalAccount.name || 'Internal',
-        }
-      : { id: null, name: 'Internal', is_internal: true }
-    return map
-  }, [allClients, clientsData])
+  // Keyed by real client id only. A null client_id ("General / no client") must
+  // NOT resolve to the internal account — TaskCard renders "General (no client)"
+  // when the lookup misses.
+  const clientMap = useMemo(
+    () => Object.fromEntries(allClients.map((c) => [String(c.id), c])),
+    [allClients],
+  )
+
+  const { data: allCampaigns = [] } = useCampaigns()
+  const campaignMap = useMemo(
+    () => Object.fromEntries(allCampaigns.map((c) => [String(c.id), c])),
+    [allCampaigns],
+  )
 
   const defaultClientId = clientsData?.internalAccount?.id ?? null
 
@@ -680,9 +695,14 @@ export default function TasksAndReminders() {
 
   const allTasks = useMemo(() => {
     if (selectedClient === 'all') return fetchedTasks
+    // General = no client at all; Internal = the internal-account client (real id).
+    // These are distinct buckets — a null client_id is not "internal work".
+    if (selectedClient === 'general') {
+      return fetchedTasks.filter((t) => !t.client_id)
+    }
     if (selectedClient === 'internal') {
       return fetchedTasks.filter(
-        (t) => !t.client_id || clientMap[t.client_id]?.is_internal === true,
+        (t) => t.client_id && clientMap[t.client_id]?.is_internal === true,
       )
     }
     return fetchedTasks.filter((t) => t.client_id === selectedClient)
@@ -705,7 +725,7 @@ export default function TasksAndReminders() {
     })
   }, [allTasks, statusTab, selectedPriority, selectedAssignees, assignedToMe, createdByMe, currentUserId, search])
 
-  const displayTasks = useMemo(() => sortByPriority(filteredTasks), [filteredTasks])
+  const displayTasks = filteredTasks
 
   const counts = useMemo(
     () =>
@@ -814,6 +834,7 @@ export default function TasksAndReminders() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Clients</SelectItem>
+                <SelectItem value="general">General (no client)</SelectItem>
                 <SelectItem value="internal">Internal</SelectItem>
                 {clientsData?.realClients?.length > 0 && (
                   <>
@@ -961,6 +982,7 @@ export default function TasksAndReminders() {
           <KanbanTasksView
             tasks={filteredTasks}
             clientMap={clientMap}
+            campaignMap={campaignMap}
             memberMap={memberMap}
             currentUserId={currentUserId}
             queryClient={queryClient}
@@ -970,6 +992,7 @@ export default function TasksAndReminders() {
             tasks={displayTasks}
             isLoading={false}
             clientMap={clientMap}
+            campaignMap={campaignMap}
             memberMap={memberMap}
             currentUserId={currentUserId}
           />
@@ -980,6 +1003,7 @@ export default function TasksAndReminders() {
                 key={task.id}
                 task={task}
                 clientMap={clientMap}
+                campaignMap={campaignMap}
                 memberMap={memberMap}
                 currentUserId={currentUserId}
               />

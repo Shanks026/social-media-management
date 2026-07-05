@@ -52,10 +52,12 @@ import { deleteIndividualMedia } from '@/api/posts'
 import { useTeamMembers } from '@/api/team'
 import { useAuth } from '@/context/AuthContext'
 import { getPublishState, renderCaption, isDocumentUrl, getDocumentExtension, getDocumentPreviewUrl } from '@/lib/helper'
+import { DELETABLE_POST_STATUSES } from '@/lib/post-statuses'
 import StatusBadge from '@/components/StatusBadge'
 import ClientNotes from './ClientNotes'
 import { cn } from '@/lib/utils'
 import SocialMediaPreview from '../socialMediaPreview/SocialMediaPreview'
+import PostLinkedTasks from '@/components/tasks/PostLinkedTasks'
 
 /**
  * Utility: Media Type Check
@@ -242,7 +244,15 @@ export default function PostContent({
   const canEdit = canSendDeliverables
     ? ['DRAFT', 'PENDING_APPROVAL', 'SUBMITTED', 'CHANGES_REQUESTED', 'READY'].includes(post.status)
     : ['DRAFT', 'CHANGES_REQUESTED'].includes(post.status)
-  const canDelete = post.status !== 'PUBLISHED' && post.status !== 'DELIVERED'
+  // Delete authorization mirrors the posts RLS DELETE policy so the button never
+  // offers an action RLS would reject: owner/admin (canSendDeliverables) can
+  // delete in any status; a member can delete only their own deliverable and
+  // only before a commitment (DRAFT/SUBMITTED/ARCHIVED).
+  const isDeliverableCreator =
+    !!post.deliverable_creator_id && post.deliverable_creator_id === user?.id
+  const canDelete =
+    canSendDeliverables ||
+    (isDeliverableCreator && DELETABLE_POST_STATUSES.includes(post.status))
   // Owner/admin send to client from DRAFT (bypass) or READY (post-internal-approval)
   const canSendForApproval = ['DRAFT', 'READY'].includes(post.status) && !!post.content && canSendDeliverables
   // Owner/admin approve & schedule from DRAFT (bypass) or READY (post-internal-approval)
@@ -906,6 +916,8 @@ export default function PostContent({
           />
         </div>
       )}
+
+      <PostLinkedTasks postId={post.actual_post_id} />
 
       <SocialMediaPreview
         isOpen={isSocialPreviewOpen}

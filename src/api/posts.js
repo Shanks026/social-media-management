@@ -13,6 +13,7 @@ export async function fetchAllPostsByClient(clientId) {
       id,
       client_id,
       campaign_id,
+      created_by,
       campaigns ( name ),
       post_versions!fk_current_version (
         id,
@@ -52,8 +53,92 @@ export async function fetchAllPostsByClient(clientId) {
       campaign_id: post.campaign_id,
       campaign_name: post.campaigns?.name,
       created_by: latest.created_by || null,
+      // Original deliverable creator (posts.created_by) — authorizes deletion.
+      deliverable_creator_id: post.created_by || null,
     }
   })
+}
+
+/**
+ * All deliverables across every client in the workspace — same per-item shape
+ * as fetchAllPostsByClient, plus client identity fields (client_name,
+ * client_logo, is_internal) so a cross-client picker can label each row.
+ * Used by the task deliverable picker when no client is selected ("General").
+ */
+export async function fetchAllDeliverables(userId) {
+  const { data, error } = await supabase
+    .from('posts')
+    .select(
+      `
+      id,
+      client_id,
+      campaign_id,
+      campaigns!campaign_id ( name ),
+      clients!inner ( id, name, logo_url, is_internal, user_id ),
+      post_versions!fk_current_version (
+        id, title, media_urls, platform, status, target_date, created_at, created_by
+      )
+    `,
+    )
+    .eq('clients.user_id', userId)
+    .order('created_at', { ascending: false })
+
+  if (error) throw error
+
+  return (data ?? [])
+    .filter((post) => post.post_versions)
+    .map((post) => {
+      const latest = post.post_versions || {}
+      const c = post.clients || {}
+      return {
+        ...latest,
+        platforms: latest.platform || [],
+        id: post.id,
+        version_id: latest.id,
+        actual_post_id: post.id,
+        client_id: post.client_id,
+        campaign_id: post.campaign_id,
+        campaign_name: post.campaigns?.name,
+        created_by: latest.created_by || null,
+        client_name: c.name || 'Unknown',
+        client_logo: c.logo_url || null,
+        is_internal: c.is_internal || false,
+      }
+    })
+}
+
+/**
+ * Minimal single-post lookup for small previews (e.g. a task's linked
+ * deliverable badge/row) — same shape as fetchAllPostsByClient's per-item
+ * result, but scoped to one id instead of a whole client. Lighter than
+ * fetchPostDetails, which also joins share_tokens and full client info.
+ */
+export async function fetchPostSummary(postId) {
+  const { data, error } = await supabase
+    .from('posts')
+    .select(
+      `
+      id,
+      client_id,
+      post_versions!fk_current_version ( title, media_urls, platform, status, target_date )
+    `,
+    )
+    .eq('id', postId)
+    .maybeSingle()
+
+  if (error) throw error
+  if (!data) return null
+
+  const latest = data.post_versions || {}
+  return {
+    id: data.id,
+    client_id: data.client_id,
+    title: latest.title,
+    media_urls: latest.media_urls,
+    platforms: latest.platform || [],
+    status: latest.status,
+    target_date: latest.target_date,
+  }
 }
 
 /**
@@ -91,6 +176,7 @@ export async function fetchPostDetails(id) {
       `
       id,
       client_id,
+      created_by,
       clients ( name, logo_url, email, social_links, industry, is_internal ),
       post_versions!fk_current_version (
         *,
@@ -106,6 +192,9 @@ export async function fetchPostDetails(id) {
       ...parentData.post_versions,
       platforms: parentData.post_versions.platform || [],
       actual_post_id: parentData.id,
+      // Original deliverable creator (posts.created_by) — distinct from the
+      // spread version's created_by. Used to gate delete (creator or admin).
+      deliverable_creator_id: parentData.created_by,
       clients: parentData.clients,
     }
   }
@@ -120,6 +209,7 @@ export async function fetchPostDetails(id) {
       posts!post_versions_post_id_fkey (
         id,
         client_id,
+        created_by,
         clients ( name, logo_url, email, social_links, industry, is_internal )
       )
     `,
@@ -134,6 +224,7 @@ export async function fetchPostDetails(id) {
       ...versionData,
       platforms: versionData.platform || [],
       actual_post_id: versionData.posts.id,
+      deliverable_creator_id: versionData.posts.created_by,
       clients: versionData.posts.clients,
     }
   }
@@ -178,6 +269,7 @@ export async function createDraftPost({
 
 export const deletePost = async (postId) => {
   try {
+    // Collect media paths first (needed for cleanup after the row is gone).
     const { data: versions, error: fetchError } = await supabase
       .from('post_versions')
       .select('media_urls')
@@ -190,11 +282,23 @@ export const deletePost = async (postId) => {
       Boolean,
     )
 
-    console.log('Attempting to delete these paths from bucket:', uniquePaths)
+    // Delete the post row FIRST — this is the RLS authorization gate (only the
+    // creator or a workspace admin may delete). Doing this before touching
+    // storage means an unauthorized/blocked delete never orphans media.
+    const { data: dbData, error: dbError } = await supabase
+      .from('posts')
+      .delete()
+      .eq('id', postId)
+      .select()
 
-    // api/posts.js -> inside deletePost function
+    if (dbError) throw dbError
+    if (!dbData || dbData.length === 0) {
+      // RLS filtered the row out — not the creator and not an admin.
+      throw new Error('You can only delete deliverables you created.')
+    }
+
+    // Row is gone → safe to clean up its media + storage accounting.
     if (uniquePaths.length > 0) {
-      // Get total size for storage tracking before deletion
       let totalBytes = 0
       try {
         const sizes = await Promise.all(uniquePaths.map(getFileSize))
@@ -209,7 +313,7 @@ export const deletePost = async (postId) => {
 
       if (storageError) {
         console.error('Storage cleanup failed:', storageError)
-        throw storageError
+        // Row already deleted — surface but don't fail the whole op.
       }
 
       if (totalBytes > 0) {
@@ -225,13 +329,6 @@ export const deletePost = async (postId) => {
       }
     }
 
-    const { data: dbData, error: dbError } = await supabase
-      .from('posts')
-      .delete()
-      .eq('id', postId)
-      .select()
-
-    if (dbError) throw dbError
     return dbData
   } catch (error) {
     console.error('Detailed Delete Error:', error)

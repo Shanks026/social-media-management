@@ -58,6 +58,8 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { useAuth } from '@/context/AuthContext'
+import { usePermissions } from '@/api/usePermissions'
+import { DELETABLE_POST_STATUSES } from '@/lib/post-statuses'
 import { useTeamMembers } from '@/api/team'
 import { useQueryClient, useMutation } from '@tanstack/react-query'
 import { deleteMeeting } from '@/api/meetings'
@@ -201,6 +203,7 @@ export function CalendarPostCard({ post }) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { user } = useAuth()
+  const { isAdmin } = usePermissions()
   const [isPreviewOpen, setIsPreviewOpen] = useState(false)
   const [activeImageIndex, setActiveImageIndex] = useState(0)
   const [postToDelete, setPostToDelete] = useState(null)
@@ -440,8 +443,12 @@ export function CalendarPostCard({ post }) {
   const canEdit = ['DRAFT', 'PENDING_APPROVAL'].includes(postStatus)
   // NEEDS_REVISION creates a new version
   const canCreateNewVersion = postStatus === 'NEEDS_REVISION'
-  // Delete is allowed for EVERYTHING EXCEPT PUBLISHED
-  const canDelete = postStatus !== 'PUBLISHED'
+  // Delete authorization mirrors the posts RLS DELETE policy: owner/admin can
+  // delete in any status; a member only their own deliverable and only before a
+  // commitment (DRAFT/SUBMITTED/ARCHIVED).
+  const canDeletePost =
+    isAdmin ||
+    (post.created_by === user?.id && DELETABLE_POST_STATUSES.includes(postStatus))
 
   // Calculate health
   const isCompleted = ['PUBLISHED', 'ARCHIVED'].includes(postStatus)
@@ -545,16 +552,17 @@ export function CalendarPostCard({ post }) {
                     Assign to Campaign
                   </DropdownMenuItem>
                 )}
-                <DropdownMenuItem
-                  disabled={!canDelete}
-                  variant="destructive"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    setPostToDelete(post)
-                  }}
-                >
-                  <Trash2 className="h-4 w-4" /> Delete Post
-                </DropdownMenuItem>
+                {canDeletePost && (
+                  <DropdownMenuItem
+                    variant="destructive"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setPostToDelete(post)
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4" /> Delete Post
+                  </DropdownMenuItem>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>

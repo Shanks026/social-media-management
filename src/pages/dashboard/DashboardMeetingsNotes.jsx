@@ -23,6 +23,7 @@ import CreateTaskDialog from '@/components/tasks/CreateTaskDialog'
 import TaskCard from '@/components/tasks/TaskCard'
 import { deleteMeeting } from '@/api/meetings'
 import { useMyTasks } from '@/api/tasks'
+import { useCampaigns } from '@/api/campaigns'
 import { useTeamMembers } from '@/api/team'
 import { useSubscription } from '@/api/useSubscription'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
@@ -45,14 +46,9 @@ export default function DashboardMeetingsNotes() {
         .from('clients')
         .select('id, name, logo_url, is_internal')
         .eq('user_id', workspaceUserId)
-      const map = (data || []).reduce((acc, c) => ({ ...acc, [c.id]: c }), {})
-      const internalClient = (data || []).find((c) => c.is_internal)
-      map['null'] = internalClient || {
-        id: null,
-        name: 'Internal (Agency)',
-        is_internal: true,
-      }
-      return map
+      // Keyed by real client id only — a null client_id ("General / no client")
+      // must not resolve to the internal account; TaskCard shows "General (no client)".
+      return (data || []).reduce((acc, c) => ({ ...acc, [String(c.id)]: c }), {})
     },
     enabled: !!workspaceUserId,
   })
@@ -86,6 +82,11 @@ export default function DashboardMeetingsNotes() {
 
   const { data: activeTasks = [], isLoading: loadingTasks } = useMyTasks()
   const { data: teamMembers = [] } = useTeamMembers()
+  const { data: allCampaigns = [] } = useCampaigns()
+  const campaignMap = useMemo(
+    () => Object.fromEntries(allCampaigns.map((c) => [String(c.id), c])),
+    [allCampaigns],
+  )
 
   const memberMap = useMemo(() => {
     const map = Object.fromEntries(teamMembers.map((m) => [m.member_user_id, m]))
@@ -250,6 +251,7 @@ export default function DashboardMeetingsNotes() {
                       key={task.id}
                       task={task}
                       clientMap={clientsMap}
+                      campaignMap={campaignMap}
                       memberMap={memberMap}
                       currentUserId={user?.id}
                     />
