@@ -5,6 +5,7 @@ import { useTeamMembers } from '@/api/team'
 import { useClients } from '@/api/clients'
 import { useCampaigns } from '@/api/campaigns'
 import { useAuth } from '@/context/AuthContext'
+import { usePermissions } from '@/api/usePermissions'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -29,6 +30,7 @@ const STATUS_FILTERS = [
 
 export default function TasksTab({ clientId }) {
   const { user } = useAuth()
+  const { canAssignTasks } = usePermissions()
 
   const [statusFilter, setStatusFilter] = useState('active')
   const [priorityFilter, setPriorityFilter] = useState('all')
@@ -153,11 +155,13 @@ export default function TasksTab({ clientId }) {
         </div>
 
         <div className="flex items-center gap-3 shrink-0">
-          <AssigneeFilterPopover
-            members={memberList}
-            selected={selectedAssignees}
-            onChange={setSelectedAssignees}
-          />
+          {canAssignTasks && (
+            <AssigneeFilterPopover
+              members={memberList}
+              selected={selectedAssignees}
+              onChange={setSelectedAssignees}
+            />
+          )}
 
           <Select value={priorityFilter} onValueChange={setPriorityFilter}>
             <SelectTrigger className="h-9 w-36 border-border/60 shadow-none">

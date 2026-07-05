@@ -1,12 +1,13 @@
-import { useNavigate } from 'react-router-dom'
-import { useAuth } from '@/context/AuthContext'
-import { Button } from '@/components/ui/button'
-import { ArrowLeft } from 'lucide-react'
-
-export default function NotFound() {
-  const navigate = useNavigate()
-  const { session } = useAuth()
-
+// Fallback for any tampered/malformed public link (review, campaign review,
+// proposal, join). Deliberately has zero dependency on auth/subscription
+// state — no logout button, no agency-specific branding (that would imply
+// this belongs to a particular logged-in account), no navigation tied to the
+// authenticated app — since a visitor here may not have a Tercero account at
+// all. The plain Tercero wordmark at the bottom is fine to show (it's not
+// tenant-specific). Mirrors NotFound.jsx's layout/typography so both 404
+// surfaces feel like the same product; only the copy and the missing action
+// button differ.
+export default function PublicNotFound() {
   return (
     <div className="min-h-screen bg-background flex flex-col w-full">
       {/* Hero section */}
@@ -18,24 +19,17 @@ export default function NotFound() {
 
           <div className="space-y-3">
             <h1 className="text-4xl font-semibold tracking-tight bricolage">
-              Page not found.
+              Invalid link.
               <br />
               <span className="font-normal text-muted-foreground">
-                Let's get you back on track.
+                This page isn't available.
               </span>
             </h1>
             <p className="text-base text-muted-foreground leading-relaxed">
-              The page you're looking for doesn't exist or may have been moved.
+              This link is invalid or no longer available. Please contact the agency that shared
+              it with you for an updated link.
             </p>
           </div>
-
-          <Button
-            onClick={() => navigate(session ? '/dashboard' : '/login')}
-            className="gap-2 px-6"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            {session ? 'Back to Dashboard' : 'Back to Login'}
-          </Button>
         </div>
       </div>
 

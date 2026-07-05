@@ -314,13 +314,13 @@ function StatusEntry({ activity }) {
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-1.5 flex-wrap">
             {fromConfig && (
-              <Badge variant="outline" className={cn('text-[11px] font-medium whitespace-nowrap py-0.5 px-2', fromConfig.className)}>
+              <Badge variant="outline" className={fromConfig.className}>
                 {fromConfig.label}
               </Badge>
             )}
             <ArrowRight className="size-3 text-muted-foreground shrink-0" />
             {toConfig && (
-              <Badge variant="outline" className={cn('text-[11px] font-medium whitespace-nowrap py-0.5 px-2', toConfig.className)}>
+              <Badge variant="outline" className={toConfig.className}>
                 {toConfig.label}
               </Badge>
             )}

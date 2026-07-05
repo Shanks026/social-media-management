@@ -20,14 +20,16 @@ export function SidebarSubCard() {
 
   // 1. Logic for Conditional Visibility
   const clientLimit = sub.max_clients
+  const hasClientLimit = clientLimit != null
   const currentClients = sub.client_count
   const storagePercent = sub.storage_display.percent
 
-  const clientPercent = (currentClients / clientLimit) * 100
+  // null clientLimit means unlimited (Quantum/Trial) — can never be reached/nearing.
+  const clientPercent = hasClientLimit ? (currentClients / clientLimit) * 100 : 0
 
   const isFreeTier = sub.plan_name?.toUpperCase() === 'FREE'
-  const isClientReached = currentClients >= clientLimit
-  const isClientNearing = clientPercent >= 80 && clientPercent < 100
+  const isClientReached = hasClientLimit && currentClients >= clientLimit
+  const isClientNearing = hasClientLimit && clientPercent >= 80 && clientPercent < 100
 
   const isStorageReached = storagePercent >= 100
   const isStorageNearing = storagePercent >= 80 && storagePercent < 100
@@ -96,10 +98,7 @@ export function SidebarSubCard() {
     }
   }
 
-  const clientStatus = getStatusClasses(
-    (currentClients / clientLimit) * 100,
-    isClientReached,
-  )
+  const clientStatus = getStatusClasses(clientPercent, isClientReached)
   const storageStatus = getStatusClasses(storagePercent)
 
   return (
@@ -159,12 +158,12 @@ export function SidebarSubCard() {
                   <Users size={12} /> Clients
                 </span>
                 <span className={clientStatus.text}>
-                  {currentClients} / {clientLimit}
+                  {currentClients} / {hasClientLimit ? clientLimit : '∞'}
                 </span>
               </div>
               {!isFreeTier && (
                 <Progress
-                  value={(currentClients / clientLimit) * 100}
+                  value={clientPercent}
                   className="h-1"
                   indicatorClassName={clientStatus.indicator}
                 />

@@ -42,6 +42,14 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -61,7 +69,6 @@ import {
 } from '@/components/ui/empty'
 import { formatCurrency } from '@/utils/finance'
 import { formatDate } from '@/lib/helper'
-import { cn } from '@/lib/utils'
 
 // ── Status config ─────────────────────────────────────────────────────────────
 
@@ -90,6 +97,11 @@ const STATUS_CONFIG = {
     className:
       'bg-red-100 text-red-700 border-transparent dark:bg-red-950 dark:text-red-300',
   },
+  changes_requested: {
+    label: 'Changes Requested',
+    className:
+      'bg-orange-100 text-orange-700 border-transparent dark:bg-orange-950 dark:text-orange-300',
+  },
   expired: {
     label: 'Expired',
     className:
@@ -109,6 +121,7 @@ const STATUS_TABS = [
   'viewed',
   'accepted',
   'declined',
+  'changes_requested',
   'expired',
   'archived',
 ]
@@ -119,10 +132,7 @@ function StatusBadge({ status }) {
     className: 'bg-muted text-muted-foreground',
   }
   return (
-    <Badge
-      variant="outline"
-      className={cn('text-[11px] font-medium capitalize', config.className)}
-    >
+    <Badge variant="outline" className={config.className}>
       {config.label}
     </Badge>
   )
@@ -132,13 +142,14 @@ function StatusBadge({ status }) {
 
 function ProposalRowSkeleton() {
   return (
-    <div className="flex items-center gap-4 px-4 py-3.5 border-b border-border/50">
-      <Skeleton className="h-4 w-48" />
-      <Skeleton className="h-4 w-32 ml-auto" />
-      <Skeleton className="h-5 w-16 rounded-full" />
-      <Skeleton className="h-4 w-20" />
-      <Skeleton className="h-4 w-24" />
-    </div>
+    <TableRow>
+      <TableCell className="px-4 py-3"><Skeleton className="h-4 w-48" /></TableCell>
+      <TableCell className="px-4 py-3"><Skeleton className="h-4 w-16 ml-auto" /></TableCell>
+      <TableCell className="px-4 py-3"><Skeleton className="h-5 w-20 rounded-full" /></TableCell>
+      <TableCell className="px-4 py-3"><Skeleton className="h-4 w-20" /></TableCell>
+      <TableCell className="px-4 py-3"><Skeleton className="h-4 w-20" /></TableCell>
+      <TableCell className="px-4 py-3" />
+    </TableRow>
   )
 }
 
@@ -199,12 +210,21 @@ export default function ProposalsPage() {
     return true
   })
 
+  // eslint-disable-next-line no-unused-vars -- kept for the paused "Build in Tercero" flow, see below
   function openNewDialog() {
     if (atLimit) {
       setUpgradeOpen(true)
     } else {
       setEditingProposal(null)
       setDialogOpen(true)
+    }
+  }
+
+  function openUploadDialog() {
+    if (atLimit) {
+      setUpgradeOpen(true)
+    } else {
+      setUploadDialogOpen(true)
     }
   }
 
@@ -243,14 +263,14 @@ export default function ProposalsPage() {
           <div className="space-y-1">
             <h1 className="text-3xl font-normal tracking-tight text-foreground bricolage">
               Proposals{' '}
-              {!isLoading && proposals.length > 0 && (
+              {!isLoading && activeCount > 0 && (
                 <span className="text-muted-foreground/50 ml-2 font-extralight">
-                  {proposals.length}
+                  {activeCount}
                 </span>
               )}
             </h1>
             <p className="text-sm text-muted-foreground font-normal">
-              Create and send proposals to clients and prospects.
+              Upload and track proposals sent to clients and prospects.
             </p>
           </div>
 
@@ -261,6 +281,9 @@ export default function ProposalsPage() {
                 {activeCount} of {proposalsLimit} used
               </span>
             )}
+            {/* "Build in Tercero" is paused pending the upcoming drag-and-drop
+                proposal builder — upload-only for now. Restore this dropdown
+                (and the single button below) once that ships.
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button className="gap-2 h-9">
@@ -270,33 +293,21 @@ export default function ProposalsPage() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-52">
-                <DropdownMenuItem
-                  onClick={() => {
-                    if (atLimit) {
-                      setUpgradeOpen(true)
-                    } else {
-                      setEditingProposal(null)
-                      setDialogOpen(true)
-                    }
-                  }}
-                >
+                <DropdownMenuItem onClick={openNewDialog}>
                   <PenLine className="size-4 mr-2" />
                   Build in Tercero
                 </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => {
-                    if (atLimit) {
-                      setUpgradeOpen(true)
-                    } else {
-                      setUploadDialogOpen(true)
-                    }
-                  }}
-                >
+                <DropdownMenuItem onClick={openUploadDialog}>
                   <Upload className="size-4 mr-2" />
                   Upload Existing File
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+            */}
+            <Button className="gap-2 h-9" onClick={openUploadDialog}>
+              <Plus size={16} />
+              New Proposal
+            </Button>
           </div>
         </div>
 
@@ -390,9 +401,13 @@ export default function ProposalsPage() {
         {/* ── Content ── */}
         {isLoading ? (
           <div className="rounded-xl border border-border/50 overflow-hidden bg-card">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <ProposalRowSkeleton key={i} />
-            ))}
+            <Table>
+              <TableBody>
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <ProposalRowSkeleton key={i} />
+                ))}
+              </TableBody>
+            </Table>
           </div>
         ) : filtered.length === 0 ? (
           <Empty className="py-20 border border-dashed rounded-2xl bg-muted/5 animate-in fade-in duration-500">
@@ -410,135 +425,138 @@ export default function ProposalsPage() {
               </EmptyHeader>
               {!isFiltered && activeTab === 'all' && (
                 <Button
-                  onClick={openNewDialog}
+                  onClick={openUploadDialog}
                   variant="outline"
                   className="mt-2"
                 >
-                  <Plus className="size-4 mr-2" />
-                  Create your first proposal
+                  <Upload className="size-4 mr-2" />
+                  Upload your first proposal
                 </Button>
               )}
             </EmptyContent>
           </Empty>
         ) : (
           <div className="rounded-xl border border-border/50 overflow-hidden bg-card">
-            {/* Table header */}
-            <div className="grid grid-cols-[1fr_auto_auto_auto_auto_auto] gap-4 px-4 py-2.5 border-b border-border/50 bg-muted/30">
-              <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
-                Proposal
-              </span>
-              <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider w-24 text-right">
-                Total
-              </span>
-              <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider w-24">
-                Status
-              </span>
-              <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider w-28">
-                Valid Until
-              </span>
-              <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider w-28">
-                Created
-              </span>
-              <span className="w-8" />
-            </div>
-
-            {/* Rows */}
-            {filtered.map((proposal) => {
-              const displayName =
-                proposal.client_name || proposal.prospect_name || '—'
-              return (
-                <div
-                  key={proposal.id}
-                  onClick={() => navigate(`/proposals/${proposal.id}`)}
-                  className="grid grid-cols-[1fr_auto_auto_auto_auto_auto] gap-4 px-4 py-3.5 border-b border-border/40 last:border-b-0 hover:bg-muted/20 transition-colors group items-center cursor-pointer"
-                >
-                  {/* Title + client */}
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-foreground truncate group-hover:text-primary transition-colors">
-                      {proposal.title}
-                    </p>
-                    <p className="text-xs text-muted-foreground truncate mt-0.5">
-                      {displayName}
-                      {!proposal.client_id && proposal.prospect_name && (
-                        <span className="ml-1.5 text-[10px] opacity-60">
-                          (prospect)
-                        </span>
-                      )}
-                    </p>
-                  </div>
-
-                  {/* Total */}
-                  <span className="text-sm font-medium tabular-nums w-24 text-right">
-                    {formatCurrency(proposal.total_value ?? 0)}
-                  </span>
-
-                  {/* Status */}
-                  <div className="w-24">
-                    <StatusBadge status={proposal.status} />
-                  </div>
-
-                  {/* Valid Until */}
-                  <span className="text-xs text-muted-foreground w-28">
-                    {proposal.valid_until
-                      ? formatDate(proposal.valid_until)
-                      : '—'}
-                  </span>
-
-                  {/* Created */}
-                  <span className="text-xs text-muted-foreground w-28">
-                    {formatDate(proposal.created_at)}
-                  </span>
-
-                  {/* Actions */}
-                  <div
-                    className="w-8 flex justify-end"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="size-7 opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
-                          <MoreHorizontal className="size-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        {proposal.status !== 'archived' &&
-                          proposal.proposal_type !== 'uploaded' && (
-                            <>
-                              <DropdownMenuItem
-                                onClick={() => openEditDialog(proposal)}
-                              >
-                                <Pencil className="size-4 mr-2" />
-                                Edit
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                            </>
+            <Table>
+              <TableHeader>
+                <TableRow className="hover:bg-transparent bg-muted/30">
+                  <TableHead className="px-4 py-2.5 text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
+                    Proposal
+                  </TableHead>
+                  <TableHead className="px-4 py-2.5 text-[11px] font-medium text-muted-foreground uppercase tracking-wider text-right">
+                    Total
+                  </TableHead>
+                  <TableHead className="px-4 py-2.5 text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
+                    Status
+                  </TableHead>
+                  <TableHead className="px-4 py-2.5 text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
+                    Valid Until
+                  </TableHead>
+                  <TableHead className="px-4 py-2.5 text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
+                    Created
+                  </TableHead>
+                  <TableHead className="px-4 py-2.5" />
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filtered.map((proposal) => {
+                  const displayName =
+                    proposal.client_name || proposal.prospect_name || '—'
+                  return (
+                    <TableRow
+                      key={proposal.id}
+                      onClick={() => navigate(`/proposals/${proposal.id}`)}
+                      className="cursor-pointer hover:bg-muted/40 transition-colors group"
+                    >
+                      {/* Title + client */}
+                      <TableCell className="px-4 py-3">
+                        <p className="text-sm font-medium text-foreground truncate group-hover:text-primary transition-colors">
+                          {proposal.title}
+                        </p>
+                        <p className="text-xs text-muted-foreground truncate mt-0.5">
+                          {displayName}
+                          {!proposal.client_id && proposal.prospect_name && (
+                            <span className="ml-1.5 text-[10px] opacity-60">
+                              (prospect)
+                            </span>
                           )}
-                        <DropdownMenuItem
-                          onClick={() => setDeletingProposal(proposal)}
-                          className="text-destructive focus:text-destructive"
-                        >
-                          {proposal.status === 'draft' ? (
-                            <>
-                              <Trash2 className="size-4 mr-2" />
-                              Delete
-                            </>
-                          ) : (
-                            <>
-                              <Archive className="size-4 mr-2" />
-                              Archive
-                            </>
-                          )}
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </div>
-              )
-            })}
+                        </p>
+                      </TableCell>
+
+                      {/* Total */}
+                      <TableCell className="px-4 py-3 text-sm font-medium tabular-nums text-right">
+                        {formatCurrency(proposal.total_value ?? 0)}
+                      </TableCell>
+
+                      {/* Status */}
+                      <TableCell className="px-4 py-3">
+                        <StatusBadge status={proposal.status} />
+                      </TableCell>
+
+                      {/* Valid Until */}
+                      <TableCell className="px-4 py-3 text-xs text-muted-foreground">
+                        {proposal.valid_until
+                          ? formatDate(proposal.valid_until)
+                          : '—'}
+                      </TableCell>
+
+                      {/* Created */}
+                      <TableCell className="px-4 py-3 text-xs text-muted-foreground">
+                        {formatDate(proposal.created_at)}
+                      </TableCell>
+
+                      {/* Actions */}
+                      <TableCell
+                        className="px-4 py-3"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="size-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              <MoreHorizontal className="size-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            {proposal.status !== 'archived' &&
+                              proposal.proposal_type !== 'uploaded' && (
+                                <>
+                                  <DropdownMenuItem
+                                    onClick={() => openEditDialog(proposal)}
+                                  >
+                                    <Pencil className="size-4 mr-2" />
+                                    Edit
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                </>
+                              )}
+                            <DropdownMenuItem
+                              onClick={() => setDeletingProposal(proposal)}
+                              className="text-destructive focus:text-destructive"
+                            >
+                              {proposal.status === 'draft' ? (
+                                <>
+                                  <Trash2 className="size-4 mr-2" />
+                                  Delete
+                                </>
+                              ) : (
+                                <>
+                                  <Archive className="size-4 mr-2" />
+                                  Archive
+                                </>
+                              )}
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  )
+                })}
+              </TableBody>
+            </Table>
           </div>
         )}
       </div>

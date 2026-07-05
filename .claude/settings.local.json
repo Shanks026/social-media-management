@@ -160,7 +160,19 @@
       "PowerShell(npx eslint src/components/tasks/TaskCard.jsx)",
       "PowerShell(npx eslint src/api/posts.js src/api/tasks.js src/components/tasks/DeliverablePickerSection.jsx src/components/tasks/CreateTaskDialog.jsx src/components/tasks/EditTaskDialog.jsx src/components/tasks/TaskCard.jsx)",
       "PowerShell(npx eslint src/components/tasks/TaskCard.jsx src/pages/TasksAndReminders.jsx)",
-      "PowerShell(npx eslint src/lib/post-statuses.js src/pages/posts/postDetails/PostContent.jsx src/pages/posts/DraftPostList.jsx src/pages/calendar/CalendarPostCard.jsx)"
+      "PowerShell(npx eslint src/lib/post-statuses.js src/pages/posts/postDetails/PostContent.jsx src/pages/posts/DraftPostList.jsx src/pages/calendar/CalendarPostCard.jsx)",
+      "Bash(ls -la /c/Users/Hai/.claude/projects/d--Tertiary/memory/ 2>&1)",
+      "Read(//c/Users/Hai/.claude/projects/d--Tertiary/memory//**)",
+      "Read(//c/Users/Hai/**)",
+      "mcp__supabase-mcp-server__list_tables",
+      "Bash(python3 -c ' *)",
+      "Bash(node \"C:\\\\Users\\\\Hai\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--Tertiary\\\\6bbaee28-0f8d-499b-85e2-c8cb41e45515\\\\scratchpad\\\\parse.js\")",
+      "Bash(node \"C:\\\\Users\\\\Hai\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--Tertiary\\\\6bbaee28-0f8d-499b-85e2-c8cb41e45515\\\\scratchpad\\\\parse2.js\")",
+      "Bash(node \"C:\\\\Users\\\\Hai\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--Tertiary\\\\6bbaee28-0f8d-499b-85e2-c8cb41e45515\\\\scratchpad\\\\dump.js\")",
+      "Skill(dataviz)",
+      "Skill(dataviz:*)",
+      "Bash(npm test *)",
+      "Bash(git stash *)"
     ]
   }
 }

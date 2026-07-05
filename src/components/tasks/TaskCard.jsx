@@ -76,17 +76,17 @@ export const STATUS_CONFIG = {
   TODO: {
     label: 'To Do',
     className:
-      'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 border-none',
+      'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border-none',
   },
   IN_PROGRESS: {
     label: 'In Progress',
     className:
-      'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400 border-none',
+      'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border-none',
   },
   COMPLETED: {
     label: 'Completed',
     className:
-      'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400 border-none',
+      'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border-none',
   },
   ARCHIVED: {
     label: 'Archived',
@@ -326,6 +326,24 @@ export function TaskDetailSheet({
                 </div>
               )}
 
+              {assignee && (
+                <div className="flex items-center gap-3">
+                  <span className="text-xs text-muted-foreground w-24 shrink-0">Assigned By</span>
+                  <div className="flex items-center gap-2">
+                    {task.created_by !== currentUserId && (
+                      creatorMember?.avatar_url ? (
+                        <img src={creatorMember.avatar_url} alt="" className="size-5 rounded-full object-cover shrink-0" />
+                      ) : (
+                        <div className="size-5 rounded-full bg-primary/10 flex items-center justify-center text-[9px] font-semibold text-primary shrink-0">
+                          {(creatorMember?.full_name || creatorMember?.email || '?')[0].toUpperCase()}
+                        </div>
+                      )
+                    )}
+                    <span className="text-sm">{creatorName}</span>
+                  </div>
+                </div>
+              )}
+
               <div className="flex items-center gap-3">
                 <span className="text-xs text-muted-foreground w-24 shrink-0">Created By</span>
                 <div className="flex items-center gap-2">
@@ -474,7 +492,7 @@ export default function TaskCard({ task, clientMap, campaignMap = {}, memberMap 
   const [editOpen, setEditOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [sheetOpen, setSheetOpen] = useState(false)
-  const { isOwner } = usePermissions()
+  const { isOwner, canAssignTasks } = usePermissions()
 
   const isCreator  = task.created_by === currentUserId
   const isAssignee = task.assigned_to === currentUserId
@@ -514,6 +532,7 @@ export default function TaskCard({ task, clientMap, campaignMap = {}, memberMap 
   const campaign = task.campaign_id ? campaignMap[String(task.campaign_id)] : null
   const statusCfg = STATUS_CONFIG[task.status] ?? STATUS_CONFIG.TODO
   const assignee = task.assigned_to ? memberMap[task.assigned_to] : null
+  const creatorMember = memberMap[task.created_by]
   const displayDate =
     task.status === 'COMPLETED' && task.completed_at ? task.completed_at : task.due_at
 
@@ -652,27 +671,43 @@ export default function TaskCard({ task, clientMap, campaignMap = {}, memberMap 
           )}
 
           {assignee && (
-            <div className="flex items-center gap-1.5 mt-auto pt-3">
-              <span className="text-xs text-muted-foreground shrink-0">Assigned to</span>
-              {assignee.avatar_url ? (
-                <img src={assignee.avatar_url} alt="" className="size-4 rounded-full object-cover shrink-0" />
-              ) : (
-                <div className="size-4 rounded-full bg-primary/10 flex items-center justify-center text-[8px] font-semibold text-primary shrink-0">
-                  {(assignee.full_name || assignee.email || '?')[0].toUpperCase()}
-                </div>
-              )}
-              <span className="text-xs text-foreground truncate">
-                {assignee.full_name || assignee.email}
-                {task.assigned_to === currentUserId && (
-                  <span className="text-muted-foreground ml-1">(You)</span>
+            canAssignTasks ? (
+              <div className="flex items-center gap-1.5 mt-auto pt-3">
+                <span className="text-xs text-muted-foreground shrink-0">Assigned to</span>
+                {assignee.avatar_url ? (
+                  <img src={assignee.avatar_url} alt="" className="size-4 rounded-full object-cover shrink-0" />
+                ) : (
+                  <div className="size-4 rounded-full bg-primary/10 flex items-center justify-center text-[8px] font-semibold text-primary shrink-0">
+                    {(assignee.full_name || assignee.email || '?')[0].toUpperCase()}
+                  </div>
                 )}
-              </span>
-            </div>
+                <span className="text-xs text-foreground truncate">
+                  {assignee.full_name || assignee.email}
+                  {task.assigned_to === currentUserId && (
+                    <span className="text-muted-foreground ml-1">(You)</span>
+                  )}
+                </span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1.5 mt-auto pt-3">
+                <span className="text-xs text-muted-foreground shrink-0">Assigned by</span>
+                {creatorMember?.avatar_url ? (
+                  <img src={creatorMember.avatar_url} alt="" className="size-4 rounded-full object-cover shrink-0" />
+                ) : (
+                  <div className="size-4 rounded-full bg-primary/10 flex items-center justify-center text-[8px] font-semibold text-primary shrink-0">
+                    {(creatorMember?.full_name || creatorMember?.email || '?')[0].toUpperCase()}
+                  </div>
+                )}
+                <span className="text-xs text-foreground truncate">
+                  {creatorMember?.full_name || creatorMember?.email || 'Team member'}
+                </span>
+              </div>
+            )
           )}
         </div>
 
         {/* ── Divider ── */}
-        <div className="mx-5 border-t border-dashed border-border/60" />
+        <div className="mx-5 border-t border-dashed" />
 
         {/* ── Footer: client + due date ── */}
         <div className="flex items-center justify-between px-5 pb-5 pt-4 gap-2">

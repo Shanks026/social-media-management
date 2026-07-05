@@ -151,11 +151,14 @@ export function useSubscription() {
         documents_collections: sub.documents_collections ?? false,
         reports: sub.reports ?? false,
         campaigns: true,
-        campaigns_limit: sub.plan_name === 'ignite' ? 5 : null,
+        campaigns_limit: sub.plan_name === 'ignite' ? 8 : null,
         proposals_limit: sub.proposals_limit ?? null,
         client_count: count || 0,
         max_clients: sub.max_clients,
-        is_client_limit_reached: (count || 0) >= sub.max_clients,
+        // sub.max_clients is null for unlimited plans (Quantum/Trial) — must
+        // short-circuit before the comparison, since `count >= null` coerces
+        // null to 0 in JS and would incorrectly evaluate true for any count.
+        is_client_limit_reached: sub.max_clients != null && (count || 0) >= sub.max_clients,
         max_team_members: sub.max_team_members ?? null,
         is_trial: isTrial,
         trial_phase: trialPhase,

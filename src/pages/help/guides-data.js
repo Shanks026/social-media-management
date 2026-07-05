@@ -56,7 +56,7 @@ export const GUIDES = [
       },
       {
         heading: 'Tracking Status',
-        body: 'Each prospect moves through a set of statuses: New, Contacted, Follow-Up, Demo Scheduled, Proposal Sent, Won, and Lost. You update the status from the prospect detail page using the dropdown at the top. The main prospects list has tabs that filter by status so you can focus on the right stage of your pipeline.',
+        body: 'Each prospect moves through a set of statuses: New, Contacted, Follow-Up, Discovery Call, Proposal Sent, Proposal Accepted, Contract Sent, Won, and Lost. You update the status from the prospect detail page using the dropdown at the top. The main prospects list has tabs that filter by status so you can focus on the right stage of your pipeline.',
       },
       {
         heading: 'Scheduling Follow-Ups',
@@ -71,11 +71,11 @@ export const GUIDES = [
   {
     id: 'proposals',
     title: 'Proposals',
-    description: 'Create, send, and track proposals through to acceptance.',
+    description: 'Upload, send, and track proposals through to acceptance.',
     sections: [
       {
         heading: 'Creating a Proposal',
-        body: 'Proposals are created from the Proposals section or directly from a prospect profile. The detail page is fully inline-editable with auto-save, so there is no separate edit mode. Add your services, pricing, and terms directly on the page and changes save as you go.',
+        body: 'Proposals are uploaded from the Proposals section or directly from a prospect profile — attach a PDF you have already prepared and Tercero tracks its status from there. An in-app proposal builder (drag-and-drop, with services/pricing/terms) is planned for a future update.',
       },
       {
         heading: 'Sending for Review',

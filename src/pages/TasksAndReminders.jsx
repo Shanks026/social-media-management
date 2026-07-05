@@ -593,6 +593,7 @@ export default function TasksAndReminders() {
   const queryClient = useQueryClient()
   const { user } = useAuth()
   const currentUserId = user?.id ?? null
+  const { canAssignTasks } = usePermissions()
 
   const [searchParams, setSearchParams] = useSearchParams()
   const statusTab        = searchParams.get('tab')       ?? 'ALL'
@@ -816,11 +817,13 @@ export default function TasksAndReminders() {
               Created by me
             </Button>
 
-            <AssigneeFilterPopover
-              members={memberList}
-              selected={selectedAssignees}
-              onChange={(ids) => setParam('assignees', ids.join(','), '')}
-            />
+            {canAssignTasks && (
+              <AssigneeFilterPopover
+                members={memberList}
+                selected={selectedAssignees}
+                onChange={(ids) => setParam('assignees', ids.join(','), '')}
+              />
+            )}
 
             <Select
               value={selectedClient}

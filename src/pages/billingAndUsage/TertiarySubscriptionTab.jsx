@@ -48,9 +48,13 @@ export const UpgradeRequestDialog = ({
 
   if (!isRenewal && !targetPlan) return null
 
+  const targetPlanPrice = targetPlan && (
+    targetPlan.price === 'Custom' ? 'Custom pricing' : `₹${targetPlan.price}/mo`
+  )
+
   const prefilledMessage = isRenewal
     ? `Dear Tercero Admin,\n\nI would like to renew my ${currentPlanName} subscription.\n\nKindly process this renewal at your earliest convenience. I understand that the team will review and update my account access shortly.\n\nThank you.`
-    : `Dear Tercero Admin,\n\nI would like to request a plan upgrade for my agency account.\n\nCurrent Plan: ${currentPlanName}\nRequested Plan: ${targetPlan.name} (₹${targetPlan.price}/mo)\n\nKindly process this upgrade at your earliest convenience. I understand that the team will review and apply the changes to my account.\n\nThank you.`
+    : `Dear Tercero Admin,\n\nI would like to request a plan upgrade for my agency account.\n\nCurrent Plan: ${currentPlanName}\nRequested Plan: ${targetPlan.name} (${targetPlanPrice})\n\nKindly process this upgrade at your earliest convenience. I understand that the team will review and apply the changes to my account.\n\nThank you.`
 
   const handleSubmit = async () => {
     setIsSubmitting(true)
@@ -236,14 +240,24 @@ export const PlanCard = ({ plan, isCurrentPlan, onContactTeam }) => {
       </div>
 
       {/* Price */}
-      <div className="mb-8 space-y-0.5">
+      <div className="mb-8 space-y-3">
         <div className="flex items-baseline gap-1">
-          <span className="text-5xl font-normal tracking-tight">
-            ₹{plan.price}
-          </span>
-          <span className={cn('text-sm font-normal', descClasses)}>/ mo</span>
+          {plan.price === 'Custom' ? (
+            <span className="text-5xl font-normal tracking-tight">Custom</span>
+          ) : (
+            <>
+              <span className="text-5xl font-normal tracking-tight">
+                ₹{plan.price}
+              </span>
+              <span className={cn('text-sm font-normal', descClasses)}>/ mo</span>
+            </>
+          )}
         </div>
-        <p className={cn('text-xs font-normal', descClasses)}>+₹500 per additional client</p>
+        <p className={cn('text-xs font-normal', descClasses)}>
+          {plan.price === 'Custom'
+            ? 'Pricing tailored to your agency'
+            : `+₹${plan.extraClientPrice}/client · +₹${plan.extraSeatPrice}/seat`}
+        </p>
       </div>
 
       {/* Divider */}
@@ -251,6 +265,11 @@ export const PlanCard = ({ plan, isCurrentPlan, onContactTeam }) => {
 
       {/* Features */}
       <div className="space-y-4 mb-10 flex-1">
+        {plan.includesBase && (
+          <p className={cn('text-[13px] font-normal', descClasses)}>
+            Everything in {plan.includesBase}, plus:
+          </p>
+        )}
         {plan.features.map((feature, i) => (
           <FeatureValue
             key={i}
