@@ -10,7 +10,7 @@ import {
   eachDayOfInterval,
 } from 'date-fns'
 import { useNavigate } from 'react-router-dom'
-import { ArrowUpRight, Clock, Bell } from 'lucide-react'
+import { ArrowUpRight, Clock } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -18,7 +18,6 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { SUPPORTED_PLATFORMS } from '@/lib/platforms'
-import { useAuth } from '@/context/AuthContext'
 
 function PlatformImg({ platformId }) {
   const label =
@@ -35,7 +34,6 @@ function PlatformImg({ platformId }) {
 
 export default function ClientWeekTimeline({ clientId }) {
   const navigate = useNavigate()
-  const { workspaceUserId } = useAuth()
 
   const today = useMemo(() => startOfDay(new Date()), [])
   const weekEnd = useMemo(() => endOfDay(addDays(today, 6)), [today])
@@ -101,26 +99,6 @@ export default function ClientWeekTimeline({ clientId }) {
     refetchOnWindowFocus: true,
   })
 
-  // ── Client notes with due_at this week ──
-  const { data: dueNotes = [] } = useQuery({
-    queryKey: ['client-week-timeline-notes', clientId, today.toISOString()],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('client_notes')
-        .select('*')
-        .eq('client_id', clientId)
-        .eq('status', 'TODO')
-        .gte('due_at', today.toISOString())
-        .lte('due_at', weekEnd.toISOString())
-        .order('due_at', { ascending: true })
-      if (error) throw error
-      return data || []
-    },
-    enabled: !!clientId,
-    staleTime: 0,
-    refetchOnWindowFocus: true,
-  })
-
   // ── Group by day ──
   const postsByDay = useMemo(() => {
     const map = {}
@@ -142,21 +120,9 @@ export default function ClientWeekTimeline({ clientId }) {
     return map
   }, [meetings])
 
-  const notesByDay = useMemo(() => {
-    const map = {}
-    for (const n of dueNotes) {
-      if (!n.due_at) continue
-      const key = format(new Date(n.due_at), 'yyyy-MM-dd')
-      if (!map[key]) map[key] = []
-      map[key].push(n)
-    }
-    return map
-  }, [dueNotes])
-
   const isLoading = loadingPosts || loadingMeetings
   const totalPosts = posts.length
   const totalMeetings = meetings.length
-  const totalNotes = dueNotes.length
 
   return (
     <Card className="border-none shadow-sm ring-1 ring-border/50 bg-card/50 dark:bg-card/30 flex flex-col gap-2 h-full">
@@ -166,7 +132,7 @@ export default function ClientWeekTimeline({ clientId }) {
           {!isLoading && (
             <p className="text-xs text-muted-foreground mt-0.5">
               {totalPosts} deliverable{totalPosts !== 1 && 's'} · {totalMeetings}{' '}
-              meeting{totalMeetings !== 1 && 's'} · {totalNotes} reminder{totalNotes !== 1 && 's'}
+              meeting{totalMeetings !== 1 && 's'}
             </p>
           )}
         </div>
@@ -204,11 +170,9 @@ export default function ClientWeekTimeline({ clientId }) {
                 const key = format(day, 'yyyy-MM-dd')
                 const dayPosts = postsByDay[key] || []
                 const dayMeetings = meetingsByDay[key] || []
-                const dayNotes = notesByDay[key] || []
                 const hasContent =
                   dayPosts.length > 0 ||
-                  dayMeetings.length > 0 ||
-                  dayNotes.length > 0
+                  dayMeetings.length > 0
                 const isCurrentDay = isToday(day)
                 const isTomorrowDay = isTomorrow(day)
 
@@ -219,7 +183,6 @@ export default function ClientWeekTimeline({ clientId }) {
                 const allItems = []
                 if (dayPosts.length > 0) allItems.push({ type: 'posts' })
                 dayMeetings.forEach((m) => allItems.push({ type: 'meeting', data: m }))
-                dayNotes.forEach((n) => allItems.push({ type: 'note', data: n }))
                 const visibleItems = allItems.slice(0, 3)
                 const overflowCount = Math.max(0, allItems.length - 3)
 
@@ -292,12 +255,6 @@ export default function ClientWeekTimeline({ clientId }) {
                                 <Clock className="size-3.5 shrink-0 text-blue-400" />
                                 <span className="truncate font-medium">{item.data.title}</span>
                                 <span className="shrink-0 ml-auto">{format(new Date(item.data.datetime), 'h:mma')}</span>
-                              </div>
-                            )
-                            if (item.type === 'note') return (
-                              <div key={item.data.id} className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                                <Bell className="size-3.5 shrink-0 text-amber-400" />
-                                <span className="truncate">{item.data.title}</span>
                               </div>
                             )
                             return null

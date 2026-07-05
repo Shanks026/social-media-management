@@ -9,9 +9,10 @@ const MAX_BYTES = 50 * 1024 * 1024
 const ACCEPTED = 'image/jpeg,image/png,image/gif,image/webp,image/svg+xml'
 const ACCEPTED_TYPES = ACCEPTED.split(',')
 
-export default function ImageNodeView({ node, updateAttributes, deleteNode, selected, extension }) {
+export default function ImageNodeView({ node, updateAttributes, deleteNode, selected, extension, editor }) {
   const { src, width, alt } = node.attrs
   const noteId = extension.options.noteId
+  const canEdit = editor.isEditable
 
   const [signedUrl, setSignedUrl] = useState(null)
   const [uploading, setUploading] = useState(false)
@@ -85,6 +86,21 @@ export default function ImageNodeView({ node, updateAttributes, deleteNode, sele
 
   // ── Upload dropzone ──────────────────────────────────────────────────────
   if (!src) {
+    if (!canEdit) {
+      return (
+        <NodeViewWrapper>
+          <div
+            contentEditable={false}
+            className="my-3 flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-border p-10 select-none"
+          >
+            <div className="flex size-12 items-center justify-center rounded-full bg-muted">
+              <ImageIcon className="size-5 text-muted-foreground" />
+            </div>
+            <p className="text-sm text-muted-foreground">No image</p>
+          </div>
+        </NodeViewWrapper>
+      )
+    }
     return (
       <NodeViewWrapper>
         <div
@@ -154,19 +170,21 @@ export default function ImageNodeView({ node, updateAttributes, deleteNode, sele
         )}
 
         {/* Delete */}
-        <button
-          type="button"
-          data-media-controls
-          contentEditable={false}
-          className="absolute top-2 right-2 flex size-6 items-center justify-center rounded-md bg-background/80 border shadow-sm hover:bg-destructive/10 hover:text-destructive transition-colors opacity-0 group-hover:opacity-100"
-          onClick={handleDelete}
-          title="Remove image"
-        >
-          <X className="size-3.5" />
-        </button>
+        {canEdit && (
+          <button
+            type="button"
+            data-media-controls
+            contentEditable={false}
+            className="absolute top-2 right-2 flex size-6 items-center justify-center rounded-md bg-background/80 border shadow-sm hover:bg-destructive/10 hover:text-destructive transition-colors opacity-0 group-hover:opacity-100"
+            onClick={handleDelete}
+            title="Remove image"
+          >
+            <X className="size-3.5" />
+          </button>
+        )}
 
         {/* Resize handles — left */}
-        {selected && (
+        {canEdit && selected && (
           <div
             data-media-controls
             className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-2 size-4 cursor-col-resize rounded-sm bg-background border shadow-sm flex items-center justify-center gap-px opacity-0 group-hover:opacity-100"
@@ -178,7 +196,7 @@ export default function ImageNodeView({ node, updateAttributes, deleteNode, sele
         )}
 
         {/* Resize handles — right */}
-        {selected && (
+        {canEdit && selected && (
           <div
             data-media-controls
             className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-2 size-4 cursor-col-resize rounded-sm bg-background border shadow-sm flex items-center justify-center gap-px opacity-0 group-hover:opacity-100"

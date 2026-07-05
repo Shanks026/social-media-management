@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQueryClient, useMutation } from '@tanstack/react-query'
 import { format } from 'date-fns'
-import { ArrowLeft, Trash2, Check, Loader2, AlertCircle, Building2, Printer } from 'lucide-react'
+import { ArrowLeft, Trash2, Check, Loader2, AlertCircle, Building2, Printer, Lock } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
@@ -28,12 +28,15 @@ import {
 } from '@/components/ui/alert-dialog'
 
 import { useHeader } from '@/components/misc/header-context'
+import { useAuth } from '@/context/AuthContext'
+import { usePermissions } from '@/api/usePermissions'
 import { useClients } from '@/api/clients'
 import {
   useAgencyNoteById,
   updateAgencyNote,
   deleteAgencyNote,
 } from '@/api/agencyNotes'
+import { useNoteShares } from '@/api/noteShares'
 import {
   useNoteTags,
   createNoteTag,
@@ -46,6 +49,9 @@ import RichTextEditor from '@/components/notes/RichTextEditor'
 import TagPill from '@/components/notes/TagPill'
 import TagPicker from '@/components/notes/TagPicker'
 import ManageTagsDialog from '@/components/notes/ManageTagsDialog'
+import NoteVisibilityToggle from '@/components/notes/NoteVisibilityToggle'
+import NoteCollaboratorAvatars from '@/components/notes/NoteCollaboratorAvatars'
+import ShareNoteDialog from '@/components/notes/ShareNoteDialog'
 import { parseNoteBody } from '@/components/notes/noteContent'
 import { printNote } from '@/components/notes/printNote'
 
@@ -76,16 +82,20 @@ export default function NoteEditorPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { setHeader } = useHeader()
+  const { user } = useAuth()
+  const { isAdmin } = usePermissions()
 
   const { data: note, isLoading, error } = useAgencyNoteById(noteId)
   const { data: clientsData } = useClients()
   const { data: allTags } = useNoteTags()
+  const { data: myShares = [] } = useNoteShares(noteId)
 
   const [title, setTitle] = useState('')
   const [clientId, setClientId] = useState('none')
   const [saveState, setSaveState] = useState('idle')
   const [initializedId, setInitializedId] = useState(null)
   const [manageTagsOpen, setManageTagsOpen] = useState(false)
+  const [shareDialogOpen, setShareDialogOpen] = useState(false)
 
   const editorRef = useRef(null)
   const valuesRef = useRef({ title: '', body: '', client_id: null })
@@ -188,6 +198,7 @@ export default function NoteEditorPage() {
           dirtyRef.current = false
           setSaveState('saved')
           queryClient.invalidateQueries({ queryKey: ['agency-notes', 'list'] })
+          queryClient.invalidateQueries({ queryKey: ['agency-notes', 'detail', noteId] })
           clearTimeout(idleTimer.current)
           idleTimer.current = setTimeout(() => {
             if (mountedRef.current) setSaveState('idle')
@@ -227,10 +238,22 @@ export default function NoteEditorPage() {
       await updateAgencyNote(noteId, valuesRef.current)
       dirtyRef.current = false
       queryClient.invalidateQueries({ queryKey: ['agency-notes', 'list'] })
+      queryClient.invalidateQueries({ queryKey: ['agency-notes', 'detail', noteId] })
     } catch {
       // best-effort flush; navigation proceeds regardless
     }
     navigate('/operations/notes')
+  }
+
+  async function handleVisibilityChange(newVisibility) {
+    try {
+      await updateAgencyNote(noteId, { visibility: newVisibility })
+      queryClient.invalidateQueries({ queryKey: ['agency-notes', 'detail', noteId] })
+      queryClient.invalidateQueries({ queryKey: ['agency-notes', 'list'] })
+      toast.success(newVisibility === 'private' ? 'Note set to Private' : 'Note set to Workspace')
+    } catch (err) {
+      toast.error(err.message || 'Failed to update visibility')
+    }
   }
 
   async function handleDelete() {
@@ -267,15 +290,33 @@ export default function NoteEditorPage() {
     )
   }
 
+  const isAuthor = note.created_by === user?.id
+  const myPermission = myShares.find((s) => s.member_user_id === user?.id)?.permission
+  const canEdit =
+    isAuthor ||
+    note.visibility === 'workspace' ||
+    (note.visibility === 'shared' && myPermission === 'write')
+  // Mirrors the notes_delete RLS policy exactly: author, or a workspace
+  // admin/owner deleting a plain Workspace note. A shared invitee — even at
+  // write permission — can never delete, and a regular member can't delete
+  // someone else's Workspace note either.
+  const canDelete = isAuthor || (note.visibility === 'workspace' && isAdmin)
+
   return (
     <div className="p-8 max-w-3xl mx-auto space-y-4 animate-in fade-in duration-300">
-      {/* Top bar */}
+      {/* Row 1: back · collaborator avatars, print, delete */}
       <div className="flex items-center justify-between gap-3">
         <Button variant="ghost" size="sm" className="-ml-2 gap-1.5" onClick={handleBack}>
           <ArrowLeft className="size-4" /> Back
         </Button>
         <div className="flex items-center gap-3">
           <SaveIndicator state={saveState} />
+          <NoteCollaboratorAvatars
+            noteId={noteId}
+            authorId={note.created_by}
+            authorName={note.created_by_name}
+            visibility={note.visibility}
+          />
           <Button
             variant="ghost"
             size="icon"
@@ -291,110 +332,136 @@ export default function NoteEditorPage() {
           >
             <Printer className="size-4" />
           </Button>
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="size-8 text-muted-foreground hover:text-destructive"
-              >
-                <Trash2 className="size-4" />
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Delete note?</AlertDialogTitle>
-                <AlertDialogDescription>This action cannot be undone.</AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction
-                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                  onClick={handleDelete}
+          {canDelete && (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-8 text-muted-foreground hover:text-destructive"
                 >
-                  Delete
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+                  <Trash2 className="size-4" />
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete note?</AlertDialogTitle>
+                  <AlertDialogDescription>This action cannot be undone.</AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    onClick={handleDelete}
+                  >
+                    Delete
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
         </div>
       </div>
 
-      {/* Title */}
-      <Input
-        value={title}
-        onChange={handleTitleChange}
-        placeholder="Untitled"
-        className="bricolage border-0 shadow-none focus-visible:ring-0 px-0 h-auto text-3xl font-bold tracking-tight placeholder:text-muted-foreground/40 md:text-3xl"
-      />
+      {/* Row 2: title, tags */}
+      <div className="flex items-center gap-2">
+        {note.visibility === 'private' && (
+          <Lock className="size-6 shrink-0 text-muted-foreground" />
+        )}
+        <Input
+          value={title}
+          onChange={handleTitleChange}
+          readOnly={!canEdit}
+          placeholder="Untitled"
+          className="flex-1 min-w-0 bricolage border-0 shadow-none focus-visible:ring-0 px-0 h-auto text-3xl font-bold tracking-tight placeholder:text-muted-foreground/40 md:text-3xl"
+        />
+      </div>
 
-      {/* Tags */}
       <div className="flex flex-wrap items-center gap-1.5">
         {noteTags.map((tag) => (
           <TagPill
             key={tag.id}
             tag={tag}
-            onRemove={() => toggleTagMutation.mutate(tag.id)}
+            onRemove={canEdit ? () => toggleTagMutation.mutate(tag.id) : undefined}
           />
         ))}
-        <TagPicker
-          selectedTagIds={selectedTagIds}
-          allTags={allTags ?? []}
-          onToggle={(tagId) => toggleTagMutation.mutate(tagId)}
-          onCreate={(name) => createTagMutation.mutateAsync(name)}
-          isBusy={createTagMutation.isPending}
-          onManage={() => setManageTagsOpen(true)}
-        />
+        {canEdit && (
+          <TagPicker
+            selectedTagIds={selectedTagIds}
+            allTags={allTags ?? []}
+            onToggle={(tagId) => toggleTagMutation.mutate(tagId)}
+            onCreate={(name) => createTagMutation.mutateAsync(name)}
+            isBusy={createTagMutation.isPending}
+            onManage={() => setManageTagsOpen(true)}
+          />
+        )}
       </div>
 
-      {/* Properties bar: linked to + created */}
-      <div className="flex items-center gap-2 pb-2 border-b">
-        <span className="text-xs text-muted-foreground shrink-0">Linked to</span>
-        <Select value={clientId} onValueChange={handleClientChange}>
-          <SelectTrigger className="h-8 w-auto gap-2 border-0 shadow-none px-2 text-xs font-medium hover:bg-accent">
-            <SelectValue>
-              <span className="flex items-center gap-1.5">
-                {selectedClient ? (
-                  <>
-                    <ClientAvatar client={selectedClient} size="sm" />
-                    {selectedClient.name}
-                  </>
-                ) : (
-                  <>
-                    <Building2 className="size-4 text-muted-foreground" />
-                    Agency-wide
-                  </>
-                )}
-              </span>
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="none">
-              <span className="flex items-center gap-2">
-                <Building2 className="size-4 text-muted-foreground" />
-                Agency-wide (no client)
-              </span>
-            </SelectItem>
-            {allClients.map((c) => (
-              <SelectItem key={c.id} value={c.id}>
+      {/* Row 3: created by · updated by */}
+      <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+        <span>
+          Created by{' '}
+          <span className="font-medium text-foreground">{note.created_by_name || 'Unknown'}</span>
+          {' · '}
+          {format(new Date(note.created_at), 'd MMM yyyy, h:mm a')}
+        </span>
+        {note.updated_by && (
+          <span>
+            Updated by{' '}
+            <span className="font-medium text-foreground">{note.updated_by_name || 'Unknown'}</span>
+            {' · '}
+            {format(new Date(note.updated_at), 'd MMM yyyy, h:mm a')}
+          </span>
+        )}
+      </div>
+
+      {/* Row 4: linked to client · visibility */}
+      <div className="flex items-center justify-between gap-2 pb-2 border-b">
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-muted-foreground shrink-0">Linked to</span>
+          <Select value={clientId} onValueChange={handleClientChange} disabled={!canEdit}>
+            <SelectTrigger className="h-8 w-auto gap-2 border-0 shadow-none px-2 text-xs font-medium hover:bg-accent">
+              <SelectValue>
+                <span className="flex items-center gap-1.5">
+                  {selectedClient ? (
+                    <>
+                      <ClientAvatar client={selectedClient} size="sm" />
+                      {selectedClient.name}
+                    </>
+                  ) : (
+                    <>
+                      <Building2 className="size-4 text-muted-foreground" />
+                      Agency-wide
+                    </>
+                  )}
+                </span>
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">
                 <span className="flex items-center gap-2">
-                  <ClientAvatar client={c} size="sm" />
-                  {c.name}
+                  <Building2 className="size-4 text-muted-foreground" />
+                  Agency-wide (no client)
                 </span>
               </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <div className="ml-auto flex items-center gap-1 shrink-0 text-xs text-muted-foreground">
-          <span>{format(new Date(note.created_at), 'd MMM yyyy, h:mm a')}</span>
-          {note.created_by_name && (
-            <>
-              <span>·</span>
-              <span className="font-medium text-foreground">{note.created_by_name}</span>
-            </>
-          )}
+              {allClients.map((c) => (
+                <SelectItem key={c.id} value={c.id}>
+                  <span className="flex items-center gap-2">
+                    <ClientAvatar client={c} size="sm" />
+                    {c.name}
+                  </span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
+
+        <NoteVisibilityToggle
+          visibility={note.visibility}
+          onChange={handleVisibilityChange}
+          onShareClick={() => setShareDialogOpen(true)}
+          disabled={!isAuthor}
+        />
       </div>
 
       {/* Body */}
@@ -402,6 +469,7 @@ export default function NoteEditorPage() {
         key={note.id}
         content={parseNoteBody(note.body)}
         onChange={handleBodyChange}
+        editable={canEdit}
         editorRef={editorRef}
         noteId={noteId}
       />
@@ -410,6 +478,12 @@ export default function NoteEditorPage() {
         open={manageTagsOpen}
         onOpenChange={setManageTagsOpen}
         tags={allTags ?? []}
+      />
+
+      <ShareNoteDialog
+        open={shareDialogOpen}
+        onOpenChange={setShareDialogOpen}
+        noteId={noteId}
       />
     </div>
   )

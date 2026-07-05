@@ -10,9 +10,10 @@ const ACCEPTED = 'video/mp4,video/webm,video/ogg,video/quicktime'
 const ACCEPTED_TYPES = ACCEPTED.split(',')
 const WIDTH_PRESETS = [25, 50, 75, 100]
 
-export default function VideoNodeView({ node, updateAttributes, deleteNode, selected, extension }) {
+export default function VideoNodeView({ node, updateAttributes, deleteNode, selected, extension, editor }) {
   const { src, width } = node.attrs
   const noteId = extension.options.noteId
+  const canEdit = editor.isEditable
 
   const [signedUrl, setSignedUrl] = useState(null)
   const [uploading, setUploading] = useState(false)
@@ -60,6 +61,21 @@ export default function VideoNodeView({ node, updateAttributes, deleteNode, sele
 
   // ── Upload dropzone ──────────────────────────────────────────────────────
   if (!src) {
+    if (!canEdit) {
+      return (
+        <NodeViewWrapper>
+          <div
+            contentEditable={false}
+            className="my-3 flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-border p-10 select-none"
+          >
+            <div className="flex size-12 items-center justify-center rounded-full bg-muted">
+              <Video className="size-5 text-muted-foreground" />
+            </div>
+            <p className="text-sm text-muted-foreground">No video</p>
+          </div>
+        </NodeViewWrapper>
+      )
+    }
     return (
       <NodeViewWrapper>
         <div
@@ -127,7 +143,7 @@ export default function VideoNodeView({ node, updateAttributes, deleteNode, sele
         )}
 
         {/* Width presets + delete — shown when node is selected */}
-        {selected && (
+        {canEdit && selected && (
           <div data-media-controls contentEditable={false} className="mt-1.5 flex items-center gap-1">
             {WIDTH_PRESETS.map((p) => (
               <button
