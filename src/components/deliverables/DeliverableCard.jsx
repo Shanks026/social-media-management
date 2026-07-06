@@ -1,0 +1,613 @@
+import { useState, useEffect } from 'react'
+import { format } from 'date-fns'
+import {
+  Eye,
+  ChevronLeft,
+  ChevronRight,
+  MoreVertical,
+  Edit2,
+  Trash2,
+  FolderOpen,
+  Megaphone,
+  Plus,
+  FileText,
+  Video,
+} from 'lucide-react'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
+import { Badge } from '@/components/ui/badge'
+import { cn } from '@/lib/utils'
+import { getUrgencyStatus } from '@/lib/client-helpers'
+import { getPublishState, renderCaption, isDocumentUrl, getDocumentExtension, getDocumentPreviewUrl } from '@/lib/helper'
+import StatusBadge from '@/components/StatusBadge'
+import {
+  Dialog,
+  DialogContent,
+} from '@/components/ui/dialog'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { ClientAvatar } from '@/components/tasks/ClientAvatar'
+import { useAuth } from '@/context/AuthContext'
+import { usePermissions } from '@/api/usePermissions'
+import { DELETABLE_POST_STATUSES } from '@/lib/post-statuses'
+import { useTeamMembers } from '@/api/team'
+import { useQueryClient, useMutation } from '@tanstack/react-query'
+import { deletePost, createRevision } from '@/api/posts'
+import DraftPostForm from '@/pages/posts/DraftPostForm'
+import { toast } from 'sonner'
+import { AssignCampaignDialog } from '@/components/campaigns/AssignCampaignDialog'
+import { useSubscription } from '@/api/useSubscription'
+import { useNavigate } from 'react-router-dom'
+import { Button } from '@/components/ui/button'
+
+const DELIVERABLE_TYPE_LABELS = {
+  reel_short_video: 'Reel',
+  long_form_video: 'Long-form Video',
+  video_editing: 'Video Edit',
+  ad_creative: 'Ad Creative',
+  motion_graphic: 'Motion Graphic',
+  static_graphic: 'Static',
+  carousel: 'Carousel',
+  story: 'Story',
+  photography: 'Photography',
+  ugc: 'UGC',
+  brand_identity: 'Brand Identity',
+  infographic: 'Infographic',
+  presentation: 'Deck',
+  website_design: 'Website / UI',
+  blog_copy: 'Blog / Copy',
+  email_campaign: 'Email Campaign',
+  podcast: 'Podcast',
+  other: 'Other',
+}
+
+const isVideoSource = (url) => {
+  if (!url) return false
+  const videoExtensions = ['.mp4', '.mov', '.webm', '.ogg', '.m4v']
+  return (
+    videoExtensions.some((ext) => url.toLowerCase().includes(ext)) ||
+    url.includes('video') ||
+    url.startsWith('blob:')
+  )
+}
+
+const MediaItem = ({ url, className, isPreview = false }) => {
+  const isVideo = isVideoSource(url)
+  const isDoc = isDocumentUrl(url)
+
+  if (isDoc) {
+    if (isPreview) {
+      const previewUrl = getDocumentPreviewUrl(url)
+      if (previewUrl) {
+        return <iframe src={previewUrl} title="Document preview" className="w-full h-full border-0" />
+      }
+      return (
+        <div className="flex flex-col items-center justify-center h-full gap-3 text-white/70">
+          <FileText className="size-12 opacity-40" />
+          <p className="text-sm opacity-60">Preview not available</p>
+          <a href={url} target="_blank" rel="noopener noreferrer" className="text-xs underline opacity-70 hover:opacity-100">Open file</a>
+        </div>
+      )
+    }
+    const ext = getDocumentExtension(url)
+    return (
+      <div className={cn('h-full w-full flex flex-col items-center justify-center gap-1.5 bg-muted/60 p-2', className)}>
+        <FileText className="h-7 w-7 text-muted-foreground shrink-0" />
+        <p className="text-[10px] font-medium text-muted-foreground uppercase">{ext}</p>
+      </div>
+    )
+  }
+
+  if (isVideo) {
+    return (
+      <div className={cn('relative bg-black flex items-center justify-center', 'h-full w-full', className)}>
+        <video
+          src={url}
+          className={cn('h-full w-full', isPreview ? 'object-contain' : 'object-cover')}
+          muted={!isPreview}
+          controls={isPreview}
+          autoPlay={isPreview}
+          loop={!isPreview}
+          playsInline
+        />
+        {!isPreview && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/20 pointer-events-none">
+            <div className="bg-black/40 backdrop-blur-sm p-1.5 rounded-full">
+              <Video className="text-white h-4 w-4 fill-white" />
+            </div>
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  return (
+    <img
+      src={url}
+      alt="Media"
+      className={cn('h-full w-full', isPreview ? 'object-contain' : 'object-cover', className)}
+    />
+  )
+}
+
+const PlatformIcon = ({ name }) => {
+  const fileName = name === 'google_business' ? 'google_busines' : name
+  const imgSrc = `/platformIcons/${fileName}.png`
+
+  return (
+    <div className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-card bg-white dark:bg-zinc-900 shadow-sm transition-transform hover:scale-110 overflow-hidden relative z-10">
+      <img
+        src={imgSrc}
+        alt={name}
+        className="size-5 object-contain"
+        onError={(e) => (e.target.style.display = 'none')}
+      />
+    </div>
+  )
+}
+
+/**
+ * Reusable deliverable (post) card — used on the global Deliverables page,
+ * the calendar, and the client Workflow tab. `client` is an optional fallback
+ * ({ name, logo_url }) for callers whose `post` doesn't already carry
+ * client_name/client_logo (e.g. a client-scoped list that knows its client
+ * up front).
+ */
+export function DeliverableCard({ post, client }) {
+  const navigate = useNavigate()
+  const queryClient = useQueryClient()
+  const { user } = useAuth()
+  const { isAdmin } = usePermissions()
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false)
+  const [activeImageIndex, setActiveImageIndex] = useState(0)
+  const [postToDelete, setPostToDelete] = useState(null)
+  const [editingPost, setEditingPost] = useState(null)
+  const [assignCampaignOpen, setAssignCampaignOpen] = useState(false)
+
+  const { data: sub } = useSubscription()
+  const { data: members = [] } = useTeamMembers()
+
+  const createRevisionMutation = useMutation({
+    mutationFn: () => createRevision(post.version_id, user?.id),
+    onSuccess: (newVersionId) => {
+      queryClient.invalidateQueries({ queryKey: ['draft-posts', post.client_id] })
+      queryClient.invalidateQueries({ queryKey: ['global-posts'] })
+      queryClient.invalidateQueries({ queryKey: ['global-calendar'] })
+      toast.success('New version created')
+      navigate(`/clients/${post.client_id}/posts/${newVersionId}`)
+    },
+    onError: (err) => {
+      toast.error(err.message || 'Failed to create new version')
+    },
+  })
+
+  const { mutate: handleDeletePost, isPending: isDeletingPost } = useMutation({
+    mutationFn: (postId) => deletePost(postId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['draft-posts', post?.client_id] })
+      queryClient.invalidateQueries({ queryKey: ['posts', post?.client_id] })
+      queryClient.invalidateQueries({ queryKey: ['global-posts'] })
+      queryClient.invalidateQueries({ queryKey: ['calendar'] })
+      queryClient.invalidateQueries({ queryKey: ['global-calendar'] })
+      queryClient.invalidateQueries({ queryKey: ['global-post-counts'] })
+      queryClient.invalidateQueries({ queryKey: ['postCounts', post?.client_id] })
+      queryClient.invalidateQueries({ queryKey: ['subscription'] })
+      toast.success('Post deleted successfully')
+      setPostToDelete(null)
+    },
+    onError: (error) => {
+      toast.error('Failed to delete post: ' + error.message)
+      setPostToDelete(null)
+    },
+  })
+
+  const handleCardClick = () => {
+    navigate(`/clients/${post.client_id}/posts/${post.version_id}`)
+  }
+
+  const handlePrev = (e) => {
+    e?.stopPropagation()
+    setActiveImageIndex((prev) => (prev === 0 ? post.media_urls.length - 1 : prev - 1))
+  }
+
+  const handleNext = (e) => {
+    e?.stopPropagation()
+    setActiveImageIndex((prev) => (prev === post.media_urls.length - 1 ? 0 : prev + 1))
+  }
+
+  useEffect(() => {
+    if (!isPreviewOpen || (post.media_urls?.length ?? 0) <= 1) return
+    const onKey = (e) => {
+      if (e.key === 'ArrowLeft') handlePrev()
+      if (e.key === 'ArrowRight') handleNext()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isPreviewOpen, activeImageIndex, post.media_urls?.length])
+
+  const renderMediaGrid = () => {
+    const media = post.media_urls || []
+    const count = media.length
+    if (count === 0) {
+      return (
+        <div className="absolute inset-0 flex items-center justify-center text-muted-foreground/10 font-black text-3xl uppercase tracking-tighter select-none">
+          No Media
+        </div>
+      )
+    }
+
+    if (count === 1)
+      return (
+        <div className="absolute inset-0">
+          <MediaItem url={media[0]} className="w-full h-full" />
+        </div>
+      )
+
+    if (count === 2)
+      return (
+        <div className="absolute inset-0 grid grid-cols-2 gap-0.5">
+          {media.map((url, i) => (
+            <div key={i} className="relative overflow-hidden">
+              <MediaItem url={url} className="absolute inset-0 w-full h-full" />
+            </div>
+          ))}
+        </div>
+      )
+
+    return (
+      <div className="absolute inset-0 grid grid-cols-2 gap-0.5">
+        <div className="relative overflow-hidden">
+          <MediaItem url={media[0]} className="absolute inset-0 w-full h-full" />
+        </div>
+        <div className="grid grid-rows-2 gap-0.5">
+          <div className="relative overflow-hidden">
+            <MediaItem url={media[1]} className="absolute inset-0 w-full h-full" />
+          </div>
+          <div className="relative overflow-hidden">
+            <MediaItem url={media[2]} className="absolute inset-0 w-full h-full" />
+            {count > 3 && (
+              <div className="absolute inset-0 bg-black/60 flex items-center justify-center pointer-events-none">
+                <span className="text-white font-bold text-sm">+{count - 3}</span>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  const platformsArr = Array.isArray(post.platforms) ? post.platforms : Array.isArray(post.platform) ? post.platform : []
+  const displayedPlatforms = platformsArr.slice(0, 3)
+  const remainingPlatforms = platformsArr.length - 3
+
+  const clientName = post.client_name || client?.name
+  const clientLogo = post.client_logo || client?.logo_url
+
+  // Status mapping
+  const postStatus = post.status || 'DRAFT'
+  const canEdit = ['DRAFT', 'PENDING_APPROVAL'].includes(postStatus)
+  const canCreateNewVersion = postStatus === 'NEEDS_REVISION'
+  // Delete authorization mirrors the posts RLS DELETE policy: owner/admin can
+  // delete in any status; a member only their own deliverable and only before a
+  // commitment (DRAFT/SUBMITTED/ARCHIVED). deliverable_creator_id (posts.created_by)
+  // is the original creator — falls back to created_by for sources (e.g. the
+  // calendar RPC) that only expose one creator field, which is already the original.
+  const creatorId = post.deliverable_creator_id ?? post.created_by
+  const canDeletePost =
+    isAdmin || (creatorId === user?.id && DELETABLE_POST_STATUSES.includes(postStatus))
+
+  // Calculate health
+  const isCompleted = ['PUBLISHED', 'ARCHIVED'].includes(postStatus)
+  const health = !isCompleted ? getUrgencyStatus(post.target_date) : null
+
+  return (
+    <>
+      <div
+        onClick={handleCardClick}
+        className="flex flex-col bg-card/50 border dark:border-none rounded-xl px-6 py-8 transition-all duration-200 cursor-pointer group shadow-xs"
+      >
+        {/* Header: Status/Type badges (left) — Platforms + Actions (right) */}
+        <div className="flex items-center justify-between mb-4 gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <StatusBadge status={getPublishState(post) || 'DRAFT'} />
+            {post.deliverable_type && DELIVERABLE_TYPE_LABELS[post.deliverable_type] && (
+              <Badge variant="secondary" className="rounded-full text-xs px-2 py-0.5 shrink-0 text-foreground/80">
+                {DELIVERABLE_TYPE_LABELS[post.deliverable_type]}
+              </Badge>
+            )}
+            {post.campaign_id && post.campaign_name && (
+              <TooltipProvider>
+                <Tooltip delayDuration={300}>
+                  <TooltipTrigger asChild>
+                    <Badge
+                      variant="secondary"
+                      className="rounded-full flex items-center justify-center p-0 size-6 border-none hover:bg-muted/80"
+                    >
+                      <Megaphone className="h-3 w-3 text-muted-foreground" />
+                    </Badge>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{post.campaign_name}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+          </div>
+
+          <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+            <div className="flex -space-x-1">
+              {displayedPlatforms.map((p, idx) => (
+                <PlatformIcon key={`${p}-${idx}`} name={p} />
+              ))}
+            </div>
+            {remainingPlatforms > 0 && (
+              <span className="text-xs font-medium text-muted-foreground ml-1 mr-1">
+                +{remainingPlatforms}
+              </span>
+            )}
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:bg-muted">
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem
+                  disabled={!canEdit}
+                  className="cursor-pointer font-medium text-foreground py-2"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setEditingPost(post)
+                  }}
+                >
+                  <Edit2 className="h-4 w-4 mr-2" /> Edit Post
+                </DropdownMenuItem>
+                {canCreateNewVersion && (
+                  <DropdownMenuItem
+                    disabled={createRevisionMutation.isPending}
+                    className="cursor-pointer font-medium text-foreground py-2"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      createRevisionMutation.mutate()
+                    }}
+                  >
+                    <Plus className="h-4 w-4 mr-2" /> Create New Version
+                  </DropdownMenuItem>
+                )}
+                {sub?.campaigns && (
+                  <DropdownMenuItem
+                    className="cursor-pointer font-medium text-foreground py-2"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setAssignCampaignOpen(true)
+                    }}
+                  >
+                    <FolderOpen className="h-4 w-4 mr-2 text-muted-foreground" /> Assign to Campaign
+                  </DropdownMenuItem>
+                )}
+                {canDeletePost && (
+                  <DropdownMenuItem
+                    variant="destructive"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setPostToDelete(post)
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4" /> Delete Post
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
+
+        {/* Title + version */}
+        <div className="flex items-center gap-2 mb-6 min-w-0">
+          <h3 className="text-lg font-medium tracking-tight text-foreground line-clamp-1 min-w-0 bricolage">
+            {post.title || 'Untitled Draft'}
+          </h3>
+          <Badge
+            variant="secondary"
+            className="rounded-full text-foreground text-xs px-2 py-0.5 font-medium font-mono shrink-0"
+          >
+            v{post.version_number || '1'}
+          </Badge>
+        </div>
+
+        {/* Media Preview Section */}
+        <div
+          className="relative aspect-video bg-muted/40 rounded-xl overflow-hidden mb-6 shrink-0 group/media border border-border/40 cursor-pointer"
+          onClick={(e) => {
+            e.stopPropagation()
+            setIsPreviewOpen(true)
+          }}
+        >
+          {renderMediaGrid()}
+          <div className="absolute inset-0 bg-black/20 opacity-0 group-hover/media:opacity-100 transition-opacity flex items-center justify-center">
+            <div className="bg-white/20 backdrop-blur-md p-2 rounded-full shadow-sm">
+              <Eye className="text-white h-5 w-5" />
+            </div>
+          </div>
+        </div>
+
+        {/* Description */}
+        <p className="text-sm text-muted-foreground leading-relaxed line-clamp-2 mb-6">
+          {renderCaption(post.content)}
+        </p>
+
+        {/* Dotted Divider & Footer */}
+        <div className="mt-auto">
+          {(() => {
+            const creator = members.find((m) => m.member_user_id === post.created_by)
+            if (!creator) return null
+            const initials = creator.full_name?.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2) ?? '?'
+            return (
+              <div className="flex items-center gap-1.5 mb-3">
+                <span className="text-xs text-muted-foreground">Created by</span>
+                <Avatar className="size-4 shrink-0">
+                  <AvatarImage src={creator.avatar_url} />
+                  <AvatarFallback className="text-[9px]">{initials}</AvatarFallback>
+                </Avatar>
+                <span className="text-xs font-medium text-foreground/70 truncate">{creator.full_name}</span>
+              </div>
+            )
+          })()}
+          <hr className="border-t border-dashed border-border mb-4" />
+
+          <div className="flex items-center justify-between gap-2">
+            {/* Client */}
+            {clientName && (
+              <div className="flex items-center gap-1.5 min-w-0">
+                <ClientAvatar client={{ logo_url: clientLogo, name: clientName }} size="sm" />
+                <span className="text-xs font-semibold text-foreground truncate max-w-[120px]">
+                  {clientName}
+                </span>
+              </div>
+            )}
+
+            {/* Date Badge and Urgency Info */}
+            <div className="flex items-center gap-2 shrink-0">
+              {health && (
+                <div className="relative flex size-2 items-center justify-center shrink-0">
+                  {health.pulse && (
+                    <span className={cn('absolute inline-flex h-full w-full animate-ping rounded-full opacity-75', health.color)} />
+                  )}
+                  <span className={cn('relative inline-flex size-2 rounded-full', health.color)} />
+                </div>
+              )}
+              <span className="text-xs font-medium text-foreground whitespace-nowrap">
+                {postStatus === 'PUBLISHED' && (post.published_at || post.updated_at)
+                  ? format(new Date(post.published_at || post.updated_at), 'd MMM, yyyy')
+                  : post.target_date
+                    ? format(new Date(post.target_date), "d MMM yyyy '·' h:mm a")
+                    : 'No Date Set'}
+              </span>
+              {health?.label && ['Overdue', 'Urgent'].includes(health.label) && (
+                <span className={cn('text-xs font-semibold', health.color.replace('bg-', 'text-'))}>
+                  {health.label}
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Edit Post Dialog */}
+      <DraftPostForm
+        clientId={post.client_id}
+        open={!!editingPost}
+        onOpenChange={(open) => !open && setEditingPost(null)}
+        initialData={
+          editingPost
+            ? { ...editingPost, platform: editingPost.platform || editingPost.platforms }
+            : null
+        }
+      />
+
+      {/* Media Preview Dialog */}
+      <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
+        <DialogContent
+          className="max-w-[85vw] sm:max-w-[85vw] md:max-w-[85vw] w-[85vw] h-[85vh] p-0 bg-transparent border-none shadow-none focus:outline-none flex items-center justify-center"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="relative flex items-center justify-center rounded-2xl bg-black/95 overflow-hidden shadow-2xl border border-white/10 w-full h-full">
+            {post.media_urls?.[activeImageIndex] && (
+              <MediaItem
+                key={post.media_urls[activeImageIndex]}
+                url={post.media_urls[activeImageIndex]}
+                isPreview={true}
+              />
+            )}
+
+            {post.media_urls?.length > 1 && (
+              <>
+                <div className="absolute inset-0 flex items-center justify-between pointer-events-none px-4 lg:px-12">
+                  <button
+                    onClick={handlePrev}
+                    className="pointer-events-auto p-3 rounded-full bg-black/50 text-white hover:bg-black/70 backdrop-blur-sm transition-all hover:scale-110"
+                  >
+                    <ChevronLeft className="h-8 w-8" />
+                  </button>
+                  <button
+                    onClick={handleNext}
+                    className="pointer-events-auto p-3 rounded-full bg-black/50 text-white hover:bg-black/70 backdrop-blur-sm transition-all hover:scale-110"
+                  >
+                    <ChevronRight className="h-8 w-8" />
+                  </button>
+                </div>
+
+                <div className="absolute top-8 right-8 pointer-events-none">
+                  <Badge className="bg-black/50 text-white border-white/10 backdrop-blur-md px-4 py-2 text-sm font-mono">
+                    {activeImageIndex + 1} / {post.media_urls.length}
+                  </Badge>
+                </div>
+              </>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog
+        open={!!postToDelete}
+        onOpenChange={(open) => !open && !isDeletingPost && setPostToDelete(null)}
+      >
+        <AlertDialogContent onClick={(e) => e.stopPropagation()}>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Post</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete{' '}
+              <span className="font-semibold text-foreground">
+                "{postToDelete?.title || 'Untitled Draft'}"
+              </span>
+              ? This action cannot be undone and all media will be permanently deleted.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeletingPost}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              onClick={() =>
+                handleDeletePost(
+                  postToDelete?.actual_post_id || postToDelete?.post_id || postToDelete?.id,
+                )
+              }
+              disabled={isDeletingPost}
+            >
+              {isDeletingPost ? 'Deleting...' : 'Delete Post'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AssignCampaignDialog
+        open={assignCampaignOpen}
+        onOpenChange={setAssignCampaignOpen}
+        post={post}
+      />
+    </>
+  )
+}
+
+export default DeliverableCard

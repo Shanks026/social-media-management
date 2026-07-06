@@ -16,6 +16,7 @@ function buildPostsQuery(userId, filters = {}) {
       id,
       client_id,
       campaign_id,
+      created_by,
       campaigns!campaign_id ( id, name ),
       clients!inner (
         id,
@@ -121,6 +122,8 @@ function normalizePosts(data) {
         campaign_id: row.campaign_id || null,
         campaign_name: row.campaigns?.name || null,
         created_by: v.created_by || null,
+        // Original deliverable creator (posts.created_by) — authorizes deletion.
+        deliverable_creator_id: row.created_by || null,
       }
     })
 }
