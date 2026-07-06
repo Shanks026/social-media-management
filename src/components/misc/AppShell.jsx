@@ -1,5 +1,6 @@
 import { HeaderProvider } from './header-context'
 import { AppSidebar } from '../sidebar/app-sidebar'
+import { ChatSidebar } from '../sidebar/chat-sidebar'
 import { AppHeader } from './AppHeader'
 import { AppBody } from './AppBody'
 import { Outlet } from 'react-router-dom'
@@ -22,10 +23,24 @@ export function AppShell({ user }) {
   const scrollContainerRef = useRef(null)
   const isCheckingRef = useRef(false)
   const { pathname } = useLocation()
+  const isChatRoute = pathname.startsWith('/chat')
 
   useEffect(() => {
     scrollContainerRef.current?.scrollTo({ top: 0 })
   }, [pathname])
+
+  // Main sidebar collapses to icon-rail while in Chat (so its other pages stay
+  // reachable) and is locked there — it re-expands the moment the user leaves
+  // /chat. Only fires on the chat/non-chat boundary, not on every navigation,
+  // so a manually-collapsed sidebar elsewhere in the app isn't fought.
+  const [sidebarOpen, setSidebarOpen] = useState(!isChatRoute)
+  const wasChatRouteRef = useRef(isChatRoute)
+  useEffect(() => {
+    if (isChatRoute !== wasChatRouteRef.current) {
+      setSidebarOpen(!isChatRoute)
+      wasChatRouteRef.current = isChatRoute
+    }
+  }, [isChatRoute])
   useMeetingReminders(user?.id)
   // Read previously-cached settings for this user so remounts skip the loading screen.
   const settingsKey = `agency_settings_${user?.id}`
@@ -120,13 +135,22 @@ export function AppShell({ user }) {
 
   return (
     <HeaderProvider>
-      <SidebarProvider defaultOpen={true}>
+      <SidebarProvider
+        open={sidebarOpen}
+        onOpenChange={(next) => {
+          // Block reopening the main sidebar while in Chat — it only unlocks
+          // by navigating away (handled by the effect above).
+          if (isChatRoute && next) return
+          setSidebarOpen(next)
+        }}
+      >
         <div className="flex min-h-screen w-full relative">
           <AppSidebar
             key={agencySettings?.agency_name || 'initial'}
             user={user}
             agencySettings={agencySettings}
           />
+          {isChatRoute && <ChatSidebar />}
           <div ref={scrollContainerRef} className="flex flex-1 flex-col w-full h-screen min-w-0 overflow-y-auto overflow-x-hidden relative [scrollbar-gutter:stable]">
             <AppHeader user={user} agencySettings={agencySettings} />
             <DeletionBanner />

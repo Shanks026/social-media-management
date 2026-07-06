@@ -151,6 +151,7 @@ export function useSubscription() {
         documents_collections: sub.documents_collections ?? false,
         reports: sub.reports ?? false,
         campaigns: true,
+        chat: sub.chat ?? false,
         campaigns_limit: sub.plan_name === 'ignite' ? 8 : null,
         proposals_limit: sub.proposals_limit ?? null,
         client_count: count || 0,

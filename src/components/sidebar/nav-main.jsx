@@ -32,6 +32,7 @@ import {
   ShieldCheck,
   ClipboardCheck,
   PencilRuler,
+  MessageCircle,
 } from 'lucide-react'
 import { NavLink, useLocation } from 'react-router-dom'
 import {
@@ -68,6 +69,7 @@ import {
 
 const BASE_NAV_ITEMS = [
   { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
+  { title: 'Chat', url: '/chat', icon: MessageCircle, requiresFlag: 'chat' },
   {
     title: 'My Organization',
     url: '/myorganization',

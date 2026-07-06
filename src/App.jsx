@@ -52,6 +52,7 @@ import AdsPage from './pages/ads/AdsPage'
 import PartnershipsPage from './pages/partnerships/PartnershipsPage'
 import ApprovalsPage from './pages/approvals/ApprovalsPage'
 import SubmissionsPage from './pages/submissions/SubmissionsPage'
+import ChatPage from './pages/chat/ChatPage'
 
 function MaintenanceGate({ children }) {
   const queryClient = useQueryClient()
@@ -136,6 +137,13 @@ function ReportsRoute() {
   return <ReportsPage />
 }
 
+function ChatRoute() {
+  const { data: sub } = useSubscription()
+  if (!sub) return null
+  if (!sub.chat) return <Navigate to="/dashboard" replace />
+  return <ChatPage />
+}
+
 function AppRoutes() {
   const { session, user } = useAuth()
 
@@ -160,6 +168,7 @@ function AppRoutes() {
           <Route path="/subscription-expired" element={<SubscriptionExpired />} />
           <Route element={<TrialGuardedShell user={user} />}>
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/chat" element={<ChatRoute />} />
           <Route path="/clients" element={<Clients />} />
           <Route path="/myorganization" element={<MyOrganization />} />
           <Route path="/partnerships" element={<PartnershipsPage />} />

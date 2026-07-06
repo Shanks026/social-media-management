@@ -76,6 +76,7 @@ Last updated: June 2026
 | Team seats | 2 | 5 | Unlimited |
 | Invite via link | ✓ | ✓ | ✓ |
 | Full workspace access for members | ✓ | ✓ | ✓ |
+| Workspace chat (team channel + DMs) | ✗ | ✓ | ✓ |
 
 ### Branding & Whitelabel
 
@@ -101,6 +102,7 @@ Last updated: June 2026
 | `documents_collections` | TRUE | FALSE | TRUE | TRUE |
 | `reports` | TRUE | FALSE | TRUE | TRUE |
 | `campaigns` | TRUE | TRUE | TRUE | TRUE |
+| `chat` | TRUE | FALSE | TRUE | TRUE |
 
 ## DB Limit Values per Plan
 
@@ -153,6 +155,7 @@ UPDATE agency_subscriptions SET
   calendar_export            = TRUE,
   documents_collections      = TRUE,
   campaigns                  = TRUE,
+  chat                       = TRUE,
   proposals_limit            = NULL,
   max_team_members           = NULL
 WHERE user_id = $1;
@@ -172,6 +175,7 @@ UPDATE agency_subscriptions SET
   calendar_export            = FALSE,
   documents_collections      = FALSE,
   campaigns                  = TRUE,
+  chat                       = FALSE,
   proposals_limit            = 5,
   max_team_members           = 2
 WHERE user_id = $1;
@@ -191,6 +195,7 @@ UPDATE agency_subscriptions SET
   calendar_export            = TRUE,
   documents_collections      = TRUE,
   campaigns                  = TRUE,
+  chat                       = TRUE,
   proposals_limit            = NULL,
   max_team_members           = 5
 WHERE user_id = $1;
@@ -210,6 +215,7 @@ UPDATE agency_subscriptions SET
   calendar_export            = TRUE,
   documents_collections      = TRUE,
   campaigns                  = TRUE,
+  chat                       = TRUE,
   proposals_limit            = NULL,
   max_team_members           = NULL
 WHERE user_id = $1;
