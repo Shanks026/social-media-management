@@ -593,7 +593,7 @@ export default function TasksAndReminders() {
   const queryClient = useQueryClient()
   const { user } = useAuth()
   const currentUserId = user?.id ?? null
-  const { canAssignTasks } = usePermissions()
+  const { canAssignTasks, isOwner } = usePermissions()
 
   const [searchParams, setSearchParams] = useSearchParams()
   const statusTab        = searchParams.get('tab')       ?? 'ALL'
@@ -715,7 +715,7 @@ export default function TasksAndReminders() {
     return allTasks.filter((task) => {
       if (statusTab !== 'ALL' && task.status !== statusTab) return false
       if (selectedPriority !== 'all' && task.priority !== selectedPriority) return false
-      if (selectedAssignees.length > 0 || assignedToMe || createdByMe && !selectedAssignees.includes(task.assigned_to)) return false
+      if (selectedAssignees.length > 0 && !selectedAssignees.includes(task.assigned_to)) return false
       if (assignedToMe && task.assigned_to !== currentUserId) return false
       if (createdByMe && task.created_by !== currentUserId) return false
       if (search.trim()) {
@@ -799,14 +799,16 @@ export default function TasksAndReminders() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2 lg:justify-end">
-            <Button
-              variant={assignedToMe ? 'default' : 'outline'}
-              onClick={() => setParam('mine', assignedToMe ? null : '1', null)}
-              className="gap-2 shadow-none font-normal h-9 shrink-0"
-            >
-              <User className="size-3.5" />
-              Assigned to me
-            </Button>
+            {!isOwner && (
+              <Button
+                variant={assignedToMe ? 'default' : 'outline'}
+                onClick={() => setParam('mine', assignedToMe ? null : '1', null)}
+                className="gap-2 shadow-none font-normal h-9 shrink-0"
+              >
+                <User className="size-3.5" />
+                Assigned to me
+              </Button>
+            )}
 
             <Button
               variant={createdByMe ? 'default' : 'outline'}

@@ -174,7 +174,12 @@
       "Bash(npm test *)",
       "Bash(git stash *)",
       "mcp__supabase-mcp-server__get_advisors",
-      "Bash(grep -o '\"Function `public\\\\.get_my_agency_user_id[^\"]*\"' \"C:\\\\Users\\\\Hai\\\\.claude\\\\projects\\\\d--Tertiary\\\\6bbaee28-0f8d-499b-85e2-c8cb41e45515\\\\tool-results\\\\mcp-supabase-mcp-server-get_advisors-1783276103895.txt\")"
+      "Bash(grep -o '\"Function `public\\\\.get_my_agency_user_id[^\"]*\"' \"C:\\\\Users\\\\Hai\\\\.claude\\\\projects\\\\d--Tertiary\\\\6bbaee28-0f8d-499b-85e2-c8cb41e45515\\\\tool-results\\\\mcp-supabase-mcp-server-get_advisors-1783276103895.txt\")",
+      "Bash(npx shadcn@latest add @shadcn/attachment --yes)",
+      "Bash(node -e \"const p=require\\('./package.json'\\); console.log\\(JSON.stringify\\(Object.keys\\(p.dependencies\\).filter\\(k=>k.includes\\('radix'\\)\\), null, 2\\)\\)\")",
+      "Skill(run)",
+      "Skill(run:*)",
+      "Bash(node -e \"const p=require\\('./package.json'\\); console.log\\('deps:', p.dependencies.shadcn, p.devDependencies && p.devDependencies.shadcn\\)\")"
     ]
   }
 }

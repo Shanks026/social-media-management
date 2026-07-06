@@ -44,6 +44,15 @@ import {
   X,
 } from 'lucide-react'
 import { Switch } from '@/components/ui/switch'
+import {
+  Attachment,
+  AttachmentMedia,
+  AttachmentContent,
+  AttachmentTitle,
+  AttachmentDescription,
+  AttachmentActions,
+  AttachmentAction,
+} from '@/components/ui/attachment'
 import { cn } from '@/lib/utils'
 import { formatFileSize } from '@/lib/helper'
 import { useClients } from '@/api/clients'
@@ -78,29 +87,30 @@ function getFileTypeMeta(filename) {
   }
 }
 
-function SelectedFileCard({ file, onClear, disabled }) {
+function SelectedFileAttachment({ file, onClear, disabled, uploadProgress }) {
   const { icon: Icon } = getFileTypeMeta(file.name)
+  const isUploading = uploadProgress !== null && uploadProgress !== undefined
+  const state = isUploading ? 'uploading' : 'idle'
+
   return (
-    <div className="flex items-center gap-3 rounded-xl bg-muted/30 p-4">
-      <div className="flex size-11 items-center justify-center rounded-lg shrink-0 bg-muted">
-        <Icon className="size-5 text-muted-foreground" />
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium truncate">{file.name}</p>
-        <p className="text-xs text-muted-foreground mt-0.5">{formatFileSize(file.size)}</p>
-      </div>
+    <Attachment state={state} className="w-full">
+      <AttachmentMedia>
+        <Icon />
+      </AttachmentMedia>
+      <AttachmentContent>
+        <AttachmentTitle>{file.name}</AttachmentTitle>
+        <AttachmentDescription>
+          {isUploading ? `Uploading · ${uploadProgress}%` : formatFileSize(file.size)}
+        </AttachmentDescription>
+      </AttachmentContent>
       {!disabled && (
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="size-8 shrink-0 text-muted-foreground hover:text-foreground"
-          onClick={onClear}
-        >
-          <X className="size-4" />
-        </Button>
+        <AttachmentActions>
+          <AttachmentAction aria-label={`Remove ${file.name}`} onClick={onClear}>
+            <X />
+          </AttachmentAction>
+        </AttachmentActions>
       )}
-    </div>
+    </Attachment>
   )
 }
 
@@ -309,10 +319,11 @@ export default function UploadMetaDialog({
                 aria-hidden={step !== 2}
               >
                   {file && (
-                    <SelectedFileCard
+                    <SelectedFileAttachment
                       file={file}
                       onClear={() => onFileSelected(null)}
                       disabled={isUploading}
+                      uploadProgress={uploadProgress}
                     />
                   )}
 

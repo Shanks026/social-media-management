@@ -18,6 +18,7 @@ import { createDraftPost, updatePost, cleanupRemovedMedia } from '@/api/posts'
 import { uploadPostImage } from '@/api/storage'
 import { fetchClientById } from '@/api/clients'
 import { fetchActiveCampaignsByClient } from '@/api/campaigns'
+import { formatFileSize } from '@/lib/helper'
 
 import {
   Dialog,
@@ -67,6 +68,15 @@ import { useAuth } from '@/context/AuthContext'
 import { useSubscription } from '@/api/useSubscription'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Checkbox } from '@/components/ui/checkbox'
+import {
+  Attachment,
+  AttachmentMedia,
+  AttachmentContent,
+  AttachmentTitle,
+  AttachmentDescription,
+  AttachmentActions,
+  AttachmentAction,
+} from '@/components/ui/attachment'
 
 const MAX_FILES = 10
 
@@ -141,7 +151,7 @@ const isDocumentFile = (fileOrUrl) => {
   return false
 }
 
-const getDocumentLabel = (fileOrUrl) => {
+const getFileLabel = (fileOrUrl) => {
   if (fileOrUrl instanceof File) return fileOrUrl.name
   if (typeof fileOrUrl === 'string') {
     const parts = fileOrUrl.split('/')
@@ -149,6 +159,8 @@ const getDocumentLabel = (fileOrUrl) => {
   }
   return 'Document'
 }
+
+const getFileFormat = (name) => name?.split('.').pop()?.toUpperCase() || ''
 
 const PLATFORM_CONFIG = {
   instagram: {
@@ -331,7 +343,7 @@ export default function DraftPostForm({
       const initialPreviews = (initialData.media_urls || []).map((url) => ({
         url,
         type: isDocumentFile(url) ? 'document' : isRemoteVideo(url) ? 'video' : 'image',
-        name: isDocumentFile(url) ? getDocumentLabel(url) : undefined,
+        name: getFileLabel(url),
       }))
       setPreviews(initialPreviews)
 
@@ -598,7 +610,7 @@ export default function DraftPostForm({
     const newLocalPreviews = addedFiles.map((file) => ({
       url: isDocumentFile(file) ? '' : URL.createObjectURL(file),
       type: isDocumentFile(file) ? 'document' : file.type.startsWith('video') ? 'video' : 'image',
-      name: isDocumentFile(file) ? file.name : undefined,
+      name: getFileLabel(file),
       file,
     }))
     setPreviews((prev) => [...prev, ...newLocalPreviews])
@@ -675,60 +687,43 @@ export default function DraftPostForm({
                 )}
               </div>
 
-              {/* Drop Zone */}
-              <div
-                className={cn(
-                  'h-[180px] shrink-0 border-2 border-dashed rounded-xl flex flex-col items-center justify-center gap-3 p-6 cursor-pointer transition-all',
-                  isDragging
-                    ? 'border-primary bg-primary/5'
-                    : 'border-border hover:border-primary/40 hover:bg-accent/40',
-                  previews.length >= (isYoutubeSelected ? 1 : MAX_FILES) &&
-                    'pointer-events-none opacity-40',
-                  isStorageFull && 'pointer-events-none opacity-40',
-                )}
-                onClick={() => {
-                  if (
-                    isStorageFull ||
-                    previews.length >= (isYoutubeSelected ? 1 : MAX_FILES)
-                  )
-                    return
-                  fileInputRef.current?.click()
-                }}
-                onDragOver={(e) => {
-                  e.preventDefault()
-                  if (
-                    !isStorageFull &&
-                    previews.length < (isYoutubeSelected ? 1 : MAX_FILES)
-                  )
-                    setIsDragging(true)
-                }}
-                onDragLeave={() => setIsDragging(false)}
-                onDrop={handleDrop}
-              >
-                {/* <div className="rounded-full border bg-background p-3 shadow-sm">
-                  <Upload className="h-5 w-5 text-muted-foreground" />
-                </div> */}
-                <div className="text-center space-y-1.5">
-                  <p className="text-sm font-medium text-foreground">
-                    {previews.length >= (isYoutubeSelected ? 1 : MAX_FILES)
-                      ? isYoutubeSelected
-                        ? 'YouTube allows only 1 video.'
-                        : `Maximum ${MAX_FILES} files reached.`
-                      : 'Drop a file here or click to browse'}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Max {isYoutubeSelected ? '1 video' : `${MAX_FILES} files`}
-                  </p>
-                  <p className="text-[11px] text-muted-foreground/70">
-                    {isYoutubeSelected
-                      ? 'MP4, MOV, WEBM, M4V'
-                      : isSocialMode
-                        ? 'JPG, PNG, GIF, WEBP, MP4, MOV, WEBM'
-                        : 'Images, Videos, PDF, DOCX, PPTX, ZIP + more'}
-                  </p>
-                </div>
-                {previews.length < (isYoutubeSelected ? 1 : MAX_FILES) &&
-                  !isStorageFull && (
+              {previews.length === 0 ? (
+                /* Drop Zone — shown fully until the first file is added */
+                <div
+                  className={cn(
+                    'flex-1 border-2 border-dashed rounded-xl flex flex-col items-center justify-center gap-3 p-6 cursor-pointer transition-all',
+                    isDragging
+                      ? 'border-primary bg-primary/5'
+                      : 'border-border hover:border-primary/40 hover:bg-accent/40',
+                    isStorageFull && 'pointer-events-none opacity-40',
+                  )}
+                  onClick={() => {
+                    if (isStorageFull) return
+                    fileInputRef.current?.click()
+                  }}
+                  onDragOver={(e) => {
+                    e.preventDefault()
+                    if (!isStorageFull) setIsDragging(true)
+                  }}
+                  onDragLeave={() => setIsDragging(false)}
+                  onDrop={handleDrop}
+                >
+                  <div className="text-center space-y-1.5">
+                    <p className="text-sm font-medium text-foreground">
+                      Drop a file here or click to browse
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Max {isYoutubeSelected ? '1 video' : `${MAX_FILES} files`}
+                    </p>
+                    <p className="text-[11px] text-muted-foreground/70">
+                      {isYoutubeSelected
+                        ? 'MP4, MOV, WEBM, M4V'
+                        : isSocialMode
+                          ? 'JPG, PNG, GIF, WEBP, MP4, MOV, WEBM'
+                          : 'Images, Videos, PDF, DOCX, PPTX, ZIP + more'}
+                    </p>
+                  </div>
+                  {!isStorageFull && (
                     <Button
                       type="button"
                       variant="outline"
@@ -742,61 +737,112 @@ export default function DraftPostForm({
                       Choose File
                     </Button>
                   )}
-              </div>
+                </div>
+              ) : (
+                /* Uploaded Media — the whole panel stays a drop target for more files */
+                <div
+                  className={cn(
+                    'flex-1 flex flex-col gap-3 rounded-xl border-2 border-dashed p-3 transition-all',
+                    isDragging ? 'border-primary bg-primary/5' : 'border-border/60',
+                  )}
+                  onDragOver={(e) => {
+                    e.preventDefault()
+                    if (
+                      !isStorageFull &&
+                      previews.length < (isYoutubeSelected ? 1 : MAX_FILES)
+                    )
+                      setIsDragging(true)
+                  }}
+                  onDragLeave={() => setIsDragging(false)}
+                  onDrop={handleDrop}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-sm font-medium">
+                      Uploaded Media{' '}
+                      <span className="text-muted-foreground font-normal">
+                        ({previews.length}/{isYoutubeSelected ? 1 : MAX_FILES})
+                      </span>
+                    </p>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-8 gap-1.5 text-xs shrink-0"
+                      disabled={
+                        isStorageFull ||
+                        previews.length >= (isYoutubeSelected ? 1 : MAX_FILES)
+                      }
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      <Upload className="h-3.5 w-3.5" />
+                      Upload more
+                    </Button>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    {previews.map((item, index) => {
+                      const isLocalFile = !!item.file
+                      const state = isLocalFile
+                        ? mutation.isPending ? 'uploading' : 'idle'
+                        : 'done'
+                      const format = getFileFormat(item.name)
+                      const size = item.file ? formatFileSize(item.file.size) : null
+                      return (
+                        <Attachment
+                          key={`item-${index}`}
+                          orientation="vertical"
+                          state={state}
+                          className="w-full shadow-sm has-data-[slot=attachment-content]:w-full!"
+                        >
+                          <AttachmentMedia
+                            variant={item.type === 'document' ? 'icon' : 'image'}
+                            className="rounded-lg"
+                          >
+                            {item.type === 'document' ? (
+                              <FileText className="h-6 w-6 text-muted-foreground" />
+                            ) : item.type === 'video' ? (
+                              <>
+                                <video
+                                  src={item.url}
+                                  className="h-full w-full object-cover"
+                                  muted
+                                />
+                                <div className="absolute inset-0 flex items-center justify-center bg-black/25">
+                                  <Film className="h-6 w-6 text-white" />
+                                </div>
+                              </>
+                            ) : (
+                              <img src={item.url} alt="Preview" />
+                            )}
+                          </AttachmentMedia>
+                          <AttachmentContent>
+                            <AttachmentTitle>{item.name || 'File'}</AttachmentTitle>
+                            <AttachmentDescription>
+                              {format}
+                              {size && ` · ${size}`}
+                            </AttachmentDescription>
+                          </AttachmentContent>
+                          <AttachmentActions>
+                            <AttachmentAction
+                              aria-label="Remove file"
+                              onClick={() => removeImage(index)}
+                              className="bg-background/90 border shadow-sm hover:bg-destructive hover:text-white"
+                            >
+                              <X />
+                            </AttachmentAction>
+                          </AttachmentActions>
+                        </Attachment>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
 
               {isYoutubeSelected && (
-                <p className="text-[11px] text-amber-600 font-medium flex items-center gap-1.5">
+                <p className="text-[11px] text-amber-600 font-medium flex items-center gap-1.5 shrink-0">
                   <AlertCircle size={12} className="shrink-0" />
                   YouTube: Single video upload only.
                 </p>
-              )}
-
-              {/* Uploaded Media */}
-              {previews.length > 0 && (
-                <div className="space-y-3">
-                  <p className="text-sm font-medium">Uploaded Media</p>
-                  <div className="grid grid-cols-2 gap-3">
-                    {previews.map((item, index) => (
-                      <div
-                        key={item.url}
-                        className="relative aspect-square rounded-xl border overflow-hidden bg-muted shadow-sm"
-                      >
-                        {item.type === 'document' ? (
-                          <div className="h-full w-full flex flex-col items-center justify-center gap-1.5 bg-muted/60 p-2">
-                            <FileText className="h-7 w-7 text-muted-foreground shrink-0" />
-                            <p className="text-[10px] text-muted-foreground text-center leading-tight line-clamp-2 break-all">
-                              {item.name || 'Document'}
-                            </p>
-                          </div>
-                        ) : item.type === 'video' ? (
-                          <div className="relative h-full w-full">
-                            <video
-                              src={item.url}
-                              className="h-full w-full object-cover"
-                              muted
-                            />
-                            <div className="absolute inset-0 flex items-center justify-center bg-black/25">
-                              <Film className="h-6 w-6 text-white" />
-                            </div>
-                          </div>
-                        ) : (
-                          <img
-                            src={item.url}
-                            alt="Preview"
-                            className="h-full w-full object-cover"
-                          />
-                        )}
-                        <button
-                          type="button"
-                          onClick={() => removeImage(index)}
-                          className="absolute top-1.5 right-1.5 bg-background/90 p-0.5 rounded-full border shadow-sm hover:bg-destructive hover:text-white transition-all"
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
               )}
 
               <input
