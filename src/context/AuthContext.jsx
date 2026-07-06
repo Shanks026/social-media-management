@@ -1,5 +1,22 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from '@/lib/supabase'
+import { upsertLinkedAccount } from '@/lib/accountSwitcher'
+
+// Persist the active session's tokens into the multi-account switcher's local
+// list, so whichever account is currently signed in always has its freshest
+// tokens saved for later switching back to. No-op if session is null.
+function persistActiveAccount(session) {
+  if (!session) return
+  upsertLinkedAccount({
+    user_id: session.user.id,
+    email: session.user.email,
+    full_name: session.user.user_metadata?.full_name ?? null,
+    avatar_url: session.user.user_metadata?.avatar_url ?? null,
+    access_token: session.access_token,
+    refresh_token: session.refresh_token,
+    updated_at: Date.now(),
+  })
+}
 
 const AuthContext = createContext({
   user: null,
@@ -103,6 +120,7 @@ export const AuthProvider = ({ children }) => {
       .then(({ data: { session } }) => {
         setSession(session)
         setUser(session?.user ?? null)
+        persistActiveAccount(session)
         const uid = session?.user?.id ?? null
         resolvedUidRef.current = uid
         return resolveWorkspace(uid)
@@ -142,6 +160,7 @@ export const AuthProvider = ({ children }) => {
       // Keep session/user fresh on every event (token refreshes, user updates).
       setSession(session)
       setUser(session?.user ?? null)
+      persistActiveAccount(session)
 
       if (uid === resolvedUidRef.current) return
       resolvedUidRef.current = uid

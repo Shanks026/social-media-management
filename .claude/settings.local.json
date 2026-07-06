@@ -179,7 +179,9 @@
       "Bash(node -e \"const p=require\\('./package.json'\\); console.log\\(JSON.stringify\\(Object.keys\\(p.dependencies\\).filter\\(k=>k.includes\\('radix'\\)\\), null, 2\\)\\)\")",
       "Skill(run)",
       "Skill(run:*)",
-      "Bash(node -e \"const p=require\\('./package.json'\\); console.log\\('deps:', p.dependencies.shadcn, p.devDependencies && p.devDependencies.shadcn\\)\")"
+      "Bash(node -e \"const p=require\\('./package.json'\\); console.log\\('deps:', p.dependencies.shadcn, p.devDependencies && p.devDependencies.shadcn\\)\")",
+      "mcp__supabase__search_docs",
+      "Bash(node -e \"console.log\\(require\\('./node_modules/@supabase/supabase-js/package.json'\\).version\\)\")"
     ]
   }
 }
