@@ -68,8 +68,6 @@ import { useHeader } from '@/components/misc/header-context'
 import {
   usePendingApprovals,
   usePendingApprovalsCount,
-  approveInternally,
-  requestInternalChanges,
   useApprovalLog,
   useApprovalLogCount,
   deleteApprovalEvents,
@@ -77,7 +75,7 @@ import {
 import { useTeamMembers } from '@/api/team'
 import { PlatformStack } from '@/components/PlatformIcon'
 import { cn } from '@/lib/utils'
-import { NavLink, useSearchParams } from 'react-router-dom'
+import { NavLink, useNavigate, useSearchParams } from 'react-router-dom'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -210,197 +208,16 @@ function LogRowSkeleton() {
   )
 }
 
-// ── Pending detail dialog ─────────────────────────────────────────────────────
-
-function ApprovalDetailDialog({ item, open, onOpenChange }) {
-  const queryClient = useQueryClient()
-  const [isRequestOpen, setIsRequestOpen] = useState(false)
-  const [changeNotes, setChangeNotes] = useState('')
-
-  const invalidate = () => {
-    queryClient.invalidateQueries({ queryKey: ['pending-approvals'] })
-    queryClient.invalidateQueries({ queryKey: ['pending-approvals-count'] })
-    queryClient.invalidateQueries({ queryKey: ['approval-log'] })
-    queryClient.invalidateQueries({ queryKey: ['post-version'] })
-  }
-
-  const approveMutation = useMutation({
-    mutationFn: () => approveInternally(item.id),
-    onSuccess: () => {
-      invalidate()
-      toast.success(`"${item.title}" approved`)
-      onOpenChange(false)
-    },
-    onError: (err) => toast.error(err.message),
-  })
-
-  const requestChangesMutation = useMutation({
-    mutationFn: () => requestInternalChanges(item.id, changeNotes),
-    onSuccess: () => {
-      invalidate()
-      toast.success('Changes requested')
-      setIsRequestOpen(false)
-      setChangeNotes('')
-      onOpenChange(false)
-    },
-    onError: (err) => toast.error(err.message),
-  })
-
-  if (!item) return null
-
-  const isSocial = (item.platforms?.length ?? 0) > 0
-
-  return (
-    <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-3xl w-full max-h-[88vh] flex flex-col gap-0 p-0 overflow-hidden">
-          <div className="px-6 pt-6 pb-4 border-b border-border shrink-0">
-            <div className="flex items-start justify-between gap-4">
-              <div className="space-y-2 min-w-0">
-                <DialogTitle className="text-xl font-semibold bricolage leading-tight">{item.title}</DialogTitle>
-                <div className="flex items-center gap-2">
-                  <ClientAvatar name={item.client?.name} logoUrl={item.client?.logo_url} />
-                  <span className="text-sm text-muted-foreground">{item.client?.name}</span>
-                </div>
-              </div>
-              <NavLink
-                to={`/clients/${item.client_id}/posts/${item.actual_post_id}`}
-                onClick={() => onOpenChange(false)}
-                className="shrink-0 flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors mt-1"
-              >
-                Open post <ExternalLink className="size-3" />
-              </NavLink>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-x-5 gap-y-2 mt-4 text-sm text-muted-foreground">
-              {isSocial && (
-                <div className="flex items-center gap-2">
-                  <PlatformStack platforms={item.platforms} size={18} />
-                  <span className="text-xs">{item.platforms.map((p) => PLATFORM_LABELS[p] ?? p).join(', ')}</span>
-                </div>
-              )}
-              {item.target_date && (
-                <div className="flex items-center gap-1.5">
-                  <Clock className="size-3.5 shrink-0" />
-                  <span>Target: {format(new Date(item.target_date), 'dd MMM yyyy')}</span>
-                </div>
-              )}
-              {item.submitter && (
-                <div className="flex items-center gap-1.5">
-                  <UserAvatar name={item.submitter.full_name} email={item.submitter.email} avatarUrl={item.submitter.avatar_url} />
-                  <span>{item.submitter.full_name || item.submitter.email}</span>
-                  <span className="text-xs text-muted-foreground/60">
-                    · {formatDistanceToNow(new Date(item.updated_at), { addSuffix: true })}
-                  </span>
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
-            {(item.media_urls?.length ?? 0) > 0 && (
-              <div className="space-y-2">
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Media</p>
-                {item.media_urls.length === 1 ? (
-                  isVideoUrl(item.media_urls[0]) ? (
-                    <div className="w-full aspect-video bg-muted rounded-lg overflow-hidden">
-                      <video src={item.media_urls[0]} className="w-full h-full object-contain" controls />
-                    </div>
-                  ) : (
-                    <img src={item.media_urls[0]} alt="" className="w-full aspect-video object-cover rounded-lg bg-muted" />
-                  )
-                ) : (
-                  <div className="grid grid-cols-2 gap-2">
-                    {item.media_urls.map((url, i) => (
-                      <div key={i} className="aspect-square rounded-md overflow-hidden bg-muted">
-                        {isVideoUrl(url) ? (
-                          <>
-                            <video src={url} muted playsInline className="w-full h-full object-cover" />
-                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                              <div className="bg-black/40 backdrop-blur-sm p-1.5 rounded-full">
-                                <Video className="size-4 text-white fill-white" />
-                              </div>
-                            </div>
-                          </>
-                        ) : (
-                          <img src={url} alt="" className="w-full h-full object-cover" />
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {item.content && (
-              <div className="space-y-2">
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  {isSocial ? 'Caption' : 'Content'}
-                </p>
-                <p className="text-sm leading-relaxed whitespace-pre-wrap text-foreground/90">{item.content}</p>
-              </div>
-            )}
-          </div>
-
-          <div className="px-6 py-4 border-t border-border flex items-center justify-end gap-3 shrink-0 bg-muted/30">
-            <Button variant="outline" className="gap-2" onClick={() => setIsRequestOpen(true)}>
-              <MessageSquareWarning className="size-4" />
-              Request Changes
-            </Button>
-            <Button
-              className="gap-2 font-semibold"
-              disabled={approveMutation.isPending}
-              onClick={() => approveMutation.mutate()}
-            >
-              {approveMutation.isPending ? <Loader2 className="size-4 animate-spin" /> : <ShieldCheck className="size-4" />}
-              Approve
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={isRequestOpen} onOpenChange={setIsRequestOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Request Changes</DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-muted-foreground -mt-2">
-            Describe what needs to be revised. The member will see this and can resubmit.
-          </p>
-          <Textarea
-            placeholder="e.g. Caption too long — cut to 150 chars. Swap the second image."
-            value={changeNotes}
-            onChange={(e) => setChangeNotes(e.target.value)}
-            rows={4}
-            className="resize-none"
-          />
-          <DialogFooter>
-            <Button variant="outline" onClick={() => { setIsRequestOpen(false); setChangeNotes('') }}>Cancel</Button>
-            <Button
-              variant="destructive"
-              onClick={() => requestChangesMutation.mutate()}
-              disabled={requestChangesMutation.isPending}
-            >
-              {requestChangesMutation.isPending && <Loader2 size={13} className="animate-spin mr-1.5" />}
-              Send Feedback
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </>
-  )
-}
-
 // ── Pending tab ───────────────────────────────────────────────────────────────
 
 const pendingCol = createColumnHelper()
 
 function PendingTab() {
+  const navigate = useNavigate()
   const { data: rawQueue = [], isLoading } = usePendingApprovals()
   const { data: teamMembers = [] } = useTeamMembers()
   const [sorting, setSorting] = useState([])
   const [globalFilter, setGlobalFilter] = useState('')
-  const [selectedItem, setSelectedItem] = useState(null)
 
   const memberMap = useMemo(() => {
     const map = {}
@@ -548,7 +365,7 @@ function PendingTab() {
                     <TableRow
                       key={row.id}
                       className="cursor-pointer hover:bg-muted/40 transition-colors"
-                      onClick={() => setSelectedItem(row.original)}
+                      onClick={() => navigate(`/clients/${row.original.client_id}/posts/${row.original.actual_post_id}`)}
                     >
                       {row.getVisibleCells().map((cell) => (
                         <TableCell key={cell.id} className="py-3 px-4">
@@ -562,12 +379,6 @@ function PendingTab() {
           </Table>
         </div>
       )}
-
-      <ApprovalDetailDialog
-        item={selectedItem}
-        open={!!selectedItem}
-        onOpenChange={(open) => { if (!open) setSelectedItem(null) }}
-      />
     </div>
   )
 }

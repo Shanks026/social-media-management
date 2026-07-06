@@ -23,12 +23,23 @@ export function useNoteShares(noteId) {
 }
 
 export async function shareNote({ noteId, memberUserId, permission = 'read' }) {
+  return shareNoteWithMany({ noteId, memberUserIds: [memberUserId], permission })
+}
+
+/** Share a note with several teammates at once (single insert + visibility update). */
+export async function shareNoteWithMany({ noteId, memberUserIds, permission = 'read' }) {
   const { user } = await resolveWorkspace()
   const { data, error } = await supabase
     .from('note_shares')
-    .insert([{ note_id: noteId, member_user_id: memberUserId, permission, invited_by: user.id }])
+    .insert(
+      memberUserIds.map((memberUserId) => ({
+        note_id: noteId,
+        member_user_id: memberUserId,
+        permission,
+        invited_by: user.id,
+      })),
+    )
     .select()
-    .single()
   if (error) throw error
 
   const { error: visError } = await supabase

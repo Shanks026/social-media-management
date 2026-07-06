@@ -52,6 +52,29 @@ export default function NoteCollaboratorAvatars({
 
   if (visibility === 'private') return null
 
+  // Workspace-visible notes have no explicit share list to reveal on hover —
+  // everyone in the workspace already has access — so surface the author's
+  // name directly instead of a bare avatar with nothing else to disclose.
+  if (visibility === 'workspace') {
+    const author = people[0]
+    return (
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className={cn('flex items-center gap-1.5 min-w-0 shrink-0', className)}
+      >
+        <Avatar className={cn(size, 'ring-2 ring-background shrink-0')}>
+          {author.avatar_url && <AvatarImage src={author.avatar_url} alt={author.name} />}
+          <AvatarFallback className="text-[10px] font-semibold">
+            {(author.name || '?')[0].toUpperCase()}
+          </AvatarFallback>
+        </Avatar>
+        <span className="text-xs text-muted-foreground truncate">
+          {author.name} <span className="text-muted-foreground/70">· Workspace</span>
+        </span>
+      </div>
+    )
+  }
+
   const visible = people.slice(0, max)
   const overflow = people.length - visible.length
 
@@ -60,7 +83,7 @@ export default function NoteCollaboratorAvatars({
       <HoverCardTrigger asChild>
         <div
           onClick={(e) => e.stopPropagation()}
-          className={cn('flex -space-x-2 shrink-0', className)}
+          className={cn('flex -space-x-1 shrink-0', className)}
         >
           {visible.map((p) => (
             <Avatar key={p.id} className={cn(size, 'ring-2 ring-background')}>

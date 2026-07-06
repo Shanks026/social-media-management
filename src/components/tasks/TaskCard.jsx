@@ -169,7 +169,7 @@ function DeliverablePreviewRow({ post, client }) {
       <div className="shrink-0 flex flex-col items-end gap-2">
         <StatusBadge status={post.status} />
         {post.platforms?.length > 0 && (
-          <div className="flex items-center -space-x-2">
+          <div className="flex items-center -space-x-1">
             {post.platforms.map((p) => (
               <PlatformIcon key={p} name={p} />
             ))}

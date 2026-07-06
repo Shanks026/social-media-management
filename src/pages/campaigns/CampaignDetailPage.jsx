@@ -705,7 +705,7 @@ export default function CampaignDetailPage() {
                                   className="text-sm px-3 py-1.5"
                                 />
                                 {pv?.platforms?.length > 0 && (
-                                  <div className="flex items-center -space-x-2">
+                                  <div className="flex items-center -space-x-1">
                                     {pv.platforms.map((p) => (
                                       <PlatformIcon key={p} name={p} />
                                     ))}

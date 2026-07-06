@@ -95,7 +95,7 @@ export default function AgencyNoteCard({ note, clientMap, onOpen, onDelete }) {
               <TagPill key={tag.id} tag={tag} size="xs" />
             ))}
             {overflowCount > 0 && (
-              <span className="text-[10px] font-medium text-muted-foreground">
+              <span className="text-xs font-medium text-muted-foreground">
                 +{overflowCount}
               </span>
             )}

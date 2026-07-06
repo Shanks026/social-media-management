@@ -60,6 +60,12 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
+import { Calendar } from '@/components/ui/calendar'
 import { Textarea } from '@/components/ui/textarea'
 import {
   UserPlus,
@@ -79,6 +85,7 @@ import {
   Ban,
   Eye,
   FolderOpen,
+  ArrowLeft,
 } from 'lucide-react'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import {
@@ -91,7 +98,7 @@ import {
 
 // ─── Documents level labels ────────────────────────────────────────────────────
 
-const DOCS_LEVEL_CONFIG = {
+export const DOCS_LEVEL_CONFIG = {
   none: { label: 'No access', description: 'Cannot see the documents section', icon: Ban },
   view: { label: 'View', description: 'Can read non-confidential documents', icon: Eye },
   manage: { label: 'Manage', description: 'Can upload, edit, and delete non-confidential documents', icon: FolderOpen },
@@ -115,27 +122,101 @@ const INVITE_ROLE_OPTIONS = [
   },
 ]
 
+// ── Stepper indicator (same pattern as UploadMetaDialog) ────────────────────
+
+function StepDot({ number, label, state }) {
+  return (
+    <div className="flex items-center gap-2 min-w-0 shrink">
+      <div
+        className={cn(
+          'flex size-6 items-center justify-center rounded-full text-xs font-semibold transition-all duration-300',
+          state === 'completed' && 'bg-primary text-primary-foreground',
+          state === 'active' && 'bg-primary text-primary-foreground ring-4 ring-primary/20',
+          state === 'upcoming' && 'bg-muted text-muted-foreground',
+        )}
+      >
+        {state === 'completed' ? <Check className="size-3" strokeWidth={3} /> : number}
+      </div>
+      <span
+        className={cn(
+          'text-sm font-medium truncate transition-colors duration-300',
+          state === 'upcoming' && 'text-muted-foreground',
+        )}
+      >
+        {label}
+      </span>
+    </div>
+  )
+}
+
+const DEFAULT_INVITE_EXPIRY_DAYS = 7
+const MAX_INVITE_EXPIRY_DAYS = 30
+
+function addDays(days) {
+  const d = new Date()
+  d.setDate(d.getDate() + days)
+  return d
+}
+
 export function InviteDialog({ open, onOpenChange }) {
+  const [step, setStep] = useState(1)
+  const [label, setLabel] = useState('')
   const [systemRole, setSystemRole] = useState('member')
+  const [docsLevel, setDocsLevel] = useState('view')
+  const [expiryDate, setExpiryDate] = useState(() => addDays(DEFAULT_INVITE_EXPIRY_DAYS))
   const [inviteUrl, setInviteUrl] = useState(null)
   const [copied, setCopied] = useState(false)
 
   const generateInvite = useGenerateInvite()
 
+  // Each panel sizes the dialog to its own natural content height (instead of
+  // a fixed height for both) — measured via ResizeObserver so it re-adjusts
+  // whenever a panel's content changes (e.g. admin vs member on panel 2).
+  // State-backed callback refs (not useRef) because Radix mounts DialogContent
+  // into the DOM on a tick that isn't guaranteed to line up with the `open`
+  // prop change — a plain ref + effect-on-[open] can fire before the node
+  // exists and never re-run. Callback refs fire exactly when the node appears.
+  const [panel1El, setPanel1El] = useState(null)
+  const [panel2El, setPanel2El] = useState(null)
+  const [panelHeights, setPanelHeights] = useState({ 1: null, 2: null })
+  const activeStep = inviteUrl ? 2 : step
+  const activeHeight = panelHeights[activeStep]
+
+  useLayoutEffect(() => {
+    const els = { 1: panel1El, 2: panel2El }
+    const measure = () =>
+      setPanelHeights({ 1: els[1]?.offsetHeight ?? null, 2: els[2]?.offsetHeight ?? null })
+    measure()
+    const ro = new ResizeObserver(measure)
+    if (els[1]) ro.observe(els[1])
+    if (els[2]) ro.observe(els[2])
+    return () => ro.disconnect()
+  }, [panel1El, panel2El])
+
+  const resetForm = () => {
+    setStep(1)
+    setLabel('')
+    setSystemRole('member')
+    setDocsLevel('view')
+    setExpiryDate(addDays(DEFAULT_INVITE_EXPIRY_DAYS))
+    setInviteUrl(null)
+    setCopied(false)
+  }
+
   const handleClose = (val) => {
     onOpenChange(val)
-    if (!val) {
-      setTimeout(() => {
-        setSystemRole('member')
-        setInviteUrl(null)
-        setCopied(false)
-      }, 200)
-    }
+    if (!val) setTimeout(resetForm, 200)
   }
 
   const handleGenerate = async () => {
     try {
-      const url = await generateInvite.mutateAsync({ system_role: systemRole })
+      const permissions = { documents: systemRole === 'admin' ? 'manage' : docsLevel }
+      const url = await generateInvite.mutateAsync({
+        system_role: systemRole,
+        permissions,
+        expires_at: expiryDate.toISOString(),
+        label,
+      })
       setInviteUrl(url)
     } catch (err) {
       const msg =
@@ -157,127 +238,280 @@ export function InviteDialog({ open, onOpenChange }) {
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Invite Team Member</DialogTitle>
-          <DialogDescription>
-            {inviteUrl
-              ? 'Share this link. It expires in 7 days.'
-              : 'Choose the access level for this invite. The new member will set their own job title.'}
-          </DialogDescription>
-        </DialogHeader>
+      <DialogContent className="w-[90vw] max-w-md overflow-hidden p-0 gap-0">
 
-        {!inviteUrl ? (
-          <div className="space-y-4">
+        {/* ── Stepper header ─────────────────────────────────────────────── */}
+        <div className="pl-6 pr-12 pt-6 pb-5 border-b">
+          <DialogTitle className="text-base font-semibold mb-4">Invite Team Member</DialogTitle>
+
+          <div className="flex items-center gap-2 min-w-0">
+            <StepDot
+              number={1}
+              label="Link details"
+              state={inviteUrl || step > 1 ? 'completed' : 'active'}
+            />
+
+            {/* Animated connector */}
+            <div className="relative flex-1 h-px bg-border overflow-hidden">
+              <div
+                className="absolute inset-0 bg-primary origin-left transition-transform duration-500 ease-in-out"
+                style={{ transform: step > 1 || inviteUrl ? 'scaleX(1)' : 'scaleX(0)' }}
+              />
+            </div>
+
+            <StepDot
+              number={2}
+              label="Document access"
+              state={step === 2 || inviteUrl ? 'active' : 'upcoming'}
+            />
+          </div>
+        </div>
+
+        {/* ── Sliding panels — height animates to match whichever panel is active ── */}
+        <div
+          className="relative overflow-x-hidden overflow-y-auto max-h-[65vh] transition-[height] duration-300 ease-in-out"
+          style={{ height: activeHeight ? `${activeHeight}px` : 'auto' }}
+        >
+
+          {/* ── Panel 1: Link details + access level ── */}
+          <div
+            ref={setPanel1El}
+            className="absolute top-0 left-0 right-0 p-6 space-y-4 transition-transform duration-300 ease-in-out"
+            style={{ transform: step === 2 || inviteUrl ? 'translateX(-100%)' : 'translateX(0)' }}
+            aria-hidden={step !== 1}
+          >
+            <div className="space-y-1.5">
+              <Label>
+                Link name <span className="text-muted-foreground font-normal">(optional)</span>
+              </Label>
+              <Input
+                placeholder="e.g. Batch for Jenit"
+                value={label}
+                onChange={(e) => setLabel(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Expires on</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full justify-start text-left font-normal"
+                  >
+                    <CalendarDays className="mr-2 size-4 opacity-50" />
+                    {formatDate(expiryDate)}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={expiryDate}
+                    onSelect={(date) => date && setExpiryDate(date)}
+                    disabled={(date) =>
+                      date < new Date(new Date().setHours(0, 0, 0, 0)) ||
+                      date > addDays(MAX_INVITE_EXPIRY_DAYS)
+                    }
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+              <p className="text-xs text-muted-foreground">
+                Up to {MAX_INVITE_EXPIRY_DAYS} days from today.
+              </p>
+            </div>
+
             <div className="space-y-2">
-              {INVITE_ROLE_OPTIONS.map((opt) => (
-                <button
-                  key={opt.value}
-                  type="button"
-                  onClick={() => setSystemRole(opt.value)}
-                  className={cn(
-                    'w-full flex items-start gap-3 rounded-lg border px-4 py-3 text-left transition-colors',
-                    systemRole === opt.value
-                      ? 'border-primary bg-primary/5'
-                      : 'border-border/50 hover:border-border',
-                  )}
-                >
-                  <div
+              <Label>Access level</Label>
+              <RadioGroup value={systemRole} onValueChange={setSystemRole} className="gap-2">
+                {INVITE_ROLE_OPTIONS.map((opt) => (
+                  <label
+                    key={opt.value}
+                    htmlFor={`invite-role-${opt.value}`}
                     className={cn(
-                      'mt-0.5 size-4 rounded-full border-2 shrink-0 flex items-center justify-center',
+                      'flex items-start gap-3 rounded-lg border px-4 py-3 cursor-pointer transition-colors',
                       systemRole === opt.value
-                        ? 'border-primary'
-                        : 'border-muted-foreground/40',
+                        ? 'border-primary bg-primary/5'
+                        : 'border-border/50 hover:border-border',
                     )}
                   >
-                    {systemRole === opt.value && (
-                      <div className="size-2 rounded-full bg-primary" />
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex justify-between items-center gap-2 mb-1">
-                      <p className="text-sm font-medium">{opt.label}</p>
-                      <Badge className={opt.palette.badge}>
-                        {opt.palette.label}
-                      </Badge>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <p className="text-sm font-medium">{opt.label}</p>
+                        <Badge className={opt.palette.badge}>
+                          {opt.palette.label}
+                        </Badge>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {opt.description}
+                      </p>
                     </div>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {opt.description}
-                    </p>
-                  </div>
-                </button>
-              ))}
+                    <RadioGroupItem
+                      value={opt.value}
+                      id={`invite-role-${opt.value}`}
+                      className="self-start mt-0.5 data-[state=checked]:border-primary"
+                    />
+                  </label>
+                ))}
+              </RadioGroup>
             </div>
-
-            <Button
-              className="w-full"
-              onClick={handleGenerate}
-              disabled={generateInvite.isPending}
-            >
-              {generateInvite.isPending ? (
-                <>
-                  <Loader2 className="size-4 animate-spin mr-2" />
-                  Generating…
-                </>
-              ) : (
-                <>
-                  <Link className="size-4 mr-2" />
-                  Generate Invite Link
-                </>
-              )}
-            </Button>
           </div>
-        ) : (
-          <div className="space-y-3">
-            <div className="space-y-1.5">
-              <Label>Invite link</Label>
-              <div className="flex gap-2">
-                <Input
-                  readOnly
-                  value={inviteUrl}
-                  className="text-xs font-mono"
-                />
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={handleCopy}
-                  className="shrink-0"
-                >
-                  {copied ? (
-                    <Check className="size-4 text-green-500" />
+
+          {/* ── Panel 2: Document access, then the generated result ── */}
+          <div
+            ref={setPanel2El}
+            className="absolute top-0 left-0 right-0 p-6 transition-transform duration-300 ease-in-out"
+            style={{ transform: step === 2 || inviteUrl ? 'translateX(0)' : 'translateX(100%)' }}
+            aria-hidden={step !== 2 && !inviteUrl}
+          >
+            {!inviteUrl ? (
+              <div className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  This invite joins as{' '}
+                  <span
+                    className={cn(
+                      'font-medium',
+                      selectedOption?.palette.badge.split(' ').find((c) => c.startsWith('text-')),
+                    )}
+                  >
+                    {selectedOption?.label}
+                  </span>
+                  . The new member will set their own job title.
+                </p>
+
+                {systemRole === 'member' ? (
+                  <div className="space-y-2">
+                    <Label>Document access</Label>
+                    <RadioGroup value={docsLevel} onValueChange={setDocsLevel} className="gap-2">
+                      {Object.entries(DOCS_LEVEL_CONFIG).map(([key, cfg]) => (
+                        <label
+                          key={key}
+                          htmlFor={`invite-docs-${key}`}
+                          className={cn(
+                            'flex items-start gap-3 rounded-lg border px-4 py-3 cursor-pointer transition-colors',
+                            docsLevel === key
+                              ? 'border-primary bg-primary/5'
+                              : 'border-border/50 hover:border-border',
+                          )}
+                        >
+                          <cfg.icon className={cn(
+                            'size-4 shrink-0 mt-0.5',
+                            docsLevel === key ? 'text-primary' : 'text-muted-foreground',
+                          )} />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium">{cfg.label}</p>
+                            <p className="text-xs text-muted-foreground">{cfg.description}</p>
+                          </div>
+                          <RadioGroupItem
+                            value={key}
+                            id={`invite-docs-${key}`}
+                            className="self-start mt-0.5 data-[state=checked]:border-primary"
+                          />
+                        </label>
+                      ))}
+                    </RadioGroup>
+                  </div>
+                ) : (
+                  <div className="rounded-lg border border-border/50 bg-muted/20 px-4 py-3 flex items-start gap-3">
+                    <FolderOpen className="size-4 text-muted-foreground shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-medium">Full document access</p>
+                      <p className="text-xs text-muted-foreground">
+                        Admins can upload, edit, and delete documents — nothing to choose here.
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div className="space-y-1.5">
+                  <Label>Invite link</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      readOnly
+                      value={inviteUrl}
+                      className="text-xs font-mono"
+                    />
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={handleCopy}
+                      className="shrink-0"
+                    >
+                      {copied ? (
+                        <Check className="size-4 text-green-500" />
+                      ) : (
+                        <Copy className="size-4" />
+                      )}
+                    </Button>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Expires {formatDate(expiryDate)}. Whoever uses this link joins as a{' '}
+                  <span
+                    className={cn(
+                      'font-medium',
+                      selectedOption?.palette.badge
+                        .split(' ')
+                        .find((c) => c.startsWith('text-')),
+                    )}
+                  >
+                    {selectedOption?.label}
+                  </span>
+                  .
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* ── Footer ─────────────────────────────────────────────────────── */}
+        <div className="flex items-center justify-between px-6 py-4 border-t">
+          <div>
+            {step === 2 && !inviteUrl && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="gap-1.5 text-muted-foreground"
+                onClick={() => setStep(1)}
+              >
+                <ArrowLeft className="size-3.5" />
+                Back
+              </Button>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            {!inviteUrl ? (
+              step === 1 ? (
+                <Button onClick={() => setStep(2)}>Continue</Button>
+              ) : (
+                <Button onClick={handleGenerate} disabled={generateInvite.isPending}>
+                  {generateInvite.isPending ? (
+                    <>
+                      <Loader2 className="size-4 animate-spin mr-2" />
+                      Generating…
+                    </>
                   ) : (
-                    <Copy className="size-4" />
+                    <>
+                      <Link className="size-4 mr-2" />
+                      Generate Invite Link
+                    </>
                   )}
                 </Button>
-              </div>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Expires in 7 days. Whoever uses this link joins as a{' '}
-              <span
-                className={cn(
-                  'font-medium',
-                  selectedOption?.palette.badge
-                    .split(' ')
-                    .find((c) => c.startsWith('text-')),
-                )}
-              >
-                {selectedOption?.label}
-              </span>
-              .
-            </p>
-            <Button
-              variant="outline"
-              size="sm"
-              className="w-full"
-              onClick={() => {
-                setInviteUrl(null)
-                setSystemRole('member')
-              }}
-            >
-              Create another invite
-            </Button>
+              )
+            ) : (
+              <>
+                <Button variant="outline" onClick={resetForm}>
+                  Create another invite
+                </Button>
+                <Button onClick={() => handleClose(false)}>Done</Button>
+              </>
+            )}
           </div>
-        )}
+        </div>
       </DialogContent>
     </Dialog>
   )
@@ -862,14 +1096,14 @@ export default function TeamSettings({ onInviteClick = () => {} }) {
         )}
       </section>
 
-      {/* ── Pending Invites (owner only) ── */}
+      {/* ── Active Links (owner only) ── */}
       {canManageTeam && pendingInvites.length > 0 && (
         <>
           <Separator className="opacity-50" />
           <section className="space-y-8">
             <div className="space-y-1">
               <h2 className="text-2xl font-normal tracking-tight bricolage">
-                Pending Invites
+                Active Links
               </h2>
               <p className="text-sm text-muted-foreground font-normal">
                 Active invite links that haven&apos;t been accepted yet.
@@ -886,11 +1120,22 @@ export default function TeamSettings({ onInviteClick = () => {} }) {
                     <Link size={16} className="text-muted-foreground" />
                   </div>
 
-                  <div className="flex-1 min-w-0 space-y-1">
+                  <div className="flex-1 min-w-0 space-y-1.5">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <p className="text-sm font-mono text-muted-foreground truncate">
-                        /join/{invite.token.slice(0, 20)}…
+                      <p className="text-base font-semibold truncate">
+                        {invite.label || `/join/${invite.token.slice(0, 20)}…`}
                       </p>
+                      {invite.permissions?.documents && (() => {
+                        const docsCfg = DOCS_LEVEL_CONFIG[invite.permissions.documents]
+                        const DocsIcon = docsCfg?.icon
+                        if (!DocsIcon) return null
+                        return (
+                          <DocsIcon
+                            className="size-4 text-muted-foreground shrink-0"
+                            title={`Document access: ${docsCfg.label}`}
+                          />
+                        )
+                      })()}
                       {invite.system_role && (
                         <Badge
                           className={
@@ -903,13 +1148,18 @@ export default function TeamSettings({ onInviteClick = () => {} }) {
                         </Badge>
                       )}
                     </div>
-                    <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <CalendarDays size={11} />
+                    {invite.label && (
+                      <p className="text-xs font-mono text-muted-foreground/70 truncate">
+                        /join/{invite.token.slice(0, 20)}…
+                      </p>
+                    )}
+                    <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                      <span className="flex items-center gap-1.5">
+                        <CalendarDays size={13} />
                         Created {formatDate(invite.created_at)}
                       </span>
-                      <span className="flex items-center gap-1">
-                        <Clock size={11} />
+                      <span className="flex items-center gap-1.5">
+                        <Clock size={13} />
                         Expires {formatDate(invite.expires_at)}
                       </span>
                     </div>

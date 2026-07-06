@@ -10,6 +10,7 @@ Tracks planned and built features. Each entry links to its full planning doc.
 | 02 | Note Tags | [02-note-tags.md](02-note-tags.md) | ✅ Complete |
 | 04 | Team Task Management | [04-team-task-management.md](04-team-task-management.md) | 🔵 Planned |
 | 06 | Multi-Account Switcher | [06-multi-account-switcher.md](06-multi-account-switcher.md) | ✅ Complete |
+| 07 | Invite Link Upgrade | [07-invite-link-upgrade.md](07-invite-link-upgrade.md) | 🟡 Built, pending verification |
 
 ## Key Database Changes
 

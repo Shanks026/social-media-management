@@ -668,7 +668,9 @@ export default function TasksAndReminders() {
     [allCampaigns],
   )
 
-  const defaultClientId = clientsData?.internalAccount?.id ?? null
+  // New tasks default to "General (no client)" rather than the internal
+  // account — CreateTaskDialog treats a null/empty clientId as General.
+  const defaultClientId = null
 
   const { data: teamMembers = [] } = useTeamMembers()
   const memberMap = useMemo(() => {

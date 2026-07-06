@@ -101,7 +101,7 @@ export default function CreateClientPage({
   const location = useLocation()
   const { setHeader } = useHeader()
   const queryClient = useQueryClient()
-  const { user } = useAuth()
+  const { user, workspaceUserId } = useAuth()
   const { refreshAgency } = useOutletContext() || {}
   const fileInputRef = useRef(null)
 
@@ -114,17 +114,17 @@ export default function CreateClientPage({
 
   // Check if agency brand identity is configured (only relevant for external client creation)
   useEffect(() => {
-    if (isEditMode || standalone) return
+    if (isEditMode || standalone || !workspaceUserId) return
     async function checkAgencyBranding() {
       const { data } = await supabase
         .from('agency_subscriptions')
         .select('agency_name')
-        .eq('user_id', user?.id)
+        .eq('user_id', workspaceUserId)
         .maybeSingle()
       if (!data?.agency_name) setAgencyBrandingMissing(true)
     }
     checkAgencyBranding()
-  }, [isEditMode, standalone, user?.id])
+  }, [isEditMode, standalone, workspaceUserId])
 
   const form = useForm({
     resolver: zodResolver(clientSchema),

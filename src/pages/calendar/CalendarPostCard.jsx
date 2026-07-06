@@ -624,7 +624,7 @@ export function CalendarPostCard({ post }) {
           <div className="flex items-center justify-between">
             {/* Platforms */}
             <div className="flex items-center">
-              <div className="flex -space-x-2">
+              <div className="flex -space-x-1">
                 {displayedPlatforms.map((p, idx) => (
                   <PlatformIcon key={`${p}-${idx}`} name={p} />
                 ))}

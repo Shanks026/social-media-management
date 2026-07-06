@@ -74,7 +74,7 @@ export function DeliverablePickerSection({ posts, selectedPosts = [], onToggle, 
       >
         {count ? (
           <>
-            <div className="flex -space-x-2 shrink-0">
+            <div className="flex -space-x-1 shrink-0">
               {selectedPosts.slice(0, 3).map((p) => (
                 <Thumb key={p.id} post={p} className="size-8 ring-2 ring-card" />
               ))}

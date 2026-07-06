@@ -302,7 +302,7 @@ export const GUIDES = [
       },
       {
         heading: 'Seat Limits',
-        body: 'The number of team members you can invite depends on your plan. Ignite allows 2 seats, Velocity allows 5, and Quantum has no limit. Pending invites are shown in the Team tab alongside active members.',
+        body: 'The number of team members you can invite depends on your plan. Ignite allows 2 seats, Velocity allows 5, and Quantum has no limit. Active links are shown in the Team tab alongside active members.',
       },
     ],
   },

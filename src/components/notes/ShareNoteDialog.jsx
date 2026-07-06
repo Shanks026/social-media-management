@@ -18,11 +18,12 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import { useTeamMembers } from '@/api/team'
 import {
   useNoteShares,
   noteShareKeys,
-  shareNote,
+  shareNoteWithMany,
   updateNoteSharePermission,
   removeNoteShare,
 } from '@/api/noteShares'
@@ -48,7 +49,7 @@ export default function ShareNoteDialog({ open, onOpenChange, noteId }) {
   const queryClient = useQueryClient()
   const { data: teamMembers = [] } = useTeamMembers()
   const { data: shares = [], isLoading } = useNoteShares(noteId)
-  const [addingMemberId, setAddingMemberId] = useState('')
+  const [selectedIds, setSelectedIds] = useState([])
 
   const memberMap = useMemo(
     () => Object.fromEntries(teamMembers.map((m) => [m.member_user_id, m])),
@@ -68,10 +69,10 @@ export default function ShareNoteDialog({ open, onOpenChange, noteId }) {
   }
 
   const addMutation = useMutation({
-    mutationFn: shareNote,
+    mutationFn: shareNoteWithMany,
     onSuccess: () => {
       invalidateAll()
-      setAddingMemberId('')
+      setSelectedIds([])
     },
     onError: (err) => toast.error(err.message || 'Failed to share note'),
   })
@@ -88,9 +89,15 @@ export default function ShareNoteDialog({ open, onOpenChange, noteId }) {
     onError: (err) => toast.error(err.message || 'Failed to remove access'),
   })
 
+  function toggleSelected(memberId) {
+    setSelectedIds((prev) =>
+      prev.includes(memberId) ? prev.filter((id) => id !== memberId) : [...prev, memberId],
+    )
+  }
+
   function handleAdd() {
-    if (!addingMemberId) return
-    addMutation.mutate({ noteId, memberUserId: addingMemberId, permission: 'read' })
+    if (selectedIds.length === 0) return
+    addMutation.mutate({ noteId, memberUserIds: selectedIds, permission: 'read' })
   }
 
   return (
@@ -103,30 +110,42 @@ export default function ShareNoteDialog({ open, onOpenChange, noteId }) {
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex items-center gap-2">
-          <Select value={addingMemberId} onValueChange={setAddingMemberId}>
-            <SelectTrigger className="flex-1 h-9 text-sm">
-              <SelectValue placeholder={availableMembers.length ? 'Select a teammate' : 'Everyone already has access'} />
-            </SelectTrigger>
-            <SelectContent>
-              {availableMembers.map((m) => (
-                <SelectItem key={m.member_user_id} value={m.member_user_id}>
-                  <div className="flex items-center gap-2">
-                    <MemberAvatar member={m} size="size-5" />
-                    <span className="truncate">{m.full_name || m.email}</span>
-                  </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <div className="space-y-2">
+          <p className="text-xs font-medium text-muted-foreground">Add people</p>
+          {availableMembers.length === 0 ? (
+            <p className="text-xs text-muted-foreground text-center py-3 rounded-md border border-dashed">
+              Everyone already has access
+            </p>
+          ) : (
+            <div className="max-h-40 overflow-y-auto rounded-md border divide-y divide-border/50">
+              {availableMembers.map((m) => {
+                const checked = selectedIds.includes(m.member_user_id)
+                return (
+                  <label
+                    key={m.member_user_id}
+                    htmlFor={`share-member-${m.member_user_id}`}
+                    className="flex items-center gap-2.5 px-2.5 py-2 cursor-pointer hover:bg-muted/40 transition-colors"
+                  >
+                    <Checkbox
+                      id={`share-member-${m.member_user_id}`}
+                      checked={checked}
+                      onCheckedChange={() => toggleSelected(m.member_user_id)}
+                    />
+                    <MemberAvatar member={m} size="size-6" />
+                    <span className="flex-1 truncate text-sm">{m.full_name || m.email}</span>
+                  </label>
+                )
+              })}
+            </div>
+          )}
           <Button
             size="sm"
-            className="h-9 gap-1.5"
-            disabled={!addingMemberId || addMutation.isPending}
+            className="w-full h-9 gap-1.5"
+            disabled={selectedIds.length === 0 || addMutation.isPending}
             onClick={handleAdd}
           >
             <UserPlus className="size-3.5" />
-            Add
+            {selectedIds.length > 0 ? `Add ${selectedIds.length} ${selectedIds.length === 1 ? 'person' : 'people'}` : 'Add'}
           </Button>
         </div>
 
