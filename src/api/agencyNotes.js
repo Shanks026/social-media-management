@@ -55,7 +55,7 @@ export function useAgencyNoteById(noteId) {
   })
 }
 
-export async function createAgencyNote({ title, body, client_id = null }) {
+export async function createAgencyNote({ title, body, client_id = null, visibility = 'private' }) {
   const { user, workspaceUserId } = await resolveWorkspace()
   const meta = user.user_metadata ?? {}
   const { data, error } = await supabase
@@ -64,6 +64,7 @@ export async function createAgencyNote({ title, body, client_id = null }) {
       title,
       body: body || '',
       client_id,
+      visibility,
       user_id: workspaceUserId,
       created_by: user.id,
       created_by_name: meta.full_name ?? meta.email ?? null,
@@ -75,9 +76,16 @@ export async function createAgencyNote({ title, body, client_id = null }) {
 }
 
 export async function updateAgencyNote(noteId, updates) {
+  const { data: { user } } = await supabase.auth.getUser()
+  const meta = user?.user_metadata ?? {}
   const { data, error } = await supabase
     .from('notes')
-    .update({ ...updates, updated_at: new Date().toISOString() })
+    .update({
+      ...updates,
+      updated_at: new Date().toISOString(),
+      updated_by: user?.id ?? null,
+      updated_by_name: meta.full_name ?? meta.email ?? null,
+    })
     .eq('id', noteId)
     .select()
     .single()

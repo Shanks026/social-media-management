@@ -269,7 +269,7 @@ export default function ProspectsPage() {
             iconBg="bg-amber-100 dark:bg-amber-950"
           />
           <StatCell
-            label="Demo Scheduled"
+            label="Discovery Call"
             value={prospects.filter((p) => p.status === 'demo_scheduled').length}
             icon={<CalendarClock className="h-3 w-3 text-violet-500" />}
             iconBg="bg-violet-100 dark:bg-violet-950"

@@ -15,12 +15,24 @@ const STATUS_CONFIG = {
     className: 'bg-amber-100 text-amber-700 border-transparent dark:bg-amber-950 dark:text-amber-300',
   },
   demo_scheduled: {
-    label: 'Demo Scheduled',
+    label: 'Discovery Call',
     className: 'bg-violet-100 text-violet-700 border-transparent dark:bg-violet-950 dark:text-violet-300',
   },
   proposal_sent: {
     label: 'Proposal Sent',
     className: 'bg-indigo-100 text-indigo-700 border-transparent dark:bg-indigo-950 dark:text-indigo-300',
+  },
+  changes_requested: {
+    label: 'Changes Requested',
+    className: 'bg-orange-100 text-orange-700 border-transparent dark:bg-orange-950 dark:text-orange-300',
+  },
+  proposal_accepted: {
+    label: 'Proposal Accepted',
+    className: 'bg-teal-100 text-teal-700 border-transparent dark:bg-teal-950 dark:text-teal-300',
+  },
+  contract_sent: {
+    label: 'Contract Sent',
+    className: 'bg-pink-100 text-pink-700 border-transparent dark:bg-pink-950 dark:text-pink-300',
   },
   won: {
     label: 'Won',
@@ -38,10 +50,7 @@ export function ProspectStatusBadge({ status, className }) {
     className: 'bg-muted text-muted-foreground border-transparent',
   }
   return (
-    <Badge
-      variant="outline"
-      className={cn('text-[11px] font-medium whitespace-nowrap', config.className, className)}
-    >
+    <Badge variant="outline" className={cn(config.className, className)}>
       {config.label}
     </Badge>
   )

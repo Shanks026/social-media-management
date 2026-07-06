@@ -17,6 +17,7 @@ import {
   Clock,
   ThumbsUp,
   ThumbsDown,
+  RefreshCw,
   Upload,
   FileText,
   Download,
@@ -97,6 +98,11 @@ const STATUS_CONFIG = {
     label: 'Declined',
     className: 'bg-red-100 text-red-700 border-transparent dark:bg-red-950 dark:text-red-300',
   },
+  changes_requested: {
+    label: 'Changes Requested',
+    className:
+      'bg-orange-100 text-orange-700 border-transparent dark:bg-orange-950 dark:text-orange-300',
+  },
   expired: {
     label: 'Expired',
     className:
@@ -152,6 +158,18 @@ function StatusTimeline({ proposal }) {
           },
         ]
       : []),
+    ...(proposal.status === 'changes_requested'
+      ? [
+          {
+            key: 'changes_requested',
+            label: 'Changes Requested',
+            date: proposal.changes_requested_at,
+            icon: RefreshCw,
+            done: !!proposal.changes_requested_at,
+            variant: 'warning',
+          },
+        ]
+      : []),
   ]
 
   const visibleSteps = steps.filter((s) => s.done)
@@ -168,7 +186,9 @@ function StatusTimeline({ proposal }) {
                 ? 'bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300'
                 : step.variant === 'danger'
                   ? 'bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300'
-                  : 'bg-muted/60 text-muted-foreground',
+                  : step.variant === 'warning'
+                    ? 'bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-300'
+                    : 'bg-muted/60 text-muted-foreground',
             )}
           >
             <step.icon className="size-3 shrink-0" />
@@ -504,10 +524,7 @@ export default function ProposalDetailPage() {
               <h1 className="text-2xl font-medium tracking-tight text-foreground truncate bricolage">
                 {proposal.title}
               </h1>
-              <Badge
-                variant="outline"
-                className={cn('text-[11px] font-medium capitalize shrink-0', statusConfig.className)}
-              >
+              <Badge variant="outline" className={statusConfig.className}>
                 {statusConfig.label}
               </Badge>
               {displayName && (
@@ -565,7 +582,7 @@ export default function ProposalDetailPage() {
               </Button>
             )}
 
-            {status === 'draft' && (
+            {(status === 'draft' || status === 'changes_requested') && (
               <Button
                 variant="outline"
                 size="sm"
@@ -642,6 +659,17 @@ export default function ProposalDetailPage() {
             <div>
               <span className="font-medium text-foreground">Decline reason: </span>
               <span className="text-muted-foreground">{proposal.decline_reason}</span>
+            </div>
+          </div>
+        )}
+
+        {/* Changes requested notes */}
+        {status === 'changes_requested' && proposal.changes_requested_notes && (
+          <div className="mt-3 flex items-start gap-2 text-sm bg-orange-500/5 border border-orange-500/20 rounded-lg px-4 py-3">
+            <RefreshCw className="size-4 text-orange-600 dark:text-orange-400 shrink-0 mt-0.5" />
+            <div>
+              <span className="font-medium text-foreground">Changes requested: </span>
+              <span className="text-muted-foreground">{proposal.changes_requested_notes}</span>
             </div>
           </div>
         )}

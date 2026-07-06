@@ -16,11 +16,12 @@ import {
 } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Megaphone, ChevronDown } from 'lucide-react'
+import { Megaphone } from 'lucide-react'
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query'
 import { createTask } from '@/api/tasks'
 import { useClients } from '@/api/clients'
 import { fetchActiveCampaignsByClient } from '@/api/campaigns'
+import { fetchAllPostsByClient, fetchAllDeliverables } from '@/api/posts'
 import { useTeamMembers } from '@/api/team'
 import { usePermissions } from '@/api/usePermissions'
 import { useAuth } from '@/context/AuthContext'
@@ -29,6 +30,7 @@ import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { SYSTEM_ROLE_PALETTE } from '@/lib/team-roles'
 import { ClientAvatar } from '@/components/tasks/ClientAvatar'
+import { DeliverablePickerSection } from '@/components/tasks/DeliverablePickerSection'
 
 const NONE = '__none__'
 
@@ -102,10 +104,13 @@ export default function CreateTaskDialog({
 
   const { data: clientsData, isLoading: isLoadingClients } = useClients()
 
-  const defaultSelectId = clientId || (clientsData?.internalAccount?.id ?? '')
+  // Empty = "General (no client)". Only preselect a client when the dialog is
+  // opened from a specific client's context (clientId prop).
+  const defaultSelectId = clientId || ''
 
   const [selectedClientId, setSelectedClientId] = useState(defaultSelectId)
   const [selectedCampaignId, setSelectedCampaignId] = useState('')
+  const [selectedPostIds, setSelectedPostIds] = useState([])
   const [assignedTo, setAssignedTo] = useState('')
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
@@ -113,7 +118,7 @@ export default function CreateTaskDialog({
   const [priority, setPriority] = useState('NORMAL')
 
   const { canAssignTasks } = usePermissions()
-  const { user } = useAuth()
+  const { user, workspaceUserId } = useAuth()
   const { data: teamMembers = [] } = useTeamMembers()
   const assigneeOptions = useMemo(
     () =>
@@ -125,15 +130,16 @@ export default function CreateTaskDialog({
 
   useEffect(() => {
     if (isOpen) {
-      setSelectedClientId(clientId || (clientsData?.internalAccount?.id ?? ''))
+      setSelectedClientId(clientId || '')
       setSelectedCampaignId('')
+      setSelectedPostIds([])
       setAssignedTo('')
       setPriority('NORMAL')
       setTitle('')
       setDescription('')
       setDueAt('')
     }
-  }, [isOpen, clientId, clientsData?.internalAccount?.id])
+  }, [isOpen, clientId])
 
   const allClients = useMemo(() => {
     if (!clientsData) return []
@@ -144,9 +150,6 @@ export default function CreateTaskDialog({
   }, [clientsData])
 
   const selectedClient = allClients.find((c) => c.id === selectedClientId)
-  const selectedAssignee = assigneeOptions.find(
-    (m) => m.member_user_id === assignedTo,
-  )
 
   const { data: availableCampaigns = [], isLoading: loadingCampaigns } =
     useQuery({
@@ -155,9 +158,20 @@ export default function CreateTaskDialog({
       enabled: !!selectedClientId && !campaignId,
     })
 
-  const selectedCampaign = availableCampaigns.find(
-    (c) => c.id === selectedCampaignId,
-  )
+  // Client selected → scope to that client's posts (fast). No client ("General")
+  // → all deliverables across every client, each labelled with its client.
+  const { data: availablePosts = [], isLoading: loadingPosts } = useQuery({
+    queryKey: selectedClientId
+      ? ['posts', 'by-client', selectedClientId]
+      : ['posts', 'all-deliverables', workspaceUserId],
+    queryFn: () =>
+      selectedClientId
+        ? fetchAllPostsByClient(selectedClientId)
+        : fetchAllDeliverables(workspaceUserId),
+    enabled: isOpen && (!!selectedClientId || !!workspaceUserId),
+  })
+
+  const selectedPosts = availablePosts.filter((p) => selectedPostIds.includes(p.id))
 
   const effectiveCampaignId =
     campaignId ||
@@ -183,8 +197,7 @@ export default function CreateTaskDialog({
     e.preventDefault()
     if (!title.trim()) return
 
-    const finalClientId =
-      selectedClientId || clientsData?.internalAccount?.id || null
+    const finalClientId = selectedClientId || null
 
     mutation.mutate({
       client_id: finalClientId,
@@ -195,6 +208,7 @@ export default function CreateTaskDialog({
       status: 'TODO',
       assigned_to: assignedTo || null,
       ...(effectiveCampaignId ? { campaign_id: effectiveCampaignId } : {}),
+      post_ids: selectedPostIds,
     })
   }
 
@@ -206,8 +220,8 @@ export default function CreateTaskDialog({
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       {children && <DialogTrigger asChild>{children}</DialogTrigger>}
-      <DialogContent className="sm:max-w-lg p-0 gap-0 overflow-hidden">
-        <DialogHeader className="px-6 pt-6 pb-4 border-b border-border/50 space-y-0.5">
+      <DialogContent className="sm:max-w-lg p-0 gap-0 overflow-hidden max-h-[85vh] flex flex-col">
+        <DialogHeader className="px-6 pt-6 pb-4 border-b border-border/50 space-y-0.5 shrink-0">
           <DialogTitle>Add Task</DialogTitle>
           <DialogDescription>
             Track work, set deadlines, and stay on top of what needs to get
@@ -215,7 +229,8 @@ export default function CreateTaskDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+        <div className="flex-1 overflow-y-auto min-h-0">
           {/* ── Writing area ── */}
           <div className="px-6 pt-6 pb-6">
             <input
@@ -249,10 +264,11 @@ export default function CreateTaskDialog({
                 </div>
               ) : (
                 <Select
-                  value={selectedClientId}
+                  value={selectedClientId || NONE}
                   onValueChange={(val) => {
-                    setSelectedClientId(val)
+                    setSelectedClientId(val === NONE ? '' : val)
                     setSelectedCampaignId('')
+                    setSelectedPostIds([])
                   }}
                   disabled={isLoadingClients}
                 >
@@ -260,6 +276,9 @@ export default function CreateTaskDialog({
                     <SelectValue placeholder="Select client" />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value={NONE}>
+                      <span className="text-muted-foreground">General (no client)</span>
+                    </SelectItem>
                     {allClients.map((c) => (
                       <SelectItem key={c.id} value={c.id}>
                         <div className="flex items-center gap-2">
@@ -408,10 +427,30 @@ export default function CreateTaskDialog({
                 </div>
               </MetaRow>
             )}
+
+            {/* Deliverable — own row, full width */}
+            <div className="space-y-1.5 pt-1">
+              <span className="text-xs text-muted-foreground">Deliverable</span>
+              <DeliverablePickerSection
+                posts={availablePosts}
+                selectedPosts={selectedPosts}
+                onToggle={(post) =>
+                  setSelectedPostIds((ids) =>
+                    ids.includes(post.id)
+                      ? ids.filter((id) => id !== post.id)
+                      : [...ids, post.id],
+                  )
+                }
+                onClear={() => setSelectedPostIds([])}
+                showClient={!selectedClientId}
+                disabled={loadingPosts}
+              />
+            </div>
           </div>
+        </div>
 
           {/* ── Footer ── */}
-          <div className="border-t border-border/50 px-6 py-4 flex items-center justify-end gap-2">
+          <div className="border-t border-border/50 px-6 py-4 flex items-center justify-end gap-2 shrink-0">
             <Button
               type="button"
               variant="ghost"

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { format, formatDistanceToNow } from 'date-fns'
 import { toast } from 'sonner'
@@ -16,6 +16,7 @@ import {
   CheckCircle2,
   Trash2,
   History,
+  MessageSquare,
   Play,
   ChevronDownIcon,
   RefreshCw,
@@ -51,10 +52,12 @@ import { deleteIndividualMedia } from '@/api/posts'
 import { useTeamMembers } from '@/api/team'
 import { useAuth } from '@/context/AuthContext'
 import { getPublishState, renderCaption, isDocumentUrl, getDocumentExtension, getDocumentPreviewUrl } from '@/lib/helper'
+import { DELETABLE_POST_STATUSES } from '@/lib/post-statuses'
 import StatusBadge from '@/components/StatusBadge'
 import ClientNotes from './ClientNotes'
 import { cn } from '@/lib/utils'
 import SocialMediaPreview from '../socialMediaPreview/SocialMediaPreview'
+import PostLinkedTasks from '@/components/tasks/PostLinkedTasks'
 
 /**
  * Utility: Media Type Check
@@ -75,6 +78,20 @@ function AuthorChip({ member }) {
       </Avatar>
       <span className="font-medium text-foreground">{member.full_name}</span>
     </span>
+  )
+}
+
+/**
+ * Minimal status/feedback note — a plain left-border quote (accent color
+ * only, no background fill or colored body text). Used in place of the old
+ * filled alert boxes; `accent` keeps each status's color on the border only.
+ */
+function StatusNote({ title, children, className, accent = 'border-border' }) {
+  return (
+    <div className={cn('max-w-2xl space-y-1 border-l-4 pl-4', accent, className)}>
+      <p className="text-sm font-medium text-foreground">{title}</p>
+      <div className="text-sm text-muted-foreground leading-relaxed">{children}</div>
+    </div>
   )
 }
 
@@ -197,6 +214,8 @@ export default function PostContent({
   canSendDeliverables,
   showHistory,
   setShowHistory,
+  showComments,
+  onToggleComments,
   onSendForApproval,
   onApproveAndSchedule,
   onPublish,
@@ -221,7 +240,6 @@ export default function PostContent({
   isApproveInternallyPending,
   onRequestChanges,
 }) {
-  const notesRef = useRef(null)
   const queryClient = useQueryClient()
   const { user } = useAuth()
   const { data: members = [] } = useTeamMembers()
@@ -239,7 +257,15 @@ export default function PostContent({
   const canEdit = canSendDeliverables
     ? ['DRAFT', 'PENDING_APPROVAL', 'SUBMITTED', 'CHANGES_REQUESTED', 'READY'].includes(post.status)
     : ['DRAFT', 'CHANGES_REQUESTED'].includes(post.status)
-  const canDelete = post.status !== 'PUBLISHED' && post.status !== 'DELIVERED'
+  // Delete authorization mirrors the posts RLS DELETE policy so the button never
+  // offers an action RLS would reject: owner/admin (canSendDeliverables) can
+  // delete in any status; a member can delete only their own deliverable and
+  // only before a commitment (DRAFT/SUBMITTED/ARCHIVED).
+  const isDeliverableCreator =
+    !!post.deliverable_creator_id && post.deliverable_creator_id === user?.id
+  const canDelete =
+    canSendDeliverables ||
+    (isDeliverableCreator && DELETABLE_POST_STATUSES.includes(post.status))
   // Owner/admin send to client from DRAFT (bypass) or READY (post-internal-approval)
   const canSendForApproval = ['DRAFT', 'READY'].includes(post.status) && !!post.content && canSendDeliverables
   // Owner/admin approve & schedule from DRAFT (bypass) or READY (post-internal-approval)
@@ -588,6 +614,19 @@ export default function PostContent({
             </Button>
           )}
 
+          {/* Comments */}
+          <Button
+            variant="outline"
+            size="sm"
+            className={cn('gap-1.5', showComments && 'bg-accent')}
+            onClick={onToggleComments}
+            aria-label="Comments"
+            title="Comments"
+          >
+            <MessageSquare size={14} />
+            <span className="hidden sm:inline">Comments</span>
+          </Button>
+
           {/* More Actions dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -680,87 +719,51 @@ export default function PostContent({
         </div>
       </div>
 
-      {/* Phase 5: SUBMITTED banner — member perspective */}
+      {/* Phase 5: SUBMITTED — member perspective */}
       {post.status === 'SUBMITTED' && !canSendDeliverables && (
-        <div className="flex items-start gap-3 p-4 rounded-xl border border-amber-200 bg-amber-50/50 dark:bg-amber-500/5 dark:border-amber-500/20 max-w-2xl">
-          <SendHorizonal className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
-          <div className="space-y-1">
-            <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">Awaiting Internal Review</p>
-            <p className="text-sm text-amber-800/90 dark:text-amber-400/90 leading-relaxed">
-              This deliverable has been submitted and is waiting for an owner or admin to review it.
-            </p>
-          </div>
-        </div>
+        <StatusNote title="Awaiting Internal Review" accent="border-amber-500">
+          This deliverable has been submitted and is waiting for an owner or admin to review it.
+        </StatusNote>
       )}
 
-      {/* Phase 5: CHANGES_REQUESTED banner — member sees feedback */}
+      {/* Phase 5: CHANGES_REQUESTED — member sees internal feedback */}
       {post.status === 'CHANGES_REQUESTED' && (
-        <div className="flex items-start gap-3 p-4 rounded-xl border border-rose-200 bg-rose-50/50 dark:bg-rose-500/5 dark:border-rose-500/20 max-w-2xl">
-          <MessageSquareWarning className="h-5 w-5 text-rose-600 shrink-0 mt-0.5" />
-          <div className="space-y-1">
-            <p className="text-sm font-semibold text-rose-900 dark:text-rose-200">Changes Requested</p>
-            {post.admin_notes ? (
-              <p className="text-sm text-rose-800/90 dark:text-rose-400/90 leading-relaxed">{post.admin_notes}</p>
-            ) : (
-              <p className="text-sm text-rose-800/90 dark:text-rose-400/90 leading-relaxed">
-                Edit this deliverable and resubmit when ready.
-              </p>
-            )}
-          </div>
-        </div>
+        <StatusNote title="Changes Requested" accent="border-rose-500">
+          {post.admin_notes || 'Edit this deliverable and resubmit when ready.'}
+        </StatusNote>
       )}
 
-      {/* Phase 5: READY banner — owner/admin can now send to client */}
+      {/* Phase 5: READY — owner/admin can now send to client */}
       {post.status === 'READY' && canSendDeliverables && (
-        <div className="flex items-start gap-3 p-4 rounded-xl border border-violet-200 bg-violet-50/50 dark:bg-violet-500/5 dark:border-violet-500/20 max-w-2xl">
-          <ShieldCheck className="h-5 w-5 text-violet-600 shrink-0 mt-0.5" />
-          <div className="space-y-1">
-            <p className="text-sm font-semibold text-violet-900 dark:text-violet-200">Internally Approved</p>
-            <p className="text-sm text-violet-800/90 dark:text-violet-400/90 leading-relaxed">
-              This deliverable has passed internal review. You can now send it to the client or schedule it.
-            </p>
-          </div>
-        </div>
+        <StatusNote title="Internally Approved" accent="border-violet-500">
+          This deliverable has passed internal review. You can now send it to the client or schedule it.
+        </StatusNote>
       )}
 
-      {/* Status Banners — Revision & Delivered */}
+      {/* Client feedback — shown inline instead of a separate alert */}
       {post.status === 'NEEDS_REVISION' && (
-        <div className="flex items-start gap-3 p-4 rounded-xl border border-amber-200 bg-amber-50/50 dark:bg-amber-500/5 dark:border-amber-500/20 max-w-2xl">
-          <AlertCircle className="h-5 w-5 text-amber-600 dark:mt-0.5 shrink-0" />
-          <div className="space-y-1">
-            <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">
-              Revision Required
-            </p>
-            <p className="text-sm text-amber-800/90 dark:text-amber-400/90 leading-relaxed">
-              Check the{' '}
-              <button
-                onClick={() =>
-                  notesRef.current?.scrollIntoView({ behavior: 'smooth' })
-                }
-                className="font-semibold underline"
-              >
-                client feedback
-              </button>{' '}
-              below, implement changes, and create a new version.
-            </p>
-          </div>
-        </div>
+        <StatusNote
+          title={`Feedback from ${post.posts?.clients?.name || 'the client'}`}
+          accent="border-pink-500"
+        >
+          <span className="italic">
+            {post.client_notes ? `“${post.client_notes}”` : 'No feedback notes were provided for this revision request.'}
+          </span>
+          {post.updated_at && (
+            <span className="block mt-1 text-xs text-muted-foreground/70 not-italic">
+              {formatDistanceToNow(new Date(post.updated_at), { addSuffix: true })}
+            </span>
+          )}
+        </StatusNote>
       )}
+
       {post.status === 'DELIVERED' && (
-        <div className="flex items-start gap-3 p-4 rounded-xl border border-teal-200 bg-teal-50/50 dark:bg-teal-500/5 dark:border-teal-500/20 max-w-2xl">
-          <PackageCheck className="h-5 w-5 text-teal-600 dark:mt-0.5 shrink-0" />
-          <div className="space-y-1">
-            <p className="text-sm font-semibold text-teal-900 dark:text-teal-200">
-              Delivered
-            </p>
-            <p className="text-sm text-teal-800/90 dark:text-teal-400/90 leading-relaxed">
-              This deliverable has been marked as delivered and is now complete.
-              {post.admin_notes && (
-                <span> Note: <em>{post.admin_notes}</em></span>
-              )}
-            </p>
-          </div>
-        </div>
+        <StatusNote title="Delivered" accent="border-teal-500">
+          This deliverable has been marked as delivered and is now complete.
+          {post.admin_notes && (
+            <span> Note: <em>{post.admin_notes}</em></span>
+          )}
+        </StatusNote>
       )}
 
       {/* Media Grid */}
@@ -882,14 +885,16 @@ export default function PostContent({
         </DialogContent>
       </Dialog>
 
-      {(post.status === 'ARCHIVED' || post.status === 'NEEDS_REVISION') && (
-        <div ref={notesRef} className="pt-4 scroll-mt-8">
+      {post.status === 'ARCHIVED' && (
+        <div className="pt-4">
           <ClientNotes
             notes={post.client_notes}
             clientName={post.posts?.clients?.name}
           />
         </div>
       )}
+
+      <PostLinkedTasks postId={post.actual_post_id} />
 
       <SocialMediaPreview
         isOpen={isSocialPreviewOpen}

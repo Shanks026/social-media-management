@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { Link } from 'react-router-dom'
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query'
 import {
   Building2,
   Circle,
@@ -10,12 +11,37 @@ import {
   Pencil,
   Trash2,
   MoreVertical,
+  Megaphone,
+  Image as ImageIcon,
+  Play,
+  PencilRuler,
 } from 'lucide-react'
-import { format } from 'date-fns'
+import { format, parseISO } from 'date-fns'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
-import { updateTaskStatus, deleteTask } from '@/api/tasks'
+import { updateTaskStatus, deleteTask, fetchTaskDeliverables } from '@/api/tasks'
 import { usePermissions } from '@/api/usePermissions'
+import { getUrgencyStatus } from '@/lib/client-helpers'
+import StatusBadge from '@/components/StatusBadge'
+
+// Matches the icon treatment used in the campaign's Deliverables table
+// (CampaignDetailPage) — a distinct, PNG-based icon set from the shared
+// SVG PlatformIcon in @/components/PlatformIcon, kept local for visual parity.
+const PlatformIcon = ({ name }) => {
+  const fileName = name === 'google_business' ? 'google_busines' : name
+  const imgSrc = `/platformIcons/${fileName}.png`
+
+  return (
+    <div className="flex size-5 items-center justify-center rounded-full border border-white dark:border-[#1c1c1f] bg-white dark:bg-zinc-900 shadow-sm overflow-hidden shrink-0">
+      <img
+        src={imgSrc}
+        alt={name}
+        className="size-4 object-contain"
+        onError={(e) => (e.target.style.display = 'none')}
+      />
+    </div>
+  )
+}
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -50,17 +76,17 @@ export const STATUS_CONFIG = {
   TODO: {
     label: 'To Do',
     className:
-      'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 border-none',
+      'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border-none',
   },
   IN_PROGRESS: {
     label: 'In Progress',
     className:
-      'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400 border-none',
+      'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border-none',
   },
   COMPLETED: {
     label: 'Completed',
     className:
-      'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400 border-none',
+      'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border-none',
   },
   ARCHIVED: {
     label: 'Archived',
@@ -84,11 +110,82 @@ export const STATUS_DOT = {
 
 // ─── Task Detail Sheet ────────────────────────────────────────────────────────
 
-function TaskDetailSheet({
+// A single linked-deliverable preview row (used in the detail sheet).
+// `client` is passed only for general (clientless) tasks, where linked
+// deliverables can span clients and need labelling.
+function DeliverablePreviewRow({ post, client }) {
+  const isCompleted = ['PUBLISHED', 'ARCHIVED'].includes(post.status)
+  const health = !isCompleted ? getUrgencyStatus(post.target_date) : null
+  return (
+    <Link
+      to={`/clients/${post.client_id}/posts/${post.id}`}
+      className="group flex items-center gap-4 flex-1 min-w-0 rounded-lg border border-border/50 hover:bg-muted/40 transition-colors px-3 py-2.5"
+    >
+      {post.media_urls?.[0] ? (
+        <div className="w-12 h-12 rounded-lg overflow-hidden shrink-0 border border-border/50 bg-muted relative">
+          {post.media_urls[0].match(/\.(mp4|mov|webm)$/i) ? (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/90">
+              <Play className="size-4 text-white fill-current" />
+            </div>
+          ) : (
+            <img src={post.media_urls[0]} alt="" className="w-full h-full object-cover" />
+          )}
+        </div>
+      ) : (
+        <div className="w-12 h-12 rounded-lg shrink-0 border border-border/50 bg-muted flex items-center justify-center">
+          <PencilRuler className="size-5 text-muted-foreground/40" />
+        </div>
+      )}
+
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-medium truncate text-foreground leading-tight">
+          {post.title || 'Untitled'}
+        </p>
+        {client && (
+          <span className="flex items-center gap-1.5 mt-1">
+            <ClientAvatar client={client} size="sm" />
+            <span className="text-xs text-muted-foreground truncate">{client.name}</span>
+          </span>
+        )}
+        {post.target_date && (
+          <div className="flex items-center gap-1.5 mt-1.5">
+            {health?.color && (
+              <div className="relative flex h-2 w-2 items-center justify-center shrink-0">
+                {health.pulse && (
+                  <span className={cn('absolute inline-flex h-full w-full animate-ping rounded-full opacity-75', health.color)} />
+                )}
+                <span className={cn('relative inline-flex h-2 w-2 rounded-full', health.color)} />
+              </div>
+            )}
+            <p className="text-xs text-muted-foreground">
+              {post.status === 'PUBLISHED' ? 'Published' : 'Target'}
+              {' · '}
+              {format(parseISO(post.target_date), 'MMM d, yyyy')}
+            </p>
+          </div>
+        )}
+      </div>
+
+      <div className="shrink-0 flex flex-col items-end gap-2">
+        <StatusBadge status={post.status} />
+        {post.platforms?.length > 0 && (
+          <div className="flex items-center -space-x-1">
+            {post.platforms.map((p) => (
+              <PlatformIcon key={p} name={p} />
+            ))}
+          </div>
+        )}
+      </div>
+    </Link>
+  )
+}
+
+export function TaskDetailSheet({
   task,
   open,
   onOpenChange,
   clientMap,
+  campaignMap = {},
   memberMap,
   currentUserId,
   canEdit,
@@ -117,10 +214,17 @@ function TaskDetailSheet({
     onError: (err) => toast.error('Failed to delete: ' + err.message),
   })
 
+  const { data: linkedPosts = [] } = useQuery({
+    queryKey: ['task-deliverables', task?.id],
+    queryFn: () => fetchTaskDeliverables(task.id),
+    enabled: !!task?.id,
+  })
+
   if (!task) return null
 
   const isBusy = isSettingStatus || isDeleting
   const client = clientMap[String(task.client_id)]
+  const campaign = task.campaign_id ? campaignMap[String(task.campaign_id)] : null
   const assignee = task.assigned_to ? memberMap[task.assigned_to] : null
   const creatorMember = memberMap[task.created_by]
   const creatorName =
@@ -222,6 +326,24 @@ function TaskDetailSheet({
                 </div>
               )}
 
+              {assignee && (
+                <div className="flex items-center gap-3">
+                  <span className="text-xs text-muted-foreground w-24 shrink-0">Assigned By</span>
+                  <div className="flex items-center gap-2">
+                    {task.created_by !== currentUserId && (
+                      creatorMember?.avatar_url ? (
+                        <img src={creatorMember.avatar_url} alt="" className="size-5 rounded-full object-cover shrink-0" />
+                      ) : (
+                        <div className="size-5 rounded-full bg-primary/10 flex items-center justify-center text-[9px] font-semibold text-primary shrink-0">
+                          {(creatorMember?.full_name || creatorMember?.email || '?')[0].toUpperCase()}
+                        </div>
+                      )
+                    )}
+                    <span className="text-sm">{creatorName}</span>
+                  </div>
+                </div>
+              )}
+
               <div className="flex items-center gap-3">
                 <span className="text-xs text-muted-foreground w-24 shrink-0">Created By</span>
                 <div className="flex items-center gap-2">
@@ -238,12 +360,31 @@ function TaskDetailSheet({
                 </div>
               </div>
 
-              {client && (
+              <div className="flex items-center gap-3">
+                <span className="text-xs text-muted-foreground w-24 shrink-0">Client</span>
+                <div className="flex items-center gap-2">
+                  {client ? (
+                    <>
+                      <ClientAvatar client={client} size="sm" />
+                      <span className="text-sm">{client.name}</span>
+                    </>
+                  ) : (
+                    <span className="text-sm text-muted-foreground">General (no client)</span>
+                  )}
+                </div>
+              </div>
+
+              {campaign && (
                 <div className="flex items-center gap-3">
-                  <span className="text-xs text-muted-foreground w-24 shrink-0">Client</span>
+                  <span className="text-xs text-muted-foreground w-24 shrink-0">Campaign</span>
                   <div className="flex items-center gap-2">
-                    <ClientAvatar client={client} size="sm" />
-                    <span className="text-sm">{client.name}</span>
+                    <Megaphone className="size-3.5 text-muted-foreground shrink-0" />
+                    <Link
+                      to={`/campaigns/${campaign.id}`}
+                      className="text-sm text-blue-600 dark:text-blue-400 underline underline-offset-2 hover:text-blue-700 dark:hover:text-blue-300"
+                    >
+                      {campaign.name}
+                    </Link>
                   </div>
                 </div>
               )}
@@ -265,6 +406,26 @@ function TaskDetailSheet({
                 </div>
               )}
             </div>
+
+            {linkedPosts.length > 0 && (
+              <div className="space-y-2.5 border-t border-border/50 pt-5">
+                <div className="flex items-center gap-2">
+                  <h4 className="text-sm font-semibold">Deliverables</h4>
+                  <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-muted px-1.5 text-[11px] font-medium text-muted-foreground">
+                    {linkedPosts.length}
+                  </span>
+                </div>
+                <div className="flex flex-col gap-2">
+                  {linkedPosts.map((post) => (
+                    <DeliverablePreviewRow
+                      key={post.id}
+                      post={post}
+                      client={!task.client_id ? clientMap?.[String(post.client_id)] : undefined}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Footer actions */}
@@ -326,12 +487,12 @@ function TaskDetailSheet({
 
 // ─── Task Card ────────────────────────────────────────────────────────────────
 
-export default function TaskCard({ task, clientMap, memberMap = {}, currentUserId = null }) {
+export default function TaskCard({ task, clientMap, campaignMap = {}, memberMap = {}, currentUserId = null }) {
   const queryClient = useQueryClient()
   const [editOpen, setEditOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [sheetOpen, setSheetOpen] = useState(false)
-  const { isOwner } = usePermissions()
+  const { isOwner, canAssignTasks } = usePermissions()
 
   const isCreator  = task.created_by === currentUserId
   const isAssignee = task.assigned_to === currentUserId
@@ -356,14 +517,22 @@ export default function TaskCard({ task, clientMap, memberMap = {}, currentUserI
     onError: (err) => toast.error('Failed to delete task: ' + err.message),
   })
 
+  const { data: linkedPosts = [] } = useQuery({
+    queryKey: ['task-deliverables', task.id],
+    queryFn: () => fetchTaskDeliverables(task.id),
+    enabled: !!task.id,
+  })
+
   const isBusy = isSettingStatus || isDeleting
   const overdue =
     task.due_at &&
     new Date(task.due_at).getTime() < new Date().getTime() &&
     (task.status === 'TODO' || task.status === 'IN_PROGRESS')
   const client = clientMap[String(task.client_id)]
+  const campaign = task.campaign_id ? campaignMap[String(task.campaign_id)] : null
   const statusCfg = STATUS_CONFIG[task.status] ?? STATUS_CONFIG.TODO
   const assignee = task.assigned_to ? memberMap[task.assigned_to] : null
+  const creatorMember = memberMap[task.created_by]
   const displayDate =
     task.status === 'COMPLETED' && task.completed_at ? task.completed_at : task.due_at
 
@@ -409,8 +578,28 @@ export default function TaskCard({ task, clientMap, memberMap = {}, currentUserI
             </Badge>
           )}
 
-          {(canToggle || canEdit) && (
-            <div className="ml-auto" onClick={(e) => e.stopPropagation()}>
+          {(campaign || linkedPosts.length > 0 || canToggle || canEdit) && (
+            <div className="ml-auto flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+              {campaign && (
+                <Badge variant="secondary" className="size-6 p-0 shrink-0" title={campaign.name}>
+                  <Megaphone className="size-3" />
+                </Badge>
+              )}
+
+              {linkedPosts.length > 0 && (
+                <Badge
+                  variant="secondary"
+                  className={cn('h-6 shrink-0 gap-1', linkedPosts.length > 1 ? 'px-1.5' : 'size-6 p-0')}
+                  title={linkedPosts.map((p) => p.title || 'Untitled').join(', ')}
+                >
+                  <PencilRuler className="size-3" />
+                  {linkedPosts.length > 1 && (
+                    <span className="text-[11px] font-medium leading-none">{linkedPosts.length}</span>
+                  )}
+                </Badge>
+              )}
+
+              {(canToggle || canEdit) && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
@@ -459,6 +648,7 @@ export default function TaskCard({ task, clientMap, memberMap = {}, currentUserI
                   )}
                 </DropdownMenuContent>
               </DropdownMenu>
+              )}
             </div>
           )}
         </div>
@@ -481,27 +671,43 @@ export default function TaskCard({ task, clientMap, memberMap = {}, currentUserI
           )}
 
           {assignee && (
-            <div className="flex items-center gap-1.5 mt-auto pt-3">
-              <span className="text-xs text-muted-foreground shrink-0">Assigned to</span>
-              {assignee.avatar_url ? (
-                <img src={assignee.avatar_url} alt="" className="size-4 rounded-full object-cover shrink-0" />
-              ) : (
-                <div className="size-4 rounded-full bg-primary/10 flex items-center justify-center text-[8px] font-semibold text-primary shrink-0">
-                  {(assignee.full_name || assignee.email || '?')[0].toUpperCase()}
-                </div>
-              )}
-              <span className="text-xs text-foreground truncate">
-                {assignee.full_name || assignee.email}
-                {task.assigned_to === currentUserId && (
-                  <span className="text-muted-foreground ml-1">(You)</span>
+            canAssignTasks ? (
+              <div className="flex items-center gap-1.5 mt-auto pt-3">
+                <span className="text-xs text-muted-foreground shrink-0">Assigned to</span>
+                {assignee.avatar_url ? (
+                  <img src={assignee.avatar_url} alt="" className="size-4 rounded-full object-cover shrink-0" />
+                ) : (
+                  <div className="size-4 rounded-full bg-primary/10 flex items-center justify-center text-[8px] font-semibold text-primary shrink-0">
+                    {(assignee.full_name || assignee.email || '?')[0].toUpperCase()}
+                  </div>
                 )}
-              </span>
-            </div>
+                <span className="text-xs text-foreground truncate">
+                  {assignee.full_name || assignee.email}
+                  {task.assigned_to === currentUserId && (
+                    <span className="text-muted-foreground ml-1">(You)</span>
+                  )}
+                </span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1.5 mt-auto pt-3">
+                <span className="text-xs text-muted-foreground shrink-0">Assigned by</span>
+                {creatorMember?.avatar_url ? (
+                  <img src={creatorMember.avatar_url} alt="" className="size-4 rounded-full object-cover shrink-0" />
+                ) : (
+                  <div className="size-4 rounded-full bg-primary/10 flex items-center justify-center text-[8px] font-semibold text-primary shrink-0">
+                    {(creatorMember?.full_name || creatorMember?.email || '?')[0].toUpperCase()}
+                  </div>
+                )}
+                <span className="text-xs text-foreground truncate">
+                  {creatorMember?.full_name || creatorMember?.email || 'Team member'}
+                </span>
+              </div>
+            )
           )}
         </div>
 
         {/* ── Divider ── */}
-        <div className="mx-5 border-t border-dashed border-border/60" />
+        <div className="mx-5 border-t border-dashed" />
 
         {/* ── Footer: client + due date ── */}
         <div className="flex items-center justify-between px-5 pb-5 pt-4 gap-2">
@@ -514,9 +720,9 @@ export default function TaskCard({ task, clientMap, memberMap = {}, currentUserI
               )}
             </div>
           ) : (
-            <div className="flex items-center gap-1.5 text-muted-foreground/40 italic text-xs">
-              <Building2 className="size-3" />
-              <span>No client</span>
+            <div className="flex items-center gap-1.5 text-muted-foreground text-xs">
+              <Building2 className="size-3.5" />
+              <span>General (no client)</span>
             </div>
           )}
 
@@ -542,6 +748,7 @@ export default function TaskCard({ task, clientMap, memberMap = {}, currentUserI
         open={sheetOpen}
         onOpenChange={setSheetOpen}
         clientMap={clientMap}
+        campaignMap={campaignMap}
         memberMap={memberMap}
         currentUserId={currentUserId}
         canEdit={canEdit}

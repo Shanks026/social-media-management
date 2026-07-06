@@ -1,9 +1,11 @@
 import { useState, useMemo } from 'react'
-import { Plus, ClipboardList, Search, X } from 'lucide-react'
+import { Plus, ClipboardList, Search, X, Megaphone, User } from 'lucide-react'
 import { useTasks } from '@/api/tasks'
 import { useTeamMembers } from '@/api/team'
 import { useClients } from '@/api/clients'
+import { useCampaigns } from '@/api/campaigns'
 import { useAuth } from '@/context/AuthContext'
+import { usePermissions } from '@/api/usePermissions'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -28,15 +30,20 @@ const STATUS_FILTERS = [
 
 export default function TasksTab({ clientId }) {
   const { user } = useAuth()
+  const { canAssignTasks, isOwner } = usePermissions()
 
   const [statusFilter, setStatusFilter] = useState('active')
   const [priorityFilter, setPriorityFilter] = useState('all')
+  const [campaignFilter, setCampaignFilter] = useState('all')
   const [selectedAssignees, setSelectedAssignees] = useState([])
+  const [assignedToMe, setAssignedToMe] = useState(false)
+  const [createdByMe, setCreatedByMe] = useState(false)
   const [search, setSearch] = useState('')
 
   const { data: allTasks = [], isLoading } = useTasks({ clientId })
   const { data: teamMembers = [] } = useTeamMembers()
   const { data: clientsData } = useClients()
+  const { data: allCampaigns = [] } = useCampaigns()
 
   const memberMap = useMemo(() => {
     const map = Object.fromEntries(teamMembers.map((m) => [m.member_user_id, m]))
@@ -59,6 +66,23 @@ export default function TasksTab({ clientId }) {
     return Object.fromEntries(all.map((c) => [String(c.id), c]))
   }, [clientsData])
 
+  const campaignMap = useMemo(
+    () => Object.fromEntries(allCampaigns.map((c) => [String(c.id), c])),
+    [allCampaigns],
+  )
+
+  // Only offer campaigns actually linked to a task in view — not every campaign in the workspace
+  const campaignFilterOptions = useMemo(() => {
+    const seen = new Map()
+    for (const t of allTasks) {
+      if (t.campaign_id && !seen.has(t.campaign_id)) {
+        const c = campaignMap[String(t.campaign_id)]
+        if (c) seen.set(t.campaign_id, c)
+      }
+    }
+    return Array.from(seen.values())
+  }, [allTasks, campaignMap])
+
   const memberList = useMemo(() =>
     Object.values(memberMap).map((m) => ({
       id: m.member_user_id,
@@ -75,14 +99,17 @@ export default function TasksTab({ clientId }) {
       return true
     }).filter((t) => {
       if (priorityFilter !== 'all' && t.priority !== priorityFilter) return false
+      if (campaignFilter !== 'all' && t.campaign_id !== campaignFilter) return false
       if (selectedAssignees.length > 0 && !selectedAssignees.includes(t.assigned_to)) return false
+      if (assignedToMe && t.assigned_to !== user?.id) return false
+      if (createdByMe && t.created_by !== user?.id) return false
       if (search.trim()) {
         const q = search.toLowerCase()
         if (!t.title?.toLowerCase().includes(q) && !t.description?.toLowerCase().includes(q)) return false
       }
       return true
     })
-  }, [allTasks, statusFilter, priorityFilter, selectedAssignees, search])
+  }, [allTasks, statusFilter, priorityFilter, campaignFilter, selectedAssignees, assignedToMe, createdByMe, user?.id, search])
 
   const totalVisible = allTasks.filter((t) => t.status !== 'ARCHIVED').length
 
@@ -112,8 +139,8 @@ export default function TasksTab({ clientId }) {
   return (
     <div className="space-y-5">
       {/* ── Row 1: Search (left) + priority filter + New Task (right) ── */}
-      <div className="flex items-center justify-between gap-3">
-        <div className="relative w-72 group">
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+        <div className="relative w-full lg:w-72 group shrink-0">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
           <Input
             placeholder="Search tasks…"
@@ -131,12 +158,34 @@ export default function TasksTab({ clientId }) {
           )}
         </div>
 
-        <div className="flex items-center gap-3 shrink-0">
-          <AssigneeFilterPopover
-            members={memberList}
-            selected={selectedAssignees}
-            onChange={setSelectedAssignees}
-          />
+        <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+          {!isOwner && (
+            <Button
+              variant={assignedToMe ? 'default' : 'outline'}
+              onClick={() => setAssignedToMe((v) => !v)}
+              className="gap-1.5 h-9 shadow-none font-normal"
+            >
+              <User className="size-3.5" />
+              Assigned to me
+            </Button>
+          )}
+
+          <Button
+            variant={createdByMe ? 'default' : 'outline'}
+            onClick={() => setCreatedByMe((v) => !v)}
+            className="gap-1.5 h-9 shadow-none font-normal"
+          >
+            <User className="size-3.5" />
+            Created by me
+          </Button>
+
+          {canAssignTasks && (
+            <AssigneeFilterPopover
+              members={memberList}
+              selected={selectedAssignees}
+              onChange={setSelectedAssignees}
+            />
+          )}
 
           <Select value={priorityFilter} onValueChange={setPriorityFilter}>
             <SelectTrigger className="h-9 w-36 border-border/60 shadow-none">
@@ -154,6 +203,25 @@ export default function TasksTab({ clientId }) {
               ))}
             </SelectContent>
           </Select>
+
+          {campaignFilterOptions.length > 0 && (
+            <Select value={campaignFilter} onValueChange={setCampaignFilter}>
+              <SelectTrigger className="h-9 w-40 border-border/60 shadow-none">
+                <SelectValue placeholder="Campaign" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All campaigns</SelectItem>
+                {campaignFilterOptions.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    <span className="flex items-center gap-2">
+                      <Megaphone className="size-3.5 text-muted-foreground shrink-0" />
+                      <span className="truncate">{c.name}</span>
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
 
           <CreateTaskDialog clientId={clientId} lockClient={true}>
             <Button className="gap-1.5">
@@ -217,6 +285,7 @@ export default function TasksTab({ clientId }) {
               key={task.id}
               task={task}
               clientMap={clientMap}
+              campaignMap={campaignMap}
               memberMap={memberMap}
               currentUserId={user?.id}
             />

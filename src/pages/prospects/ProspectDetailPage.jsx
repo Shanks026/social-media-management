@@ -55,9 +55,12 @@ const STATUS_DOT = {
   contacted:      'bg-blue-500',
   follow_up:      'bg-amber-500',
   demo_scheduled: 'bg-violet-500',
-  proposal_sent:  'bg-indigo-500',
-  won:            'bg-green-500',
-  lost:           'bg-red-500',
+  proposal_sent:      'bg-indigo-500',
+  changes_requested:  'bg-orange-500',
+  proposal_accepted:  'bg-teal-500',
+  contract_sent:      'bg-pink-500',
+  won:                'bg-green-500',
+  lost:               'bg-red-500',
 }
 
 // Button-style trigger colors (match badge palette)
@@ -66,9 +69,12 @@ const STATUS_BUTTON_CLASS = {
   contacted:      'bg-blue-100 text-blue-700 hover:bg-blue-200 dark:bg-blue-950 dark:text-blue-300 dark:hover:bg-blue-900',
   follow_up:      'bg-amber-100 text-amber-700 hover:bg-amber-200 dark:bg-amber-950 dark:text-amber-300 dark:hover:bg-amber-900',
   demo_scheduled: 'bg-violet-100 text-violet-700 hover:bg-violet-200 dark:bg-violet-950 dark:text-violet-300 dark:hover:bg-violet-900',
-  proposal_sent:  'bg-indigo-100 text-indigo-700 hover:bg-indigo-200 dark:bg-indigo-950 dark:text-indigo-300 dark:hover:bg-indigo-900',
-  won:            'bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-950 dark:text-green-300 dark:hover:bg-green-900',
-  lost:           'bg-red-100 text-red-600 hover:bg-red-200 dark:bg-red-950 dark:text-red-300 dark:hover:bg-red-900',
+  proposal_sent:      'bg-indigo-100 text-indigo-700 hover:bg-indigo-200 dark:bg-indigo-950 dark:text-indigo-300 dark:hover:bg-indigo-900',
+  changes_requested:  'bg-orange-100 text-orange-700 hover:bg-orange-200 dark:bg-orange-950 dark:text-orange-300 dark:hover:bg-orange-900',
+  proposal_accepted:  'bg-teal-100 text-teal-700 hover:bg-teal-200 dark:bg-teal-950 dark:text-teal-300 dark:hover:bg-teal-900',
+  contract_sent:      'bg-pink-100 text-pink-700 hover:bg-pink-200 dark:bg-pink-950 dark:text-pink-300 dark:hover:bg-pink-900',
+  won:                'bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-950 dark:text-green-300 dark:hover:bg-green-900',
+  lost:               'bg-red-100 text-red-600 hover:bg-red-200 dark:bg-red-950 dark:text-red-300 dark:hover:bg-red-900',
 }
 
 // ── Tabs config ────────────────────────────────────────────────────────────────
@@ -204,11 +210,11 @@ export default function ProspectDetailPage() {
         {/* ── Header ───────────────────────────────────────────────────────── */}
         <div className="flex items-start gap-5">
           {/* Avatar */}
-          <Avatar className="size-16 rounded-2xl">
+          {/* <Avatar className="size-16 rounded-2xl">
             <AvatarFallback className="rounded-2xl text-xl font-bold tracking-tighter">
               {initials}
             </AvatarFallback>
-          </Avatar>
+          </Avatar> */}
 
           {/* Name + meta */}
           <div className="flex-1 min-w-0 space-y-1.5">

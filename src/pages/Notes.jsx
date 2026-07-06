@@ -31,6 +31,7 @@ import {
 } from '@/components/ui/empty'
 
 import { useHeader } from '@/components/misc/header-context'
+import { useAuth } from '@/context/AuthContext'
 import { useClients } from '@/api/clients'
 import {
   useAgencyNotes,
@@ -46,8 +47,10 @@ export default function Notes() {
   const { setHeader } = useHeader()
   const queryClient = useQueryClient()
   const navigate = useNavigate()
+  const { user } = useAuth()
 
   const [clientFilter, setClientFilter] = useState('all')
+  const [visibilityFilter, setVisibilityFilter] = useState('all')
   const [search, setSearch] = useState('')
   const [selectedTagIds, setSelectedTagIds] = useState([])
   const [manageOpen, setManageOpen] = useState(false)
@@ -109,6 +112,12 @@ export default function Notes() {
     if (clientFilter === 'none') result = result.filter((n) => !n.client_id)
     else if (clientFilter !== 'all') result = result.filter((n) => n.client_id === clientFilter)
 
+    if (visibilityFilter === 'shared_with_me') {
+      result = result.filter((n) => n.visibility === 'shared' && n.created_by !== user?.id)
+    } else if (visibilityFilter !== 'all') {
+      result = result.filter((n) => n.visibility === visibilityFilter)
+    }
+
     if (search.trim()) {
       const q = search.toLowerCase()
       result = result.filter(
@@ -127,7 +136,7 @@ export default function Notes() {
     }
 
     return result
-  }, [notes, clientFilter, search, selectedTagIds])
+  }, [notes, clientFilter, visibilityFilter, search, selectedTagIds, user?.id])
 
   const createMutation = useMutation({
     mutationFn: createAgencyNote,
@@ -160,7 +169,12 @@ export default function Notes() {
   }
 
   const isLoading = isLoadingNotes || isLoadingClients
-  const noFilters = clientFilter === 'all' && !search && selectedTagIds.length === 0
+  const noFilters =
+    clientFilter === 'all' && visibilityFilter === 'all' && !search && selectedTagIds.length === 0
+  const onlyPrivateFilterActive =
+    visibilityFilter === 'private' && clientFilter === 'all' && !search && selectedTagIds.length === 0
+  const onlySharedWithMeFilterActive =
+    visibilityFilter === 'shared_with_me' && clientFilter === 'all' && !search && selectedTagIds.length === 0
 
   return (
     <div className="p-8 max-w-[1400px] mx-auto space-y-6 animate-in fade-in duration-500">
@@ -211,6 +225,19 @@ export default function Notes() {
                   {c.name}
                 </SelectItem>
               ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={visibilityFilter} onValueChange={setVisibilityFilter}>
+            <SelectTrigger className="w-[140px] h-9 text-xs font-semibold shadow-none bg-background">
+              <SelectValue placeholder="All visibility" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All visibility</SelectItem>
+              <SelectItem value="private">Private</SelectItem>
+              <SelectItem value="shared">Shared</SelectItem>
+              <SelectItem value="shared_with_me">Shared with me</SelectItem>
+              <SelectItem value="workspace">Workspace</SelectItem>
             </SelectContent>
           </Select>
 
@@ -292,9 +319,13 @@ export default function Notes() {
             <EmptyDescription>
               {noFilters
                 ? 'Create your first note to capture ideas, SOPs, or client context.'
-                : selectedTagIds.length > 0
-                  ? 'No notes match these tags. Try adjusting your tags, search, or filter.'
-                  : 'Try adjusting your search or filter.'}
+                : onlyPrivateFilterActive
+                  ? 'No private notes yet — mark a note Private to keep it to yourself.'
+                  : onlySharedWithMeFilterActive
+                    ? 'Nothing has been shared with you yet.'
+                    : selectedTagIds.length > 0
+                      ? 'No notes match these tags. Try adjusting your tags, search, or filter.'
+                      : 'Try adjusting your search or filter.'}
             </EmptyDescription>
           </EmptyHeader>
           {noFilters && (

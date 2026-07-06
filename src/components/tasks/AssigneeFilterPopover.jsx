@@ -1,17 +1,24 @@
 import { Users, Check, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover'
 
+const MAX_TRIGGER_AVATARS = 3
+
 export default function AssigneeFilterPopover({ members = [], selected = [], onChange }) {
   const toggle = (id) => {
     if (selected.includes(id)) onChange(selected.filter((x) => x !== id))
     else onChange([...selected, id])
   }
+
+  const selectedMembers = selected.map((id) => members.find((m) => m.id === id)).filter(Boolean)
+  const visibleAvatars = selectedMembers.slice(0, MAX_TRIGGER_AVATARS)
+  const overflow = selectedMembers.length - visibleAvatars.length
 
   return (
     <Popover>
@@ -23,12 +30,33 @@ export default function AssigneeFilterPopover({ members = [], selected = [], onC
             selected.length > 0 && 'border-foreground/40 bg-muted/50',
           )}
         >
-          <Users className="size-3.5 shrink-0" />
-          {selected.length === 0
-            ? 'Assignee'
-            : selected.length === 1
-              ? members.find((m) => m.id === selected[0])?.name || '1 selected'
-              : `${selected.length} selected`}
+          {selectedMembers.length === 0 ? (
+            <>
+              <Users className="size-3.5 shrink-0" />
+              Assignee
+            </>
+          ) : (
+            <>
+              <div className="flex -space-x-1.5 shrink-0">
+                {visibleAvatars.map((m) => (
+                  <Avatar key={m.id} className="size-5 ring-2 ring-background">
+                    {m.avatar_url && <AvatarImage src={m.avatar_url} alt={m.name} />}
+                    <AvatarFallback className="text-[9px] font-semibold">
+                      {(m.name || '?')[0].toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                ))}
+                {overflow > 0 && (
+                  <Avatar className="size-5 ring-2 ring-background">
+                    <AvatarFallback className="text-[9px] font-medium text-muted-foreground">
+                      +{overflow}
+                    </AvatarFallback>
+                  </Avatar>
+                )}
+              </div>
+              {selectedMembers.length === 1 ? selectedMembers[0].name : `${selectedMembers.length} selected`}
+            </>
+          )}
           {selected.length > 0 && (
             <span
               role="button"
@@ -56,13 +84,12 @@ export default function AssigneeFilterPopover({ members = [], selected = [], onC
                     isSelected ? 'bg-muted' : 'hover:bg-muted/60',
                   )}
                 >
-                  {m.avatar_url ? (
-                    <img src={m.avatar_url} alt="" className="size-6 rounded-full object-cover shrink-0 ring-1 ring-border" />
-                  ) : (
-                    <div className="size-6 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-semibold text-primary shrink-0 ring-1 ring-border">
+                  <Avatar className="size-6 ring-1 ring-border">
+                    {m.avatar_url && <AvatarImage src={m.avatar_url} alt={m.name} />}
+                    <AvatarFallback className="text-[10px] font-semibold">
                       {(m.name || '?')[0].toUpperCase()}
-                    </div>
-                  )}
+                    </AvatarFallback>
+                  </Avatar>
                   <span className="flex-1 truncate">{m.name}</span>
                   {isSelected && <Check className="size-3.5 shrink-0 text-primary" />}
                 </button>

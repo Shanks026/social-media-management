@@ -2,6 +2,7 @@ import { supabase } from '@/lib/supabase'
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '@/context/AuthContext'
 import { resolveWorkspace } from '@/lib/workspace'
+import { fetchPostSummary } from '@/api/posts'
 
 export function useTasks({ clientId, campaignId, assignedToMe } = {}) {
   const { workspaceUserId, user } = useAuth()
@@ -19,7 +20,6 @@ export function useTasks({ clientId, campaignId, assignedToMe } = {}) {
         .from('tasks')
         .select('*')
         .eq('workspace_id', workspaceUserId)
-        .order('due_at', { ascending: true, nullsFirst: false })
         .order('created_at', { ascending: false })
 
       if (clientId) q = q.eq('client_id', clientId)
@@ -34,22 +34,82 @@ export function useTasks({ clientId, campaignId, assignedToMe } = {}) {
   })
 }
 
-export async function createTask(data) {
+export async function createTask({ post_ids, ...data }) {
   const { user, workspaceUserId } = await resolveWorkspace()
-  const { error } = await supabase.from('tasks').insert({
-    workspace_id: workspaceUserId,
-    created_by: user.id,
-    ...data,
-  })
+  const { data: row, error } = await supabase
+    .from('tasks')
+    .insert({
+      workspace_id: workspaceUserId,
+      created_by: user.id,
+      ...data,
+    })
+    .select('id')
+    .single()
   if (error) throw error
+
+  if (post_ids?.length) {
+    await replaceTaskDeliverables(row.id, post_ids, workspaceUserId)
+  }
+  return row.id
 }
 
-export async function updateTask(id, updates) {
+export async function updateTask(id, { post_ids, ...updates }) {
   const { error } = await supabase
     .from('tasks')
     .update({ ...updates, updated_at: new Date().toISOString() })
     .eq('id', id)
   if (error) throw error
+
+  // Only touch links when the caller actually manages them (the edit dialog),
+  // so unrelated updates (inline field edits) never wipe deliverables.
+  if (post_ids !== undefined) {
+    await replaceTaskDeliverables(id, post_ids)
+  }
+}
+
+// ─── Deliverable (post) links ───────────────────────────────────────────────
+
+/** Post ids currently linked to a task — for seeding the edit dialog. */
+export async function fetchTaskPostIds(taskId) {
+  const { data, error } = await supabase
+    .from('task_posts')
+    .select('post_id')
+    .eq('task_id', taskId)
+  if (error) throw error
+  return (data ?? []).map((r) => r.post_id)
+}
+
+/** Resolved post summaries for a task's linked deliverables (for display). */
+export async function fetchTaskDeliverables(taskId) {
+  const ids = await fetchTaskPostIds(taskId)
+  if (!ids.length) return []
+  const summaries = await Promise.all(ids.map(fetchPostSummary))
+  return summaries.filter(Boolean)
+}
+
+/**
+ * Replace the full set of deliverable links for a task (clear + insert).
+ * workspaceId is resolved on demand when not supplied by the caller.
+ */
+export async function replaceTaskDeliverables(taskId, postIds, workspaceId) {
+  const wsId = workspaceId ?? (await resolveWorkspace()).workspaceUserId
+
+  const { error: delError } = await supabase
+    .from('task_posts')
+    .delete()
+    .eq('task_id', taskId)
+  if (delError) throw delError
+
+  if (postIds.length) {
+    const { error: insError } = await supabase.from('task_posts').insert(
+      postIds.map((pid) => ({
+        task_id: taskId,
+        post_id: pid,
+        workspace_id: wsId,
+      })),
+    )
+    if (insError) throw insError
+  }
 }
 
 export async function updateTaskStatus(id, newStatus) {
@@ -65,6 +125,29 @@ export async function deleteTask(id) {
   if (error) throw error
 }
 
+/**
+ * Reverse lookup: tasks linked to a given deliverable (post), newest-first.
+ * postId is the real posts.id (task_posts.post_id), i.e. post.actual_post_id.
+ */
+export function useTasksForPost(postId) {
+  const { workspaceUserId } = useAuth()
+  return useQuery({
+    queryKey: ['tasks', 'for-post', postId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('task_posts')
+        .select('tasks(*)')
+        .eq('post_id', postId)
+      if (error) throw error
+      return (data ?? [])
+        .map((r) => r.tasks)
+        .filter(Boolean)
+        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+    },
+    enabled: !!postId && !!workspaceUserId,
+  })
+}
+
 export function useMyTasks() {
   const { workspaceUserId, user } = useAuth()
   return useQuery({
@@ -77,7 +160,6 @@ export function useMyTasks() {
         .eq('workspace_id', workspaceUserId)
         .not('status', 'in', '("COMPLETED","ARCHIVED")')
         .or(`assigned_to.eq.${user.id},created_by.eq.${user.id}`)
-        .order('due_at', { ascending: true, nullsFirst: false })
         .order('created_at', { ascending: false })
       if (error) throw error
       return data ?? []

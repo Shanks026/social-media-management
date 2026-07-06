@@ -108,11 +108,15 @@ export default function Dashboard() {
       </div>
 
       {/* Row 4: Finance + Social Media (finance widgets hidden for members) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
-        {finance && <FinancialSnapshot />}
-        {finance && <LifetimeRevenue />}
+      {finance ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
+          <FinancialSnapshot />
+          <LifetimeRevenue />
+          <DashboardSocialMediaUsage />
+        </div>
+      ) : (
         <DashboardSocialMediaUsage />
-      </div>
+      )}
 
       {/* Row 5: Recent invoices table (finance only) */}
       {finance && <DashboardInvoiceTable />}

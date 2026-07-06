@@ -73,7 +73,7 @@ import {
   teamKeys,
 } from '@/api/team'
 import { useQueryClient } from '@tanstack/react-query'
-import { InviteDialog, EditAccessDialog } from './settings/TeamSettings'
+import { InviteDialog, EditAccessDialog, DOCS_LEVEL_CONFIG } from './settings/TeamSettings'
 import { formatDate } from '@/lib/helper'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
@@ -458,7 +458,7 @@ export default function TeamPage() {
 
             {canManageTeam && (
               <div className="flex items-center gap-2 shrink-0">
-                {/* ── Pending invites popover ── */}
+                {/* ── Active Links popover ── */}
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button variant="outline" size="sm" className="gap-2">
@@ -473,15 +473,15 @@ export default function TeamPage() {
                   </PopoverTrigger>
                   <PopoverContent className="w-105 p-0" align="end">
                     <div className="px-4 pt-4 pb-3 border-b border-border/50">
-                      <p className="text-sm font-medium">Pending Invites</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">
+                      <p className="text-base font-semibold">Active Links</p>
+                      <p className="text-sm text-muted-foreground mt-0.5">
                         Active invite links that haven&apos;t been accepted yet.
                       </p>
                     </div>
                     {pendingInvites.length === 0 ? (
                       <div className="flex flex-col items-center gap-1.5 py-8 text-center px-4">
                         <span className="text-3xl leading-none select-none">📬</span>
-                        <p className="text-sm font-medium mt-1">No pending invites</p>
+                        <p className="text-sm font-medium mt-1">No active links</p>
                         <p className="text-xs text-muted-foreground">
                           Links you generate will appear here until accepted.
                         </p>
@@ -489,21 +489,39 @@ export default function TeamPage() {
                     ) : (
                       <div className="divide-y divide-border/40 max-h-72 overflow-y-auto">
                         {pendingInvites.map((invite) => (
-                          <div key={invite.id} className="flex items-center gap-3 px-4 py-3">
-                            <div className="size-8 rounded-lg bg-muted flex items-center justify-center shrink-0">
+                          <div key={invite.id} className="flex items-start gap-3 px-4 py-3">
+                            <div className="size-9 rounded-lg bg-muted flex items-center justify-center shrink-0">
                               <Link size={13} className="text-muted-foreground" />
                             </div>
-                            <div className="flex-1 min-w-0 space-y-0.5">
-                              <p className="text-xs font-mono text-foreground truncate">
-                                /join/{invite.token.slice(0, 18)}…
-                              </p>
-                              <div className="flex items-center gap-2.5 text-[11px] text-muted-foreground">
+                            <div className="flex-1 min-w-0 space-y-1">
+                              <div className="flex items-center gap-1.5 min-w-0">
+                                <p className="text-sm font-medium text-foreground truncate">
+                                  {invite.label || `/join/${invite.token.slice(0, 18)}…`}
+                                </p>
+                                {invite.permissions?.documents && (() => {
+                                  const docsCfg = DOCS_LEVEL_CONFIG[invite.permissions.documents]
+                                  const DocsIcon = docsCfg?.icon
+                                  if (!DocsIcon) return null
+                                  return (
+                                    <DocsIcon
+                                      className="size-3.5 text-muted-foreground shrink-0"
+                                      title={`Document access: ${docsCfg.label}`}
+                                    />
+                                  )
+                                })()}
+                              </div>
+                              {invite.label && (
+                                <p className="text-xs font-mono text-muted-foreground/70 truncate">
+                                  /join/{invite.token.slice(0, 18)}…
+                                </p>
+                              )}
+                              <div className="flex items-center gap-2.5 text-xs text-muted-foreground">
                                 <span className="flex items-center gap-1">
-                                  <CalendarDays size={10} />
+                                  <CalendarDays size={11} />
                                   {formatDate(invite.created_at)}
                                 </span>
                                 <span className="flex items-center gap-1">
-                                  <Clock size={10} />
+                                  <Clock size={11} />
                                   Expires {formatDate(invite.expires_at)}
                                 </span>
                               </div>

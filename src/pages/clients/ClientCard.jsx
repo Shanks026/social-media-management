@@ -108,7 +108,7 @@ function ClientCard({ client, onOpen, onDelete }) {
       <Card
         onClick={() => onOpen(client)}
         className={cn(
-          'group cursor-pointer shadow-none transition-all duration-200 border hover:bg-accent/30 dark:hover:bg-card flex flex-col overflow-hidden py-2',
+          'group cursor-pointer shadow-none transition-all duration-200 border hover:bg-accent/30 dark:hover:bg-card flex flex-col overflow-hidden py-0',
           client.is_internal
             ? 'border-border/70 dark:border-border/60'
             : 'dark:bg-card/70 dark:border-none',

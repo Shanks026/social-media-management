@@ -10,10 +10,13 @@ export const PROSPECT_STATUSES = [
   { value: 'new',              label: 'New' },
   { value: 'contacted',        label: 'Contacted' },
   { value: 'follow_up',        label: 'Follow-Up' },
-  { value: 'demo_scheduled',   label: 'Demo Scheduled' },
-  { value: 'proposal_sent',    label: 'Proposal Sent' },
-  { value: 'won',              label: 'Won' },
-  { value: 'lost',             label: 'Lost' },
+  { value: 'demo_scheduled',   label: 'Discovery Call' },
+  { value: 'proposal_sent',      label: 'Proposal Sent' },
+  { value: 'changes_requested',  label: 'Changes Requested' },
+  { value: 'proposal_accepted',  label: 'Proposal Accepted' },
+  { value: 'contract_sent',      label: 'Contract Sent' },
+  { value: 'won',                label: 'Won' },
+  { value: 'lost',               label: 'Lost' },
 ]
 
 export const PROSPECT_SOURCES = [
@@ -167,15 +170,69 @@ export function useUpdateProspect() {
   })
 }
 
+// Local duplicate of the storage-removal snippet in `@/api/proposals`'
+// `deleteProposalFile` — not imported directly to avoid a circular import
+// (prospects.js → proposals.js → prospectActivities.js → prospects.js).
+async function removeProposalFileByUrl(fileUrl) {
+  try {
+    const storagePath = fileUrl?.split('/proposal-files/')[1]
+    if (!storagePath) return
+    const { error } = await supabase.storage.from('proposal-files').remove([storagePath])
+    if (error) console.warn('Failed to remove proposal file:', error)
+  } catch (err) {
+    console.warn('Failed to remove proposal file:', err)
+  }
+}
+
 export function useDeleteProspect() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (id) => {
+      // `proposals.prospect_id` is ON DELETE SET NULL, so without this,
+      // proposals attached to the prospect survive as orphaned rows (still
+      // showing the old prospect's name, still visible workspace-wide).
+      // Apply the same rule used to delete a single proposal elsewhere
+      // (see useDeleteProposal): drafts are hard-deleted (+ file cleanup);
+      // anything past draft is a real business record (sent/accepted/etc.)
+      // and gets soft-archived instead, never destroyed. Once archived, the
+      // prospect delete below naturally unlinks it via ON DELETE SET NULL.
+      const { data: proposals } = await supabase
+        .from('proposals')
+        .select('id, status, file_url')
+        .eq('prospect_id', id)
+
+      const draftIds = (proposals ?? []).filter((p) => p.status === 'draft').map((p) => p.id)
+      const otherIds = (proposals ?? []).filter((p) => p.status !== 'draft').map((p) => p.id)
+
+      for (const p of proposals ?? []) {
+        if (p.status === 'draft' && p.file_url) await removeProposalFileByUrl(p.file_url)
+      }
+      if (draftIds.length) {
+        const { error: draftError } = await supabase.from('proposals').delete().in('id', draftIds)
+        if (draftError) throw draftError
+      }
+      if (otherIds.length) {
+        const { error: archiveError } = await supabase
+          .from('proposals')
+          .update({ status: 'archived', updated_at: new Date().toISOString() })
+          .in('id', otherIds)
+        if (archiveError) throw archiveError
+      }
+
+      // `client_documents.prospect_id` is also ON DELETE SET NULL — left as
+      // the default behavior (unlink, keep the file and row) since documents
+      // can hold signed contracts/NDAs that shouldn't disappear as a side
+      // effect of deleting an unrelated prospect record.
+
+      // prospect_activities.prospect_id is ON DELETE CASCADE — no manual
+      // cleanup needed, it's removed automatically with the prospect.
       const { error } = await supabase.from('prospects').delete().eq('id', id)
       if (error) throw error
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['prospects', 'list'] })
+      queryClient.invalidateQueries({ queryKey: ['proposals', 'list'] })
+      queryClient.invalidateQueries({ queryKey: ['documents'] })
     },
   })
 }

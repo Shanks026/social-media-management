@@ -8,7 +8,7 @@ import { useNavigate } from 'react-router-dom'
 import { Loader2, AlertCircle } from 'lucide-react'
 import ForgotPasswordDialog from './ForgotPasswordDialog'
 
-export function LoginForm({ className, ...props }) {
+export function LoginForm({ className, client = supabase, onSuccess, ...props }) {
   const navigate = useNavigate()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
@@ -22,7 +22,7 @@ export function LoginForm({ className, ...props }) {
     const password = form.get('password')
 
     setLoading(true)
-    const { data, error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await client.auth.signInWithPassword({
       email,
       password,
     })
@@ -30,7 +30,7 @@ export function LoginForm({ className, ...props }) {
 
     if (error) {
       if (error.code === 'invalid_credentials') {
-        const { data: exists } = await supabase.rpc('check_email_exists', { p_email: email })
+        const { data: exists } = await client.rpc('check_email_exists', { p_email: email })
         setError(
           exists
             ? 'Incorrect password. Please try again or reset your password.'
@@ -40,7 +40,8 @@ export function LoginForm({ className, ...props }) {
         setError(error.message)
       }
     } else if (data?.session) {
-      navigate('/dashboard')
+      if (onSuccess) onSuccess(data.session)
+      else navigate('/dashboard')
     }
   }
 

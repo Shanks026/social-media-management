@@ -14,7 +14,9 @@ export const UsageTab = ({ sub, isLoading }) => {
   if (isLoading) return <LoadingSkeleton />
   if (!sub) return null
 
-  const clientPercent = (sub.client_count / sub.max_clients) * 100
+  // null max_clients means unlimited (Quantum/Trial) — no percentage to show.
+  const hasClientLimit = sub.max_clients != null
+  const clientPercent = hasClientLimit ? (sub.client_count / sub.max_clients) * 100 : 0
 
   return (
     <div className="space-y-8">
@@ -23,9 +25,10 @@ export const UsageTab = ({ sub, isLoading }) => {
           title="Client Capacity"
           icon={Users}
           value={sub.client_count}
-          max={sub.max_clients}
+          max={hasClientLimit ? sub.max_clients : '∞'}
           unit="slots"
           percent={clientPercent}
+          remainingLabel={hasClientLimit ? undefined : 'Unlimited'}
           status={getStatusConfig(clientPercent)}
         />
 

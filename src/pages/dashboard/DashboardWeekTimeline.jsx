@@ -10,7 +10,7 @@ import {
   eachDayOfInterval,
 } from 'date-fns'
 import { useNavigate } from 'react-router-dom'
-import { ArrowUpRight, Clock, Bell } from 'lucide-react'
+import { ArrowUpRight, Clock } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -107,24 +107,6 @@ export default function DashboardWeekTimeline() {
     refetchOnWindowFocus: true,
   })
 
-  // ── Notes with due_at ──
-  const { data: dueNotes = [] } = useQuery({
-    queryKey: ['notes', 'week-timeline', today.toISOString()],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('client_notes')
-        .select('*')
-        .eq('status', 'TODO')
-        .gte('due_at', today.toISOString())
-        .lte('due_at', weekEnd.toISOString())
-        .order('due_at', { ascending: true })
-      if (error) throw error
-      return data || []
-    },
-    staleTime: 0,
-    refetchOnWindowFocus: true,
-  })
-
   // ── Group by day ──
   const postsByDay = useMemo(() => {
     const map = {}
@@ -146,22 +128,10 @@ export default function DashboardWeekTimeline() {
     return map
   }, [meetings])
 
-  const notesByDay = useMemo(() => {
-    const map = {}
-    for (const n of dueNotes) {
-      if (!n.due_at) continue
-      const key = format(new Date(n.due_at), 'yyyy-MM-dd')
-      if (!map[key]) map[key] = []
-      map[key].push(n)
-    }
-    return map
-  }, [dueNotes])
-
   const isLoading = loadingPosts || loadingMeetings
 
   const totalPosts = scheduledPosts.length
   const totalMeetings = meetings.length
-  const totalNotes = dueNotes.length
 
   return (
     <Card className="border-none shadow-sm ring-1 ring-border/50 bg-card/50 dark:bg-card/30 flex flex-col gap-2 group h-full">
@@ -171,7 +141,7 @@ export default function DashboardWeekTimeline() {
           {!isLoading && (
             <p className="text-xs text-muted-foreground mt-0.5">
               {totalPosts} deliverable{totalPosts !== 1 && 's'} · {totalMeetings}{' '}
-              meeting{totalMeetings !== 1 && 's'} · {totalNotes} reminder{totalNotes !== 1 && 's'}
+              meeting{totalMeetings !== 1 && 's'}
             </p>
           )}
         </div>
@@ -212,11 +182,9 @@ export default function DashboardWeekTimeline() {
                 const key = format(day, 'yyyy-MM-dd')
                 const dayPosts = postsByDay[key] || []
                 const dayMeetings = meetingsByDay[key] || []
-                const dayNotes = notesByDay[key] || []
                 const hasContent =
                   dayPosts.length > 0 ||
-                  dayMeetings.length > 0 ||
-                  dayNotes.length > 0
+                  dayMeetings.length > 0
                 const isCurrentDay = isToday(day)
                 const isTomorrowDay = isTomorrow(day)
 
@@ -240,7 +208,6 @@ export default function DashboardWeekTimeline() {
                 const allItems = []
                 if (dayPosts.length > 0) allItems.push({ type: 'posts' })
                 dayMeetings.forEach((m) => allItems.push({ type: 'meeting', data: m }))
-                dayNotes.forEach((n) => allItems.push({ type: 'note', data: n }))
                 const visibleItems = allItems.slice(0, 3)
                 const overflowCount = Math.max(0, allItems.length - 3)
 
@@ -318,12 +285,6 @@ export default function DashboardWeekTimeline() {
                                 <Clock className="size-3.5 shrink-0 text-blue-400" />
                                 <span className="truncate font-medium">{item.data.title}</span>
                                 <span className="shrink-0 ml-auto">{format(new Date(item.data.datetime), 'h:mma')}</span>
-                              </div>
-                            )
-                            if (item.type === 'note') return (
-                              <div key={item.data.id} className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                                <Bell className="size-3.5 shrink-0 text-amber-400" />
-                                <span className="truncate">{item.data.title}</span>
                               </div>
                             )
                             return null

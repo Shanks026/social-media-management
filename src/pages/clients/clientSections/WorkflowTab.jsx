@@ -135,7 +135,7 @@ export default function WorkflowTab({ client }) {
       </div>
 
       <DraftPostList
-        clientId={client.id}
+        client={client}
         onCreatePost={() => setCreateOpen(true)}
         statusFilter={statusFilter}
         myWorkOnly={myWorkOnly}

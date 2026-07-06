@@ -100,7 +100,7 @@ export function usePendingInvites() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('agency_invites')
-        .select('id, token, created_at, expires_at, system_role')
+        .select('id, token, created_at, expires_at, system_role, label, permissions')
         .eq('agency_user_id', workspaceUserId)
         .is('accepted_at', null)
         .gt('expires_at', new Date().toISOString())
@@ -117,14 +117,16 @@ export function usePendingInvites() {
 
 /**
  * Generate a new invite token and return the full join URL.
- * Accepts { functional_role, permissions } set by the owner in InviteDialog.
+ * Accepts { system_role, permissions, expires_at, label } set by the owner
+ * in InviteDialog — permissions is computed by the caller ({ documents: 'manage' }
+ * for admin, the chosen level for member), mirroring EditAccessDialog's rule.
  */
 export function useGenerateInvite() {
   const queryClient = useQueryClient()
   const { workspaceUserId } = useAuth()
 
   return useMutation({
-    mutationFn: async ({ system_role = 'member' } = {}) => {
+    mutationFn: async ({ system_role = 'member', permissions, expires_at, label } = {}) => {
       const { data: sub, error: subError } = await supabase
         .from('agency_subscriptions')
         .select('max_team_members')
@@ -149,6 +151,9 @@ export function useGenerateInvite() {
         .insert({
           agency_user_id: workspaceUserId,
           system_role,
+          permissions,
+          expires_at,
+          label: label?.trim() || null,
         })
         .select('token')
         .single()

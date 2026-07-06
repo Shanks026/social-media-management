@@ -1,4 +1,4 @@
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
@@ -18,6 +18,7 @@ import { usePermissions } from '@/api/usePermissions'
 // Sub-components
 import PostContent from './PostContent'
 import VersionSidebar from './VersionSidebar'
+import { CommentThread } from '@/components/comments/CommentThread'
 import PostActionDialogs from './PostActionDialogs'
 import DraftPostForm from '../DraftPostForm'
 import { useAuth } from '@/context/AuthContext'
@@ -31,10 +32,11 @@ import {
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
-import { Loader2 } from 'lucide-react'
+import { Loader2, X } from 'lucide-react'
 
 export default function PostDetails() {
   const { clientId, postId } = useParams()
+  const [searchParams] = useSearchParams()
   const { user } = useAuth()
   const navigate = useNavigate()
   const { setHeader } = useHeader()
@@ -44,6 +46,8 @@ export default function PostDetails() {
 
   const [isConfirmOpen, setIsConfirmOpen] = useState(false)
   const [showHistory, setShowHistory] = useState(false)
+  // Auto-open when a notification deep-links to a specific comment (?comment=id)
+  const [showComments, setShowComments] = useState(() => searchParams.has('comment'))
   const [isPublishConfirmOpen, setIsPublishConfirmOpen] = useState(false)
   const [isEditOpen, setIsEditOpen] = useState(false)
   const [isRevisionConfirmOpen, setIsRevisionConfirmOpen] = useState(false)
@@ -407,7 +411,9 @@ export default function PostDetails() {
         isInternal={isInternal}
         canSendDeliverables={canSendDeliverables}
         showHistory={showHistory}
-        setShowHistory={setShowHistory}
+        setShowHistory={(v) => { setShowHistory(v); if (v) setShowComments(false) }}
+        showComments={showComments}
+        onToggleComments={() => { setShowComments((c) => !c); setShowHistory(false) }}
         onSendForApproval={() => setIsConfirmOpen(true)}
         onApproveAndSchedule={() => {
           const hasPlatforms = (post.platforms?.length ?? 0) > 0
@@ -457,6 +463,26 @@ export default function PostDetails() {
           clientId={clientId}
           onClose={() => setShowHistory(false)}
         />
+      )}
+
+      {showComments && (
+        <aside className="w-full lg:w-105 border-t lg:border-t-0 lg:border-l dark:bg-card/30 py-6 ps-6 pe-3 shrink-0 flex flex-col min-h-0 max-h-[85vh] lg:sticky lg:top-16 lg:h-[calc(100vh-4rem)] lg:max-h-none">
+          <div className="flex items-center justify-between mb-4 shrink-0">
+            <h2 className="text-lg font-bold text-foreground bricolage">Comments</h2>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setShowComments(false)}
+              className="rounded-full hover:bg-muted"
+            >
+              <span className="sr-only">Close</span>
+              <X className="h-5 w-5 text-muted-foreground" />
+            </Button>
+          </div>
+          <div className="flex-1 min-h-0">
+            <CommentThread entityType="post" entityId={post.actual_post_id} />
+          </div>
+        </aside>
       )}
 
       <PostActionDialogs

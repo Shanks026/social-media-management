@@ -12,7 +12,7 @@ export default function TagPill({ tag, onRemove, size = 'sm', className }) {
     <span
       className={cn(
         'inline-flex items-center gap-1 rounded-full font-medium leading-none',
-        isXs ? 'px-1.5 py-0.5 text-[10px]' : 'px-2 py-1 text-xs',
+        isXs ? 'px-1.5 py-0.5 text-xs' : 'px-2 py-1 text-xs',
         color.pill,
         className,
       )}

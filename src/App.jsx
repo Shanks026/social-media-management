@@ -44,6 +44,7 @@ import ProposalReview from './pages/proposals/ProposalReview'
 import TrialExpired from './pages/TrialExpired'
 import SubscriptionExpired from './pages/SubscriptionExpired'
 import NotFound from './pages/NotFound'
+import PublicNotFound from './pages/PublicNotFound'
 import HelpPage from './pages/help/HelpPage'
 import PoliciesPage from './pages/help/PoliciesPage'
 import TeamPage from './pages/TeamPage'
@@ -142,9 +143,13 @@ function AppRoutes() {
     <Routes>
       <Route path="/policies" element={<PoliciesPage />} />
       <Route path="/review/:token" element={<PublicReview />} />
+      <Route path="/review/*" element={<PublicNotFound />} />
       <Route path="/campaign-review/:token" element={<CampaignReview />} />
+      <Route path="/campaign-review/*" element={<PublicNotFound />} />
       <Route path="/proposal/:token" element={<ProposalReview />} />
+      <Route path="/proposal/*" element={<PublicNotFound />} />
       <Route path="/join/:token" element={<JoinTeam />} />
+      <Route path="/join/*" element={<PublicNotFound />} />
       <Route path="/login" element={<PublicOnlyRoute><LoginPage /></PublicOnlyRoute>} />
       <Route path="/signup" element={<PublicOnlyRoute><SignupPage /></PublicOnlyRoute>} />
 

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { MoreVertical, Pencil, Trash2 } from 'lucide-react'
+import { MoreVertical, Pencil, Trash2, Lock, Users } from 'lucide-react'
 import { format } from 'date-fns'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -22,6 +22,7 @@ import {
 import { ClientAvatar } from '@/components/tasks/ClientAvatar'
 import { getNoteExcerpt } from '@/components/notes/noteContent'
 import TagPill from '@/components/notes/TagPill'
+import NoteCollaboratorAvatars from '@/components/notes/NoteCollaboratorAvatars'
 
 export default function AgencyNoteCard({ note, clientMap, onOpen, onDelete }) {
   const [deleteOpen, setDeleteOpen] = useState(false)
@@ -45,9 +46,17 @@ export default function AgencyNoteCard({ note, clientMap, onOpen, onDelete }) {
       >
         {/* Title + menu */}
         <div className="flex items-start justify-between gap-2">
-          <p className="bricolage font-medium text-base leading-tight line-clamp-2">
-            {note.title || <span className="text-muted-foreground/50">Untitled</span>}
-          </p>
+          <div className="flex items-start gap-1.5 min-w-0">
+            {note.visibility === 'private' && (
+              <Lock className="size-3.5 shrink-0 text-muted-foreground mt-0.5" />
+            )}
+            {note.visibility === 'shared' && (
+              <Users className="size-3.5 shrink-0 text-muted-foreground mt-0.5" />
+            )}
+            <p className="bricolage font-medium text-base leading-tight line-clamp-2">
+              {note.title || <span className="text-muted-foreground/50">Untitled</span>}
+            </p>
+          </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
               <Button variant="ghost" size="icon" className="size-7 shrink-0 -mt-0.5 -mr-1">
@@ -86,20 +95,30 @@ export default function AgencyNoteCard({ note, clientMap, onOpen, onDelete }) {
               <TagPill key={tag.id} tag={tag} size="xs" />
             ))}
             {overflowCount > 0 && (
-              <span className="text-[10px] font-medium text-muted-foreground">
+              <span className="text-xs font-medium text-muted-foreground">
                 +{overflowCount}
               </span>
             )}
           </div>
         )}
 
+        {/* Collaborators */}
+        <NoteCollaboratorAvatars
+          noteId={note.id}
+          authorId={note.created_by}
+          authorName={note.created_by_name}
+          visibility={note.visibility}
+          size="size-5"
+          className="mt-3"
+        />
+
         {/* Dashed separator */}
         <div className="border-t border-dashed border-border/60 mt-4 mb-3" />
 
         {/* Footer: client + date */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-2">
           {client ? (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 min-w-0">
               <ClientAvatar client={client} size="sm" />
               <span className="text-xs font-medium text-foreground truncate max-w-[140px]">
                 {client.name || 'Internal'}
