@@ -696,6 +696,21 @@ export default function TasksAndReminders() {
 
   const { data: fetchedTasks = [], isLoading: isLoadingTasks } = useTasks()
 
+  // Deep-link from a chat/notification reference (?task=<id>) — opens the
+  // sheet regardless of which view (grid/table/kanban) or filters are active,
+  // and independent of each view's own local selection state. Looks up
+  // against the unfiltered list so a deep link still works even if the
+  // task's status/client is hidden by the current filter selection.
+  const deepLinkedTaskId = searchParams.get('task')
+  const deepLinkedTask = useMemo(
+    () => (deepLinkedTaskId ? fetchedTasks.find((t) => t.id === deepLinkedTaskId) ?? null : null),
+    [fetchedTasks, deepLinkedTaskId],
+  )
+  const deepLinkCanEdit = deepLinkedTask ? (isOwner || deepLinkedTask.created_by === currentUserId) : false
+  const deepLinkCanToggle = deepLinkedTask
+    ? (isOwner || deepLinkedTask.created_by === currentUserId || deepLinkedTask.assigned_to === currentUserId)
+    : false
+
   const allTasks = useMemo(() => {
     if (selectedClient === 'all') return fetchedTasks
     // General = no client at all; Internal = the internal-account client (real id).
@@ -1018,6 +1033,18 @@ export default function TasksAndReminders() {
           </div>
         )}
       </Tabs>
+
+      <TaskDetailSheet
+        task={deepLinkedTask}
+        open={!!deepLinkedTask}
+        onOpenChange={(open) => { if (!open) setParam('task', null) }}
+        clientMap={clientMap}
+        campaignMap={campaignMap}
+        memberMap={memberMap}
+        currentUserId={currentUserId}
+        canEdit={deepLinkCanEdit}
+        canToggle={deepLinkCanToggle}
+      />
     </div>
   )
 }

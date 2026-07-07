@@ -7,6 +7,27 @@ import { createElement } from 'react'
 export const MAX_DOCUMENT_SIZE_BYTES = 50 * 1024 * 1024 // 50 MB
 
 /**
+ * Compact relative time — "just now", "5m ago", "3h ago", "2d ago" — instead
+ * of date-fns's verbose "about 3 hours ago", which collides with long names
+ * in narrow panels (comment threads, chat messages).
+ */
+export function formatCompactTimeAgo(dateInput) {
+  const seconds = Math.floor((Date.now() - new Date(dateInput).getTime()) / 1000)
+  if (seconds < 45) return 'just now'
+  const minutes = Math.floor(seconds / 60)
+  if (minutes < 60) return `${minutes}m ago`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours}h ago`
+  const days = Math.floor(hours / 24)
+  if (days < 7) return `${days}d ago`
+  const weeks = Math.floor(days / 7)
+  if (weeks < 4) return `${weeks}w ago`
+  const months = Math.floor(days / 30)
+  if (months < 12) return `${months}mo ago`
+  return `${Math.floor(days / 365)}y ago`
+}
+
+/**
  * Format a byte count into a human-readable size string.
  * e.g. 2457600 → "2.3 MB"
  */

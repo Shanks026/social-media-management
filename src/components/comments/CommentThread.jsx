@@ -28,7 +28,8 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { splitMentions } from '@/lib/mentions'
+import { splitMentions, detectMention, MENTION_CLASS, MY_MENTION_CLASS, MENTION_TEXT_CLASS, MY_MENTION_TEXT_CLASS } from '@/lib/mentions'
+import { formatCompactTimeAgo } from '@/lib/helper'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -39,29 +40,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-
-// Compact relative time — "just now", "5m ago", "3h ago", "2d ago" — instead of
-// date-fns's verbose "about 3 hours ago", which collides with long names in a narrow panel.
-function formatCompactTimeAgo(dateInput) {
-  const seconds = Math.floor((Date.now() - new Date(dateInput).getTime()) / 1000)
-  if (seconds < 45) return 'just now'
-  const minutes = Math.floor(seconds / 60)
-  if (minutes < 60) return `${minutes}m ago`
-  const hours = Math.floor(minutes / 60)
-  if (hours < 24) return `${hours}h ago`
-  const days = Math.floor(hours / 24)
-  if (days < 7) return `${days}d ago`
-  const weeks = Math.floor(days / 7)
-  if (weeks < 4) return `${weeks}w ago`
-  const months = Math.floor(days / 30)
-  if (months < 12) return `${months}mo ago`
-  return `${Math.floor(days / 365)}y ago`
-}
-
-// Mentions of someone else — indigo (composer chips + rendered comments)
-const MENTION_CLASS = 'rounded bg-indigo-50 dark:bg-indigo-950 px-1 py-0.5 font-medium text-indigo-700 dark:text-indigo-400'
-// Mentions of the current logged-in user get a distinct rose highlight (Teams-style "@you")
-const MY_MENTION_CLASS = 'rounded bg-rose-50 dark:bg-rose-950 px-1 py-0.5 font-medium text-rose-700 dark:text-rose-400'
 
 // ─── Avatar ────────────────────────────────────────────────────────────────────
 
@@ -198,7 +176,7 @@ function MentionedBody({ body, mentionNames, myMentionName }) {
         seg.isMention ? (
           <span
             key={i}
-            className={myMentionName && seg.text === myMentionName ? MY_MENTION_CLASS : MENTION_CLASS}
+            className={myMentionName && seg.text === myMentionName ? MY_MENTION_TEXT_CLASS : MENTION_TEXT_CLASS}
           >
             {seg.text}
           </span>
@@ -340,21 +318,6 @@ function CommentRow({ comment, author, mentionNames, myMentionName, memberMap, c
       </div>
     </div>
   )
-}
-
-// ─── Mention token detection ───────────────────────────────────────────────────
-
-// Returns { at, caret, query } if the caret sits inside an "@token" being typed,
-// else null. The '@' must be at the start or preceded by whitespace.
-function detectMention(value, caret) {
-  const upto = value.slice(0, caret)
-  const at = upto.lastIndexOf('@')
-  if (at === -1) return null
-  const before = at === 0 ? '' : upto[at - 1]
-  if (before && !/\s/.test(before)) return null
-  const query = upto.slice(at + 1)
-  if (/\s/.test(query)) return null
-  return { at, caret, query }
 }
 
 // ─── Thread ────────────────────────────────────────────────────────────────────
