@@ -191,7 +191,7 @@ function SubItemsList({ items, sub, isLoading, onNavigate }) {
               `flex items-center gap-2 px-3 py-1.5 text-sm rounded-md transition-colors ${
                 isActive
                   ? 'bg-accent text-accent-foreground font-medium'
-                  : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                  : 'text-foreground hover:bg-accent hover:text-accent-foreground'
               }`
             }
           >
@@ -279,7 +279,7 @@ export function NavMain() {
                         className="w-44 p-1.5"
                         align="start"
                       >
-                        <p className="px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60 mb-1">
+                        <p className="px-3 py-1 text-[11px] font-medium uppercase tracking-wider text-muted-foreground mb-1">
                           {item.title}
                         </p>
                         <SubItemsList
@@ -369,6 +369,31 @@ export function NavMain() {
               )
             }
 
+            // Locked top-level items previously stayed fully clickable (just a
+            // passive Lock icon tacked on) — inconsistent with how locked
+            // sub-items are already treated above. Match that: disabled,
+            // dimmed, non-navigable, with a tooltip explaining why.
+            if (isTopLocked) {
+              return (
+                <SidebarMenuItem key={item.title}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <SidebarMenuButton className="cursor-not-allowed opacity-40 hover:bg-transparent hover:text-inherit">
+                        <item.icon className="size-4 shrink-0" />
+                        {!isCollapsed && <span>{item.title}</span>}
+                        {!isCollapsed && (
+                          <Lock className="ml-auto size-3 shrink-0" />
+                        )}
+                      </SidebarMenuButton>
+                    </TooltipTrigger>
+                    <TooltipContent side="right" sideOffset={8}>
+                      Available on Velocity &amp; Quantum
+                    </TooltipContent>
+                  </Tooltip>
+                </SidebarMenuItem>
+              )
+            }
+
             const itemCount = item.showCount ? approvalCount : 0
             const changesCount = item.showChangesCount ? submissionsChangesCount : 0
             const myTodos = item.showTodoCount ? overdueCount : 0
@@ -408,9 +433,6 @@ export function NavMain() {
                       <span className="ml-auto flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white">
                         {chatCount > 99 ? '99+' : chatCount}
                       </span>
-                    )}
-                    {!isCollapsed && isTopLocked && (
-                      <Lock className="ml-auto size-3 shrink-0 text-muted-foreground" />
                     )}
                   </NavLink>
                 </SidebarMenuButton>

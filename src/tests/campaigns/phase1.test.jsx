@@ -70,7 +70,7 @@ import { useCampaigns, fetchActiveCampaignsByClient } from '@/api/campaigns'
 import { useSubscription } from '@/api/useSubscription'
 import { CampaignDialog } from '@/components/campaigns/CampaignDialog'
 import { CampaignCard } from '@/components/campaigns/CampaignCard'
-import { CampaignUpgradePrompt } from '@/components/campaigns/CampaignUpgradePrompt'
+import { PlanUpgradePrompt } from '@/components/misc/PlanUpgradePrompt'
 import CampaignsPage from '@/pages/campaigns/CampaignsPage'
 
 // ─── Group A — API Layer ──────────────────────────────────────────────────────
@@ -329,24 +329,27 @@ describe('Group D — CampaignCard', () => {
   })
 })
 
-// ─── Group E — CampaignUpgradePrompt ─────────────────────────────────────────
+// ─── Group E — PlanUpgradePrompt ──────────────────────────────────────────────
+// CampaignUpgradePrompt was generalized into the reusable PlanUpgradePrompt
+// (src/components/misc/PlanUpgradePrompt.jsx), now used by Campaigns, Chat,
+// Reports, and Finance subscriptions gating alike.
 
-describe('Group E — CampaignUpgradePrompt', () => {
+describe('Group E — PlanUpgradePrompt', () => {
+  const title = 'Campaigns are a Velocity feature'
+
   it('renders the upgrade message', () => {
     render(
       <MemoryRouter>
-        <CampaignUpgradePrompt />
+        <PlanUpgradePrompt title={title} description="Group posts into campaigns." />
       </MemoryRouter>,
     )
-    expect(
-      screen.getByText(/Campaigns are a Velocity feature/i),
-    ).toBeInTheDocument()
+    expect(screen.getByText(title)).toBeInTheDocument()
   })
 
   it('renders the View Plans button', () => {
     render(
       <MemoryRouter>
-        <CampaignUpgradePrompt />
+        <PlanUpgradePrompt title={title} description="Group posts into campaigns." />
       </MemoryRouter>,
     )
     expect(
@@ -357,7 +360,7 @@ describe('Group E — CampaignUpgradePrompt', () => {
 
 // ─── Group F — CampaignsPage Subscription Gate ───────────────────────────────
 // Note: CampaignTab is stubbed globally (avoids data-fetching setup).
-// When campaigns=false, the real CampaignUpgradePrompt renders — test by text.
+// When campaigns=false, the real PlanUpgradePrompt renders — test by text.
 
 describe('Group F — CampaignsPage', () => {
   it('renders CampaignTab when campaigns flag is true', () => {
@@ -371,7 +374,7 @@ describe('Group F — CampaignsPage', () => {
     expect(screen.queryByText(/Campaigns are a Velocity feature/i)).toBeNull()
   })
 
-  it('renders CampaignUpgradePrompt when campaigns flag is false', () => {
+  it('renders PlanUpgradePrompt when campaigns flag is false', () => {
     useSubscription.mockReturnValue({ data: { campaigns: false } })
     render(
       <MemoryRouter>

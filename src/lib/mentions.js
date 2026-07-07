@@ -11,12 +11,13 @@ export const IMPORTANT_MENTION_CLASS = 'rounded bg-red-50 dark:bg-red-950 px-1 p
 // Mentions of the current logged-in user get a distinct rose highlight (Teams-style "@you").
 export const MENTION_TEXT_CLASS = 'font-medium text-indigo-600 dark:text-indigo-400'
 export const MY_MENTION_TEXT_CLASS = 'font-medium text-rose-600 dark:text-rose-400'
-// Plain colored text (like MENTION_TEXT_CLASS) reads fine on a neutral
-// bubble but loses contrast against the blue --chat-self bubble on your own
-// messages — red-on-blue is close enough in lightness to read as muddy. A
-// solid pill (matching Badge's destructive variant: bg-destructive/text-white)
-// guarantees contrast regardless of the surrounding bubble color.
-export const IMPORTANT_TEXT_CLASS = 'inline-flex rounded px-1 font-semibold bg-red-600 text-white dark:bg-red-500'
+// Only used for other people's (neutral-bubble) messages — a solid red pill
+// was tried to fix red-on-blue contrast on your own bubble, but it read as
+// an error/alert badge clashing with the bubble rather than part of the
+// sentence. Own-bubble messages instead reuse OWN_MENTION_CLASS (white,
+// inherited from the bubble text) like every other token there — see the
+// isOwn branch in ChatThread.jsx's MessageBody.
+export const IMPORTANT_TEXT_CLASS = 'font-semibold text-red-600 dark:text-red-400'
 
 /**
  * Returns { at, caret, query } if the caret sits inside an "@token" being

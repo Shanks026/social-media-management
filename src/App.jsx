@@ -53,6 +53,7 @@ import PartnershipsPage from './pages/partnerships/PartnershipsPage'
 import ApprovalsPage from './pages/approvals/ApprovalsPage'
 import SubmissionsPage from './pages/submissions/SubmissionsPage'
 import ChatPage from './pages/chat/ChatPage'
+import { PlanUpgradePrompt } from './components/misc/PlanUpgradePrompt'
 
 function MaintenanceGate({ children }) {
   const queryClient = useQueryClient()
@@ -126,21 +127,46 @@ function RequirePermission({ cap, children }) {
 function SubscriptionsRoute() {
   const { data: sub } = useSubscription()
   if (!sub) return null
-  if (!sub.finance_subscriptions) return <Navigate to="/finance/invoices" replace />
+  if (!sub.finance_subscriptions) {
+    return (
+      <PlanUpgradePrompt
+        title="Expense subscriptions are a Velocity feature"
+        description="Track recurring vendor and tool expenses automatically — available on Velocity and above."
+      />
+    )
+  }
   return <SubscriptionsTab />
 }
 
 function ReportsRoute() {
   const { data: sub } = useSubscription()
   if (!sub) return null
-  if (!sub.reports) return <Navigate to="/dashboard" replace />
+  if (!sub.reports) {
+    return (
+      <div className="flex min-h-[70vh] items-center justify-center">
+        <PlanUpgradePrompt
+          title="Client reports are a Velocity feature"
+          description="Generate polished, shareable client reports — available on Velocity and above."
+        />
+      </div>
+    )
+  }
   return <ReportsPage />
 }
 
 function ChatRoute() {
   const { data: sub } = useSubscription()
   if (!sub) return null
-  if (!sub.chat) return <Navigate to="/dashboard" replace />
+  if (!sub.chat) {
+    return (
+      <div className="flex min-h-[70vh] items-center justify-center">
+        <PlanUpgradePrompt
+          title="Workspace chat is a Velocity feature"
+          description="Chat with your team in a shared workspace channel or 1:1 DMs — available on Velocity and above."
+        />
+      </div>
+    )
+  }
   return <ChatPage />
 }
 

@@ -29,6 +29,8 @@ Tests use **Vitest** + jsdom. Test files live in `src/tests/` (e.g. `src/tests/c
 - **Supabase** (PostgreSQL, auth, storage, edge functions)
 - **date-fns** (date manipulation; used in API layer and components)
 - **@react-pdf/renderer** (PDF generation — invoices and calendar reports)
+- **Tiptap** (rich text editor — Notes feature, `src/components/notes/editor/`)
+- **Recharts** (charts — dashboard/reports/campaign analytics, e.g. `WorkflowHealth.jsx`'s half-donut `PieChart`)
 
 ### Data Flow
 
@@ -52,7 +54,7 @@ Pages/Components → API functions (src/api/) → Supabase client → PostgreSQL
 - `create_revision_version()` — post versioning
 - `get_global_calendar()` — date-range post queries
 
-**Pages (src/pages/):** Feature directories — clients, posts, calendar, finance, billingAndUsage, operations (notes/meetings), documents, dashboard, settings, prospects, reports, public review.
+**Pages (src/pages/):** Feature directories — clients, posts, calendar, finance, billingAndUsage, operations (notes/meetings), documents, dashboard, settings, prospects, reports, chat, public review.
 
 **Header context (`src/components/misc/header-context.jsx`):** Pages call `useHeader()` to set the dynamic breadcrumb/title in the shell header via `setHeader({ title, breadcrumbs })`.
 
@@ -100,6 +102,8 @@ Posts support two publishing modes: (1) simple — single `target_date`, marked 
 - **Contextual comments** (`CommentThread`, on posts + campaigns): `comments` table (`entity_type` `post|campaign`, `entity_id`, `author_user_id` = real caller, `mentioned_uids[]`, `deleted_at` soft-delete). `useComments({entityType, entityId})` read; `createComment`/`updateComment`/`softDeleteComment` (RPC) mutations. `AFTER INSERT` trigger fans out `comment_added` to thread participants + mentions + post author.
 - Feature doc: `documentation/features/feature-collaboration.md`.
 
+**Workspace Chat (`/chat`):** One shared workspace-wide channel plus 1:1 DMs — no group chats. Subscription-gated (`sub?.chat`, Velocity+/Quantum, plus Trial mirroring Quantum — same precedent as every other Velocity+ flag). Also enforced **in the database**, not just the UI — `ensure_workspace_channel()`, `get_or_create_dm_channel()`, and the `chat_messages` INSERT policy all call `is_chat_enabled_for_workspace()`, which checks the `chat` column directly (an independent, override-capable flag, not derived from `plan_name` at read time — see `documentation/subscription-features-phase2.md`). Tables: `chat_channels` (`type`: `workspace` | `dm`), `chat_channel_members`, `chat_messages`, `chat_message_reactions`. `ensure_workspace_channel()` bootstraps the shared channel/membership on first load (so pre-existing members work); `get_or_create_dm_channel()` is deterministic per pair — both sides converge on the same channel id. API: `src/api/chat.js` (`useMyChannels`, `useChannelMessages`, `sendMessage`, `useMemberMap` for the merged teammates+owner+self roster). UI in `src/components/chat/` — `ChatThread.jsx` is the largest file (composer, reactions, mentions, all in one). Mentions support real people (`@Name`) plus two broadcast pseudo-mentions, `@Everyone`/`@Important`, which expand to every workspace member id at send time rather than being real uids (`@Important` renders in red; both get distinct notification titles via body-text sniffing in `tg_notify_chat_message`, since they aren't real `mentioned_uids` entries otherwise). Messages can reference a deliverable or task inline via a `/` slash command — stored as `chat_messages.entity_references` (JSONB array; renamed from `references`, a reserved SQL keyword) and rendered as `[[Title]]` tokens, with a compact preview card below the bubble when exactly one reference is present. Task references respect `tasks_select`'s RLS (creator/assignee/admin only, unlike workspace-wide-visible deliverables) — the `task_reference_exists()` RPC lets the UI say "you don't have access" instead of leaking the task's title to a viewer who isn't allowed to see it. Notification fan-out follows the same DB-trigger pattern as Collaboration above (`tg_notify_chat_message`); Realtime is an invalidator only. Feature doc (the authoritative build history, including deviations and fixes found along the way): `documentation/features/feature-workspace-chat.md`.
+
 **Deliverable (post) deletion authorization:** Enforced in **RLS** (authoritative), mirrored in the UI on all three delete surfaces (`PostContent`, `DraftPostList`, `CalendarPostCard`). `posts.created_by` (backfilled from the v1 version, stamped by a trigger on `post_versions`) is the original creator. Rule: **owner/admin (`is_workspace_admin()`) may delete in any status; a non-admin member may delete only their own deliverable and only while the current version's status is in `DELETABLE_POST_STATUSES` (`DRAFT`/`SUBMITTED`/`ARCHIVED`)** — everything from `READY` onward is a committed action, blocked for members. `deletePost` deletes the row first (the RLS gate) *before* touching storage, so a blocked delete never orphans media. Editing stays open to all workspace members.
 
 **Supabase Edge Functions (supabase/):**
@@ -133,9 +137,10 @@ The `data` object includes:
   - `documents_collections` — document collections grouping (Velocity+)
   - `campaigns` — campaigns feature (Velocity+)
   - `reports` — reports page access (Velocity+; also enabled on Trial)
+  - `chat` — workspace chat feature (Velocity+; also enabled on Trial). Also DB-enforced, not just UI — see Domain Patterns below.
 - `proposals_limit` — integer | null — 5 for Trial/Ignite; null = unlimited (Velocity/Quantum)
 
-**Canonical feature matrix:** `documentation/subscription-features.md` is the authoritative source for which features are enabled per plan. `.claude/features/feature-tiers-v5.md` is a secondary reference — when they conflict, trust `subscription-features.md`.
+**Canonical feature matrix:** `documentation/subscription-features-phase2.md` is the authoritative source for which features are enabled per plan, tier pricing/limits, and DB seed values — it explicitly supersedes the earlier `subscription-features.md` (now deleted) and Phase 2 draft. `.claude/features/feature-tiers-v5.md` is a secondary reference — when they conflict, trust `subscription-features-phase2.md`.
 
 **Gating pattern:** Read flags directly from `data` (e.g. `data?.finance_subscriptions`). For locked features (visible but disabled), show with a disabled state + lock icon + tooltip. For hidden features (like nav items), conditionally render them. See `.claude/features/feature-tiers-v5.md` for the full feature matrix.
 

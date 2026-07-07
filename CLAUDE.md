@@ -35,7 +35,7 @@ One exception: the `created_by` field on records should be `auth.uid()` (the act
 
 ### RBAC and permissions
 Two separate gating systems — use both correctly:
-- **`useSubscription()`** (`src/api/useSubscription.js`) — plan/tier feature flags (`data?.campaigns`, `data?.calendar_export`, etc.). Never query `agency_subscriptions` directly. Canonical feature matrix: `documentation/subscription-features.md`.
+- **`useSubscription()`** (`src/api/useSubscription.js`) — plan/tier feature flags (`data?.campaigns`, `data?.calendar_export`, etc.). Never query `agency_subscriptions` directly. Canonical feature matrix: `documentation/subscription-features-phase2.md`.
 - **`usePermissions()`** (`src/api/usePermissions.js`) — role-based capabilities (`canAssignTasks`, `finance`, `proposals`, etc.) derived from the user's role in `agency_members`. Use for actions gated by role, not plan.
 
 ### Reusable tab pattern
