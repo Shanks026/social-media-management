@@ -13,6 +13,8 @@ import {
   MessageCircle,
   CheckCheck,
   Trash2,
+  Users,
+  TriangleAlert,
 } from 'lucide-react'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Button } from '@/components/ui/button'
@@ -48,6 +50,8 @@ const TYPE_CONFIG = {
   team_member_joined:     { icon: UserPlus,        color: 'text-teal-500',   bg: 'bg-teal-100 dark:bg-teal-950' },
   invoice_overdue:        { icon: AlertCircle,     color: 'text-destructive', bg: 'bg-red-100 dark:bg-red-950' },
   comment_added:          { icon: MessageCircle,   color: 'text-sky-500',    bg: 'bg-sky-100 dark:bg-sky-950' },
+  chat_important:         { icon: TriangleAlert,   color: 'text-red-500',    bg: 'bg-red-100 dark:bg-red-950' },
+  chat_everyone:          { icon: Users,           color: 'text-indigo-500', bg: 'bg-indigo-100 dark:bg-indigo-950' },
 }
 
 // Label to show when a notification has no human actor (actor_user_id is null).

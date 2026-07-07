@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { useQueryClient } from '@tanstack/react-query'
-import { ArrowUp, Pencil, Plus, SmilePlus, Trash2, X, Check } from 'lucide-react'
+import { ArrowUp, AtSign, FileText, ListChecks, Pencil, Plus, SmilePlus, Trash2, TriangleAlert, Users, X, Check, PencilRuler } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/context/AuthContext'
 import { usePermissions } from '@/api/usePermissions'
@@ -18,8 +18,19 @@ import {
   chatKeys,
 } from '@/api/chat'
 import { formatCompactTimeAgo } from '@/lib/helper'
-import { splitMentions, detectMention, MENTION_CLASS, MENTION_TEXT_CLASS, MY_MENTION_TEXT_CLASS } from '@/lib/mentions'
+import {
+  splitMentions,
+  detectMention,
+  MENTION_CLASS,
+  MENTION_TEXT_CLASS,
+  MY_MENTION_TEXT_CLASS,
+  IMPORTANT_MENTION_CLASS,
+  IMPORTANT_TEXT_CLASS,
+} from '@/lib/mentions'
+import { detectSlashCommand, splitReferences } from '@/lib/references'
 import { MemberAvatar } from '@/components/chat/MemberAvatar'
+import { AttachEntityMenu } from '@/components/chat/AttachEntityMenu'
+import { ChatEntityCard } from '@/components/chat/ChatEntityCard'
 import { Message, MessageAvatar as MessageAvatarSlot, MessageContent, MessageHeader } from '@/components/ui/message'
 import { Bubble, BubbleContent, BubbleReactions } from '@/components/ui/bubble'
 import { Button } from '@/components/ui/button'
@@ -45,24 +56,76 @@ import {
 // background (comments, and other people's messages here).
 const OWN_MENTION_CLASS = 'font-semibold'
 
-function MentionedMessageBody({ body, mentionNames, myMentionName, isOwn }) {
-  const segments = splitMentions(body, mentionNames)
+// Pseudo-mentions — not real workspace members, so they're prepended to the
+// candidate list rather than sourced from memberMap. Both broadcast to the
+// whole workspace (see handleSend); "Important" always renders in red
+// regardless of who sent it, "Everyone" renders exactly like a normal
+// @Name mention (Decision: keep it visually unremarkable, only the
+// notification fan-out behavior is special).
+const SPECIAL_MENTIONS = [
+  { id: '__everyone__', name: 'Everyone', special: 'everyone', icon: Users },
+  { id: '__important__', name: 'Important', special: 'important', icon: TriangleAlert },
+]
+
+function referenceHref(reference) {
+  if (reference.type === 'post') return `/clients/${reference.client_id}/posts/${reference.id}`
+  // ?task=<id> opens TaskDetailSheet on load (TasksAndReminders.jsx) —
+  // independent of the per-view local selection state each of the three
+  // views (grid/table/kanban) otherwise manages.
+  return `/tasks?task=${reference.id}`
+}
+
+// Renders a message body that may contain both [[Title]] entity references
+// and @Name mentions. References are matched first (an unambiguous bracketed
+// delimiter), then each remaining plain-text span is checked for mentions —
+// a message can contain both kinds of token at once.
+function MessageBody({ body, mentionNames, myMentionName, references, isOwn }) {
+  const refSegments = splitReferences(body, references)
   return (
     <>
-      {segments.map((seg, i) => {
-        if (!seg.isMention) return <span key={i}>{seg.text}</span>
-        if (isOwn) {
+      {refSegments.map((seg, i) => {
+        if (seg.isReference) {
+          const ReferenceIcon = seg.reference.type === 'task' ? ListChecks : PencilRuler
           return (
-            <span key={i} className={OWN_MENTION_CLASS}>
+            <Link
+              key={i}
+              to={referenceHref(seg.reference)}
+              className={cn(
+                'inline-flex items-center gap-1 align-text-bottom underline underline-offset-2',
+                isOwn
+                  ? 'font-semibold'
+                  : 'font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300',
+              )}
+            >
+              <ReferenceIcon className="size-3.5 shrink-0" />
               {seg.text}
-            </span>
+            </Link>
           )
         }
-        return (
-          <span key={i} className={myMentionName && seg.text === myMentionName ? MY_MENTION_TEXT_CLASS : MENTION_TEXT_CLASS}>
-            {seg.text}
-          </span>
-        )
+        return splitMentions(seg.text, mentionNames).map((mseg, j) => {
+          if (!mseg.isMention) return <span key={`${i}-${j}`}>{mseg.text}</span>
+          // "@Important" always renders in red, regardless of bubble
+          // ownership — unlike everything else here, it's meant to stand out.
+          if (mseg.text === '@Important') {
+            return (
+              <span key={`${i}-${j}`} className={IMPORTANT_TEXT_CLASS}>
+                {mseg.text}
+              </span>
+            )
+          }
+          if (isOwn) {
+            return (
+              <span key={`${i}-${j}`} className={OWN_MENTION_CLASS}>
+                {mseg.text}
+              </span>
+            )
+          }
+          return (
+            <span key={`${i}-${j}`} className={myMentionName && mseg.text === myMentionName ? MY_MENTION_TEXT_CLASS : MENTION_TEXT_CLASS}>
+              {mseg.text}
+            </span>
+          )
+        })
       })}
     </>
   )
@@ -221,9 +284,15 @@ function ChatMessageRow({ message, author, isOwn, canModify, canDelete, mentionN
           <MemberAvatar member={author} />
         </MessageAvatarSlot>
       )}
-      <MessageContent className="max-w-[70%]">
+      <MessageContent className={message.references?.length === 1 ? 'max-w-full' : 'max-w-[70%]'}>
         <MessageHeader className={cn(isOwn && 'flex-row-reverse')}>
           {!isOwn && <span className="font-medium text-foreground">{name}</span>}
+          {message.body?.includes('@Important') && (
+            <TriangleAlert className="size-3 shrink-0 text-red-500" aria-label="Important message" />
+          )}
+          {message.body?.includes('@Everyone') && (
+            <Users className="size-3 shrink-0 text-indigo-500" aria-label="Everyone mentioned" />
+          )}
           <span className="whitespace-nowrap">
             {formatCompactTimeAgo(message.created_at)}
             {message.updated_at && ' · edited'}
@@ -281,19 +350,32 @@ function ChatMessageRow({ message, author, isOwn, canModify, canDelete, mentionN
             </div>
           </div>
         ) : (
-          <Bubble align={isOwn ? 'end' : 'start'} variant={isOwn ? 'self' : 'muted'}>
-            <BubbleContent className="rounded-2xl text-sm whitespace-pre-wrap wrap-break-word">
-              <MentionedMessageBody body={message.body} mentionNames={mentionNames} myMentionName={myMentionName} isOwn={isOwn} />
-            </BubbleContent>
-            <BubbleReactionsRow
-              messageId={message.id}
-              reactions={message.reactions}
-              memberMap={memberMap}
-              currentUserId={currentUserId}
-              onReacted={onReacted}
-              isOwn={isOwn}
-            />
-          </Bubble>
+          <>
+            <Bubble align={isOwn ? 'end' : 'start'} variant={isOwn ? 'self' : 'muted'}>
+              <BubbleContent className="rounded-2xl text-sm whitespace-pre-wrap wrap-break-word">
+                <MessageBody
+                  body={message.body}
+                  mentionNames={mentionNames}
+                  myMentionName={myMentionName}
+                  references={message.references}
+                  isOwn={isOwn}
+                />
+              </BubbleContent>
+              <BubbleReactionsRow
+                messageId={message.id}
+                reactions={message.reactions}
+                memberMap={memberMap}
+                currentUserId={currentUserId}
+                onReacted={onReacted}
+                isOwn={isOwn}
+              />
+            </Bubble>
+            {/* Rich preview only for exactly one reference — more than one
+                falls back to the inline links above (Phase 7, Decision 5). */}
+            {message.references?.length === 1 && (
+              <ChatEntityCard reference={message.references[0]} />
+            )}
+          </>
         )}
       </MessageContent>
     </Message>
@@ -322,12 +404,44 @@ export function ChatThread({ channelId, channelType }) {
   const [mention, setMention] = useState(null) // { at, caret, query } | null
   const [activeIdx, setActiveIdx] = useState(0)
   const bottomRef = useRef(null)
+  const scrollContentRef = useRef(null)
+
+  // Attach-entity (deliverable/task reference) state — see AttachEntityMenu.
+  const [pendingReferences, setPendingReferences] = useState([]) // [{ type, id, title, client_id }]
+  const [attachMenuOpen, setAttachMenuOpen] = useState(false)
+  const [attachCategory, setAttachCategory] = useState(null) // null shows the category picker first
+  const [attachInsertAt, setAttachInsertAt] = useState(0)
+  const [plusMenuOpen, setPlusMenuOpen] = useState(false)
+  const attachMenuRef = useRef(null)
+
+  // The attach menu is a plain positioned div, not a Radix Popover, so it
+  // needs its own click-outside-to-dismiss wiring (Escape is already handled
+  // via the onKeyDown below).
+  useEffect(() => {
+    if (!attachMenuOpen) return
+    function handlePointerDown(e) {
+      if (attachMenuRef.current && !attachMenuRef.current.contains(e.target)) {
+        setAttachMenuOpen(false)
+        setAttachCategory(null)
+      }
+    }
+    document.addEventListener('mousedown', handlePointerDown)
+    return () => document.removeEventListener('mousedown', handlePointerDown)
+  }, [attachMenuOpen])
 
   // Reset the composer when switching channels so a half-typed DM doesn't
   // leak into the team channel.
   useEffect(() => {
     setBody('')
     setPendingMentions([])
+    setPendingReferences([])
+    setAttachMenuOpen(false)
+  }, [channelId])
+
+  // Land the cursor in the composer as soon as a channel opens, so typing
+  // works immediately without an extra click.
+  useEffect(() => {
+    taRef.current?.focus()
   }, [channelId])
 
   // Stick-to-bottom on new messages / channel switch. Deliberately a plain
@@ -338,6 +452,24 @@ export function ChatThread({ channelId, channelType }) {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ block: 'end' })
   }, [channelId, messages.length])
+
+  // The scroll above lands short of the true bottom on initial load: avatars,
+  // media thumbnails, and ChatEntityCard's own async post/task fetch all
+  // resolve after that first scrollIntoView, growing the content height
+  // afterward. Re-correct for a short settling window after mount/channel
+  // switch via ResizeObserver, then stop so it doesn't yank the view down
+  // later while someone's scrolled up reading history.
+  useEffect(() => {
+    const content = scrollContentRef.current
+    if (!content) return
+    let settled = false
+    const observer = new ResizeObserver(() => {
+      if (!settled) bottomRef.current?.scrollIntoView({ block: 'end' })
+    })
+    observer.observe(content)
+    const timeout = setTimeout(() => { settled = true }, 1500)
+    return () => { clearTimeout(timeout); observer.disconnect() }
+  }, [channelId])
 
   // Keep the unread badge cleared while this channel is actually open — not
   // just at the moment it's clicked (ChatSidebar already does that for
@@ -387,12 +519,15 @@ export function ChatThread({ channelId, channelType }) {
     return me ? `@${me.full_name || me.email}` : null
   }, [memberMap, user?.id])
 
-  // Members available to @mention (everyone but the current user)
+  // Members available to @mention (everyone but the current user), with the
+  // two broadcast pseudo-mentions pinned to the top.
   const mentionCandidates = useMemo(
-    () =>
-      Object.values(memberMap)
+    () => [
+      ...SPECIAL_MENTIONS,
+      ...Object.values(memberMap)
         .filter((m) => m.id !== user?.id)
         .map((m) => ({ id: m.id, name: m.full_name || m.email || 'Unknown', avatar_url: m.avatar_url || null })),
+    ],
     [memberMap, user?.id],
   )
 
@@ -403,18 +538,39 @@ export function ChatThread({ channelId, channelType }) {
   const mentionMenuOpen = !!mention && filteredMentions.length > 0
 
   function mentionNamesFor(message) {
-    return (message.mentioned_uids || [])
-      .map((uid) => memberMap[uid])
-      .filter(Boolean)
-      .map((m) => `@${m.full_name || m.email}`)
+    // "@Everyone"/"@Important" aren't real uids, so they can't come from
+    // mentioned_uids like a person mention — always offered as highlight
+    // candidates instead; splitMentions only lights them up if the literal
+    // text actually appears in this particular message's body.
+    return [
+      ...(message.mentioned_uids || [])
+        .map((uid) => memberMap[uid])
+        .filter(Boolean)
+        .map((m) => `@${m.full_name || m.email}`),
+      '@Everyone',
+      '@Important',
+    ]
   }
 
   function handleBodyChange(e) {
     const value = e.target.value
-    setBody(value)
     const caret = e.target.selectionStart ?? value.length
     setMention(detectMention(value, caret))
     setActiveIdx(0)
+
+    // "/" opens the attach picker immediately (Notion/Linear-style slash
+    // command) — the "/" itself is stripped right away since it's a command
+    // trigger, not text meant to stay in the message.
+    const slash = detectSlashCommand(value, caret)
+    if (slash) {
+      setBody(value.slice(0, slash.at) + value.slice(slash.caret))
+      setAttachInsertAt(slash.at)
+      setAttachCategory(null)
+      setAttachMenuOpen(true)
+      return
+    }
+
+    setBody(value)
   }
 
   function selectMention(member) {
@@ -439,7 +595,8 @@ export function ChatThread({ channelId, channelType }) {
     setBody((b) => b.replace(`@${member.name}`, '').replace(/[ \t]{2,}/g, ' '))
   }
 
-  // "+" button: insert "@" at the caret, same as if the user typed it — opens the mention menu.
+  // "+" button: small combined menu (mention / attach deliverable / attach
+  // task) rather than one icon guessing which action you want.
   function handleMentionButtonClick() {
     const el = taRef.current
     const caret = el ? (el.selectionStart ?? body.length) : body.length
@@ -459,15 +616,64 @@ export function ChatThread({ channelId, channelType }) {
     })
   }
 
+  function openAttachMenu(category) {
+    const el = taRef.current
+    const caret = el ? (el.selectionStart ?? body.length) : body.length
+    setAttachInsertAt(caret)
+    setAttachCategory(category)
+    setAttachMenuOpen(true)
+  }
+
+  function handleAttachSelect(references) {
+    if (!references.length) return
+    const insert = references.map((r) => `[[${r.title}]] `).join('')
+    const newBody = body.slice(0, attachInsertAt) + insert + body.slice(attachInsertAt)
+    setBody(newBody)
+    setPendingReferences((prev) => [...prev, ...references])
+    setAttachMenuOpen(false)
+    setAttachCategory(null)
+    requestAnimationFrame(() => {
+      const el = taRef.current
+      if (el) {
+        const pos = attachInsertAt + insert.length
+        el.focus()
+        el.setSelectionRange(pos, pos)
+      }
+    })
+  }
+
+  function removeReference(ref) {
+    setPendingReferences((prev) => prev.filter((r) => !(r.type === ref.type && r.id === ref.id)))
+    setBody((b) => b.replace(`[[${ref.title}]]`, '').replace(/[ \t]{2,}/g, ' '))
+  }
+
+  function closeAttachMenu() {
+    setAttachMenuOpen(false)
+    setAttachCategory(null)
+  }
+
   async function handleSend() {
     const trimmed = body.trim()
     if (!trimmed) return
-    const mentionedUids = pendingMentions.filter((m) => trimmed.includes(`@${m.name}`)).map((m) => m.id)
+    // "@Everyone"/"@Important" broadcast to the whole workspace rather than
+    // the specific people picked — expand to every known member id instead
+    // of sending the pseudo-mention's fake id (not a real uuid). The DM
+    // notification path ignores mentioned_uids entirely (see
+    // tg_notify_chat_message), so this only actually broadcasts in the
+    // shared workspace channel — sending it inside a DM still renders the
+    // highlighted token but only notifies the DM's own participants, same as
+    // any other message there.
+    const broadcastsToEveryone = pendingMentions.some((m) => m.special && trimmed.includes(`@${m.name}`))
+    const mentionedUids = broadcastsToEveryone
+      ? Object.keys(memberMap)
+      : pendingMentions.filter((m) => trimmed.includes(`@${m.name}`)).map((m) => m.id)
+    const references = pendingReferences.filter((r) => trimmed.includes(`[[${r.title}]]`))
     setSending(true)
     try {
-      await sendMessage({ channelId, body: trimmed, mentionedUids })
+      await sendMessage({ channelId, body: trimmed, mentionedUids, references })
       setBody('')
       setPendingMentions([])
+      setPendingReferences([])
       invalidate()
     } catch (err) {
       toast.error(err.message || 'Failed to send message')
@@ -521,7 +727,7 @@ export function ChatThread({ channelId, channelType }) {
   return (
     <div className="flex flex-1 flex-col min-h-0">
       <ScrollArea className="flex-1 min-h-0">
-        <div className="flex flex-col gap-4 max-w-5xl mx-auto px-4 pt-6 pb-3" aria-label="Messages">
+        <div ref={scrollContentRef} className="flex flex-col gap-4 max-w-5xl mx-auto px-4 pt-6 pb-3" aria-label="Messages">
           {isLoading ? (
             Array.from({ length: 3 }).map((_, i) => (
               <div key={i} className="flex gap-3">
@@ -570,12 +776,39 @@ export function ChatThread({ channelId, channelType }) {
           {pendingMentions.length > 0 && (
             <div className="flex flex-wrap gap-1.5 mb-2">
               {pendingMentions.map((m) => (
-                <span key={m.id} className={cn(MENTION_CLASS, 'inline-flex items-center gap-1 text-xs')}>
+                <span
+                  key={m.id}
+                  className={cn(
+                    m.special === 'important' ? IMPORTANT_MENTION_CLASS : MENTION_CLASS,
+                    'inline-flex items-center gap-1 text-xs',
+                  )}
+                >
                   @{m.name}
                   <button
                     onClick={() => removeMention(m)}
                     className="hover:text-destructive"
                     aria-label={`Remove mention ${m.name}`}
+                  >
+                    <X className="size-3" />
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+
+          {/* Pending attached-entity chips */}
+          {pendingReferences.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mb-2">
+              {pendingReferences.map((r, i) => (
+                <span
+                  key={`${r.type}-${r.id}-${i}`}
+                  className="inline-flex items-center gap-1 rounded border border-blue-200 px-1.5 py-0.5 text-xs font-medium text-blue-600 dark:border-blue-900 dark:text-blue-400"
+                >
+                  {r.title}
+                  <button
+                    onClick={() => removeReference(r)}
+                    className="hover:text-destructive"
+                    aria-label={`Remove ${r.title}`}
                   >
                     <X className="size-3" />
                   </button>
@@ -599,11 +832,35 @@ export function ChatThread({ channelId, channelType }) {
                         i === activeIdx ? 'bg-muted' : 'hover:bg-muted/60',
                       )}
                     >
-                      <MemberAvatar member={m} className="size-5" />
+                      {m.special ? (
+                        <span
+                          className={cn(
+                            'flex size-5 shrink-0 items-center justify-center rounded-full',
+                            m.special === 'important'
+                              ? 'bg-red-100 text-red-600 dark:bg-red-950 dark:text-red-400'
+                              : 'bg-indigo-100 text-indigo-600 dark:bg-indigo-950 dark:text-indigo-400',
+                          )}
+                        >
+                          <m.icon className="size-3" />
+                        </span>
+                      ) : (
+                        <MemberAvatar member={m} className="size-5" />
+                      )}
                       <span className="truncate">{m.name}</span>
                     </button>
                   ))}
                 </div>
+              </div>
+            )}
+
+            {/* "/" attach-entity menu (category picker → search) */}
+            {attachMenuOpen && (
+              <div
+                ref={attachMenuRef}
+                className="absolute bottom-full mb-2 left-0 z-50"
+                onKeyDown={(e) => { if (e.key === 'Escape') { e.preventDefault(); closeAttachMenu() } }}
+              >
+                <AttachEntityMenu initialCategory={attachCategory} onSelect={handleAttachSelect} />
               </div>
             )}
 
@@ -612,23 +869,46 @@ export function ChatThread({ channelId, channelType }) {
               value={body}
               onChange={handleBodyChange}
               onKeyDown={handleKeyDown}
-              placeholder="Message the team… (@ to mention)"
+              placeholder="Message the team… (@ to mention, / to attach)"
               rows={1}
               aria-label="Write a message"
               className="min-h-10 max-h-40 field-sizing-content overflow-y-auto"
             />
 
             <InputGroupAddon align="block-end">
-              <InputGroupButton
-                variant="outline"
-                size="icon-sm"
-                className="rounded-full"
-                onClick={handleMentionButtonClick}
-                title="Mention a teammate"
-                aria-label="Mention a teammate"
-              >
-                <Plus className="size-4" />
-              </InputGroupButton>
+              <Popover open={plusMenuOpen} onOpenChange={setPlusMenuOpen}>
+                <PopoverTrigger asChild>
+                  <InputGroupButton
+                    variant="outline"
+                    size="icon-sm"
+                    className="rounded-full"
+                    title="Mention or attach"
+                    aria-label="Mention or attach"
+                  >
+                    <Plus className="size-4" />
+                  </InputGroupButton>
+                </PopoverTrigger>
+                <PopoverContent align="start" className="w-52 p-1.5">
+                  <button
+                    onClick={() => { setPlusMenuOpen(false); handleMentionButtonClick() }}
+                    className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm text-left transition-colors hover:bg-muted/60"
+                  >
+                    <AtSign className="size-4 text-muted-foreground" /> Mention teammate
+                  </button>
+                  <button
+                    onClick={() => { setPlusMenuOpen(false); openAttachMenu('post') }}
+                    className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm text-left transition-colors hover:bg-muted/60"
+                  >
+                    <PencilRuler className="size-4 text-muted-foreground" /> Attach deliverable
+                  </button>
+                  <button
+                    onClick={() => { setPlusMenuOpen(false); openAttachMenu('task') }}
+                    className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm text-left transition-colors hover:bg-muted/60"
+                  >
+                    <ListChecks className="size-4 text-muted-foreground" /> Attach task
+                  </button>
+                </PopoverContent>
+              </Popover>
               <InputGroupButton
                 variant="default"
                 size="icon-sm"

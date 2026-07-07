@@ -201,6 +201,10 @@ export function useChannelMessages(channelId) {
       return (data ?? []).map((m) => ({
         ...m,
         reactions: m.chat_message_reactions ?? [],
+        // entity_references is the DB column name (references is a reserved
+        // SQL keyword) — normalized to `references` here so consumers don't
+        // need to know that.
+        references: m.entity_references ?? [],
       }))
     },
     enabled: !!channelId && !!workspaceUserId,
@@ -215,7 +219,7 @@ export function useChannelMessages(channelId) {
  * Send a message. author_user_id is the actual caller (auth.uid()), NOT the
  * workspace owner — enables per-author attribution, same rule as comments.
  */
-export async function sendMessage({ channelId, body, mentionedUids = [] }) {
+export async function sendMessage({ channelId, body, mentionedUids = [], references = [] }) {
   const { user, workspaceUserId } = await resolveWorkspace()
   const { data, error } = await supabase
     .from('chat_messages')
@@ -225,6 +229,7 @@ export async function sendMessage({ channelId, body, mentionedUids = [] }) {
       author_user_id: user.id,
       body,
       mentioned_uids: mentionedUids,
+      entity_references: references,
     })
     .select()
     .single()

@@ -183,7 +183,11 @@
       "mcp__supabase__search_docs",
       "Bash(node -e \"console.log\\(require\\('./node_modules/@supabase/supabase-js/package.json'\\).version\\)\")",
       "Bash(grep -v \"no-empty\\\\|exhaustive-deps\\\\|problems\\\\|AppShell.jsx$\")",
-      "Bash(git checkout *)"
+      "Bash(git checkout *)",
+      "Bash(node -e \"console.log\\(require\\('lucide-react/package.json'\\).version\\)\")",
+      "Bash(node -e \"const l = require\\('lucide-react'\\); console.log\\('TriangleAlert' in l, 'AlertTriangle' in l, 'Megaphone' in l, 'Users' in l\\)\")",
+      "Bash(grep -n \"header-row icon for \\\\`@Important\\\\`\" documentation/features/feature-workspace-chat.md)",
+      "Bash(grep -n \"changed from \\\\`Megaphone\\\\` to \\\\`Users\\\\`\" documentation/features/feature-workspace-chat.md)"
     ]
   }
 }

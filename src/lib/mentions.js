@@ -2,12 +2,21 @@
 // a pill background to read as a distinct chip (not inline text).
 export const MENTION_CLASS = 'rounded bg-indigo-50 dark:bg-indigo-950 px-1 py-0.5 font-medium text-indigo-700 dark:text-indigo-400'
 export const MY_MENTION_CLASS = 'rounded bg-rose-50 dark:bg-rose-950 px-1 py-0.5 font-medium text-rose-700 dark:text-rose-400'
+// "@Important" chip — deliberately red, distinct from every other mention
+// (regular and "@Everyone" both stay indigo/rose) so it reads as urgent.
+export const IMPORTANT_MENTION_CLASS = 'rounded bg-red-50 dark:bg-red-950 px-1 py-0.5 font-medium text-red-700 dark:text-red-400'
 
 // Inline mentions rendered within a posted comment/message body — no pill
 // background, just colored text, so they read as part of the sentence.
 // Mentions of the current logged-in user get a distinct rose highlight (Teams-style "@you").
-export const MENTION_TEXT_CLASS = 'font-medium text-indigo-700 dark:text-indigo-400'
-export const MY_MENTION_TEXT_CLASS = 'font-medium text-rose-700 dark:text-rose-400'
+export const MENTION_TEXT_CLASS = 'font-medium text-indigo-600 dark:text-indigo-400'
+export const MY_MENTION_TEXT_CLASS = 'font-medium text-rose-600 dark:text-rose-400'
+// Plain colored text (like MENTION_TEXT_CLASS) reads fine on a neutral
+// bubble but loses contrast against the blue --chat-self bubble on your own
+// messages — red-on-blue is close enough in lightness to read as muddy. A
+// solid pill (matching Badge's destructive variant: bg-destructive/text-white)
+// guarantees contrast regardless of the surrounding bubble color.
+export const IMPORTANT_TEXT_CLASS = 'inline-flex rounded px-1 font-semibold bg-red-600 text-white dark:bg-red-500'
 
 /**
  * Returns { at, caret, query } if the caret sits inside an "@token" being

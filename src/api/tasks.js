@@ -4,6 +4,25 @@ import { useAuth } from '@/context/AuthContext'
 import { resolveWorkspace } from '@/lib/workspace'
 import { fetchPostSummary } from '@/api/posts'
 
+/**
+ * Whether a task id exists at all in the caller's workspace, without
+ * exposing any of its content — for callers that only have the id (e.g. a
+ * chat reference) and need to tell "genuinely deleted" apart from "exists,
+ * but tasks_select's creator/assigned_to/admin RLS scope means you can't see
+ * it" (tasks are private to creator/assignee/admin, unlike deliverables).
+ */
+export function useTaskExists(taskId, { enabled = true } = {}) {
+  return useQuery({
+    queryKey: ['tasks', 'exists', taskId],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('task_reference_exists', { p_task_id: taskId })
+      if (error) throw error
+      return !!data
+    },
+    enabled: !!taskId && enabled,
+  })
+}
+
 export function useTasks({ clientId, campaignId, assignedToMe } = {}) {
   const { workspaceUserId, user } = useAuth()
   return useQuery({
