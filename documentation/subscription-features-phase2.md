@@ -41,6 +41,20 @@ The Tercero admin portal that agency staff use to set a workspace's plan lives i
 >
 > Full context, all seed SQL, and the reasoning behind each gating decision is in `documentation/subscription-features-phase2.md`.
 
+### Follow-up Handoff Prompt — `chat` flag (paste separately)
+
+A `chat` boolean column was added to `agency_subscriptions` after the above revision and was never included in this portal's plan-setting logic, since it didn't exist yet when that logic was written. It also turned out to be enforced only in the main app's UI, not the database — since fixed on the main-app side (see below), but the admin portal's plan-setting code needs the same update or it will keep writing rows with a stale/missing `chat` value. **Copy the prompt below into a Claude session running in the admin portal project:**
+
+> Tercero's `agency_subscriptions` table has a `chat` boolean column (workspace chat feature — a shared team channel plus 1:1 DMs) that this admin portal's plan-setting logic doesn't know about yet. Please:
+>
+> 1. **Find the same plan-setting code you updated for the Phase 2 pricing revision** (the form/action that writes `plan_name` + flag columns to `agency_subscriptions`).
+> 2. **Add `chat` to the values it writes per plan**, following the exact same Trial-mirrors-Quantum pattern already used for `campaigns`/`finance_*`/`calendar_export`/`documents_collections`/`branding_agency_sidebar`: `chat = TRUE` for Trial, Velocity, and Quantum; `chat = FALSE` for Ignite.
+> 3. **This is now enforced in the database, not just the main app's UI** — `ensure_workspace_channel()`, `get_or_create_dm_channel()`, and the `chat_messages` insert RLS policy all now call a new `is_chat_enabled_for_workspace()` helper that reads the `chat` column directly. This means `chat` is a genuine access gate now, not cosmetic — getting it wrong on a plan change actually breaks or unlocks the feature for that workspace, not just the sidebar nav item.
+> 4. **`chat` is an independent, override-capable flag** — same as every other feature boolean on this table. If this portal has (or gets) a way to toggle individual feature flags per workspace outside the plan-preset buttons (e.g. a raw field editor, a "grant this feature as a one-off" action), `chat` should be editable there too, and that path should NOT get silently overwritten by whatever "apply plan defaults" action exists — a manual grant/revoke should stick until someone explicitly changes it again.
+> 5. **No schema migration needed** — the `chat` column already exists in the shared Supabase database; this is purely an update to what values this portal writes to it.
+>
+> Reference: `documentation/subscription-features-phase2.md`'s "DB Flag Values per Plan" table and Seed SQL blocks in the main Tercero repo now include `chat` alongside every other flag — copy its values exactly rather than re-deriving them.
+
 ---
 
 ## What Changed from Live (Phase 1)
@@ -209,6 +223,9 @@ The Tercero admin portal that agency staff use to set a workspace's plan lives i
 | `documents_collections` | TRUE | FALSE | TRUE | TRUE |
 | `reports` | TRUE | FALSE | TRUE | TRUE |
 | `campaigns` *(deprecated — ignored)* | TRUE | TRUE | TRUE | TRUE |
+| `chat` | TRUE | FALSE | TRUE | TRUE |
+
+> **`chat` added post-Phase-2** (Workspace Chat feature, `documentation/features/feature-workspace-chat.md`) — same Trial-mirrors-Quantum precedent as every other Velocity+ flag. As of this update it is also enforced **in the database**, not just the UI: `ensure_workspace_channel()`, `get_or_create_dm_channel()`, and the `chat_messages` insert policy all call `is_chat_enabled_for_workspace()`, which reads the `chat` column directly (not `plan_name`) — so `chat` remains an independent, override-capable flag (a superadmin can grant/revoke it per workspace via `admin_update_subscription()` regardless of plan) rather than something purely derived at read time. `set_agency_plan()` sets it to the table above on every plan change.
 
 ## DB Limit Values per Plan
 
@@ -282,6 +299,7 @@ UPDATE agency_subscriptions SET
   calendar_export            = TRUE,
   documents_collections      = TRUE,
   campaigns                  = TRUE,
+  chat                       = TRUE,
   proposals_limit            = NULL,
   max_team_members           = NULL,
   extra_client_price_inr     = NULL,
@@ -302,6 +320,7 @@ UPDATE agency_subscriptions SET
   calendar_export            = FALSE,
   documents_collections      = FALSE,
   campaigns                  = TRUE,
+  chat                       = FALSE,
   proposals_limit            = 10,
   max_team_members           = 4,
   extra_client_price_inr     = 500,
@@ -322,6 +341,7 @@ UPDATE agency_subscriptions SET
   calendar_export            = TRUE,
   documents_collections      = TRUE,
   campaigns                  = TRUE,
+  chat                       = TRUE,
   proposals_limit            = NULL,
   max_team_members           = 10,
   extra_client_price_inr     = 500,
@@ -342,6 +362,7 @@ UPDATE agency_subscriptions SET
   calendar_export            = TRUE,
   documents_collections      = TRUE,
   campaigns                  = TRUE,
+  chat                       = TRUE,
   proposals_limit            = NULL,
   max_team_members           = NULL,
   extra_client_price_inr     = NULL,

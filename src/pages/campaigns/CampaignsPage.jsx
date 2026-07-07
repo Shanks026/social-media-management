@@ -3,6 +3,7 @@ import { useSubscription } from '@/api/useSubscription'
 import { useCampaigns } from '@/api/campaigns'
 import { usePermissions } from '@/api/usePermissions'
 import { CampaignTab } from '@/components/campaigns/CampaignTab'
+import { PlanUpgradePrompt } from '@/components/misc/PlanUpgradePrompt'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { Plus } from 'lucide-react'
@@ -23,6 +24,24 @@ export default function CampaignsPage() {
   const atLimit = campaignsLimit !== null && campaignCount >= campaignsLimit
 
   if (subLoading) return null
+
+  // Campaigns previously had no page-level gate at all — only the sidebar nav
+  // item was locked, so direct navigation to /campaigns worked on any plan.
+  if (!sub?.campaigns) {
+    return (
+      <div className="min-h-full bg-background selection:bg-primary/10">
+        <div className="px-8 pt-8 pb-20 max-w-[1400px] mx-auto animate-page-fade-in">
+          <h1 className="text-3xl font-normal tracking-tight text-foreground bricolage mb-4">
+            Campaigns
+          </h1>
+          <PlanUpgradePrompt
+            title="Campaigns are a Velocity feature"
+            description="Group posts into named campaigns, track progress, and manage client deliverables — available on Velocity and above."
+          />
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-full bg-background selection:bg-primary/10">

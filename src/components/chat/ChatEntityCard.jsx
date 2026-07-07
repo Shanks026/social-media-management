@@ -59,7 +59,7 @@ export function ChatDeliverableCard({ reference }) {
   return (
     <Link
       to={`/clients/${post.client_id}/posts/${post.version_id}`}
-      className="mt-1.5 flex w-96 max-w-full items-center gap-3 rounded-lg border border-border/50 px-3 py-2.5 transition-colors hover:bg-muted/40"
+      className="mt-1.5 flex w-96 max-w-full items-center gap-3 rounded-lg border border-border/70 px-3 py-2.5 transition-colors hover:bg-muted/40"
     >
       {post.media_urls?.[0] ? (
         <div className="relative size-11 shrink-0 overflow-hidden rounded-lg border border-border/50 bg-muted">
@@ -137,7 +137,7 @@ export function ChatTaskCard({ reference }) {
   return (
     <Link
       to={`/tasks?task=${task.id}`}
-      className="mt-1.5 flex w-96 max-w-full flex-col gap-1.5 rounded-lg border border-border/50 px-3 py-2.5 transition-colors hover:bg-muted/40"
+      className="mt-1.5 flex w-96 max-w-full flex-col gap-1.5 rounded-lg border border-border/70 px-3 py-2.5 transition-colors hover:bg-muted/40"
     >
       <div className="flex items-center gap-2">
         <Badge variant="outline" className={cn('gap-1.5 select-none', statusCfg.className)}>

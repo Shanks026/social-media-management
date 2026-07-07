@@ -2,10 +2,11 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { useQueryClient } from '@tanstack/react-query'
-import { ArrowUp, AtSign, FileText, ListChecks, Pencil, Plus, SmilePlus, Trash2, TriangleAlert, Users, X, Check, PencilRuler } from 'lucide-react'
+import { ArrowUp, AtSign, FileText, ListChecks, Lock, Pencil, Plus, SmilePlus, Trash2, TriangleAlert, Users, X, Check, PencilRuler } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/context/AuthContext'
 import { usePermissions } from '@/api/usePermissions'
+import { useTasks } from '@/api/tasks'
 import {
   useChannelMessages,
   useMemberMap,
@@ -79,12 +80,28 @@ function referenceHref(reference) {
 // and @Name mentions. References are matched first (an unambiguous bracketed
 // delimiter), then each remaining plain-text span is checked for mentions —
 // a message can contain both kinds of token at once.
-function MessageBody({ body, mentionNames, myMentionName, references, isOwn }) {
+function MessageBody({ body, mentionNames, myMentionName, references, isOwn, visibleTaskIds }) {
   const refSegments = splitReferences(body, references)
   return (
     <>
       {refSegments.map((seg, i) => {
         if (seg.isReference) {
+          // Tasks are RLS-scoped to creator/assignee/admin (unlike
+          // deliverables, which are workspace-wide) — the title snapshot
+          // stored on the message is otherwise shown to every viewer
+          // regardless of access, which defeats the point of ChatTaskCard's
+          // "you don't have access" fallback below. Redact the title (and
+          // drop the link, since it would only land on a no-op page anyway)
+          // for a task reference absent from this viewer's own visible list.
+          const isRestrictedTask = seg.reference.type === 'task' && visibleTaskIds && !visibleTaskIds.has(seg.reference.id)
+          if (isRestrictedTask) {
+            return (
+              <span key={i} className="inline-flex items-center gap-1 align-text-bottom text-muted-foreground italic">
+                <Lock className="size-3.5 shrink-0" />
+                a restricted task
+              </span>
+            )
+          }
           const ReferenceIcon = seg.reference.type === 'task' ? ListChecks : PencilRuler
           return (
             <Link
@@ -104,9 +121,11 @@ function MessageBody({ body, mentionNames, myMentionName, references, isOwn }) {
         }
         return splitMentions(seg.text, mentionNames).map((mseg, j) => {
           if (!mseg.isMention) return <span key={`${i}-${j}`}>{mseg.text}</span>
-          // "@Important" always renders in red, regardless of bubble
-          // ownership — unlike everything else here, it's meant to stand out.
-          if (mseg.text === '@Important') {
+          // "@Important" on your own (blue) bubble reuses OWN_MENTION_CLASS
+          // like every other token there — a solid red pill was tried but
+          // read as a clashing error badge rather than urgent text. Red only
+          // shows up on other people's (neutral-bubble) messages.
+          if (mseg.text === '@Important' && !isOwn) {
             return (
               <span key={`${i}-${j}`} className={IMPORTANT_TEXT_CLASS}>
                 {mseg.text}
@@ -236,7 +255,7 @@ function BubbleReactionsRow({ messageId, reactions, memberMap, currentUserId, on
   )
 }
 
-function ChatMessageRow({ message, author, isOwn, canModify, canDelete, mentionNames, myMentionName, memberMap, currentUserId, highlighted, onReacted, onDeleted }) {
+function ChatMessageRow({ message, author, isOwn, canModify, canDelete, mentionNames, myMentionName, memberMap, currentUserId, highlighted, onReacted, onDeleted, visibleTaskIds }) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(message.body)
   const [saving, setSaving] = useState(false)
@@ -359,6 +378,7 @@ function ChatMessageRow({ message, author, isOwn, canModify, canDelete, mentionN
                   myMentionName={myMentionName}
                   references={message.references}
                   isOwn={isOwn}
+                  visibleTaskIds={visibleTaskIds}
                 />
               </BubbleContent>
               <BubbleReactionsRow
@@ -395,6 +415,14 @@ export function ChatThread({ channelId, channelType }) {
   const { data: messages = [], isLoading } = useChannelMessages(channelId)
   const memberMap = useMemberMap()
   const [searchParams, setSearchParams] = useSearchParams()
+
+  // Task references are RLS-scoped to creator/assignee/admin (unlike
+  // deliverables) — this viewer's own visible task ids, so MessageBody can
+  // redact a referenced task's title/link when this viewer isn't one of
+  // them, instead of leaking the title snapshot to everyone regardless of
+  // access (see ChatEntityCard.jsx's matching "you don't have access" card).
+  const { data: myTasks = [] } = useTasks()
+  const visibleTaskIds = useMemo(() => new Set(myTasks.map((t) => t.id)), [myTasks])
 
   const taRef = useRef(null)
   const [body, setBody] = useState('')
@@ -762,6 +790,7 @@ export function ChatThread({ channelId, channelType }) {
                   highlighted={m.id === highlightedId}
                   onReacted={invalidate}
                   onDeleted={setDeleting}
+                  visibleTaskIds={visibleTaskIds}
                 />
               )
             })
