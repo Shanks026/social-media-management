@@ -61,6 +61,7 @@ import { useSubscription } from '@/api/useSubscription'
 import { usePermissions } from '@/api/usePermissions'
 import { usePendingApprovalsCount, useMySubmissionsCount } from '@/api/posts'
 import { useMyOverdueTaskCount } from '@/api/tasks'
+import { useChatUnreadSummary } from '@/api/chat'
 import {
   Tooltip,
   TooltipContent,
@@ -69,7 +70,7 @@ import {
 
 const BASE_NAV_ITEMS = [
   { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
-  { title: 'Chat', url: '/chat', icon: MessageCircle, requiresFlag: 'chat' },
+  { title: 'Chat', url: '/chat', icon: MessageCircle, requiresFlag: 'chat', showChatIndicator: true },
   {
     title: 'My Organization',
     url: '/myorganization',
@@ -211,6 +212,7 @@ export function NavMain() {
   const { data: approvalCount = 0 } = usePendingApprovalsCount()
   const { data: submissionsChangesCount = 0 } = useMySubmissionsCount('CHANGES_REQUESTED')
   const { data: overdueCount = 0 } = useMyOverdueTaskCount()
+  const { count: chatUnreadCount, hasMention: chatHasMention } = useChatUnreadSummary({ enabled: !!sub?.chat })
   const [openPopover, setOpenPopover] = useState(null)
   const [suppressedTooltip, setSuppressedTooltip] = useState(null)
 
@@ -370,6 +372,8 @@ export function NavMain() {
             const itemCount = item.showCount ? approvalCount : 0
             const changesCount = item.showChangesCount ? submissionsChangesCount : 0
             const myTodos = item.showTodoCount ? overdueCount : 0
+            const chatMentioned = item.showChatIndicator && chatHasMention
+            const chatCount = item.showChatIndicator && !chatMentioned ? chatUnreadCount : 0
             return (
               <SidebarMenuItem key={item.title}>
                 <SidebarMenuButton
@@ -393,6 +397,16 @@ export function NavMain() {
                     {!isCollapsed && myTodos > 0 && (
                       <span className="ml-auto flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-500 px-1 text-[10px] font-bold text-white">
                         {myTodos > 99 ? '99+' : myTodos}
+                      </span>
+                    )}
+                    {/* Mention takes priority over the plain unread count — a
+                        higher-attention signal than "something's unread". */}
+                    {!isCollapsed && chatMentioned && (
+                      <span className="ml-auto text-sm font-bold text-rose-500 dark:text-rose-400">@</span>
+                    )}
+                    {!isCollapsed && chatCount > 0 && (
+                      <span className="ml-auto flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white">
+                        {chatCount > 99 ? '99+' : chatCount}
                       </span>
                     )}
                     {!isCollapsed && isTopLocked && (

@@ -564,7 +564,7 @@ export function ChatThread({ channelId, channelType }) {
         </div>
       </ScrollArea>
 
-      <div className="shrink-0 border-t p-3">
+      <div className="shrink-0 p-3">
         <div className="max-w-5xl mx-auto">
           {/* Pending mention chips */}
           {pendingMentions.length > 0 && (

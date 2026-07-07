@@ -77,17 +77,22 @@ export function useMemberMap() {
 
 /**
  * The caller's channel list — the single workspace channel plus any DMs —
- * with unread counts and DM-partner resolution via get_my_chat_channels().
- * Bootstraps the workspace channel (and the caller's membership in it) on
- * first call via ensure_workspace_channel(), so this works for members who
- * existed before the chat feature shipped.
+ * with unread counts, per-channel mention state, and DM-partner resolution
+ * via get_my_chat_channels(). Bootstraps the workspace channel (and the
+ * caller's membership in it) on first call via ensure_workspace_channel(),
+ * so this works for members who existed before the chat feature shipped.
+ *
+ * `enabled` lets callers outside the chat pages (e.g. the main sidebar's nav
+ * badge) gate this off entirely for workspaces without the `chat` plan flag
+ * — otherwise every page load would bootstrap chat infra for users who don't
+ * have the feature at all.
  */
-export function useMyChannels() {
+export function useMyChannels({ enabled = true } = {}) {
   const { user, workspaceUserId } = useAuth()
   const queryClient = useQueryClient()
 
   useEffect(() => {
-    if (!user?.id) return
+    if (!user?.id || !enabled) return
 
     const invalidate = () =>
       queryClient.invalidateQueries({ queryKey: chatKeys.channels(user.id) })
@@ -109,7 +114,7 @@ export function useMyChannels() {
       .subscribe()
 
     return () => supabase.removeChannel(channel)
-  }, [user?.id, queryClient])
+  }, [user?.id, enabled, queryClient])
 
   return useQuery({
     queryKey: chatKeys.channels(user?.id),
@@ -120,10 +125,28 @@ export function useMyChannels() {
       if (error) throw error
       return data ?? []
     },
-    enabled: !!user?.id && !!workspaceUserId,
+    enabled: !!user?.id && !!workspaceUserId && enabled,
     staleTime: 30000,
     retry: 1,
   })
+}
+
+/**
+ * Aggregate unread state across every channel — total count, and whether any
+ * unread message actually mentions the caller. Powers the main sidebar's
+ * Chat nav badge (a plain count normally, an "@" takes priority when
+ * mentioned). Gated the same way as useMyChannels — see its `enabled` note.
+ */
+export function useChatUnreadSummary({ enabled = true } = {}) {
+  const { data: channels = [] } = useMyChannels({ enabled })
+
+  return useMemo(
+    () => ({
+      count: channels.reduce((sum, c) => sum + Number(c.unread_count || 0), 0),
+      hasMention: channels.some((c) => c.has_unread_mention),
+    }),
+    [channels],
+  )
 }
 
 /**

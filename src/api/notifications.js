@@ -171,3 +171,16 @@ export async function markAllNotificationsRead(userId) {
     .is('read_at', null)
   if (error) throw error
 }
+
+/**
+ * Manually delete a single notification. Additive to the 30-day auto-expiry
+ * cron job, not a replacement for it — RLS scopes this to the caller's own
+ * notifications (recipient_user_id = auth.uid()).
+ */
+export async function deleteNotification(id) {
+  const { error } = await supabase
+    .from('notifications')
+    .delete()
+    .eq('id', id)
+  if (error) throw error
+}

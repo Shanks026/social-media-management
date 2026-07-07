@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { formatDistanceToNow } from 'date-fns'
+import { toast } from 'sonner'
 import { useQueryClient } from '@tanstack/react-query'
 import {
   Bell,
@@ -12,6 +12,7 @@ import {
   AlertCircle,
   MessageCircle,
   CheckCheck,
+  Trash2,
 } from 'lucide-react'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Button } from '@/components/ui/button'
@@ -24,11 +25,13 @@ import {
   EmptyHeader,
 } from '@/components/ui/empty'
 import { cn } from '@/lib/utils'
+import { formatCompactTimeAgo } from '@/lib/helper'
 import {
   useUnreadNotificationCount,
   useNotifications,
   markNotificationRead,
   markAllNotificationsRead,
+  deleteNotification,
   notificationKeys,
 } from '@/api/notifications'
 import { useTeamMembers } from '@/api/team'
@@ -75,7 +78,7 @@ function resolveRoute(notification) {
 
 // ─── Single row ────────────────────────────────────────────────────────────────
 
-function NotificationRow({ notification, memberMap, onRead }) {
+function NotificationRow({ notification, memberMap, onRead, onDeleted }) {
   const navigate = useNavigate()
   const config = TYPE_CONFIG[notification.type] ?? { icon: Bell, color: 'text-muted-foreground', bg: 'bg-muted' }
   const Icon = config.icon
@@ -95,12 +98,37 @@ function NotificationRow({ notification, memberMap, onRead }) {
     if (route) navigate(route)
   }
 
+  function handleKeyDown(e) {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      handleClick()
+    }
+  }
+
+  // Nested inside the row's own click target below, so this must stop
+  // propagation — otherwise deleting would also fire the row's mark-read/navigate.
+  async function handleDelete(e) {
+    e.stopPropagation()
+    try {
+      await deleteNotification(notification.id)
+      onDeleted()
+    } catch (err) {
+      toast.error(err.message || 'Failed to delete notification')
+    }
+  }
+
   return (
-    <button
+    // A real <button> can't contain the delete button below (nested
+    // interactive elements are invalid HTML) — role="button" + onKeyDown
+    // keeps this keyboard-accessible without that constraint.
+    <div
+      role="button"
+      tabIndex={0}
       onClick={handleClick}
+      onKeyDown={handleKeyDown}
       aria-label={`${actorName ? `${actorName}: ` : ''}${notification.title}${isUnread ? ' (unread)' : ''}`}
       className={cn(
-        'w-full flex items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/60 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring',
+        'group relative w-full flex items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/60 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring',
         isUnread && 'bg-muted/40',
       )}
     >
@@ -127,7 +155,9 @@ function NotificationRow({ notification, memberMap, onRead }) {
         )}
       </span>
 
-      {/* Content */}
+      {/* Content — the delete button is absolutely positioned at the bottom
+          corner, so it floats over trailing content instead of needing
+          reserved layout space (which pushed the unread dot inward). */}
       <div className="min-w-0 flex-1">
         <div className="flex items-start justify-between gap-2">
           <p className={cn('text-sm leading-snug', isUnread ? 'font-medium' : 'text-muted-foreground')}>
@@ -145,10 +175,19 @@ function NotificationRow({ notification, memberMap, onRead }) {
         <p className="mt-1 text-[11px] text-muted-foreground/70">
           {actorName && <span className="font-medium text-muted-foreground">{actorName}</span>}
           {actorName && ' · '}
-          {formatDistanceToNow(new Date(notification.created_at), { addSuffix: true })}
+          {formatCompactTimeAgo(notification.created_at)}
         </p>
       </div>
-    </button>
+
+      <button
+        onClick={handleDelete}
+        className="absolute bottom-2 right-2 rounded p-1 text-muted-foreground opacity-0 transition-opacity hover:bg-background hover:text-destructive group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        title="Delete notification"
+        aria-label="Delete notification"
+      >
+        <Trash2 className="size-3.5" />
+      </button>
+    </div>
   )
 }
 
@@ -236,6 +275,7 @@ function NotificationPanel() {
                 notification={n}
                 memberMap={memberMap}
                 onRead={invalidate}
+                onDeleted={invalidate}
               />
             ))}
           </div>

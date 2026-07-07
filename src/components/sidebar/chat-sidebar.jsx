@@ -19,7 +19,13 @@ import {
 } from '@/components/ui/sidebar'
 import { Skeleton } from '@/components/ui/skeleton'
 
-function UnreadBadge({ count }) {
+// Mention takes priority over the plain unread count — a higher-attention
+// signal than "something's unread". No pill background on the "@", matching
+// the same treatment used for inline mentions and the main-sidebar nav badge.
+function UnreadBadge({ count, mentioned }) {
+  if (mentioned) {
+    return <span className="ml-auto text-sm font-bold text-rose-500 dark:text-rose-400">@</span>
+  }
   if (!count) return null
   return (
     <span className="ml-auto flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white">
@@ -119,7 +125,7 @@ export function ChatSidebar() {
                   >
                     <TeamChatAvatar logoUrl={sub?.logo_url} name={sub?.agency_name} className="size-6" />
                     <span className="truncate">{teamChatName}</span>
-                    <UnreadBadge count={workspaceChannel.unread_count} />
+                    <UnreadBadge count={workspaceChannel.unread_count} mentioned={workspaceChannel.has_unread_mention} />
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               )}
@@ -153,7 +159,7 @@ export function ChatSidebar() {
                       >
                         <MemberAvatar member={member} className="size-6" />
                         <span className="truncate">{member.full_name || member.email}</span>
-                        <UnreadBadge count={dm?.unread_count} />
+                        <UnreadBadge count={dm?.unread_count} mentioned={dm?.has_unread_mention} />
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   )
