@@ -35,7 +35,7 @@ export default function GuidesTab() {
   }
 
   return (
-    <div className="flex gap-16">
+    <div className="flex gap-44">
       {/* Content — own scroll container so right nav stays fixed */}
       <div className="flex-1 min-w-0 max-w-3xl flex flex-col gap-8">
         <div className="space-y-1">

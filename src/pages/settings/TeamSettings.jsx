@@ -852,10 +852,13 @@ export default function TeamSettings({ onInviteClick = () => {} }) {
 
   const handleDeletePermanently = async () => {
     if (!deletingMember) return
+    const name = deletingMember.full_name || 'Member'
     try {
-      await deleteMemberPermanently.mutateAsync(deletingMember.id)
+      const { authDeleted } = await deleteMemberPermanently.mutateAsync(deletingMember.id)
       toast.success(
-        `${deletingMember.full_name || 'Member'} permanently deleted`,
+        authDeleted
+          ? `${name} permanently deleted`
+          : `${name}'s access here was removed, but their login is still active on another workspace`,
       )
     } catch (err) {
       toast.error(err.message || 'Failed to delete member')
@@ -1287,10 +1290,20 @@ export default function TeamSettings({ onInviteClick = () => {} }) {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete permanently?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently remove{' '}
-              {deletingMember?.full_name || 'this member'} from the database.
-              They will need to be re-invited to rejoin. This cannot be undone.
+            <AlertDialogDescription asChild>
+              <div className="space-y-2">
+                <p>
+                  This deletes {deletingMember?.full_name || 'this member'}&apos;s login entirely — they
+                  would need a brand new account to ever rejoin. Deliverables, tasks, and chat messages
+                  they created stay exactly as they are, but will now show{' '}
+                  <span className="font-medium text-foreground">you</span> as the author instead of them.
+                </p>
+                <p>
+                  If they belong to another Tercero workspace, their login is left intact and only their
+                  access and data here are removed.
+                </p>
+                <p className="font-medium text-foreground">This cannot be undone.</p>
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

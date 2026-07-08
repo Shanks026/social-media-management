@@ -25,6 +25,8 @@ const AuthContext = createContext({
   workspaceUserId: null,
   userRole: null,
   userPermissions: null,
+  removedFromWorkspace: false,
+  workspaceVerified: false,
   signOut: async () => {},
 })
 
@@ -35,6 +37,13 @@ export const AuthProvider = ({ children }) => {
   const [workspaceUserId, setWorkspaceUserId] = useState(null)
   const [userRole, setUserRole] = useState(null)
   const [userPermissions, setUserPermissions] = useState(null)
+  const [removedFromWorkspace, setRemovedFromWorkspace] = useState(false)
+  // True only once a REAL (network) resolveWorkspace call has completed for
+  // the current uid — never set by the sessionStorage cache-restore
+  // shortcut. TrialGuardedShell requires this before ever rendering AppShell,
+  // so a removed member can't flash the dashboard for a frame using stale
+  // cached workspace data before the real check corrects it.
+  const [workspaceVerified, setWorkspaceVerified] = useState(false)
   // Tracks the uid we've already resolved the workspace for, so repeated auth
   // events for the SAME user don't re-resolve and churn workspaceUserId.
   const resolvedUidRef = useRef(null)
@@ -48,6 +57,8 @@ export const AuthProvider = ({ children }) => {
     setWorkspaceUserId(null)
     setUserRole(null)
     setUserPermissions(null)
+    setRemovedFromWorkspace(false)
+    setWorkspaceVerified(false)
   }, [])
 
   // Update workspace state only when a value actually changed. resolveWorkspace
@@ -78,15 +89,18 @@ export const AuthProvider = ({ children }) => {
     if (!uid) {
       setWorkspaceUserId(null)
       setUserRole(null)
+      setRemovedFromWorkspace(false)
+      setWorkspaceVerified(true)
       return
     }
 
-    const { data, error } = await supabase
+    // Fetch every membership row (active or not) rather than filtering
+    // is_active server-side — an inactive-only result set means "removed",
+    // which needs to be told apart from "no row at all" (genuine owner).
+    const { data: rows, error } = await supabase
       .from('agency_members')
-      .select('agency_user_id, system_role, permissions')
+      .select('agency_user_id, system_role, permissions, is_active')
       .eq('member_user_id', uid)
-      .eq('is_active', true)
-      .maybeSingle()
 
     // Transient failure (network blip, token mid-refresh): do NOT mis-resolve.
     // Keep whatever workspace state we already have and let a later event retry.
@@ -97,17 +111,32 @@ export const AuthProvider = ({ children }) => {
       return
     }
 
-    if (data) {
-      const ws = { wid: data.agency_user_id, role: data.system_role, perms: data.permissions ?? { documents: 'view' } }
+    const active = rows?.find((r) => r.is_active)
+
+    if (active) {
+      const ws = { wid: active.agency_user_id, role: active.system_role, perms: active.permissions ?? { documents: 'view' } }
       try { sessionStorage.setItem(`wsp_${uid}`, JSON.stringify(ws)) } catch { /* sessionStorage unavailable */ }
+      setRemovedFromWorkspace(false)
       applyWorkspace(ws.wid, ws.role, ws.perms)
+    } else if (rows?.length > 0) {
+      // Every membership row for this user is inactive — they were removed
+      // and belong nowhere else. Surface that explicitly instead of falling
+      // through to the owner branch (which would silently drop them into
+      // their own dormant personal workspace and its long-expired trial).
+      try { sessionStorage.removeItem(`wsp_${uid}`) } catch { /* sessionStorage unavailable */ }
+      setWorkspaceUserId(null)
+      setUserRole(null)
+      setUserPermissions(null)
+      setRemovedFromWorkspace(true)
     } else {
       // No membership row at all → genuine owner whose self-row isn't visible yet
       // (first-signup race). Owners resolve to their own uid.
       const ws = { wid: uid, role: 'owner', perms: { documents: 'manage' } }
       try { sessionStorage.setItem(`wsp_${uid}`, JSON.stringify(ws)) } catch { /* sessionStorage unavailable */ }
+      setRemovedFromWorkspace(false)
       applyWorkspace(ws.wid, ws.role, ws.perms)
     }
+    setWorkspaceVerified(true)
   }, [applyWorkspace])
 
   const refreshWorkspace = useCallback(async () => {
@@ -165,13 +194,16 @@ export const AuthProvider = ({ children }) => {
       if (uid === resolvedUidRef.current) return
       resolvedUidRef.current = uid
 
-      // Immediately restore cached workspace so TrialGuardedShell can mount
-      // AppShell without waiting for the async agency_members DB lookup.
-      // The DB call below still runs to verify/update role or permissions changes.
+      // Optimistically restore cached workspace for instant perceived state,
+      // but mark it unverified — TrialGuardedShell won't render AppShell off
+      // the back of this alone, only once the DB call below actually confirms
+      // it. Without that gate, a member removed since their last visit could
+      // flash the old dashboard for a frame before being corrected.
       try {
         const raw = sessionStorage.getItem(`wsp_${uid}`)
         if (raw) {
           const c = JSON.parse(raw)
+          setWorkspaceVerified(false)
           applyWorkspace(c.wid, c.role, c.perms)
         }
       } catch { /* ignore malformed cache */ }
@@ -217,8 +249,14 @@ export const AuthProvider = ({ children }) => {
   }, [user?.id, refreshWorkspace])
 
   const value = useMemo(
-    () => ({ user, session, loading, workspaceUserId, userRole, userPermissions, refreshWorkspace, signOut }),
-    [user, session, loading, workspaceUserId, userRole, userPermissions, refreshWorkspace, signOut]
+    () => ({
+      user, session, loading, workspaceUserId, userRole, userPermissions,
+      removedFromWorkspace, workspaceVerified, refreshWorkspace, signOut,
+    }),
+    [
+      user, session, loading, workspaceUserId, userRole, userPermissions,
+      removedFromWorkspace, workspaceVerified, refreshWorkspace, signOut,
+    ]
   )
 
   return (

@@ -313,15 +313,27 @@ export function TaskDetailSheet({
               {assignee && (
                 <div className="flex items-center gap-3">
                   <span className="text-xs text-muted-foreground w-24 shrink-0">Assigned To</span>
-                  <div className="flex items-center gap-2">
+                  <div className={cn('flex items-center gap-2', assignee._removed && 'opacity-60')}>
                     {assignee.avatar_url ? (
-                      <img src={assignee.avatar_url} alt="" className="size-5 rounded-full object-cover shrink-0" />
+                      <img
+                        src={assignee.avatar_url}
+                        alt=""
+                        className={cn('size-5 rounded-full object-cover shrink-0', assignee._removed && 'grayscale')}
+                      />
                     ) : (
-                      <div className="size-5 rounded-full bg-primary/10 flex items-center justify-center text-[9px] font-semibold text-primary shrink-0">
+                      <div
+                        className={cn(
+                          'size-5 rounded-full flex items-center justify-center text-[9px] font-semibold shrink-0',
+                          assignee._removed ? 'bg-muted text-muted-foreground' : 'bg-primary/10 text-primary',
+                        )}
+                      >
                         {(assignee.full_name || assignee.email || '?')[0].toUpperCase()}
                       </div>
                     )}
-                    <span className="text-sm">{assignee.full_name || assignee.email}</span>
+                    <span className="text-sm">
+                      {assignee.full_name || assignee.email}
+                      {assignee._removed && <span className="text-muted-foreground"> (Removed)</span>}
+                    </span>
                   </div>
                 </div>
               )}
@@ -329,34 +341,58 @@ export function TaskDetailSheet({
               {assignee && (
                 <div className="flex items-center gap-3">
                   <span className="text-xs text-muted-foreground w-24 shrink-0">Assigned By</span>
-                  <div className="flex items-center gap-2">
+                  <div className={cn('flex items-center gap-2', creatorMember?._removed && 'opacity-60')}>
                     {task.created_by !== currentUserId && (
                       creatorMember?.avatar_url ? (
-                        <img src={creatorMember.avatar_url} alt="" className="size-5 rounded-full object-cover shrink-0" />
+                        <img
+                          src={creatorMember.avatar_url}
+                          alt=""
+                          className={cn('size-5 rounded-full object-cover shrink-0', creatorMember?._removed && 'grayscale')}
+                        />
                       ) : (
-                        <div className="size-5 rounded-full bg-primary/10 flex items-center justify-center text-[9px] font-semibold text-primary shrink-0">
+                        <div
+                          className={cn(
+                            'size-5 rounded-full flex items-center justify-center text-[9px] font-semibold shrink-0',
+                            creatorMember?._removed ? 'bg-muted text-muted-foreground' : 'bg-primary/10 text-primary',
+                          )}
+                        >
                           {(creatorMember?.full_name || creatorMember?.email || '?')[0].toUpperCase()}
                         </div>
                       )
                     )}
-                    <span className="text-sm">{creatorName}</span>
+                    <span className="text-sm">
+                      {creatorName}
+                      {creatorMember?._removed && <span className="text-muted-foreground"> (Removed)</span>}
+                    </span>
                   </div>
                 </div>
               )}
 
               <div className="flex items-center gap-3">
                 <span className="text-xs text-muted-foreground w-24 shrink-0">Created By</span>
-                <div className="flex items-center gap-2">
+                <div className={cn('flex items-center gap-2', creatorMember?._removed && 'opacity-60')}>
                   {task.created_by !== currentUserId && (
                     creatorMember?.avatar_url ? (
-                      <img src={creatorMember.avatar_url} alt="" className="size-5 rounded-full object-cover shrink-0" />
+                      <img
+                        src={creatorMember.avatar_url}
+                        alt=""
+                        className={cn('size-5 rounded-full object-cover shrink-0', creatorMember?._removed && 'grayscale')}
+                      />
                     ) : (
-                      <div className="size-5 rounded-full bg-primary/10 flex items-center justify-center text-[9px] font-semibold text-primary shrink-0">
+                      <div
+                        className={cn(
+                          'size-5 rounded-full flex items-center justify-center text-[9px] font-semibold shrink-0',
+                          creatorMember?._removed ? 'bg-muted text-muted-foreground' : 'bg-primary/10 text-primary',
+                        )}
+                      >
                         {(creatorMember?.full_name || creatorMember?.email || '?')[0].toUpperCase()}
                       </div>
                     )
                   )}
-                  <span className="text-sm">{creatorName}</span>
+                  <span className="text-sm">
+                    {creatorName}
+                    {creatorMember?._removed && <span className="text-muted-foreground"> (Removed)</span>}
+                  </span>
                 </div>
               </div>
 
@@ -672,34 +708,54 @@ export default function TaskCard({ task, clientMap, campaignMap = {}, memberMap 
 
           {assignee && (
             canAssignTasks ? (
-              <div className="flex items-center gap-1.5 mt-auto pt-3">
+              <div className={cn('flex items-center gap-1.5 mt-auto pt-3', assignee._removed && 'opacity-60')}>
                 <span className="text-xs text-muted-foreground shrink-0">Assigned to</span>
                 {assignee.avatar_url ? (
-                  <img src={assignee.avatar_url} alt="" className="size-4 rounded-full object-cover shrink-0" />
+                  <img
+                    src={assignee.avatar_url}
+                    alt=""
+                    className={cn('size-4 rounded-full object-cover shrink-0', assignee._removed && 'grayscale')}
+                  />
                 ) : (
-                  <div className="size-4 rounded-full bg-primary/10 flex items-center justify-center text-[8px] font-semibold text-primary shrink-0">
+                  <div
+                    className={cn(
+                      'size-4 rounded-full flex items-center justify-center text-[8px] font-semibold shrink-0',
+                      assignee._removed ? 'bg-muted text-muted-foreground' : 'bg-primary/10 text-primary',
+                    )}
+                  >
                     {(assignee.full_name || assignee.email || '?')[0].toUpperCase()}
                   </div>
                 )}
                 <span className="text-xs text-foreground truncate">
                   {assignee.full_name || assignee.email}
+                  {assignee._removed && <span className="text-muted-foreground ml-1">(Removed)</span>}
                   {task.assigned_to === currentUserId && (
                     <span className="text-muted-foreground ml-1">(You)</span>
                   )}
                 </span>
               </div>
             ) : (
-              <div className="flex items-center gap-1.5 mt-auto pt-3">
+              <div className={cn('flex items-center gap-1.5 mt-auto pt-3', creatorMember?._removed && 'opacity-60')}>
                 <span className="text-xs text-muted-foreground shrink-0">Assigned by</span>
                 {creatorMember?.avatar_url ? (
-                  <img src={creatorMember.avatar_url} alt="" className="size-4 rounded-full object-cover shrink-0" />
+                  <img
+                    src={creatorMember.avatar_url}
+                    alt=""
+                    className={cn('size-4 rounded-full object-cover shrink-0', creatorMember?._removed && 'grayscale')}
+                  />
                 ) : (
-                  <div className="size-4 rounded-full bg-primary/10 flex items-center justify-center text-[8px] font-semibold text-primary shrink-0">
+                  <div
+                    className={cn(
+                      'size-4 rounded-full flex items-center justify-center text-[8px] font-semibold shrink-0',
+                      creatorMember?._removed ? 'bg-muted text-muted-foreground' : 'bg-primary/10 text-primary',
+                    )}
+                  >
                     {(creatorMember?.full_name || creatorMember?.email || '?')[0].toUpperCase()}
                   </div>
                 )}
                 <span className="text-xs text-foreground truncate">
                   {creatorMember?.full_name || creatorMember?.email || 'Team member'}
+                  {creatorMember?._removed && <span className="text-muted-foreground ml-1">(Removed)</span>}
                 </span>
               </div>
             )

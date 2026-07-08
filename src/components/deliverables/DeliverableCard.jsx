@@ -50,7 +50,7 @@ import { ClientAvatar } from '@/components/tasks/ClientAvatar'
 import { useAuth } from '@/context/AuthContext'
 import { usePermissions } from '@/api/usePermissions'
 import { DELETABLE_POST_STATUSES } from '@/lib/post-statuses'
-import { useTeamMembers } from '@/api/team'
+import { useTeamMembers, useRemovedMembers } from '@/api/team'
 import { useQueryClient, useMutation } from '@tanstack/react-query'
 import { deletePost, createRevision } from '@/api/posts'
 import DraftPostForm from '@/pages/posts/DraftPostForm'
@@ -186,6 +186,7 @@ export function DeliverableCard({ post, client }) {
 
   const { data: sub } = useSubscription()
   const { data: members = [] } = useTeamMembers()
+  const { data: removedMembers = [] } = useRemovedMembers()
 
   const createRevisionMutation = useMutation({
     mutationFn: () => createRevision(post.version_id, user?.id),
@@ -460,17 +461,28 @@ export function DeliverableCard({ post, client }) {
         {/* Dotted Divider & Footer */}
         <div className="mt-auto">
           {(() => {
-            const creator = members.find((m) => m.member_user_id === post.created_by)
+            // Removed members are checked too so a deliverable created by
+            // someone no longer on the team still shows who — instead of the
+            // whole row silently vanishing — flagged _removed for styling.
+            const creator =
+              members.find((m) => m.member_user_id === post.created_by) ??
+              (() => {
+                const r = removedMembers.find((m) => m.member_user_id === post.created_by)
+                return r ? { ...r, _removed: true } : null
+              })()
             if (!creator) return null
             const initials = creator.full_name?.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2) ?? '?'
             return (
-              <div className="flex items-center gap-1.5 mb-3">
+              <div className={cn('flex items-center gap-1.5 mb-3', creator._removed && 'opacity-60')}>
                 <span className="text-xs text-muted-foreground">Created by</span>
-                <Avatar className="size-4 shrink-0">
+                <Avatar className={cn('size-4 shrink-0', creator._removed && 'grayscale')}>
                   <AvatarImage src={creator.avatar_url} />
                   <AvatarFallback className="text-[9px]">{initials}</AvatarFallback>
                 </Avatar>
-                <span className="text-xs font-medium text-foreground/70 truncate">{creator.full_name}</span>
+                <span className="text-xs font-medium text-foreground/70 truncate">
+                  {creator.full_name}
+                  {creator._removed && <span className="text-muted-foreground"> (Removed)</span>}
+                </span>
               </div>
             )
           })()}
