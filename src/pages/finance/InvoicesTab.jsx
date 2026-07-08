@@ -18,6 +18,7 @@ import {
   Lock,
   Megaphone,
   Receipt,
+  Mail,
 } from 'lucide-react'
 
 import {
@@ -64,8 +65,9 @@ import { EditInvoiceDialog } from './EditInvoiceDialog'
 import { RecurringInvoiceDialog } from './RecurringInvoiceDialog'
 import { toast } from 'sonner'
 import { useSubscription } from '@/api/useSubscription'
-import { downloadInvoicePDF } from '@/utils/downloadInvoicePDF'
+import { downloadInvoicePDF, emailInvoicePDF } from '@/utils/downloadInvoicePDF'
 import { supabase } from '@/lib/supabase'
+import { useAuth } from '@/context/AuthContext'
 import {
   Empty,
   EmptyContent,
@@ -112,6 +114,7 @@ export default function InvoicesTab({ clientId, subTabs }) {
   const { data: clientData } = useClients()
   const clients = clientData?.realClients || []
   const { data: subscription } = useSubscription()
+  const { workspaceUserId } = useAuth()
 
   // --- Quick Stats ---
   const stats = useMemo(() => {
@@ -185,6 +188,52 @@ export default function InvoicesTab({ clientId, subTabs }) {
     } catch (err) {
       console.error('PDF generation error:', err)
       toast.error('Failed to generate PDF')
+    }
+  }
+
+  // --- Send via email handler ---
+  // Emails the invoice PDF to the client. When the invoice is still a DRAFT,
+  // this also transitions it to SENT (the happy path). Re-sending a SENT/OVERDUE
+  // invoice leaves its status untouched. "Mark as Sent" remains available for
+  // invoices delivered through other channels.
+  const handleSendEmail = async (invoice) => {
+    const recipientEmail = invoice.client?.email
+    if (!recipientEmail) {
+      toast.error('This client has no email address on file.')
+      return
+    }
+
+    const toastId = toast.loading('Generating & sending invoice…')
+    try {
+      const { data: items, error } = await supabase
+        .from('invoice_items')
+        .select('*')
+        .eq('invoice_id', invoice.id)
+        .order('created_at', { ascending: true })
+
+      if (error) throw error
+
+      const fullInvoice = { ...invoice, items: items || [] }
+      await emailInvoicePDF(fullInvoice, subscription || {}, {
+        recipientEmail,
+        recipientName: invoice.client?.name,
+        agencyUserId: workspaceUserId,
+      })
+
+      // Flip DRAFT → SENT once the email is on its way.
+      if (invoice.status === 'DRAFT') {
+        await new Promise((resolve, reject) =>
+          updateInvoice(
+            { id: invoice.id, updates: { status: 'SENT' } },
+            { onSuccess: resolve, onError: reject },
+          ),
+        )
+      }
+
+      toast.success(`Invoice emailed to ${recipientEmail}`, { id: toastId })
+    } catch (err) {
+      console.error('Invoice email error:', err)
+      toast.error(err.message || 'Failed to send invoice email', { id: toastId })
     }
   }
 
@@ -318,6 +367,12 @@ export default function InvoicesTab({ clientId, subTabs }) {
                 </>
               )}
             </DropdownMenuItem>
+            {inv.status !== 'PAID' && (
+              <DropdownMenuItem onClick={() => handleSendEmail(inv)}>
+                <Mail className="h-3.5 w-3.5 mr-2" />
+                {inv.status === 'DRAFT' ? 'Send via Email' : 'Resend Email'}
+              </DropdownMenuItem>
+            )}
             {inv.status === 'DRAFT' && (
               <DropdownMenuItem
                 onClick={() => handleStatusChange(inv.id, 'SENT')}

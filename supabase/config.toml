@@ -405,6 +405,11 @@ verify_jwt = false
 verify_jwt = false
 [functions.send-proposal-email]
 verify_jwt = false
+[functions.send-invoice-email]
+# verify_jwt=false: invoked from the authenticated app (Finance → Send via Email)
+# via functions.invoke; authenticates internally with the service key for the
+# branding lookup and does not read the caller JWT. Matches the other send-* email functions.
+verify_jwt = false
 [functions.send-feedback-notification]
 verify_jwt = false
 [functions.send-renewal-request]

@@ -57,7 +57,12 @@ export default function ChatPage() {
           {isWorkspaceChannel ? teamChatName : dmMember?.full_name || dmMember?.email || 'Direct Message'}
         </span>
       </div>
-      <ChatThread key={activeChannelId} channelId={activeChannelId} channelType={activeChannel.type} />
+      <ChatThread
+        key={activeChannelId}
+        channelId={activeChannelId}
+        channelType={activeChannel.type}
+        otherUserId={activeChannel.other_user_id}
+      />
     </div>
   )
 }

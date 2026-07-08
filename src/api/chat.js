@@ -2,7 +2,7 @@ import { supabase } from '@/lib/supabase'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/context/AuthContext'
 import { useTeamMembers } from '@/api/team'
-import { useEffect, useMemo } from 'react'
+import { useEffect, useId, useMemo } from 'react'
 import { resolveWorkspace } from '@/lib/workspace'
 
 // ─── Query Keys ────────────────────────────────────────────────────────────────
@@ -90,6 +90,15 @@ export function useMemberMap() {
 export function useMyChannels({ enabled = true } = {}) {
   const { user, workspaceUserId } = useAuth()
   const queryClient = useQueryClient()
+  // ChatSidebar and ChatPage both call this hook while /chat is open, so two
+  // instances are mounted concurrently. Supabase's realtime client keys
+  // subscriptions by topic — if both instances subscribed to the identical
+  // `chat-channels:${user.id}` topic, only the first join's postgres_changes
+  // filters actually get registered with the server, so whichever instance
+  // mounted second silently never fires (only a full reload's initial fetch
+  // would then reflect a new message, never the live update). useId() gives
+  // each mounted instance its own topic so both subscriptions actually work.
+  const instanceId = useId()
 
   useEffect(() => {
     if (!user?.id || !enabled) return
@@ -98,7 +107,7 @@ export function useMyChannels({ enabled = true } = {}) {
       queryClient.invalidateQueries({ queryKey: chatKeys.channels(user.id) })
 
     const channel = supabase
-      .channel(`chat-channels:${user.id}`)
+      .channel(`chat-channels:${user.id}:${instanceId}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'chat_channel_members', filter: `user_id=eq.${user.id}` },
@@ -114,7 +123,7 @@ export function useMyChannels({ enabled = true } = {}) {
       .subscribe()
 
     return () => supabase.removeChannel(channel)
-  }, [user?.id, enabled, queryClient])
+  }, [user?.id, enabled, queryClient, instanceId])
 
   return useQuery({
     queryKey: chatKeys.channels(user?.id),
