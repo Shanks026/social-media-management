@@ -96,7 +96,7 @@ import { useAuth } from '@/context/AuthContext'
 import { useClients } from '@/api/clients'
 import { useCampaigns } from '@/api/campaigns'
 import { useTasks, updateTaskStatus } from '@/api/tasks'
-import { useTeamMembers } from '@/api/team'
+import { useTeamMembers, useRemovedMembers } from '@/api/team'
 import { usePermissions } from '@/api/usePermissions'
 import CreateTaskDialog from '@/components/tasks/CreateTaskDialog'
 import EditTaskDialog from '@/components/tasks/EditTaskDialog'
@@ -445,16 +445,26 @@ function TasksTableView({ tasks, isLoading, clientMap, campaignMap, memberMap, c
         const assignee = getValue() ? memberMap[getValue()] : null
         if (!assignee) return <span className="text-xs text-muted-foreground">—</span>
         return (
-          <div className="flex items-center gap-2 min-w-0">
+          <div className={cn('flex items-center gap-2 min-w-0', assignee._removed && 'opacity-60')}>
             {assignee.avatar_url ? (
-              <img src={assignee.avatar_url} alt="" className="size-6 rounded-full object-cover shrink-0 ring-1 ring-border" />
+              <img
+                src={assignee.avatar_url}
+                alt=""
+                className={cn('size-6 rounded-full object-cover shrink-0 ring-1 ring-border', assignee._removed && 'grayscale')}
+              />
             ) : (
-              <div className="size-6 rounded-full bg-primary/10 flex items-center justify-center text-[9px] font-semibold text-primary shrink-0 ring-1 ring-border">
+              <div
+                className={cn(
+                  'size-6 rounded-full flex items-center justify-center text-[9px] font-semibold shrink-0 ring-1 ring-border',
+                  assignee._removed ? 'bg-muted text-muted-foreground' : 'bg-primary/10 text-primary',
+                )}
+              >
                 {(assignee.full_name || assignee.email || '?')[0].toUpperCase()}
               </div>
             )}
             <span className="text-sm truncate max-w-32">
               {assignee.full_name || assignee.email}
+              {assignee._removed && <span className="text-muted-foreground ml-1">(Removed)</span>}
               {getValue() === currentUserId && (
                 <span className="text-muted-foreground ml-1">(You)</span>
               )}
@@ -673,8 +683,15 @@ export default function TasksAndReminders() {
   const defaultClientId = null
 
   const { data: teamMembers = [] } = useTeamMembers()
+  const { data: removedMembers = [] } = useRemovedMembers()
+  // Removed members are merged in (flagged _removed) purely so an existing
+  // assignment/creation still resolves to a name instead of vanishing once
+  // someone leaves the workspace — never offered as assignable options.
   const memberMap = useMemo(() => {
     const map = Object.fromEntries(teamMembers.map((m) => [m.member_user_id, m]))
+    removedMembers.forEach((m) => {
+      if (!map[m.member_user_id]) map[m.member_user_id] = { ...m, _removed: true }
+    })
     if (user && !map[user.id]) {
       map[user.id] = {
         member_user_id: user.id,
@@ -684,7 +701,7 @@ export default function TasksAndReminders() {
       }
     }
     return map
-  }, [teamMembers, user])
+  }, [teamMembers, removedMembers, user])
 
   const memberList = useMemo(() =>
     Object.values(memberMap).map((m) => ({

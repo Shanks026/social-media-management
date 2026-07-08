@@ -207,9 +207,13 @@ const s = StyleSheet.create({
 
 /* ── Helpers ── */
 function fmtCurrency(val) {
+  // Render the ISO code ("INR 1,234") rather than the ₹ symbol — the rupee
+  // glyph renders blank in the PDF when the embedded font's glyph set / CDN
+  // fetch is unavailable, so use the always-safe currency code instead.
   return new Intl.NumberFormat(CURRENCY.LOCALE, {
     style: 'currency',
     currency: CURRENCY.CODE,
+    currencyDisplay: 'code',
     maximumFractionDigits: 0,
   }).format(val || 0)
 }

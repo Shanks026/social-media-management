@@ -3,9 +3,12 @@ import { CURRENCY } from '@/utils/constants'
 
 /* ── Helpers ── */
 function fmtCurrency(val) {
+  // Mirror InvoicePDF: render the ISO code ("INR 1,234") not the ₹ symbol, so
+  // the on-screen preview matches the generated PDF exactly.
   return new Intl.NumberFormat(CURRENCY.LOCALE, {
     style: 'currency',
     currency: CURRENCY.CODE,
+    currencyDisplay: 'code',
     maximumFractionDigits: 0,
   }).format(val || 0)
 }

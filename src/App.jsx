@@ -43,6 +43,7 @@ import ProposalDetailPage from './pages/proposals/ProposalDetailPage'
 import ProposalReview from './pages/proposals/ProposalReview'
 import TrialExpired from './pages/TrialExpired'
 import SubscriptionExpired from './pages/SubscriptionExpired'
+import NoWorkspaceAccess from './pages/NoWorkspaceAccess'
 import NotFound from './pages/NotFound'
 import PublicNotFound from './pages/PublicNotFound'
 import HelpPage from './pages/help/HelpPage'
@@ -93,12 +94,24 @@ function PublicOnlyRoute({ children }) {
 const TGS_BLANK = <div className="h-screen w-full bg-background" />
 
 function TrialGuardedShell({ user }) {
-  const { workspaceUserId } = useAuth()
+  const { workspaceUserId, removedFromWorkspace, workspaceVerified } = useAuth()
   const { data: sub } = useSubscription()
   const [hasShown, setHasShown] = useState(false)
 
-  // First-load gate: wait for the workspace + subscription before showing anything.
-  const ready = !!workspaceUserId && !!sub
+  // Removed members never get a workspaceUserId, so they'd otherwise sit on
+  // TGS_BLANK forever waiting for `ready` — check this before that gate.
+  if (removedFromWorkspace) return <Navigate to="/no-access" replace />
+
+  // First-load gate: wait for the workspace + subscription before showing
+  // anything — and specifically for a VERIFIED workspace, not the optimistic
+  // sessionStorage-cached one AuthContext applies instantly on every auth
+  // event. Without `workspaceVerified`, a member removed since their last
+  // visit could flash the old dashboard for a frame before the real
+  // agency_members check corrects it to `removedFromWorkspace`. Once
+  // `hasShown` latches below, this no longer gates anything — a later
+  // token refresh briefly toggling `workspaceVerified` won't blank an
+  // already-mounted AppShell.
+  const ready = !!workspaceUserId && !!sub && workspaceVerified
 
   // Once the shell has been shown, keep it mounted. Transient subscription
   // states (refetch on invalidate, token refresh, cache wipe on logout) must
@@ -192,6 +205,7 @@ function AppRoutes() {
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/trial-expired" element={<TrialExpired />} />
           <Route path="/subscription-expired" element={<SubscriptionExpired />} />
+          <Route path="/no-access" element={<NoWorkspaceAccess />} />
           <Route element={<TrialGuardedShell user={user} />}>
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/chat" element={<ChatRoute />} />

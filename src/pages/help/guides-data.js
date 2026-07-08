@@ -46,6 +46,33 @@ export const GUIDES = [
     ],
   },
   {
+    id: 'chat',
+    title: 'Chat',
+    description: 'A shared workspace channel plus 1:1 messages with your team, without leaving Tercero.',
+    sections: [
+      {
+        heading: 'Workspace Room and Direct Messages',
+        body: 'Every team member is automatically part of one shared workspace channel. You can also message any teammate directly from the Chat sidebar — starting a DM creates the conversation the first time you send them something.',
+      },
+      {
+        heading: 'Mentions and Reactions',
+        body: 'Type @ to mention a teammate. Inside the workspace room you can also use @Everyone or @Important to flag something to the whole team; those are not available in a 1:1 conversation since there is only one other person to reach. Messages support emoji reactions the same way comments do.',
+      },
+      {
+        heading: 'Referencing Work',
+        body: 'Use / in the composer to attach a specific deliverable or task to a message — it renders as a clickable card in the thread. Task references respect the same access rules as the Tasks page, so you will never see the title of a task you are not allowed to view.',
+      },
+      {
+        heading: 'Sidebar Preview and Unread State',
+        body: 'The Chat sidebar shows your conversations sorted by most recent activity, each with a preview of the last message and a timestamp. Unread conversations appear bolded with a count badge; an @ badge takes priority when you have been mentioned directly.',
+      },
+      {
+        heading: 'Availability',
+        body: 'Chat is available on Velocity and Quantum plans, and during your trial. On Ignite, the Chat nav item is visible but locked with an upgrade prompt.',
+      },
+    ],
+  },
+  {
     id: 'prospects',
     title: 'Prospects',
     description: 'Manage your pipeline of potential clients from first contact to conversion.',
@@ -91,7 +118,7 @@ export const GUIDES = [
       },
       {
         heading: 'Proposal Limits by Plan',
-        body: 'Ignite plan users can have up to 5 active proposals at a time. Velocity and Quantum plans have no limit. Once you reach the limit on Ignite, the create button is replaced with an upgrade prompt.',
+        body: 'Ignite plan users can have up to 10 active proposals at a time. Velocity and Quantum plans have no limit. Once you reach the limit on Ignite, the create button is replaced with an upgrade prompt.',
       },
     ],
   },
@@ -114,7 +141,7 @@ export const GUIDES = [
       },
       {
         heading: 'Client Limits',
-        body: 'Your plan determines how many clients you can have. Ignite allows up to 5, Velocity up to 15, and Quantum up to 30. Your current usage is always visible in the sidebar subscription card. You can add extra clients beyond your plan limit at an additional per-client fee.',
+        body: 'Your plan determines how many clients you can have. Ignite allows up to 8, Velocity up to 20, and Quantum is unlimited. Your current usage is always visible in the sidebar subscription card. You can add extra clients beyond your plan limit on Ignite or Velocity for a flat ₹500/client.',
       },
     ],
   },
@@ -129,7 +156,11 @@ export const GUIDES = [
       },
       {
         heading: 'Post Statuses',
-        body: 'A post moves through these statuses: Draft, Pending (submitted for review), Revisions Requested, Scheduled (approved), and Archived. You control the status manually. On the Deliverables page, tabs across the top filter posts by their current status so you can focus on what needs attention.',
+        body: 'A deliverable moves through a full lifecycle: Draft, an optional internal Submitted / Changes Requested / Ready loop (see Approvals & Submissions), Pending Approval once it is sent to the client, Approved or Needs Revision based on their feedback, then Scheduled and Published. On the Deliverables page, tabs across the top filter posts by their current status so you can focus on what needs attention.',
+      },
+      {
+        heading: 'Linking to Campaigns and Tasks',
+        body: 'A deliverable can be assigned to a campaign from its card menu, and any task can link back to one or more deliverables — so a piece of content and the work items around it stay connected. Linked tasks show up on the deliverable’s own page under Linked Tasks.',
       },
       {
         heading: 'Platform Previews',
@@ -146,6 +177,29 @@ export const GUIDES = [
       {
         heading: 'Filtering and Search',
         body: 'The Deliverables page supports filtering by client, platform, campaign, date range, and content health (Urgent, Upcoming, Idle). Urgent posts are those due within 24 hours, Upcoming within 72 hours. These filters help you prioritise what needs to go out soonest.',
+      },
+    ],
+  },
+  {
+    id: 'approvals',
+    title: 'Approvals & Submissions',
+    description: 'The internal review step deliverables go through before they reach a client.',
+    sections: [
+      {
+        heading: 'Submitting for Internal Approval',
+        body: 'Team members submit their own drafts for internal approval before they go anywhere near a client. Submitting moves the status to Submitted and notifies the workspace owner and admins. Owners and admins can skip this and send a draft straight to Ready themselves — the step mainly exists to give team leads a checkpoint on member-created work.',
+      },
+      {
+        heading: 'Reviewing on the Approvals Page',
+        body: 'Owners and admins review everything waiting on them from the Approvals page. Each submission can be approved, moving it to Ready, or sent back with a note requesting changes, which flips it to Changes Requested for the original creator to fix and resubmit.',
+      },
+      {
+        heading: 'Tracking Your Own Submissions',
+        body: 'Team members can see the status of everything they have submitted from the Submissions page, including how many are currently sent back for changes, so nothing sits waiting on a decision without you knowing.',
+      },
+      {
+        heading: 'From Ready to Client',
+        body: 'Once a deliverable is Ready, an owner or admin sends it on for client review the same way as any other post, or schedules it directly if no client sign-off is needed.',
       },
     ],
   },
@@ -172,7 +226,30 @@ export const GUIDES = [
       },
       {
         heading: 'Campaign Limits',
-        body: 'Ignite plan users can have up to 5 campaigns. Velocity and Quantum plans have no limit. Campaigns are locked entirely on plans below Ignite.',
+        body: 'Ignite plan users can have up to 8 campaigns. Velocity and Quantum plans have no limit.',
+      },
+    ],
+  },
+  {
+    id: 'tasks',
+    title: 'Tasks & Todos',
+    description: 'Internal work items for your team, optionally linked to a client, campaign, or deliverable.',
+    sections: [
+      {
+        heading: 'Creating a Task',
+        body: 'Click New Task to create one with a title, priority, and optional due date. A task can be scoped to a client, or left as a "General" task with no client at all for internal work that does not belong to any one account.',
+      },
+      {
+        heading: 'Linking Work',
+        body: 'A task can be tagged with a campaign and linked to any number of specific deliverables, even across different clients for a General task. Linked deliverables show up as a badge on the card, and the reverse link appears on the deliverable’s own page under Linked Tasks.',
+      },
+      {
+        heading: 'Assigning Tasks',
+        body: 'Only owners and admins can assign a task to someone else. Team members can still create and manage their own tasks, but assigning work to other people is restricted to keep workload distribution centralised.',
+      },
+      {
+        heading: 'Views and Status',
+        body: 'Tasks move through To Do, In Progress, Completed, and Archived. View them as a kanban board, a grouped list, or a table depending on how you like to work, and filter by a specific client, General, or Internal.',
       },
     ],
   },
@@ -214,7 +291,22 @@ export const GUIDES = [
       },
       {
         heading: 'Storage Limits',
-        body: 'Your plan comes with a storage allocation: 20GB on Ignite, 100GB on Velocity, and 300GB on Quantum. Your current usage is shown in the Billing and Usage section. Files count toward your total regardless of which client they are stored under.',
+        body: 'Your plan comes with a storage allocation: 50GB on Ignite, 200GB on Velocity, and 500GB (base) on Quantum. Your current usage is shown in the Billing and Usage section. Files count toward your total regardless of which client they are stored under.',
+      },
+    ],
+  },
+  {
+    id: 'reports',
+    title: 'Reports',
+    description: 'Generate a branded, downloadable performance summary for any client.',
+    sections: [
+      {
+        heading: 'Generating a Report',
+        body: 'Pick a client from the dropdown to see a stat summary — deliverables by status, revenue, and activity for that account. Click Download to export it as a branded PDF you can send straight to the client.',
+      },
+      {
+        heading: 'Availability',
+        body: 'Reports is available on Velocity and Quantum plans, and during your trial.',
       },
     ],
   },
@@ -297,12 +389,12 @@ export const GUIDES = [
         body: 'Go to General Settings and open the Team tab. Click Generate Invite Link to create a shareable link. Anyone who joins via that link becomes a member of your workspace with full access to all clients, posts, campaigns, and documents.',
       },
       {
-        heading: 'Workspace Access',
-        body: 'All team members share the same workspace as the owner. They can see and interact with everything in the workspace. There are currently no role-based permissions — all members have equivalent access. Role management is planned for a future release.',
+        heading: 'Roles and Permissions',
+        body: 'Every team member has a role: Owner, Admin, or Member. Owners and admins get full operational access — finance, proposals, prospects, reports, creating clients and campaigns, sending deliverables to clients, and assigning tasks. Members work inside clients and deliverables but do not get those higher-level actions, and their access to documents can be tuned individually (view or manage) from the Team tab.',
       },
       {
         heading: 'Seat Limits',
-        body: 'The number of team members you can invite depends on your plan. Ignite allows 2 seats, Velocity allows 5, and Quantum has no limit. Active links are shown in the Team tab alongside active members.',
+        body: 'The number of team members you can invite depends on your plan. Ignite includes 4 seats, Velocity includes 10, and Quantum is unlimited. You can add extra seats beyond your plan limit on Ignite or Velocity for a flat ₹399/seat. Active links are shown in the Team tab alongside active members.',
       },
     ],
   },

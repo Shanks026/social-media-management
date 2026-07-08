@@ -7,6 +7,7 @@ import {
   flexRender,
   createColumnHelper,
 } from '@tanstack/react-table'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useHeader } from '@/components/misc/header-context'
 import { useAuth } from '@/context/AuthContext'
 import { Button } from '@/components/ui/button'
@@ -87,7 +88,6 @@ import {
 
 import {
   SYSTEM_ROLE_PALETTE,
-  REMOVED_PALETTE,
   getRolePalette,
 } from '@/lib/team-roles'
 import { usePermissions } from '@/api/usePermissions'
@@ -143,6 +143,7 @@ export default function TeamPage() {
   const { canManageTeam } = usePermissions()
   const queryClient = useQueryClient()
 
+  const [activeTab, setActiveTab] = useState('active')
   const [sorting, setSorting] = useState([])
   const [globalFilter, setGlobalFilter] = useState('')
   const [roleFilter, setRoleFilter] = useState('all')
@@ -200,9 +201,14 @@ export default function TeamPage() {
 
   const handleDeletePermanently = useCallback(async () => {
     if (!deletingMember) return
+    const name = deletingMember.full_name || 'Member'
     try {
-      await deleteMemberPermanently.mutateAsync(deletingMember.id)
-      toast.success(`${deletingMember.full_name || 'Member'} permanently deleted`)
+      const { authDeleted } = await deleteMemberPermanently.mutateAsync(deletingMember.id)
+      toast.success(
+        authDeleted
+          ? `${name} permanently deleted`
+          : `${name}'s access here was removed, but their login is still active on another workspace`,
+      )
     } catch (err) {
       toast.error(err.message || 'Failed to delete member')
     } finally {
@@ -236,17 +242,15 @@ export default function TeamPage() {
     const opts = [{ key: 'all', label: 'All Members', dot: null }]
     if (hasOwnerOrAdmin) opts.push({ key: 'elevated', label: 'Owner / Admin', dot: SYSTEM_ROLE_PALETTE.owner.dot })
     functionalRoles.forEach((r) => opts.push({ key: r, label: r, dot: getRolePalette(r)?.dot }))
-    if (canManageTeam && removedMembers.length > 0)
-      opts.push({ key: 'removed', label: 'Removed', dot: REMOVED_PALETTE.dot })
     return opts
-  }, [members, removedMembers, canManageTeam])
+  }, [members])
 
   const tableData = useMemo(() => {
-    if (roleFilter === 'removed') return removedMembers.map((m) => ({ ...m, _removed: true }))
+    if (activeTab === 'removed') return removedMembers.map((m) => ({ ...m, _removed: true }))
     if (roleFilter === 'all') return members
     if (roleFilter === 'elevated') return members.filter((m) => m.system_role === 'owner' || m.system_role === 'admin')
     return members.filter((m) => m.functional_role === roleFilter)
-  }, [members, removedMembers, roleFilter])
+  }, [members, removedMembers, roleFilter, activeTab])
 
   // ── Column definitions ────────────────────────────────────────────────────
 
@@ -561,6 +565,49 @@ export default function TeamPage() {
             )}
           </div>
 
+          {/* ── Tabs ── */}
+          {canManageTeam && (
+            <Tabs
+              value={activeTab}
+              onValueChange={(v) => { setActiveTab(v); setRoleFilter('all') }}
+              className="w-full"
+            >
+              <TabsList className="bg-transparent h-auto w-full justify-start rounded-none p-0 gap-8 border-b border-border/40">
+                {[
+                  { key: 'active', label: 'Active Team Members', count: members.length },
+                  { key: 'removed', label: 'Removed', count: removedMembers.length },
+                ].map((tab) => (
+                  <TabsTrigger
+                    key={tab.key}
+                    value={tab.key}
+                    className="
+                      relative rounded-none bg-transparent px-0 pb-3 pt-0 text-[13px] font-medium transition-none
+                      shadow-none border-b-2 border-transparent text-muted-foreground
+                      flex-none w-fit gap-2
+                      data-[state=active]:bg-transparent
+                      dark:data-[state=active]:bg-transparent
+                      data-[state=active]:text-black
+                      dark:data-[state=active]:text-white
+                      data-[state=active]:border-black
+                      dark:data-[state=active]:border-white
+                      data-[state=active]:shadow-none
+                      data-[state=active]:border-x-0
+                      data-[state=active]:border-t-0
+                      focus-visible:ring-0
+                    "
+                  >
+                    {tab.label}
+                    {tab.count > 0 && (
+                      <Badge variant="secondary" className="text-xs px-1.5 py-0 min-w-5 text-center">
+                        {tab.count}
+                      </Badge>
+                    )}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </Tabs>
+          )}
+
           {/* ── Search + filter toolbar ── */}
           {!membersLoading && (
             <div className="flex items-center gap-3">
@@ -574,7 +621,7 @@ export default function TeamPage() {
                 />
               </div>
               <div className="flex-1" />
-              {roleOptions.length > 1 && (
+              {activeTab === 'active' && roleOptions.length > 1 && (
                 <Select value={roleFilter} onValueChange={setRoleFilter}>
                   <SelectTrigger size="sm" className="w-40 h-8">
                     <SelectValue>
@@ -621,18 +668,26 @@ export default function TeamPage() {
           ) : tableData.length === 0 ? (
             <Empty className="py-16 border border-dashed rounded-2xl bg-muted/5">
               <EmptyContent>
-                <div className="text-4xl leading-none select-none mb-2">👥</div>
+                <div className="text-4xl leading-none select-none mb-2">
+                  {activeTab === 'removed' ? '🗂️' : '👥'}
+                </div>
                 <EmptyHeader>
                   <EmptyTitle className="font-bold text-xl">
-                    {members.length === 0 ? 'Just you for now' : 'No members match this filter'}
+                    {activeTab === 'removed'
+                      ? 'No removed members'
+                      : members.length === 0
+                        ? 'Just you for now'
+                        : 'No members match this filter'}
                   </EmptyTitle>
                   <EmptyDescription className="font-normal">
-                    {members.length === 0
-                      ? 'Invite a teammate to collaborate on client accounts and share the workload.'
-                      : 'Try selecting a different role filter above.'}
+                    {activeTab === 'removed'
+                      ? 'Members you remove from the workspace show up here.'
+                      : members.length === 0
+                        ? 'Invite a teammate to collaborate on client accounts and share the workload.'
+                        : 'Try selecting a different role filter above.'}
                   </EmptyDescription>
                 </EmptyHeader>
-                {canManageTeam && members.length === 0 && (
+                {canManageTeam && activeTab === 'active' && members.length === 0 && (
                   <Button variant="outline" size="sm" onClick={() => setInviteOpen(true)}>
                     <UserPlus className="size-4 mr-2" />
                     Invite Team Member
@@ -720,9 +775,20 @@ export default function TeamPage() {
             <AlertDialogContent>
               <AlertDialogHeader>
                 <AlertDialogTitle>Delete permanently?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  This will permanently remove {deletingMember?.full_name || 'this member'} from the
-                  database. They will need to be re-invited to rejoin. This cannot be undone.
+                <AlertDialogDescription asChild>
+                  <div className="space-y-2">
+                    <p>
+                      This deletes {deletingMember?.full_name || 'this member'}&apos;s login entirely —
+                      they would need a brand new account to ever rejoin. Deliverables, tasks, and chat
+                      messages they created stay exactly as they are, but will now show{' '}
+                      <span className="font-medium text-foreground">you</span> as the author instead of them.
+                    </p>
+                    <p>
+                      If they belong to another Tercero workspace, their login is left intact and only
+                      their access and data here are removed.
+                    </p>
+                    <p className="font-medium text-foreground">This cannot be undone.</p>
+                  </div>
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>

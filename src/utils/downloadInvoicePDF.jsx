@@ -1,5 +1,7 @@
 import { pdf } from '@react-pdf/renderer'
 import InvoicePDF from '@/components/InvoicePDF'
+import { supabase } from '@/lib/supabase'
+import { CURRENCY } from '@/utils/constants'
 
 const TERCERO_SVG_URL = '/TerceroLand.svg'
 
@@ -89,13 +91,14 @@ async function resolveSvgField(url, targetHeight) {
 }
 
 /**
- * Generate and download an invoice PDF.
+ * Generate an invoice PDF and return it as a Blob.
+ * Shared by the download flow and the email flow so both produce an identical PDF.
  *
  * @param {object}  invoice  – Full invoice object with .client, .items, etc.
  * @param {object}  agency   – Agency settings (agency_name, logo_url, email, …)
- * @returns {Promise<void>}
+ * @returns {Promise<Blob>}
  */
-export async function downloadInvoicePDF(invoice, agency = {}) {
+export async function generateInvoicePDFBlob(invoice, agency = {}) {
   // Ignite (no whitelabel) needs TerceroLand in the header/footer.
   // Quantum (full_whitelabel) needs neither.
   let terceroLogoDataUrl = null
@@ -112,9 +115,20 @@ export async function downloadInvoicePDF(invoice, agency = {}) {
 
   const resolvedAgency = { ...agency, signature_url, logo_url, logo_horizontal_url }
 
-  const blob = await pdf(
+  return pdf(
     <InvoicePDF invoice={invoice} agency={resolvedAgency} terceroLogoDataUrl={terceroLogoDataUrl} />,
   ).toBlob()
+}
+
+/**
+ * Generate and download an invoice PDF.
+ *
+ * @param {object}  invoice  – Full invoice object with .client, .items, etc.
+ * @param {object}  agency   – Agency settings (agency_name, logo_url, email, …)
+ * @returns {Promise<void>}
+ */
+export async function downloadInvoicePDF(invoice, agency = {}) {
+  const blob = await generateInvoicePDFBlob(invoice, agency)
 
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
@@ -124,4 +138,58 @@ export async function downloadInvoicePDF(invoice, agency = {}) {
   a.click()
   document.body.removeChild(a)
   URL.revokeObjectURL(url)
+}
+
+/** Read a Blob into a bare base64 string (no `data:` prefix). */
+function blobToBase64(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onloadend = () => resolve(String(reader.result).split(',')[1] || '')
+    reader.onerror = reject
+    reader.readAsDataURL(blob)
+  })
+}
+
+/**
+ * Generate the invoice PDF and email it to the client (as an attachment) via
+ * the `send-invoice-email` edge function.
+ *
+ * @param {object} invoice        – Full invoice object with .client, .items, .total …
+ * @param {object} agency         – Agency settings (branding + address)
+ * @param {object} opts
+ * @param {string} opts.recipientEmail
+ * @param {string} [opts.recipientName]
+ * @param {string} opts.agencyUserId – workspaceUserId, for branding lookup
+ * @returns {Promise<object>} the edge function response
+ */
+export async function emailInvoicePDF(invoice, agency = {}, opts = {}) {
+  const { recipientEmail, recipientName, agencyUserId } = opts
+  if (!recipientEmail) throw new Error('The client has no email address on file.')
+
+  const blob = await generateInvoicePDFBlob(invoice, agency)
+  const pdf_base64 = await blobToBase64(blob)
+
+  const totalFormatted = new Intl.NumberFormat(CURRENCY.LOCALE, {
+    style: 'currency',
+    currency: CURRENCY.CODE,
+    currencyDisplay: 'code',
+    maximumFractionDigits: 0,
+  }).format(invoice.total || 0)
+
+  const { data, error } = await supabase.functions.invoke('send-invoice-email', {
+    body: {
+      recipient_email: recipientEmail,
+      recipient_name: recipientName || invoice.client?.name || null,
+      agency_user_id: agencyUserId,
+      invoice_number: invoice.invoice_number,
+      total_formatted: totalFormatted,
+      due_date: invoice.due_date || null,
+      notes: invoice.notes || null,
+      pdf_base64,
+      filename: `${invoice.invoice_number || 'invoice'}.pdf`,
+    },
+  })
+
+  if (error) throw error
+  return data
 }

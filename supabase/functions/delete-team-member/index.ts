@@ -20,20 +20,23 @@ serve(async (req) => {
       })
     }
 
-    // Caller-scoped client to verify ownership
+    // Caller-scoped client — used for the RPC so auth.uid() inside it
+    // resolves to the real caller (the RPC does its own ownership check via
+    // is_workspace_owner()). The RPC itself is SECURITY DEFINER, so it can
+    // still reassign/delete rows across tables despite RLS.
     const callerClient = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('PUBLISHABLE_KEY') ?? Deno.env.get('SUPABASE_ANON_KEY')!,
       { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
     )
 
-    // Admin client (service role) for bypassing RLS
+    // Admin client (service role) — only used to delete the auth.users row,
+    // which requires the Admin API rather than a SQL function.
     const adminClient = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SERVICE_KEY') ?? Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     )
 
-    // Verify the caller is authenticated
     const { data: { user: caller }, error: authError } = await callerClient.auth.getUser()
     if (authError || !caller) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
@@ -42,43 +45,51 @@ serve(async (req) => {
       })
     }
 
-    // Look up the agency_members row to get member_user_id and verify ownership
-    const { data: member, error: lookupError } = await adminClient
-      .from('agency_members')
-      .select('id, agency_user_id, member_user_id')
-      .eq('id', memberId)
-      .single()
-
-    if (lookupError || !member) {
-      return new Response(JSON.stringify({ error: 'Member not found' }), {
-        status: 404,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
-    }
-
-    // Only the workspace owner can permanently delete a member
-    if (member.agency_user_id !== caller.id) {
-      return new Response(JSON.stringify({ error: 'Forbidden' }), {
-        status: 403,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
-    }
-
-    // Delete the agency_members row — this is the only record we remove.
-    // The member's auth account is intentionally left intact so that any
-    // content they created (posts, notes, meetings, etc.) is preserved.
-    // Without an agency_members row they have no access to any workspace.
-    const { error: deleteRowError } = await adminClient
-      .from('agency_members')
-      .delete()
-      .eq('id', memberId)
-
-    if (deleteRowError) throw deleteRowError
-
-    return new Response(JSON.stringify({ success: true }), {
-      status: 200,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    // Reassigns this member's authorship (posts, tasks, chat messages, etc.)
+    // to the workspace owner, unassigns their tasks, and deletes the
+    // agency_members row — all atomically. Returns whether this person
+    // belongs to any other workspace, since we must never delete their auth
+    // account if so (it would break their access there too).
+    const { data: rpcRows, error: rpcError } = await callerClient.rpc('hard_delete_team_member', {
+      p_member_id: memberId,
     })
+
+    if (rpcError) {
+      const status = /forbidden|owner/i.test(rpcError.message)
+        ? 403
+        : /not found/i.test(rpcError.message)
+          ? 404
+          : 500
+      return new Response(JSON.stringify({ error: rpcError.message }), {
+        status,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
+    const result = rpcRows?.[0]
+    if (!result?.member_user_id) {
+      throw new Error('Member deletion did not return a user id')
+    }
+
+    // Only delete the auth account if this workspace is their only one.
+    let authDeleted = false
+    let authDeleteWarning = null
+    if (!result.other_workspaces) {
+      const { error: authDeleteError } = await adminClient.auth.admin.deleteUser(result.member_user_id)
+      if (authDeleteError) {
+        // The membership + data cleanup already succeeded (committed inside
+        // the RPC), so don't fail the whole request — just report that the
+        // login itself couldn't be removed.
+        authDeleteWarning = authDeleteError.message
+      } else {
+        authDeleted = true
+      }
+    }
+
+    return new Response(
+      JSON.stringify({ success: true, authDeleted, authDeleteWarning }),
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+    )
   } catch (err) {
     return new Response(JSON.stringify({ error: err.message }), {
       status: 500,

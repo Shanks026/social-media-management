@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
 import { Plus, ClipboardList, Search, X, Megaphone, User } from 'lucide-react'
 import { useTasks } from '@/api/tasks'
-import { useTeamMembers } from '@/api/team'
+import { useTeamMembers, useRemovedMembers } from '@/api/team'
 import { useClients } from '@/api/clients'
 import { useCampaigns } from '@/api/campaigns'
 import { useAuth } from '@/context/AuthContext'
@@ -42,11 +42,20 @@ export default function TasksTab({ clientId }) {
 
   const { data: allTasks = [], isLoading } = useTasks({ clientId })
   const { data: teamMembers = [] } = useTeamMembers()
+  const { data: removedMembers = [] } = useRemovedMembers()
   const { data: clientsData } = useClients()
   const { data: allCampaigns = [] } = useCampaigns()
 
+  // Removed members are merged in (flagged _removed) purely so an existing
+  // assignment/creation still resolves to a name instead of vanishing once
+  // someone leaves the workspace — they're never offered as assignable
+  // options (AssigneeFilterPopover only filters existing tasks, it doesn't
+  // assign new ones).
   const memberMap = useMemo(() => {
     const map = Object.fromEntries(teamMembers.map((m) => [m.member_user_id, m]))
+    removedMembers.forEach((m) => {
+      if (!map[m.member_user_id]) map[m.member_user_id] = { ...m, _removed: true }
+    })
     if (user && !map[user.id]) {
       map[user.id] = {
         member_user_id: user.id,
@@ -56,7 +65,7 @@ export default function TasksTab({ clientId }) {
       }
     }
     return map
-  }, [teamMembers, user])
+  }, [teamMembers, removedMembers, user])
 
   const clientMap = useMemo(() => {
     const all = [

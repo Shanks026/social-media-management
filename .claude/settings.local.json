@@ -188,7 +188,10 @@
       "Bash(node -e \"const l = require\\('lucide-react'\\); console.log\\('TriangleAlert' in l, 'AlertTriangle' in l, 'Megaphone' in l, 'Users' in l\\)\")",
       "Bash(grep -n \"header-row icon for \\\\`@Important\\\\`\" documentation/features/feature-workspace-chat.md)",
       "Bash(grep -n \"changed from \\\\`Megaphone\\\\` to \\\\`Users\\\\`\" documentation/features/feature-workspace-chat.md)",
-      "Bash(grep -n \"fixed a contrast bug in \\\\`IMPORTANT_TEXT_CLASS\\\\`\" documentation/features/feature-workspace-chat.md)"
+      "Bash(grep -n \"fixed a contrast bug in \\\\`IMPORTANT_TEXT_CLASS\\\\`\" documentation/features/feature-workspace-chat.md)",
+      "mcp__supabase__get_project_url",
+      "Bash(node -e \"require\\('./src/pages/help/guides-data.js'\\)\")",
+      "Bash(node --check src/pages/help/guides-data.js)"
     ]
   }
 }

@@ -192,7 +192,10 @@ export function useRevokeInvite() {
 }
 
 /**
- * Remove an active team member (set is_active = false).
+ * Remove an active team member: sets is_active = false AND force-signs them
+ * out of every device by deleting their live sessions (via the
+ * remove_team_member RPC, not a direct table write — that's what lets it
+ * also touch auth.sessions instead of just agency_members).
  */
 export function useRemoveMember() {
   const queryClient = useQueryClient()
@@ -200,11 +203,7 @@ export function useRemoveMember() {
 
   return useMutation({
     mutationFn: async (memberId) => {
-      const { error } = await supabase
-        .from('agency_members')
-        .update({ is_active: false })
-        .eq('id', memberId)
-
+      const { error } = await supabase.rpc('remove_team_member', { p_member_id: memberId })
       if (error) throw error
     },
     onSuccess: () => {
@@ -258,8 +257,13 @@ export function useRestoreMember() {
 }
 
 /**
- * Permanently delete a member from agency_members AND auth.users.
- * Uses the delete-team-member edge function (requires service role).
+ * Permanently delete a member: reassigns their authorship (posts, tasks,
+ * chat messages, etc.) to the workspace owner, unassigns their tasks, drops
+ * their agency_members row, and — only if this is their only workspace —
+ * deletes their auth.users account entirely. Uses the delete-team-member
+ * edge function (requires service role for the auth deletion step).
+ * Resolves to { authDeleted, authDeleteWarning } so the caller can tell
+ * whether the login itself was removed or just their access here.
  */
 export function useDeleteMemberPermanently() {
   const queryClient = useQueryClient()
@@ -273,6 +277,7 @@ export function useDeleteMemberPermanently() {
 
       if (error) throw error
       if (data?.error) throw new Error(data.error)
+      return { authDeleted: !!data?.authDeleted, authDeleteWarning: data?.authDeleteWarning ?? null }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: teamKeys.removed(workspaceUserId) })

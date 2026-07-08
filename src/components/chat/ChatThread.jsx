@@ -408,7 +408,7 @@ function ChatMessageRow({ message, author, isOwn, canModify, canDelete, mentionN
 // workspace room, but never reach into a private DM they aren't part of
 // (enforced server-side in soft_delete_chat_message; canDelete here just
 // keeps the UI consistent with what the RPC will actually allow).
-export function ChatThread({ channelId, channelType }) {
+export function ChatThread({ channelId, channelType, otherUserId }) {
   const { user } = useAuth()
   const { isAdmin } = usePermissions()
   const queryClient = useQueryClient()
@@ -547,17 +547,25 @@ export function ChatThread({ channelId, channelType }) {
     return me ? `@${me.full_name || me.email}` : null
   }, [memberMap, user?.id])
 
-  // Members available to @mention (everyone but the current user), with the
-  // two broadcast pseudo-mentions pinned to the top.
-  const mentionCandidates = useMemo(
-    () => [
+  // Members available to @mention. In a DM there's only one other person to
+  // mention and no workspace to broadcast to, so skip both the full roster
+  // and the @Everyone/@Important pseudo-mentions. In the shared workspace
+  // room, offer everyone but the current user, with the two broadcast
+  // pseudo-mentions pinned to the top.
+  const mentionCandidates = useMemo(() => {
+    if (channelType === 'dm') {
+      const other = memberMap[otherUserId]
+      return other
+        ? [{ id: other.id, name: other.full_name || other.email || 'Unknown', avatar_url: other.avatar_url || null }]
+        : []
+    }
+    return [
       ...SPECIAL_MENTIONS,
       ...Object.values(memberMap)
         .filter((m) => m.id !== user?.id)
         .map((m) => ({ id: m.id, name: m.full_name || m.email || 'Unknown', avatar_url: m.avatar_url || null })),
-    ],
-    [memberMap, user?.id],
-  )
+    ]
+  }, [memberMap, user?.id, channelType, otherUserId])
 
   const mentionQuery = mention?.query ?? ''
   const filteredMentions = mention
@@ -703,6 +711,11 @@ export function ChatThread({ channelId, channelType }) {
       setPendingMentions([])
       setPendingReferences([])
       invalidate()
+      // Don't wait on the chat_messages realtime event to reorder/update our
+      // own sidebar preview — that round-trips through the (occasionally
+      // flaky) postgres_changes relay. The sender already knows a message
+      // just went out, so refresh the channel list directly.
+      queryClient.invalidateQueries({ queryKey: chatKeys.channels(user?.id) })
     } catch (err) {
       toast.error(err.message || 'Failed to send message')
     } finally {
