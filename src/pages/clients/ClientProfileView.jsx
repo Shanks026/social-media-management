@@ -34,6 +34,7 @@ import OverviewTab from './clientSections/OverviewTab'
 import WorkflowTab from './clientSections/WorkflowTab'
 import ManagementTab from './clientSections/ManagementTab'
 import IndustryBadge from './IndustryBadge'
+import ClientMetricsRow from './ClientMetricsRow'
 import ContentCalendar from '../calendar/ContentCalendar'
 import { cn } from '@/lib/utils'
 import { ClientBillingTab } from './ClientBillingTab'
@@ -75,12 +76,14 @@ export default function ClientProfileView({ client }) {
     )
   }
 
-  // Build tabs — Billing requires finance access + external client; Proposals requires proposals access
+  // Build tabs — Billing requires finance access + external client; Proposals requires proposals access.
+  // Workflow/Tasks/Campaigns carry a count badge (total_deliverables/total_tasks/total_campaigns)
+  // instead of repeating those totals in a separate header row.
   const TABS_CONFIG = [
     { value: 'overview', label: 'Overview', icon: PieChart },
-    { value: 'workflow', label: 'Workflow', icon: LayoutGrid },
-    { value: 'tasks', label: 'Tasks', icon: ListTodo },
-    { value: 'campaigns', label: 'Campaigns', icon: Megaphone },
+    { value: 'workflow', label: 'Workflow', icon: LayoutGrid, count: client.total_deliverables },
+    { value: 'tasks', label: 'Tasks', icon: ListTodo, count: client.total_tasks },
+    { value: 'campaigns', label: 'Campaigns', icon: Megaphone, count: client.total_campaigns },
     ...(!client.is_internal && finance
       ? [{ value: 'billing', label: 'Billing', icon: Receipt }]
       : []),
@@ -120,8 +123,9 @@ export default function ClientProfileView({ client }) {
               </h1>
               <TierBadge tier={client.tier} />
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
               <IndustryBadge industryValue={client.industry} />
+              <ClientMetricsRow client={client} section="financials" className="" />
             </div>
           </div>
 
@@ -184,6 +188,9 @@ export default function ClientProfileView({ client }) {
               >
                 <tab.icon className={cn('size-4 transition-colors')} />
                 {tab.label}
+                {!!tab.count && (
+                  <span className="text-xs text-muted-foreground/70 tabular-nums">{tab.count}</span>
+                )}
               </TabsTrigger>
             ))}
           </TabsList>

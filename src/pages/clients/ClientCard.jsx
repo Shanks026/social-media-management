@@ -23,7 +23,7 @@ import { getUrgencyStatus } from '@/lib/client-helpers'
 import IndustryBadge from './IndustryBadge'
 import TierBadge from '@/components/TierBadge'
 import { PlatformStack } from '@/components/PlatformIcon'
-import { useSubscription } from '@/api/useSubscription'
+import ClientMetricsRow from './ClientMetricsRow'
 
 
 const StatItem = ({ count, label, colorClass }) => {
@@ -42,7 +42,6 @@ const StatItem = ({ count, label, colorClass }) => {
 
 function ClientCard({ client, onOpen, onDelete }) {
   const [deleteOpen, setDeleteOpen] = useState(false)
-  const { data: sub } = useSubscription()
 
   const platforms = client.platforms || []
   const pipeline = client.pipeline || {
@@ -68,13 +67,6 @@ function ClientCard({ client, onOpen, onDelete }) {
     : null
   const joinedDateFormatted = formatDate(client.created_at)
 
-  const formatMRR = (val) =>
-    new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      maximumFractionDigits: 0,
-    }).format(val)
-
   const initials = client.name
     ? client.name
         .split(' ')
@@ -88,20 +80,6 @@ function ClientCard({ client, onOpen, onDelete }) {
     (v) => v > 0,
   ).length
   const hasPipelineData = activePipelineCount > 0
-
-  const showFinancials = !client.is_internal
-  const showCampaigns = !!sub?.campaigns && (client.active_campaigns ?? 0) > 0
-  const hasMetrics = showFinancials || showCampaigns
-
-  const margin = client.profit_margin ?? 0
-  const marginColorClass =
-    margin === 0
-      ? 'text-foreground'
-      : margin >= 70
-        ? 'text-emerald-500'
-        : margin >= 40
-          ? 'text-amber-500'
-          : 'text-red-500'
 
   return (
     <>
@@ -162,35 +140,7 @@ function ClientCard({ client, onOpen, onDelete }) {
             )}
           </div>
 
-          {/* Metrics row: MRR + Margin + Campaigns */}
-          {hasMetrics && (
-            <div className="pt-4 flex items-center gap-2.5">
-              {showFinancials && (
-                <span className="text-xs font-semibold text-foreground">
-                  {(client.avg_monthly_retainer ?? 0) > 0 ? formatMRR(client.avg_monthly_retainer) : '-'}{' '}
-                  <span className="font-normal text-muted-foreground">MRR</span>
-                </span>
-              )}
-              {showFinancials && (
-                <>
-                  <div className="size-1 rounded-full bg-muted-foreground/30 shrink-0" />
-                  <span className={`text-xs font-semibold ${margin > 0 ? marginColorClass : 'text-foreground'}`}>
-                    {margin > 0 ? `${margin}%` : '-'}{' '}
-                    <span className="font-normal text-muted-foreground">Margin</span>
-                  </span>
-                </>
-              )}
-              {showCampaigns && (
-                <>
-                  {showFinancials && <div className="size-1 rounded-full bg-muted-foreground/30 shrink-0" />}
-                  <span className="text-xs font-semibold text-foreground">
-                    {client.active_campaigns}{' '}
-                    <span className="font-normal text-muted-foreground">Campaigns</span>
-                  </span>
-                </>
-              )}
-            </div>
-          )}
+          <ClientMetricsRow client={client} />
 
           {/* Footer: platform icons | next post / joined date */}
           <div className="mt-auto flex items-center justify-between pt-5 border-t border-dashed border-border">
