@@ -28,7 +28,7 @@ const STATUS_FILTERS = [
   { value: 'archived',  label: 'Archived' },
 ]
 
-export default function TasksTab({ clientId }) {
+export default function TasksTab({ clientId, campaignId, campaignName }) {
   const { user } = useAuth()
   const { canAssignTasks, isOwner } = usePermissions()
 
@@ -40,7 +40,12 @@ export default function TasksTab({ clientId }) {
   const [createdByMe, setCreatedByMe] = useState(false)
   const [search, setSearch] = useState('')
 
-  const { data: allTasks = [], isLoading } = useTasks({ clientId })
+  // When scoped to a campaign, filter purely by campaign_id — a task linked to
+  // this campaign may carry a different (or null) client_id, so don't also
+  // constrain by clientId or those tasks would be dropped.
+  const { data: allTasks = [], isLoading } = useTasks(
+    campaignId ? { campaignId } : { clientId },
+  )
   const { data: teamMembers = [] } = useTeamMembers()
   const { data: removedMembers = [] } = useRemovedMembers()
   const { data: clientsData } = useClients()
@@ -213,7 +218,7 @@ export default function TasksTab({ clientId }) {
             </SelectContent>
           </Select>
 
-          {campaignFilterOptions.length > 0 && (
+          {!campaignId && campaignFilterOptions.length > 0 && (
             <Select value={campaignFilter} onValueChange={setCampaignFilter}>
               <SelectTrigger className="h-9 w-40 border-border/60 shadow-none">
                 <SelectValue placeholder="Campaign" />
@@ -232,7 +237,12 @@ export default function TasksTab({ clientId }) {
             </Select>
           )}
 
-          <CreateTaskDialog clientId={clientId} lockClient={true}>
+          <CreateTaskDialog
+            clientId={clientId}
+            lockClient={true}
+            campaignId={campaignId}
+            campaignName={campaignName}
+          >
             <Button className="gap-1.5">
               <Plus className="size-4" />
               New Task
@@ -283,7 +293,7 @@ export default function TasksTab({ clientId }) {
           </p>
           <p className="text-xs text-muted-foreground/70">
             {allTasks.length === 0
-              ? 'Create a task to track work for this client.'
+              ? `Create a task to track work for this ${campaignId ? 'campaign' : 'client'}.`
               : 'Try adjusting your search or filters.'}
           </p>
         </div>
