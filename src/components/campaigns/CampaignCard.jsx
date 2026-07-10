@@ -88,12 +88,10 @@ function formatDateRange(start, end) {
   return `Until ${fmt(end)}`
 }
 
+// onEdit/onDelete/onStatusChange are still passed by callers but unused here
+// while the menu trigger below is commented out.
 export function CampaignCard({
   campaign,
-  onEdit,
-  onDelete,
-  onStatusChange,
-  showClient,
 }) {
   const navigate = useNavigate()
   const {
@@ -135,21 +133,21 @@ export function CampaignCard({
       onClick={() => navigate(`/campaigns/${id}`)}
     >
     <CardContent className="p-6 flex flex-col flex-1 min-w-0">
-      {/* Row 1: Status + Progress (left) | Menu (right) */}
+      {/* Row 1: Status (left) | Progress (right, in the menu trigger's old spot) */}
       <div
         className="flex items-center justify-between mb-4"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center gap-2.5">
-          <Badge
-            className={cn(STATUS_STYLES[status] ?? STATUS_STYLES.Archived)}
-          >
-            {status}
-          </Badge>
-          {total_posts > 0 && (
-            <CircularProgress progress={progress} size={22} strokeWidth={2.5} />
-          )}
-        </div>
+        <Badge
+          className={cn(STATUS_STYLES[status] ?? STATUS_STYLES.Archived)}
+        >
+          {status}
+        </Badge>
+        {total_posts > 0 && (
+          <CircularProgress progress={progress} size={22} strokeWidth={2.5} />
+        )}
+        {/* Menu trigger — commented out per request; onEdit/onDelete/onStatusChange
+            props kept wired in case this is re-enabled later.
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
@@ -201,6 +199,7 @@ export function CampaignCard({
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+        */}
       </div>
 
       {/* Row 2: Title */}
@@ -249,7 +248,7 @@ export function CampaignCard({
       <div className="flex items-center justify-between pt-5 border-t border-dashed border-border/50 mt-auto min-w-0">
         {/* Client Info */}
         <div className="flex items-center min-w-0">
-          {showClient && client_name && (
+          {client_name && (
             <div className="flex items-center gap-2">
               <Avatar className="size-6">
                 <AvatarImage src={client_avatar} alt={client_name} />

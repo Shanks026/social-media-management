@@ -82,6 +82,35 @@ export async function fetchClients(filters = {}) {
 
   if (error) throw error
 
+  const clientIds = (data.clients || []).map((c) => c.id)
+
+  // Total (all-time, all-status) counts — separate from the RPC's status-scoped
+  // pipeline breakdown above. Fetched as flat client_id lists and reduced here
+  // rather than via a DB function change, since these are cheap, additive counts.
+  const [postsRows, campaignsRows, tasksRows] = clientIds.length
+    ? await Promise.all([
+        supabase.from('posts').select('client_id').in('client_id', clientIds),
+        supabase.from('campaigns').select('client_id').in('client_id', clientIds),
+        supabase.from('tasks').select('client_id').in('client_id', clientIds),
+      ])
+    : [{ data: [], error: null }, { data: [], error: null }, { data: [], error: null }]
+
+  if (postsRows.error) throw postsRows.error
+  if (campaignsRows.error) throw campaignsRows.error
+  if (tasksRows.error) throw tasksRows.error
+
+  const countByClientId = (rows) => {
+    const counts = {}
+    for (const row of rows) {
+      counts[row.client_id] = (counts[row.client_id] ?? 0) + 1
+    }
+    return counts
+  }
+
+  const totalDeliverables = countByClientId(postsRows.data)
+  const totalCampaigns = countByClientId(campaignsRows.data)
+  const totalTasks = countByClientId(tasksRows.data)
+
   const clients = (data.clients || []).map((c) => ({
     id: c.id,
     name: c.name,
@@ -96,6 +125,9 @@ export async function fetchClients(filters = {}) {
     avg_monthly_retainer: Number(c.avg_monthly_retainer ?? 0),
     profit_margin: c.profit_margin != null ? Number(c.profit_margin) : null,
     created_at: c.created_at,
+    total_deliverables: totalDeliverables[c.id] ?? 0,
+    total_campaigns: totalCampaigns[c.id] ?? 0,
+    total_tasks: totalTasks[c.id] ?? 0,
     pipeline: {
       drafts: Number(c.drafts),
       pending: Number(c.pending),
@@ -296,17 +328,29 @@ export async function deleteClient(clientId) {
  * Fetch single client by ID, including computed financial metrics
  */
 export async function fetchClientById(id) {
-  const [{ data, error }, { data: txData, error: txError }] = await Promise.all([
+  const [
+    { data, error },
+    { data: txData, error: txError },
+    { count: totalDeliverables, error: postsError },
+    { count: totalCampaigns, error: campaignsError },
+    { count: totalTasks, error: tasksError },
+  ] = await Promise.all([
     supabase.from('clients').select('*').eq('id', id).single(),
     supabase
       .from('transactions')
       .select('type, status, category, amount')
       .eq('client_id', id)
       .eq('status', 'PAID'),
+    supabase.from('posts').select('id', { count: 'exact', head: true }).eq('client_id', id),
+    supabase.from('campaigns').select('id', { count: 'exact', head: true }).eq('client_id', id),
+    supabase.from('tasks').select('id', { count: 'exact', head: true }).eq('client_id', id),
   ])
 
   if (error) throw error
   if (txError) throw txError
+  if (postsError) throw postsError
+  if (campaignsError) throw campaignsError
+  if (tasksError) throw tasksError
 
   const paidIncome = (txData || [])
     .filter((t) => t.type === 'INCOME')
@@ -331,7 +375,14 @@ export async function fetchClientById(id) {
       ? Math.round(((paidIncome - paidExpenses) / paidIncome) * 1000) / 10
       : null
 
-  return { ...data, avg_monthly_retainer, profit_margin }
+  return {
+    ...data,
+    avg_monthly_retainer,
+    profit_margin,
+    total_deliverables: totalDeliverables ?? 0,
+    total_campaigns: totalCampaigns ?? 0,
+    total_tasks: totalTasks ?? 0,
+  }
 }
 
 export async function fetchInternalClient() {

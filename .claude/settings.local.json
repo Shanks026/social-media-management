@@ -191,7 +191,9 @@
       "Bash(grep -n \"fixed a contrast bug in \\\\`IMPORTANT_TEXT_CLASS\\\\`\" documentation/features/feature-workspace-chat.md)",
       "mcp__supabase__get_project_url",
       "Bash(node -e \"require\\('./src/pages/help/guides-data.js'\\)\")",
-      "Bash(node --check src/pages/help/guides-data.js)"
+      "Bash(node --check src/pages/help/guides-data.js)",
+      "Bash(cat eslint.config.js)",
+      "Bash(ls .eslintrc* eslint.config.*)"
     ]
   }
 }

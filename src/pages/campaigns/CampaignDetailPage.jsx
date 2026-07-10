@@ -27,6 +27,8 @@ import {
   Image,
   FileText,
   CalendarDays,
+  ListTodo,
+  PencilRuler,
   ChevronLeft,
   ChevronRight,
   MessageSquare,
@@ -45,11 +47,6 @@ import { useGlobalPosts } from '@/api/useGlobalPosts'
 import { useSubscription } from '@/api/useSubscription'
 import { usePermissions } from '@/api/usePermissions'
 import { useCampaignTransactions } from '@/api/transactions'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { fetchCampaignMeetings, deleteMeeting } from '@/api/meetings'
-import { useTasks } from '@/api/tasks'
-import { useTeamMembers } from '@/api/team'
-import { useAuth } from '@/context/AuthContext'
 import { AddTransactionDialog } from '@/pages/finance/AddTransactionDialog'
 import DraftPostForm from '@/pages/posts/DraftPostForm'
 import { LinkPostsToCampaignDialog } from '@/components/campaigns/LinkPostsToCampaignDialog'
@@ -61,6 +58,8 @@ import { CommentThread } from '@/components/comments/CommentThread'
 import TaskCard from '@/components/tasks/TaskCard'
 import CreateMeetingDialog from '@/components/CreateMeetingDialog'
 import CreateTaskDialog from '@/components/tasks/CreateTaskDialog'
+import TasksTab from '@/components/tasks/TasksTab'
+import MeetingsTab from '@/components/meetings/MeetingsTab'
 import StatusBadge from '@/components/StatusBadge'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -156,7 +155,6 @@ export default function CampaignDetailPage() {
   const { campaignId } = useParams()
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
-  const queryClient = useQueryClient()
 
   // Auto-switch to Discussion when a notification deep-links to a specific comment
   const [activeTab, setActiveTab] = useState(() => (searchParams.has('comment') ? 'discussion' : 'posts'))
@@ -169,9 +167,6 @@ export default function CampaignDetailPage() {
   const [sendingEmail, setSendingEmail] = useState(false)
   const [createInvoiceOpen, setCreateInvoiceOpen] = useState(false)
   const [addTransactionOpen, setAddTransactionOpen] = useState(false)
-  const [editingMeeting, setEditingMeeting] = useState(null)
-  const [notesCarouselApi, setNotesCarouselApi] = useState(null)
-  const [meetingsCarouselApi, setMeetingsCarouselApi] = useState(null)
 
   const { data: campaign, isLoading: campaignLoading } = useCampaign(campaignId)
   const { data: analytics, isLoading: analyticsLoading } =
@@ -190,49 +185,6 @@ export default function CampaignDetailPage() {
     useCampaignTransactions(isInternalClient ? campaignId : null)
   const regenerateToken = useRegenerateCampaignReviewToken()
   const markReviewSent = useMarkReviewSent()
-
-  const { data: campaignMeetings = [], isLoading: meetingsLoading } = useQuery({
-    queryKey: ['campaign-meetings', campaignId],
-    queryFn: () => fetchCampaignMeetings(campaignId),
-    enabled: !!campaignId,
-  })
-
-  const { data: campaignNotes = [], isLoading: notesLoading } = useTasks({ campaignId })
-
-  const { user } = useAuth()
-  const { data: teamMembers = [] } = useTeamMembers()
-  const memberMap = useMemo(() => {
-    const map = Object.fromEntries(teamMembers.map((m) => [m.member_user_id, m]))
-    if (user && !map[user.id]) {
-      map[user.id] = {
-        member_user_id: user.id,
-        full_name: user.user_metadata?.full_name || user.user_metadata?.name || null,
-        email: user.email,
-        avatar_url: user.user_metadata?.avatar_url || null,
-      }
-    }
-    return map
-  }, [teamMembers, user])
-  const clientMap = useMemo(() =>
-    campaign?.clients ? { [String(campaign.clients.id)]: campaign.clients } : {},
-  [campaign])
-
-  const { mutate: markMeetingDone, isPending: isCompletingMeeting } =
-    useMutation({
-      mutationFn: (meetingId) => deleteMeeting(meetingId),
-      onSuccess: () => {
-        queryClient.invalidateQueries({
-          queryKey: ['campaign-meetings', campaignId],
-        })
-        queryClient.invalidateQueries({ queryKey: ['meetings'] })
-        queryClient.invalidateQueries({ queryKey: ['todayMeetings'] })
-        toast.success('Meeting marked as done')
-      },
-      onError: (error) => {
-        toast.error('Failed to update meeting: ' + error.message)
-      },
-    })
-
 
   const { setHeader } = useHeader()
   useEffect(() => {
@@ -522,10 +474,11 @@ export default function CampaignDetailPage() {
           <div className="mb-4">
             <TabsList className="bg-transparent h-auto w-full justify-start rounded-none p-0 gap-12 border-b border-border/40">
               {[
-                { value: 'posts',    label: 'Deliverables', icon: Activity },
+                { value: 'posts',      label: 'Deliverables', icon: PencilRuler },
+                { value: 'discussion', label: 'Discussion',   icon: MessageSquare },
+                { value: 'tasks',      label: 'Tasks',        icon: ListTodo },
+                { value: 'meetings',   label: 'Meetings',     icon: CalendarDays },
                 ...(finance ? [{ value: 'finance', label: 'Finance', icon: Receipt }] : []),
-                { value: 'activity', label: 'Activity',     icon: CalendarDays },
-                { value: 'discussion', label: 'Discussion', icon: MessageSquare },
               ].map((tab) => (
                 <TabsTrigger
                   key={tab.value}
@@ -731,6 +684,68 @@ export default function CampaignDetailPage() {
                 description="Deliverable pipeline for this campaign"
                 className="lg:col-span-2 border-none shadow-sm ring-1 ring-border/50 bg-card/50 flex flex-col h-full"
               />
+
+              {/* Platform distribution — full row below */}
+              <Card className="lg:col-span-5 border-none shadow-sm ring-1 ring-border/50 bg-card/50">
+                <CardHeader className="pb-3 shrink-0">
+                  <CardTitle className="text-lg font-medium bricolage">
+                    Platform Distribution
+                  </CardTitle>
+                  <CardDescription>Posts across platforms</CardDescription>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  {!analytics ? (
+                    <div className="flex flex-col items-center justify-center text-center py-10 gap-2">
+                      <div className="h-10 w-10 border border-dashed rounded-full flex items-center justify-center text-muted-foreground">
+                        <Activity className="h-4 w-4 opacity-50" />
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        No posts yet
+                      </p>
+                    </div>
+                  ) : (
+                    <ChartContainer
+                      config={platformChartConfig}
+                      className="h-[260px] w-full"
+                    >
+                      <BarChart
+                        data={platformData}
+                        layout="vertical"
+                        margin={{ top: 0, right: 30, bottom: 0, left: 10 }}
+                      >
+                        <YAxis
+                          dataKey="platform"
+                          type="category"
+                          tickLine={false}
+                          axisLine={false}
+                          width={40}
+                          tick={<CustomPlatformTick />}
+                        />
+                        <XAxis dataKey="posts" type="number" hide />
+                        <ChartTooltip
+                          cursor={{ fill: 'rgba(0,0,0,0.05)' }}
+                          content={<ChartTooltipContent hideIndicator />}
+                        />
+                        <Bar
+                          dataKey="posts"
+                          radius={[0, 4, 4, 0]}
+                          barSize={24}
+                          label={{
+                            position: 'right',
+                            fill: 'currentColor',
+                            fontSize: 12,
+                            fontWeight: 500,
+                          }}
+                        >
+                          {platformData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.fill} />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ChartContainer>
+                  )}
+                </CardContent>
+              </Card>
             </div>
           </TabsContent>
 
@@ -1076,181 +1091,22 @@ export default function CampaignDetailPage() {
           </TabsContent>
           )}
 
-          {/* ── Activity tab ── */}
-          <TabsContent value="activity" className="mt-0">
-            <div className="flex flex-col gap-6">
-              {/* Notes section */}
-              <Card className="border-none bg-card/50 shadow-sm ring-1 ring-border/50 gap-0">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-                  <div className="flex items-center gap-2">
-                    <CardTitle className="text-lg font-medium bricolage">Tasks</CardTitle>
-                    {!notesLoading && (
-                      <span className="text-lg text-muted-foreground tabular-nums">
-                        {campaignNotes.filter((n) => n.status !== 'ARCHIVED').length}
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-0.5">
-                    <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground" onClick={() => notesCarouselApi?.scrollPrev()}>
-                      <ChevronLeft className="size-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground" onClick={() => notesCarouselApi?.scrollNext()}>
-                      <ChevronRight className="size-4" />
-                    </Button>
-                    <CreateTaskDialog clientId={campaign.client_id} lockClient={true} campaignId={campaignId} campaignName={campaign.name}>
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <Plus className="h-4 w-4" />
-                      </Button>
-                    </CreateTaskDialog>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" onClick={() => navigate('/tasks')}>
-                      <ArrowUpRight className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent className="pt-0">
-                  {notesLoading ? (
-                    <div className="flex gap-3">
-                      {[1, 2, 3].map((i) => <Skeleton key={i} className="w-[480px] h-44 rounded-xl shrink-0" />)}
-                    </div>
-                  ) : campaignNotes.filter((n) => n.status !== 'ARCHIVED').length === 0 ? (
-                    <div className="flex flex-col items-center justify-center text-center py-10 gap-2 rounded-xl border border-dashed border-border/50">
-                      <div className="h-10 w-10 border border-dashed rounded-full flex items-center justify-center text-muted-foreground">
-                        <FileText className="h-4 w-4 opacity-50" />
-                      </div>
-                      <p className="text-sm text-muted-foreground">No notes yet</p>
-                      <p className="text-xs text-muted-foreground/70">Use the + button to add one</p>
-                    </div>
-                  ) : (
-                    <Carousel setApi={setNotesCarouselApi} opts={{ align: 'start', dragFree: true }}>
-                      <CarouselContent>
-                        {campaignNotes.filter((n) => n.status !== 'ARCHIVED').map((note) => (
-                          <CarouselItem key={note.id} className="basis-[480px]">
-                            <TaskCard task={note} clientMap={clientMap} memberMap={memberMap} currentUserId={user?.id} />
-                          </CarouselItem>
-                        ))}
-                      </CarouselContent>
-                    </Carousel>
-                  )}
-                </CardContent>
-              </Card>
+          {/* ── Tasks tab ── */}
+          <TabsContent value="tasks" className="mt-0">
+            <TasksTab
+              clientId={campaign.client_id}
+              campaignId={campaignId}
+              campaignName={campaign.name}
+            />
+          </TabsContent>
 
-              {/* Meetings section */}
-              <Card className="border-none bg-card/50 shadow-sm ring-1 ring-border/50 gap-0">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-                  <div className="flex items-center gap-2">
-                    <CardTitle className="text-lg font-medium bricolage">Meetings</CardTitle>
-                    {!meetingsLoading && (
-                      <span className="text-lg text-muted-foreground tabular-nums">
-                        {campaignMeetings.length}
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-0.5">
-                    <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground" onClick={() => meetingsCarouselApi?.scrollPrev()}>
-                      <ChevronLeft className="size-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground" onClick={() => meetingsCarouselApi?.scrollNext()}>
-                      <ChevronRight className="size-4" />
-                    </Button>
-                    <CreateMeetingDialog defaultClientId={campaign.client_id} lockClient={true} campaignId={campaignId} campaignName={campaign.name} editMeeting={editingMeeting} onSuccess={() => setEditingMeeting(null)}>
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <Plus className="h-4 w-4" />
-                      </Button>
-                    </CreateMeetingDialog>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" onClick={() => navigate('/operations/meetings')}>
-                      <ArrowUpRight className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent className="pt-0">
-                  {meetingsLoading ? (
-                    <div className="flex gap-3">
-                      {[1, 2, 3].map((i) => <Skeleton key={i} className="w-80 h-44 rounded-xl shrink-0" />)}
-                    </div>
-                  ) : campaignMeetings.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center text-center py-10 gap-2 rounded-xl border border-dashed border-border/50">
-                      <div className="h-10 w-10 border border-dashed rounded-full flex items-center justify-center text-muted-foreground">
-                        <CalendarDays className="h-4 w-4" />
-                      </div>
-                      <p className="text-sm text-muted-foreground">No meetings yet</p>
-                      <p className="text-xs text-muted-foreground/70">Use the + button to schedule one</p>
-                    </div>
-                  ) : (
-                    <Carousel setApi={setMeetingsCarouselApi} opts={{ align: 'start', dragFree: true }}>
-                      <CarouselContent>
-                        {campaignMeetings.map((meeting) => (
-                          <CarouselItem key={meeting.id} className="basis-[340px]">
-                            <MeetingRow meeting={meeting} markMeetingDone={markMeetingDone} isCompletingMeeting={isCompletingMeeting} variant="client-card" />
-                          </CarouselItem>
-                        ))}
-                      </CarouselContent>
-                    </Carousel>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Platform distribution — full row below */}
-              <Card className="border-none shadow-sm ring-1 ring-border/50 bg-card/50">
-                <CardHeader className="pb-3 shrink-0">
-                  <CardTitle className="text-lg font-medium bricolage">
-                    Platform Distribution
-                  </CardTitle>
-                  <CardDescription>Posts across platforms</CardDescription>
-                </CardHeader>
-                <CardContent className="pt-0">
-                  {!analytics ? (
-                    <div className="flex flex-col items-center justify-center text-center py-10 gap-2">
-                      <div className="h-10 w-10 border border-dashed rounded-full flex items-center justify-center text-muted-foreground">
-                        <Activity className="h-4 w-4 opacity-50" />
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        No posts yet
-                      </p>
-                    </div>
-                  ) : (
-                    <ChartContainer
-                      config={platformChartConfig}
-                      className="h-[260px] w-full"
-                    >
-                      <BarChart
-                        data={platformData}
-                        layout="vertical"
-                        margin={{ top: 0, right: 30, bottom: 0, left: 10 }}
-                      >
-                        <YAxis
-                          dataKey="platform"
-                          type="category"
-                          tickLine={false}
-                          axisLine={false}
-                          width={40}
-                          tick={<CustomPlatformTick />}
-                        />
-                        <XAxis dataKey="posts" type="number" hide />
-                        <ChartTooltip
-                          cursor={{ fill: 'rgba(0,0,0,0.05)' }}
-                          content={<ChartTooltipContent hideIndicator />}
-                        />
-                        <Bar
-                          dataKey="posts"
-                          radius={[0, 4, 4, 0]}
-                          barSize={24}
-                          label={{
-                            position: 'right',
-                            fill: 'currentColor',
-                            fontSize: 12,
-                            fontWeight: 500,
-                          }}
-                        >
-                          {platformData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.fill} />
-                          ))}
-                        </Bar>
-                      </BarChart>
-                    </ChartContainer>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
+          {/* ── Meetings tab ── */}
+          <TabsContent value="meetings" className="mt-0">
+            <MeetingsTab
+              clientId={campaign.client_id}
+              campaignId={campaignId}
+              campaignName={campaign.name}
+            />
           </TabsContent>
 
           {/* ── Discussion tab ── */}

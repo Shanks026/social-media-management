@@ -235,7 +235,6 @@ function CampaignTabContent({ clientId, isCreateOpen, setIsCreateOpen, campaigns
               onEdit={() => handleEdit(campaign)}
               onDelete={() => setDeletingCampaign(campaign)}
               onStatusChange={(status) => handleStatusChange(campaign, status)}
-              showClient={!clientId}
             />
           ))}
         </div>
