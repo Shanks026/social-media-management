@@ -113,6 +113,20 @@ export function usePendingInvites() {
   })
 }
 
+// ─── Invite defaults ───────────────────────────────────────────────────────────
+
+// Shared so InviteDialog and the onboarding invite step can't drift apart — they
+// previously each declared their own copy of the expiry window.
+export const DEFAULT_INVITE_EXPIRY_DAYS = 7
+export const MAX_INVITE_EXPIRY_DAYS = 30
+export const DEFAULT_INVITE_PERMISSIONS = { documents: 'view' }
+
+export function defaultInviteExpiry() {
+  const d = new Date()
+  d.setDate(d.getDate() + DEFAULT_INVITE_EXPIRY_DAYS)
+  return d
+}
+
 // ─── Mutations ─────────────────────────────────────────────────────────────────
 
 /**
@@ -120,13 +134,21 @@ export function usePendingInvites() {
  * Accepts { system_role, permissions, expires_at, label } set by the owner
  * in InviteDialog — permissions is computed by the caller ({ documents: 'manage' }
  * for admin, the chosen level for member), mirroring EditAccessDialog's rule.
+ *
+ * Every argument defaults to the standard member invite, so a caller that just
+ * wants "the normal link" (onboarding) stays in lockstep with the dialog.
  */
 export function useGenerateInvite() {
   const queryClient = useQueryClient()
   const { workspaceUserId } = useAuth()
 
   return useMutation({
-    mutationFn: async ({ system_role = 'member', permissions, expires_at, label } = {}) => {
+    mutationFn: async ({
+      system_role = 'member',
+      permissions = DEFAULT_INVITE_PERMISSIONS,
+      expires_at = defaultInviteExpiry().toISOString(),
+      label = null,
+    } = {}) => {
       const { data: sub, error: subError } = await supabase
         .from('agency_subscriptions')
         .select('max_team_members')

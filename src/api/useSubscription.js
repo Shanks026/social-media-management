@@ -175,11 +175,20 @@ export function useSubscription() {
         deletion_scheduled_at: sub.scheduled_for_deletion_at ?? null,
         is_pending_deletion: !!sub.scheduled_for_deletion_at,
 
+        // Onboarding progress — workspace-level, replaces the old per-device
+        // localStorage flag. `needs_onboarding` gates the wizard in AppShell.
+        onboarding_completed_at: sub.onboarding_completed_at ?? null,
+        onboarding_skipped_steps: sub.onboarding_skipped_steps ?? [],
+        needs_onboarding:
+          !sub.agency_name?.trim() && !sub.onboarding_completed_at,
+
         // Agency contact for invoices — sourced from the agency (internal client) record
         email: internalClient?.email ?? sub.email ?? null,
         mobile_number: sub.mobile_number ?? null,
-        agency_address: internalClient?.address ?? null,
-        agency_website: internalClient?.website ?? null,
+        // Internal client wins so existing workspaces keep today's values; the
+        // agency_subscriptions columns cover workspaces without an internal row.
+        agency_address: internalClient?.address ?? sub.address ?? null,
+        agency_website: internalClient?.website ?? sub.website ?? null,
         // Invoice settings — signatory only (genuinely invoice-specific)
         signatory_name: sub.signatory_name ?? null,
         signatory_designation: sub.signatory_designation ?? null,

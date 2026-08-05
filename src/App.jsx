@@ -49,6 +49,7 @@ import PublicNotFound from './pages/PublicNotFound'
 import HelpPage from './pages/help/HelpPage'
 import PoliciesPage from './pages/help/PoliciesPage'
 import TeamPage from './pages/TeamPage'
+import WelcomePage from './pages/welcome/WelcomePage'
 import AdsPage from './pages/ads/AdsPage'
 import PartnershipsPage from './pages/partnerships/PartnershipsPage'
 import ApprovalsPage from './pages/approvals/ApprovalsPage'
@@ -206,6 +207,9 @@ function AppRoutes() {
           <Route path="/trial-expired" element={<TrialExpired />} />
           <Route path="/subscription-expired" element={<SubscriptionExpired />} />
           <Route path="/no-access" element={<NoWorkspaceAccess />} />
+          {/* Post-setup feature showcase. Deliberately outside TrialGuardedShell
+              so it renders full-page without the sidebar/header chrome. */}
+          <Route path="/welcome" element={<WelcomePage />} />
           <Route element={<TrialGuardedShell user={user} />}>
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/chat" element={<ChatRoute />} />

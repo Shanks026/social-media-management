@@ -6,13 +6,15 @@ import { AppBody } from './AppBody'
 import { Outlet } from 'react-router-dom'
 import { SidebarProvider } from '@/components/ui/sidebar'
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { useLocation } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 
-import { fetchAgencySettings } from '../../api/agency'
-import { completeFullAgencySetup, setupBrandingOnly } from '../../api/agency'
-import CreateClientPage from '../../pages/clients/CreateClientPage'
-import WelcomeCarousel from '../WelcomeCarousel' // Import the new component
+import { usePermissions } from '@/api/usePermissions'
+import {
+  fetchAgencySettings,
+  markOnboardingComplete,
+  reconcileLegacyOnboardingFlag,
+} from '../../api/agency'
 import OnboardingPage from '../../pages/onboarding/Onboarding'
 import { SubscriptionReminder } from '../SubscriptionReminder'
 import { DeletionBanner } from '../DeletionBanner'
@@ -20,9 +22,11 @@ import { useMeetingReminders } from '../../hooks/useMeetingReminders'
 
 export function AppShell({ user }) {
   const queryClient = useQueryClient()
+  const { canEditWorkspace } = usePermissions()
   const scrollContainerRef = useRef(null)
   const isCheckingRef = useRef(false)
   const { pathname } = useLocation()
+  const navigate = useNavigate()
   const isChatRoute = pathname.startsWith('/chat')
 
   useEffect(() => {
@@ -50,15 +54,16 @@ export function AppShell({ user }) {
       return cached ? JSON.parse(cached) : null
     } catch { return null }
   })
-  const [showWelcome, setShowWelcome] = useState(false)
-  const [isSetupOpen, setIsSetupOpen] = useState(false)
-  const [setupMode, setSetupMode] = useState('full') // 'full' or 'branding'
   const [loading, setLoading] = useState(() => {
     try { return !sessionStorage.getItem(settingsKey) } catch { return true }
   })
-  const [hasSeenWelcomeState, setHasSeenWelcomeState] = useState(
-    () => localStorage.getItem(`has_seen_welcome_${user?.id}`) === 'true'
-  )
+
+  // Onboarding is owner-only (see .claude/features/03-rbac-team-roles.md): every
+  // field it writes — agency identity, invoice signatory, team invites — is
+  // owner-only. Admins are view-only on workspace settings; members have none.
+  // AuthProvider withholds children until resolveWorkspace settles, so the role
+  // is already known on first render — no flash of the app before the wizard.
+  const canOnboard = canEditWorkspace
 
   const checkAgencyStatus = useCallback(async () => {
     if (isCheckingRef.current) return
@@ -70,41 +75,35 @@ export function AppShell({ user }) {
     try {
       // Refresh both the local state and the global subscription query
       await queryClient.invalidateQueries({ queryKey: ['subscription'] })
-      const settings = await fetchAgencySettings()
+      let settings = await fetchAgencySettings()
+
+      // One-time carry-over of the legacy per-device flag: a user who dismissed
+      // onboarding on this browser before the DB column existed must not be
+      // shown the wizard again. Refetch once if it wrote anything.
+      if (canOnboard && settings && !settings.onboarding_completed_at) {
+        try {
+          if (await reconcileLegacyOnboardingFlag(user.id)) {
+            settings = await fetchAgencySettings()
+          }
+        } catch (err) {
+          console.error('AppShell: onboarding flag reconciliation failed', err)
+        }
+      }
+
       try { sessionStorage.setItem(settingsKey, JSON.stringify(settings)) } catch {}
       setAgencySettings(settings)
-      const isIncomplete =
-        !settings || !settings.agency_name || settings.agency_name.trim() === ''
-      const hasSeen = localStorage.getItem(`has_seen_welcome_${user.id}`) === 'true'
-      
-      setHasSeenWelcomeState(hasSeen)
-
-      if (isIncomplete && !hasSeen) {
-        setShowWelcome(true)
-      } else if (!isIncomplete && !hasSeen) {
-        // If they completed setup during onboarding, show the welcome carousel
-        setShowWelcome(true)
-      }
     } catch (err) {
       console.error('AppShell: Status check failed', err)
     } finally {
       isCheckingRef.current = false
       setLoading(false)
     }
-  }, [user, queryClient])
+  }, [user, queryClient, canOnboard])
 
   useEffect(() => {
     checkAgencyStatus()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id])
-
-  const handleSetupComplete = async () => {
-    if (setupMode === 'full') {
-      await queryClient.invalidateQueries({ queryKey: ['internal-client'] })
-    }
-    await checkAgencyStatus()
-    setIsSetupOpen(false)
-  }
 
   if (loading)
     return (
@@ -115,18 +114,33 @@ export function AppShell({ user }) {
       </div>
     )
 
-  // If agency is incomplete and they haven't seen the welcome choice yet,
-  // show the full-page onboarding instead of the AppShell layout.
-  const isIncomplete = !agencySettings || !agencySettings.agency_name || agencySettings.agency_name.trim() === ''
+  // Show the full-page wizard instead of the AppShell layout when the owner
+  // hasn't set the workspace up yet. Admins and members never see it — they
+  // can't action any of it, and a teammate joining an unconfigured workspace
+  // must not be handed the agency setup form.
+  const isIncomplete =
+    !agencySettings ||
+    !agencySettings.agency_name ||
+    agencySettings.agency_name.trim() === ''
+  const needsOnboarding = isIncomplete && !agencySettings?.onboarding_completed_at
 
-  if (isIncomplete && !hasSeenWelcomeState) {
+  if (canOnboard && needsOnboarding) {
     return (
-      <OnboardingPage 
-        user={user} 
-        onComplete={() => checkAgencyStatus()} 
-        onSkip={() => {
-          localStorage.setItem(`has_seen_welcome_${user.id}`, 'true')
-          setHasSeenWelcomeState(true)
+      <OnboardingPage
+        user={user}
+        onComplete={async () => {
+          // Hand off to the feature walkthrough. Stateless — reached by
+          // navigation rather than a flag, so it needs no "seen" marker and
+          // stays revisitable from Help → Guides.
+          await checkAgencyStatus()
+          navigate('/welcome', { replace: true })
+        }}
+        onSkip={async () => {
+          try {
+            await markOnboardingComplete({ skippedSteps: [] })
+          } catch (err) {
+            console.error('AppShell: failed to defer onboarding', err)
+          }
           checkAgencyStatus()
         }}
       />
@@ -160,57 +174,14 @@ export function AppShell({ user }) {
                   user,
                   agencySettings,
                   refreshAgency: checkAgencyStatus,
-                  openAgencySetup: () => {
-                    setSetupMode('full')
-                    setIsSetupOpen(true)
-                  },
                 }}
               />
             </AppBody>
           </div>
 
-          <WelcomeCarousel
-            user={user}
-            open={showWelcome}
-            onOpenChange={(val) => {
-              setShowWelcome(val)
-              if (!val)
-                localStorage.setItem(`has_seen_welcome_${user.id}`, 'true')
-            }}
-          />
-
           {/* Background Subscription Reminder Service */}
           <SubscriptionReminder />
         </div>
-
-        {isSetupOpen && (
-          <div className="fixed inset-0 z-100 bg-background">
-            <CreateClientPage
-              standalone
-              customSubmit={async (data) => {
-                if (setupMode === 'branding') {
-                  return await setupBrandingOnly(data)
-                } else {
-                  return await completeFullAgencySetup(data)
-                }
-              }}
-              onSuccess={handleSetupComplete}
-              onCancel={() => setIsSetupOpen(false)}
-              defaultValues={{
-                name: '',
-                description: '',
-                email: user?.email || '',
-                mobile_number: '+91',
-                status: 'ACTIVE',
-                tier: 'INTERNAL',
-                logo_url: '',
-                platforms: [],
-                industry: 'Internal',
-                social_links: {},
-              }}
-            />
-          </div>
-        )}
       </SidebarProvider>
     </HeaderProvider>
   )

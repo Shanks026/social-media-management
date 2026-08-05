@@ -11,6 +11,8 @@ import {
   useRestoreMember,
   useDeleteMemberPermanently,
   updateMemberAccess,
+  DEFAULT_INVITE_EXPIRY_DAYS,
+  MAX_INVITE_EXPIRY_DAYS,
 } from '@/api/team'
 import {
   SYSTEM_ROLE_PALETTE,
@@ -149,16 +151,19 @@ function StepDot({ number, label, state }) {
   )
 }
 
-const DEFAULT_INVITE_EXPIRY_DAYS = 7
-const MAX_INVITE_EXPIRY_DAYS = 30
-
+// DEFAULT_INVITE_EXPIRY_DAYS / MAX_INVITE_EXPIRY_DAYS now come from @/api/team,
+// so this dialog and the onboarding invite step share one source of truth.
 function addDays(days) {
   const d = new Date()
   d.setDate(d.getDate() + days)
   return d
 }
 
-export function InviteDialog({ open, onOpenChange }) {
+/**
+ * `onGenerated` is optional — onboarding uses it to record that the owner
+ * actually created an invite, so the setup checklist reflects it.
+ */
+export function InviteDialog({ open, onOpenChange, onGenerated }) {
   const [step, setStep] = useState(1)
   const [label, setLabel] = useState('')
   const [systemRole, setSystemRole] = useState('member')
@@ -218,6 +223,7 @@ export function InviteDialog({ open, onOpenChange }) {
         label,
       })
       setInviteUrl(url)
+      onGenerated?.(url)
     } catch (err) {
       const msg =
         err.message === 'TEAM_SEAT_LIMIT_REACHED'
