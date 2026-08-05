@@ -16,6 +16,7 @@ import LifetimeRevenue from './LifetimeRevenue'
 import FinancialSnapshot from './FinancialSnapshot'
 import DashboardInvoiceTable from './DashboardInvoiceTable'
 import ClientHealthGrid from './ClientHealthGrid'
+import SetupChecklistCard from '@/components/onboarding/SetupChecklistCard'
 
 function TrialExpiryBanner({ phase, daysRemaining, endsAt }) {
   const navigate = useNavigate()
@@ -86,6 +87,10 @@ export default function Dashboard() {
     <div className="px-4 sm:px-6 lg:px-8 pt-6 pb-20 max-w-[1400px] mx-auto flex flex-col gap-4 animate-in fade-in duration-500">
       {/* Row 1: Welcome Message */}
       <DashboardWelcomeMessage />
+
+      {/* Outstanding onboarding steps — renders nothing once they're done or
+          dismissed, and never appears for established workspaces. */}
+      <SetupChecklistCard />
 
       {/* Trial expiry banner (critical + grace phases) */}
       {showTrialBanner && (

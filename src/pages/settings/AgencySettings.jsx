@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react'
 import { useAuth } from '@/context/AuthContext'
+import { usePermissions } from '@/api/usePermissions'
 import { useOutletContext, useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
@@ -9,12 +10,8 @@ import { cn } from '@/lib/utils'
 
 // API
 import { fetchInternalClient } from '@/api/clients'
-import {
-  activateInternalWorkspace,
-  completeFullAgencySetup,
-  setupBrandingOnly,
-} from '@/api/agency'
-import CreateClientPage from '@/pages/clients/CreateClientPage'
+import { activateInternalWorkspace } from '@/api/agency'
+import OnboardingPage from '@/pages/onboarding/Onboarding'
 
 // UI
 import { Button } from '@/components/ui/button'
@@ -41,8 +38,6 @@ import {
   CheckCircle2,
   HardDrive,
   Layout,
-  Palette,
-  Rocket,
   Camera,
   ImagePlus,
   Save,
@@ -66,6 +61,7 @@ function extractStoragePath(publicUrl) {
 
 export default function AgencySettings() {
   const { user } = useAuth()
+  const { canEditWorkspace } = usePermissions()
   const { agencySettings, refreshAgency } = useOutletContext() || {}
   const queryClient = useQueryClient()
   const navigate = useNavigate()
@@ -73,7 +69,6 @@ export default function AgencySettings() {
   // Setup & activation state
   const [isActivating, setIsActivating] = useState(false)
   const [isSetupModalOpen, setIsSetupModalOpen] = useState(false)
-  const [setupMode, setSetupMode] = useState('full')
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false)
 
   // Agency logo editing
@@ -103,8 +98,11 @@ export default function AgencySettings() {
 
   // ── Handlers ──
 
-  const handleOpenSetup = (mode) => {
-    setSetupMode(mode)
+  // Editing agency identity is owner-only — admins are view-only on workspace
+  // settings (.claude/features/03-rbac-team-roles.md), so they never get the
+  // setup wizard.
+  const handleOpenSetup = () => {
+    if (!canEditWorkspace) return
     setIsSetupModalOpen(true)
   }
 
@@ -270,45 +268,22 @@ export default function AgencySettings() {
     }
   }
 
-  // ── Full-screen setup form ──
+  // ── Full-screen setup wizard ──
   if (isSetupModalOpen) {
     return (
       <div className="h-full bg-background overflow-y-auto selection:bg-primary/10 animate-in fade-in duration-500">
-        <CreateClientPage
-          standalone
-          customSubmit={async (data) => {
-            if (setupMode === 'branding') {
-              return await setupBrandingOnly(data)
-            } else {
-              return await completeFullAgencySetup(data)
-            }
-          }}
-          onSuccess={async () => {
+        <OnboardingPage
+          user={user}
+          includeActivation={false}
+          onComplete={async () => {
             if (refreshAgency) await refreshAgency()
-            if (setupMode !== 'branding') {
-              await queryClient.invalidateQueries({
-                queryKey: ['internal-client'],
-              })
-              queryClient.invalidateQueries({ queryKey: ['clients'] })
-            }
+            await queryClient.invalidateQueries({
+              queryKey: ['internal-client'],
+            })
+            queryClient.invalidateQueries({ queryKey: ['clients'] })
             setIsSetupModalOpen(false)
           }}
-          onCancel={() => setIsSetupModalOpen(false)}
-          defaultValues={{
-            name: '',
-            description: '',
-            email: user?.email || '',
-            mobile_number: '+91',
-            website: '',
-            location: '',
-            address: '',
-            status: 'ACTIVE',
-            tier: 'INTERNAL',
-            logo_url: '',
-            platforms: [],
-            industry: 'Internal',
-            social_links: {},
-          }}
+          onSkip={() => setIsSetupModalOpen(false)}
         />
       </div>
     )
@@ -689,12 +664,14 @@ export default function AgencySettings() {
               </p>
             </div>
             <div className="flex items-center gap-3 shrink-0">
-              <button
-                className="text-xs text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2"
-                onClick={() => handleOpenSetup('full')}
-              >
-                Reconfigure
-              </button>
+              {canEditWorkspace && (
+                <button
+                  className="text-xs text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2"
+                  onClick={handleOpenSetup}
+                >
+                  Reconfigure
+                </button>
+              )}
               <Button
                 size="sm"
                 disabled={isActivating}
@@ -722,15 +699,17 @@ export default function AgencySettings() {
                   Your internal agency identity and workspace details.
                 </p>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleOpenSetup('branding')}
-                className="gap-2 w-fit shrink-0"
-              >
-                <Pencil size={14} />
-                Edit Profile
-              </Button>
+              {canEditWorkspace && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleOpenSetup}
+                  className="gap-2 w-fit shrink-0"
+                >
+                  <Pencil size={14} />
+                  Edit Profile
+                </Button>
+              )}
             </div>
 
             {/* Row 1: Logos */}
@@ -934,28 +913,24 @@ export default function AgencySettings() {
 
   // ── PATH C: Nothing set up ──
   return (
-    <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in duration-1000">
-      <div className="text-center space-y-2">
-        <h2 className="text-2xl font-normal tracking-tight bricolage">Get Started</h2>
-        <p className="text-muted-foreground text-sm font-normal">
-          Choose how you want to initialize your agency profile.
-        </p>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-5xl mx-auto">
-        <ChoiceCard
-          icon={<Palette className="size-6" />}
-          title="Identity Branding"
-          description="Set your agency name and logo. Perfect if you just want to white-label your reports and portal."
-          onClick={() => handleOpenSetup('branding')}
-        />
-        <ChoiceCard
-          icon={<Rocket className="size-6 text-primary" />}
-          title="Operational Workspace"
-          description="Full identity setup plus a dedicated internal account for managing your own agency's social media."
-          highlight
-          onClick={() => handleOpenSetup('full')}
-        />
+    <div className="max-w-2xl mx-auto animate-in fade-in duration-1000">
+      <div className="flex flex-col items-center text-center gap-6 rounded-2xl border border-border/60 bg-muted/10 px-8 py-14">
+        <span className="text-5xl">🚀</span>
+        <div className="space-y-2">
+          <h2 className="text-2xl font-normal tracking-tight bricolage">
+            Set up your agency
+          </h2>
+          <p className="text-sm text-muted-foreground font-normal leading-relaxed max-w-md">
+            {canEditWorkspace
+              ? "Four quick steps — your branding, contact details, invoice signatory and platforms. We'll provision your internal agency workspace at the same time."
+              : 'The workspace owner needs to complete agency setup before this page has anything to show.'}
+          </p>
+        </div>
+        {canEditWorkspace && (
+          <Button onClick={handleOpenSetup} className="gap-2">
+            Get started <ArrowRight size={14} />
+          </Button>
+        )}
       </div>
     </div>
   )
@@ -976,42 +951,6 @@ function InfoRow({ icon, label, value }) {
         <div className="text-sm text-foreground truncate max-w-[200px] sm:max-w-xs">
           {value}
         </div>
-      </div>
-    </div>
-  )
-}
-
-function ChoiceCard({ icon, title, description, onClick, highlight = false }) {
-  return (
-    <div
-      onClick={onClick}
-      className={cn(
-        'group relative p-8 rounded-[32px] border transition-all cursor-pointer flex flex-col items-center text-center space-y-4',
-        highlight
-          ? 'border-primary/20 bg-primary/2 hover:bg-primary/4 hover:border-primary/40'
-          : 'border-border/60 bg-muted/5 hover:bg-muted/10 hover:border-border',
-      )}
-    >
-      <div
-        className={cn(
-          'size-14 rounded-2xl flex items-center justify-center mb-2 transition-transform group-hover:scale-110 duration-500',
-          highlight
-            ? 'bg-primary/10 text-primary'
-            : 'bg-background text-muted-foreground border border-border/50 shadow-sm',
-        )}
-      >
-        {icon}
-      </div>
-      <div className="space-y-2">
-        <h3 className="text-xl font-medium tracking-tight bricolage">{title}</h3>
-        <p className="text-sm text-muted-foreground font-normal leading-relaxed line-clamp-3">
-          {description}
-        </p>
-      </div>
-      <div className="pt-4 opacity-0 group-hover:opacity-100 transition-opacity">
-        <Button variant="link" className="text-xs h-auto p-0 gap-1">
-          Select Path <ArrowRight size={14} />
-        </Button>
       </div>
     </div>
   )

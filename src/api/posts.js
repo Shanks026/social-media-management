@@ -617,6 +617,10 @@ export function usePendingApprovals() {
     queryKey: ['pending-approvals', workspaceUserId],
     enabled: !!workspaceUserId,
     queryFn: async () => {
+      // The workspace predicate is explicit, not just implied by RLS. RLS stays
+      // authoritative, but this query previously filtered on status alone — so a
+      // single over-permissive policy was enough to surface other workspaces'
+      // deliverables here (which is exactly what happened).
       const { data, error } = await supabase
         .from('post_versions')
         .select(`
@@ -630,6 +634,7 @@ export function usePendingApprovals() {
           updated_at,
           submitted_by,
           deliverable_type,
+          workspace:clients!post_versions_client_id_fkey!inner ( user_id ),
           posts!post_versions_post_id_fkey (
             id,
             client_id,
@@ -637,17 +642,24 @@ export function usePendingApprovals() {
           )
         `)
         .eq('status', 'SUBMITTED')
+        .eq('workspace.user_id', workspaceUserId)
         .order('updated_at', { ascending: true })
 
       if (error) throw error
 
-      return (data || []).map((v) => ({
-        ...v,
-        actual_post_id: v.posts?.id,
-        client_id: v.posts?.client_id,
-        client: v.posts?.clients,
-        platforms: v.platform || [],
-      }))
+      return (data || []).map((v) => {
+        const mapped = {
+          ...v,
+          actual_post_id: v.posts?.id,
+          client_id: v.posts?.client_id,
+          client: v.posts?.clients,
+          platforms: v.platform || [],
+        }
+        // `workspace` exists only to drive the join filter — keep it out of the
+        // shape consumers see.
+        delete mapped.workspace
+        return mapped
+      })
     },
   })
 }
@@ -659,10 +671,16 @@ export function usePendingApprovalsCount() {
     enabled: !!workspaceUserId,
     refetchInterval: 60_000,
     queryFn: async () => {
+      // Same explicit workspace predicate as usePendingApprovals — the sidebar
+      // badge must not count other workspaces' submissions.
       const { count, error } = await supabase
         .from('post_versions')
-        .select('*', { count: 'exact', head: true })
+        .select('id, workspace:clients!post_versions_client_id_fkey!inner(user_id)', {
+          count: 'exact',
+          head: true,
+        })
         .eq('status', 'SUBMITTED')
+        .eq('workspace.user_id', workspaceUserId)
 
       if (error) throw error
       return count ?? 0
@@ -753,6 +771,50 @@ export function useRegeneratePostShareToken() {
     mutationFn: (versionId) => regeneratePostShareToken(versionId),
     onSuccess: (_, versionId) => {
       queryClient.invalidateQueries({ queryKey: ['post-version', versionId] })
+    },
+  })
+}
+
+// ─── Public review (unauthenticated, token from the URL) ───────────────────────
+
+/**
+ * Fetches the deliverable + agency branding for /review/:token via SECURITY
+ * DEFINER RPCs, so it works with or without a session.
+ *
+ * Returns `null` ONLY when the RPC succeeded and matched no live token — i.e. the
+ * link really is invalid or expired. A transient failure throws instead, so the
+ * page can retry and show a "try again" state rather than telling a client their
+ * link expired. Previously any error was swallowed into the same null, which is
+ * why a stale JWT being refreshed on first load rendered "Link Expired" and a
+ * reload then worked.
+ */
+export function usePostReview(token) {
+  return useQuery({
+    queryKey: ['post-review', token],
+    enabled: !!token,
+    staleTime: 0,
+    retry: 2,
+    retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 4000),
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('get_post_by_token', {
+        p_token: token,
+      })
+      if (error) throw error
+      const post = data?.[0] ?? null
+      if (!post) return { post: null, branding: null }
+
+      // Branding is best-effort — never fail the whole page over it.
+      let branding = null
+      try {
+        const { data: b } = await supabase.rpc('get_agency_branding_by_token', {
+          p_token: token,
+        })
+        branding = b?.[0] ?? null
+      } catch (err) {
+        console.error('Branding lookup failed:', err)
+      }
+
+      return { post, branding }
     },
   })
 }

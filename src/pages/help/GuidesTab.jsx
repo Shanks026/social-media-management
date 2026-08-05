@@ -1,10 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { ArrowRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { GUIDES } from './guides-data'
 
 export default function GuidesTab() {
   const [activeId, setActiveId] = useState(GUIDES[0]?.id)
   const contentRef = useRef(null)
+  const navigate = useNavigate()
   useEffect(() => {
     const container = contentRef.current
     if (!container) return
@@ -44,6 +47,27 @@ export default function GuidesTab() {
             A walkthrough of every section in Tercero and how to get the most out of it.
           </p>
         </div>
+
+        {/* Entry point for the one-page feature overview — the only path to it,
+            now that finishing setup goes straight to the dashboard. */}
+        <button
+          type="button"
+          onClick={() => navigate('/welcome')}
+          className="group flex items-center justify-between gap-4 rounded-xl border bg-muted/20 px-5 py-4 text-left transition-colors hover:bg-muted/40"
+        >
+          <div className="flex items-center gap-3 min-w-0">
+            <span className="text-2xl shrink-0">🚀</span>
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-foreground">
+                New here? See what Tercero does
+              </p>
+              <p className="text-xs text-muted-foreground">
+                A one-page overview of every feature, grouped by how the work flows.
+              </p>
+            </div>
+          </div>
+          <ArrowRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+        </button>
 
         <div ref={contentRef} className="relative overflow-y-auto max-h-[calc(100vh-300px)] pr-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <div className="space-y-16">

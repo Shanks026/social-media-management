@@ -2,20 +2,16 @@ import { useEffect, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useHeader } from '@/components/misc/header-context'
 import { useAuth } from '@/context/AuthContext'
+import { usePermissions } from '@/api/usePermissions'
 import { useOutletContext } from 'react-router-dom'
 import { toast } from 'sonner'
 
 // API & Components
 import ClientProfileView from '@/pages/clients/ClientProfileView'
 import { Button } from '@/components/ui/button'
-import CreateClientPage from '@/pages/clients/CreateClientPage'
+import OnboardingPage from '@/pages/onboarding/Onboarding'
 import { fetchInternalClient } from '@/api/clients'
-import {
-  activateInternalWorkspace,
-  fetchAgencySettings,
-  completeFullAgencySetup,
-  setupBrandingOnly,
-} from '@/api/agency'
+import { activateInternalWorkspace } from '@/api/agency'
 
 // UI Components
 import {
@@ -39,17 +35,16 @@ import {
   HardDrive,
   Layout,
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
 
 export default function MyOrganization() {
   const { setHeader } = useHeader()
   const { user } = useAuth()
+  const { canEditWorkspace } = usePermissions()
   const queryClient = useQueryClient()
   const { agencySettings, refreshAgency } = useOutletContext() || {}
 
   const [isActivating, setIsActivating] = useState(false)
   const [isSetupModalOpen, setIsSetupModalOpen] = useState(false)
-  const [setupMode, setSetupMode] = useState('full') // 'full' or 'branding'
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false)
 
   const {
@@ -69,8 +64,10 @@ export default function MyOrganization() {
     })
   }, [setHeader])
 
-  const handleOpenSetup = (mode) => {
-    setSetupMode(mode)
+  // Editing agency identity is owner-only — admins are view-only on workspace
+  // settings (.claude/features/03-rbac-team-roles.md).
+  const handleOpenSetup = () => {
+    if (!canEditWorkspace) return
     setIsSetupModalOpen(true)
   }
 
@@ -105,41 +102,20 @@ export default function MyOrganization() {
   if (isSetupModalOpen) {
     return (
       <div className="h-full bg-background overflow-y-auto selection:bg-primary/10 animate-in fade-in slide-in-from-bottom-4 duration-500">
-        <CreateClientPage
-          standalone
-          customSubmit={async (data) => {
-            if (setupMode === 'branding') {
-              return await setupBrandingOnly(data)
-            } else {
-              return await completeFullAgencySetup(data)
-            }
-          }}
-          onSuccess={async () => {
+        <OnboardingPage
+          user={user}
+          includeActivation={false}
+          onComplete={async () => {
             // Wait for AppShell to fetch and update AppSidebar
             if (refreshAgency) await refreshAgency()
-
-            if (setupMode !== 'branding') {
-              await queryClient.invalidateQueries({
-                queryKey: ['internal-client'],
-              })
-              queryClient.invalidateQueries({ queryKey: ['clients'] })
-            }
-            // Then close the modal to reveal the newly branded workspace/settings
+            await queryClient.invalidateQueries({
+              queryKey: ['internal-client'],
+            })
+            queryClient.invalidateQueries({ queryKey: ['clients'] })
+            // Then close to reveal the newly branded workspace
             setIsSetupModalOpen(false)
           }}
-          onCancel={() => setIsSetupModalOpen(false)}
-          defaultValues={{
-            name: '',
-            description: '',
-            email: user?.email || '',
-            mobile_number: '+91',
-            status: 'ACTIVE',
-            tier: 'INTERNAL',
-            logo_url: '',
-            platforms: [],
-            industry: 'Internal',
-            social_links: {},
-          }}
+          onSkip={() => setIsSetupModalOpen(false)}
         />
       </div>
     )
@@ -207,45 +183,38 @@ export default function MyOrganization() {
                       </>
                     )}
                   </Button>
-                  <button
-                    className="text-xs text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2"
-                    onClick={() => handleOpenSetup('full')}
-                  >
-                    Reset &amp; reconfigure →
-                  </button>
+                  {canEditWorkspace && (
+                    <button
+                      className="text-xs text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2"
+                      onClick={handleOpenSetup}
+                    >
+                      Reset &amp; reconfigure →
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
           </div>
         ) : (
-          /* PATH C: Zero Data - Choice Architecture */
-          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-6 duration-1000">
-            <div className="text-center space-y-2">
-              <h2 className="text-3xl font-normal tracking-tight bricolage">
-                Get Started
-              </h2>
-              <p className="text-muted-foreground text-sm font-normal">
-                Choose how you want to initialize your organization profile.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
-              {/* Option 1: Branding Only */}
-              <ChoiceCard
-                icon="🎨"
-                title="Identity Branding"
-                description="Set your agency name and logo. Perfect if you just want to white-label your reports and portal."
-                onClick={() => handleOpenSetup('branding')}
-              />
-
-              {/* Option 2: Full Setup */}
-              <ChoiceCard
-                icon="🚀"
-                title="Operational Workspace"
-                description="Full identity setup plus a dedicated internal account for managing your own agency's social media."
-                highlight
-                onClick={() => handleOpenSetup('full')}
-              />
+          /* PATH C: Zero Data — single setup entry point */
+          <div className="max-w-2xl mx-auto animate-in fade-in slide-in-from-bottom-6 duration-1000">
+            <div className="flex flex-col items-center text-center gap-6 rounded-2xl border border-border/60 bg-muted/10 px-8 py-14">
+              <span className="text-5xl">🚀</span>
+              <div className="space-y-2">
+                <h2 className="text-3xl font-normal tracking-tight bricolage">
+                  Set up your agency
+                </h2>
+                <p className="text-sm text-muted-foreground font-normal leading-relaxed max-w-md">
+                  {canEditWorkspace
+                    ? 'Four quick steps — your branding, contact details, invoice signatory and platforms. Your internal agency workspace gets provisioned at the same time.'
+                    : 'The workspace owner needs to complete agency setup before this page has anything to show.'}
+                </p>
+              </div>
+              {canEditWorkspace && (
+                <Button onClick={handleOpenSetup} className="gap-2">
+                  Get started <ArrowRight size={14} />
+                </Button>
+              )}
             </div>
           </div>
         )}
@@ -296,32 +265,6 @@ export default function MyOrganization() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
-  )
-}
-
-function ChoiceCard({ icon, title, description, onClick, highlight = false }) {
-  return (
-    <div
-      onClick={onClick}
-      className={cn(
-        'group relative p-5 rounded-xl border transition-all cursor-pointer flex flex-col gap-4 text-left',
-        highlight
-          ? 'border-primary/20 bg-primary/5 hover:bg-primary/8 hover:border-primary/40'
-          : 'border-border/60 bg-muted/30 hover:bg-muted/50 hover:border-border',
-      )}
-    >
-      <span className="text-3xl">{icon}</span>
-      <div className="space-y-1.5 flex-1">
-        <h3 className="text-xl font-medium">{title}</h3>
-        <p className="text-sm text-muted-foreground leading-relaxed">
-          {description}
-        </p>
-      </div>
-      <span className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-        Select{' '}
-        <ArrowRight className="size-3 transition-transform group-hover:translate-x-0.5" />
-      </span>
     </div>
   )
 }

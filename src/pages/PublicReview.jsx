@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
+import { usePostReview } from '@/api/posts'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import {
@@ -75,12 +76,9 @@ function isVideo(url = '') {
 
 export default function PublicReview() {
   const { token } = useParams()
-  const [post, setPost] = useState(null)
-  const [loading, setLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [feedback, setFeedback] = useState('')
   const [statusUpdated, setStatusUpdated] = useState(null)
-  const [agencySub, setAgencySub] = useState(null)
 
   // Full-screen Preview States
   const [isPreviewOpen, setIsPreviewOpen] = useState(false)
@@ -94,38 +92,20 @@ export default function PublicReview() {
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false)
   const [mobileSheetPlatform, setMobileSheetPlatform] = useState(null)
 
-  useEffect(() => {
-    async function fetchPost() {
-      const { data, error } = await supabase.rpc('get_post_by_token', {
-        p_token: token,
-      })
-      if (error || !data || data.length === 0) {
-        setLoading(false)
-        return
-      }
+  // Data comes from the API layer via React Query so a transient failure retries
+  // instead of being mistaken for an expired link. `post: null` from a SUCCESSFUL
+  // response is the only thing that means "invalid or expired".
+  const {
+    data: review,
+    isPending,
+    isError,
+    refetch,
+    isFetching,
+  } = usePostReview(token)
 
-      const postData = data[0]
-      setPost(postData)
-
-      // Use user_id returned directly from the RPC (now included in the response)
-      const userId = postData.user_id
-
-      if (userId) {
-        const { data: sub } = await supabase
-          .from('agency_subscriptions')
-          .select(
-            'agency_name, logo_url, logo_horizontal_url, primary_color, branding_agency_sidebar, branding_powered_by',
-          )
-          .eq('user_id', userId)
-          .maybeSingle()
-
-        if (sub) setAgencySub(sub)
-      }
-
-      setLoading(false)
-    }
-    fetchPost()
-  }, [token])
+  const post = review?.post ?? null
+  const agencySub = review?.branding ?? null
+  const loading = isPending
 
   // Keyboard Navigation for Media Dialog
   useEffect(() => {
@@ -230,6 +210,31 @@ export default function PublicReview() {
             ? "Your approval has been recorded. You'll receive an email when your posts go live."
             : "We've received your feedback and will prepare a new version shortly."}
         </p>
+      </div>
+    )
+  }
+
+  // The request itself failed (network, cold start, token refresh) — never tell a
+  // client their link expired over something retryable.
+  if (isError) {
+    return (
+      <div className="flex h-screen w-full flex-col items-center justify-center bg-background p-6 text-center">
+        <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400">
+          <Info size={32} />
+        </div>
+        <h2 className="text-2xl font-bold tracking-tight text-foreground bricolage">
+          Couldn&apos;t load this review
+        </h2>
+        <p className="mt-2 max-w-md text-muted-foreground leading-relaxed">
+          Something went wrong on our side — your link is still valid.
+        </p>
+        <Button
+          onClick={() => refetch()}
+          disabled={isFetching}
+          className="mt-6 gap-2"
+        >
+          {isFetching ? 'Retrying…' : 'Try again'}
+        </Button>
       </div>
     )
   }
