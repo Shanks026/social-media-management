@@ -391,6 +391,8 @@ function TasksTableView({ tasks, isLoading, clientMap, campaignMap, memberMap, c
   const [selectedTask, setSelectedTask] = useState(null)
 
   const columns = useMemo(() => [
+    // No width — absorbs whatever the sized columns leave, so the title
+    // truncates to the column instead of a hard-coded max-width.
     taskCol.accessor('title', {
       header: ({ column }) => <SortableColHeader column={column} label="Title" />,
       cell: ({ row }) => {
@@ -398,19 +400,20 @@ function TasksTableView({ tasks, isLoading, clientMap, campaignMap, memberMap, c
         return (
           <div className="min-w-0">
             <p className={cn(
-              'text-sm font-medium leading-tight truncate max-w-72',
+              'text-sm font-medium leading-tight truncate',
               task.status === 'COMPLETED' && 'line-through text-muted-foreground',
             )}>
               {task.title}
             </p>
             {task.description && (
-              <p className="text-xs text-muted-foreground truncate max-w-72 mt-0.5">{task.description}</p>
+              <p className="text-xs text-muted-foreground truncate mt-0.5">{task.description}</p>
             )}
           </div>
         )
       },
     }),
     taskCol.accessor('status', {
+      meta: { width: '12%' },
       header: ({ column }) => <SortableColHeader column={column} label="Status" />,
       cell: ({ getValue }) => {
         const status = getValue()
@@ -424,6 +427,7 @@ function TasksTableView({ tasks, isLoading, clientMap, campaignMap, memberMap, c
       },
     }),
     taskCol.accessor('priority', {
+      meta: { width: '10%' },
       header: ({ column }) => <SortableColHeader column={column} label="Priority" />,
       cell: ({ getValue }) => {
         const priority = getValue()
@@ -439,6 +443,7 @@ function TasksTableView({ tasks, isLoading, clientMap, campaignMap, memberMap, c
     }),
     taskCol.accessor('assigned_to', {
       id: 'assignee',
+      meta: { width: '16%' },
       header: () => <ColHeader label="Assigned To" />,
       enableSorting: false,
       cell: ({ getValue }) => {
@@ -462,7 +467,7 @@ function TasksTableView({ tasks, isLoading, clientMap, campaignMap, memberMap, c
                 {(assignee.full_name || assignee.email || '?')[0].toUpperCase()}
               </div>
             )}
-            <span className="text-sm truncate max-w-32">
+            <span className="text-sm truncate">
               {assignee.full_name || assignee.email}
               {assignee._removed && <span className="text-muted-foreground ml-1">(Removed)</span>}
               {getValue() === currentUserId && (
@@ -475,6 +480,7 @@ function TasksTableView({ tasks, isLoading, clientMap, campaignMap, memberMap, c
     }),
     taskCol.accessor('client_id', {
       id: 'client',
+      meta: { width: '16%' },
       header: ({ column }) => <SortableColHeader column={column} label="Client" />,
       sortingFn: (a, b) => {
         const nameA = clientMap[String(a.original.client_id)]?.name ?? ''
@@ -488,13 +494,14 @@ function TasksTableView({ tasks, isLoading, clientMap, campaignMap, memberMap, c
         return (
           <div className="flex items-center gap-2 min-w-0">
             <ClientAvatar client={client} size="sm" />
-            <span className="text-sm truncate max-w-32">{client.name}</span>
+            <span className="text-sm truncate">{client.name}</span>
           </div>
         )
       },
     }),
     taskCol.accessor('campaign_id', {
       id: 'campaign',
+      meta: { width: '16%' },
       header: () => <ColHeader label="Campaign" />,
       enableSorting: false,
       cell: ({ getValue }) => {
@@ -503,12 +510,13 @@ function TasksTableView({ tasks, isLoading, clientMap, campaignMap, memberMap, c
         return (
           <div className="flex items-center gap-1.5 min-w-0">
             <Megaphone className="size-3.5 text-muted-foreground shrink-0" />
-            <span className="text-sm truncate max-w-32">{campaign.name}</span>
+            <span className="text-sm truncate">{campaign.name}</span>
           </div>
         )
       },
     }),
     taskCol.accessor('due_at', {
+      meta: { width: '10%' },
       header: ({ column }) => <SortableColHeader column={column} label="Due" />,
       cell: ({ row }) => {
         const task = row.original
@@ -548,12 +556,16 @@ function TasksTableView({ tasks, isLoading, clientMap, campaignMap, memberMap, c
   return (
     <>
       <div className="rounded-xl border border-border bg-card overflow-hidden mt-4">
-        <Table>
+        <Table className="table-fixed">
           <TableHeader>
             {table.getHeaderGroups().map((hg) => (
               <TableRow key={hg.id} className="hover:bg-transparent">
                 {hg.headers.map((h) => (
-                  <TableHead key={h.id} className="py-3 px-4">
+                  <TableHead
+                    key={h.id}
+                    className="py-3 px-4"
+                    style={{ width: h.column.columnDef.meta?.width }}
+                  >
                     {flexRender(h.column.columnDef.header, h.getContext())}
                   </TableHead>
                 ))}

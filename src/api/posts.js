@@ -177,6 +177,8 @@ export async function fetchPostDetails(id) {
       id,
       client_id,
       created_by,
+      campaign_id,
+      campaigns!campaign_id ( name ),
       clients ( name, logo_url, email, social_links, industry, is_internal ),
       post_versions!fk_current_version (
         *,
@@ -196,6 +198,9 @@ export async function fetchPostDetails(id) {
       // spread version's created_by. Used to gate delete (creator or admin).
       deliverable_creator_id: parentData.created_by,
       clients: parentData.clients,
+      campaign: parentData.campaign_id
+        ? { id: parentData.campaign_id, name: parentData.campaigns?.name }
+        : null,
     }
   }
 
@@ -210,6 +215,8 @@ export async function fetchPostDetails(id) {
         id,
         client_id,
         created_by,
+        campaign_id,
+        campaigns!campaign_id ( name ),
         clients ( name, logo_url, email, social_links, industry, is_internal )
       )
     `,
@@ -226,6 +233,9 @@ export async function fetchPostDetails(id) {
       actual_post_id: versionData.posts.id,
       deliverable_creator_id: versionData.posts.created_by,
       clients: versionData.posts.clients,
+      campaign: versionData.posts.campaign_id
+        ? { id: versionData.posts.campaign_id, name: versionData.posts.campaigns?.name }
+        : null,
     }
   }
 

@@ -255,6 +255,8 @@ export default function TeamPage() {
   // ── Column definitions ────────────────────────────────────────────────────
 
   const columns = useMemo(() => [
+    // No width — absorbs whatever the sized columns leave, so the name/email
+    // truncate to the column instead of a hard-coded max-width.
     columnHelper.accessor((row) => row.full_name || row.email, {
       id: 'member',
       header: ({ column }) => <SortableHeader column={column} label="Member" />,
@@ -275,7 +277,7 @@ export default function TeamPage() {
                   </Badge>
                 )}
               </div>
-              <p className="text-xs text-muted-foreground mt-0.5 truncate max-w-55">
+              <p className="text-xs text-muted-foreground mt-0.5 truncate">
                 {m.email}
               </p>
             </div>
@@ -286,6 +288,7 @@ export default function TeamPage() {
 
     columnHelper.accessor('system_role', {
       id: 'system_role',
+      meta: { width: '14%' },
       header: () => <span className="text-xs font-medium text-muted-foreground">Access</span>,
       cell: ({ row }) => {
         const m = row.original
@@ -300,6 +303,7 @@ export default function TeamPage() {
 
     columnHelper.accessor('functional_role', {
       id: 'job_title',
+      meta: { width: '18%' },
       header: () => <span className="text-xs font-medium text-muted-foreground">Job Title</span>,
       cell: ({ row }) => {
         const m = row.original
@@ -316,6 +320,7 @@ export default function TeamPage() {
 
     ...(canManageTeam ? [columnHelper.accessor('roles_and_responsibilities', {
       id: 'roles_responsibilities',
+      meta: { width: '22%' },
       header: () => <span className="text-xs font-medium text-muted-foreground">Roles &amp; Responsibilities</span>,
       cell: ({ getValue }) => {
         const val = getValue()
@@ -323,7 +328,7 @@ export default function TeamPage() {
         return (
           <Tooltip>
             <TooltipTrigger asChild>
-              <span className="text-xs text-muted-foreground truncate max-w-52 block cursor-default">
+              <span className="text-xs text-muted-foreground truncate block cursor-default">
                 {val}
               </span>
             </TooltipTrigger>
@@ -337,6 +342,7 @@ export default function TeamPage() {
 
     columnHelper.accessor('joined_at', {
       id: 'joined',
+      meta: { width: '13%' },
       header: ({ column }) => <SortableHeader column={column} label="Joined" />,
       sortingFn: 'datetime',
       cell: ({ row }) => {
@@ -355,6 +361,7 @@ export default function TeamPage() {
 
     columnHelper.display({
       id: 'actions',
+      meta: { width: '6%' },
       header: () => null,
       cell: ({ row }) => {
         const m = row.original
@@ -574,7 +581,7 @@ export default function TeamPage() {
             >
               <TabsList className="bg-transparent h-auto w-full justify-start rounded-none p-0 gap-8 border-b border-border/40">
                 {[
-                  { key: 'active', label: 'Active Team Members', count: members.length },
+                  { key: 'active', label: 'Active Members', count: members.length },
                   { key: 'removed', label: 'Removed', count: removedMembers.length },
                 ].map((tab) => (
                   <TabsTrigger
@@ -697,12 +704,16 @@ export default function TeamPage() {
             </Empty>
           ) : (
             <div className="rounded-xl border border-border/50 overflow-hidden">
-              <Table>
+              <Table className="table-fixed">
                 <TableHeader>
                   {table.getHeaderGroups().map((hg) => (
                     <TableRow key={hg.id} className="hover:bg-transparent border-b border-border/50 bg-muted/20">
                       {hg.headers.map((header) => (
-                        <TableHead key={header.id} className="px-4 h-10">
+                        <TableHead
+                          key={header.id}
+                          className="px-4 h-10"
+                          style={{ width: header.column.columnDef.meta?.width }}
+                        >
                           {header.isPlaceholder
                             ? null
                             : flexRender(header.column.columnDef.header, header.getContext())}

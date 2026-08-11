@@ -29,7 +29,7 @@ function UnreadBadge({ count, mentioned }) {
   }
   if (!count) return null
   return (
-    <span className="ml-auto flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white shrink-0">
+    <span className="ml-auto flex h-4.5 min-w-4.5 items-center justify-center rounded-md bg-rose-100 px-1 text-[10px] font-bold text-rose-600 dark:bg-rose-500/10 dark:text-rose-400 shrink-0">
       {count > 99 ? '99+' : count}
     </span>
   )

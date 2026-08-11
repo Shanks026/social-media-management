@@ -92,7 +92,7 @@ const BASE_NAV_ITEMS = [
   },
   { title: 'Clients', url: '/clients', icon: UserStar },
 
-  { title: 'Deliverables', url: '/posts', icon: PencilRuler },
+  { title: 'Deliverables', url: '/deliverables', icon: PencilRuler },
   { title: 'Submissions', url: '/submissions', icon: Send, showChangesCount: true, requiresPermission: 'isTeamMember' },
   {
     title: 'Approvals',
@@ -410,17 +410,17 @@ export function NavMain() {
                     <item.icon className="size-4 shrink-0" />
                     {!isCollapsed && <span>{item.title}</span>}
                     {!isCollapsed && itemCount > 0 && (
-                      <span className="ml-auto flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-primary-foreground">
+                      <span className="ml-auto flex h-4.5 min-w-4.5 items-center justify-center rounded-md bg-rose-100 px-1 text-[10px] font-bold text-rose-600 dark:bg-rose-500/10 dark:text-rose-400">
                         {itemCount > 99 ? '99+' : itemCount}
                       </span>
                     )}
                     {!isCollapsed && changesCount > 0 && (
-                      <span className="ml-auto flex h-4 min-w-4 items-center justify-center rounded-full bg-pink-500 px-1 text-[10px] font-bold text-white">
+                      <span className="ml-auto flex h-4.5 min-w-4.5 items-center justify-center rounded-md bg-pink-100 px-1 text-[10px] font-bold text-pink-600 dark:bg-pink-500/10 dark:text-pink-400">
                         {changesCount > 99 ? '99+' : changesCount}
                       </span>
                     )}
                     {!isCollapsed && myTodos > 0 && (
-                      <span className="ml-auto flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-500 px-1 text-[10px] font-bold text-white">
+                      <span className="ml-auto flex h-4.5 min-w-4.5 items-center justify-center rounded-md bg-amber-100 px-1 text-[10px] font-bold text-amber-600 dark:bg-amber-500/10 dark:text-amber-400">
                         {myTodos > 99 ? '99+' : myTodos}
                       </span>
                     )}
@@ -430,7 +430,7 @@ export function NavMain() {
                       <span className="ml-auto text-sm font-bold text-rose-500 dark:text-rose-400">@</span>
                     )}
                     {!isCollapsed && chatCount > 0 && (
-                      <span className="ml-auto flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white">
+                      <span className="ml-auto flex h-4.5 min-w-4.5 items-center justify-center rounded-md bg-rose-100 px-1 text-[10px] font-bold text-rose-600 dark:bg-rose-500/10 dark:text-rose-400">
                         {chatCount > 99 ? '99+' : chatCount}
                       </span>
                     )}

@@ -24,6 +24,7 @@ import { useAuth } from '@/context/AuthContext'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
@@ -214,8 +215,8 @@ export default function Posts() {
     setHeader({
       title: 'Deliverables',
       breadcrumbs: [
-        { label: 'Operations', href: '/posts' },
-        { label: 'Deliverables', href: '/posts' },
+        { label: 'Operations', href: '/deliverables' },
+        { label: 'Deliverables', href: '/deliverables' },
       ],
     })
   }, [setHeader])
@@ -354,7 +355,7 @@ export default function Posts() {
             <DropdownMenuItem
               onClick={(e) => {
                 e.stopPropagation()
-                navigate(`/clients/${item.client_id}/posts/${item.version_id}`)
+                navigate(`/clients/${item.client_id}/deliverables/${item.version_id}`)
               }}
             >
               Edit
@@ -366,7 +367,7 @@ export default function Posts() {
   ]
 
   const handleRowClick = (item) => {
-    navigate(`/clients/${item.client_id}/posts/${item.version_id}`)
+    navigate(`/clients/${item.client_id}/deliverables/${item.version_id}`)
   }
 
   // ─── Render ──────────────────────────────────
@@ -406,7 +407,11 @@ export default function Posts() {
 
       {/* ── Tabs ──────────────────────── */}
       <Tabs value={statusTab} onValueChange={setStatusTab} className="w-full">
-        <TabsList className="bg-transparent h-auto w-full justify-start rounded-none p-0 gap-8 border-b border-border/40">
+        {/* Ten status tabs don't fit a narrow viewport. The border lives on the
+            ScrollArea so the underline still spans the full width while the
+            triggers scroll beneath it. */}
+        <ScrollArea className="w-full border-b border-border/40">
+        <TabsList className="bg-transparent h-auto w-max justify-start rounded-none p-0 gap-8 border-none">
           {STATUS_TABS.map((tab) => {
             const count = tab.key === 'ALL' ? counts.all : counts[tab.key]
             return (
@@ -442,6 +447,8 @@ export default function Posts() {
             )
           })}
         </TabsList>
+          <ScrollBar orientation="horizontal" className="h-1.5" />
+        </ScrollArea>
       </Tabs>
 
       {/* ── Controls Row ─────────────────── */}

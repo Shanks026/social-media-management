@@ -231,6 +231,9 @@ function PendingTab() {
   )
 
   const columns = useMemo(() => [
+    // The Deliverable column deliberately declares no width — it absorbs
+    // whatever the sized columns leave, so the title truncates to the column
+    // rather than to a hard-coded max-width.
     pendingCol.accessor('title', {
       header: ({ column }) => <SortableHeader column={column} label="Deliverable" />,
       cell: ({ row }) => {
@@ -239,9 +242,9 @@ function PendingTab() {
           <div className="flex items-center gap-3 min-w-0">
             <InlineThumb urls={item.media_urls} />
             <div className="min-w-0">
-              <p className="text-sm font-medium leading-tight truncate max-w-50">{item.title}</p>
+              <p className="text-sm font-medium leading-tight truncate">{item.title}</p>
               {item.content && (
-                <p className="text-xs text-muted-foreground truncate max-w-50 mt-0.5">{item.content}</p>
+                <p className="text-xs text-muted-foreground truncate mt-0.5">{item.content}</p>
               )}
             </div>
           </div>
@@ -250,18 +253,20 @@ function PendingTab() {
     }),
     pendingCol.accessor((row) => row.client?.name ?? '', {
       id: 'client',
+      meta: { width: '18%' },
       header: ({ column }) => <SortableHeader column={column} label="Client" />,
       cell: ({ row }) => {
         const c = row.original.client
         return (
           <div className="flex items-center gap-2 min-w-0">
             <ClientAvatar name={c?.name} logoUrl={c?.logo_url} />
-            <span className="text-sm truncate max-w-32.5">{c?.name ?? '—'}</span>
+            <span className="text-sm truncate">{c?.name ?? '—'}</span>
           </div>
         )
       },
     }),
     pendingCol.accessor('platforms', {
+      meta: { width: '12%' },
       header: () => <ColHeader label="Platforms" />,
       enableSorting: false,
       cell: ({ getValue }) => {
@@ -273,6 +278,7 @@ function PendingTab() {
     }),
     pendingCol.accessor((row) => row.submitter?.full_name || row.submitter?.email || '', {
       id: 'submitter',
+      meta: { width: '18%' },
       header: ({ column }) => <SortableHeader column={column} label="Submitted by" />,
       cell: ({ row }) => {
         const s = row.original.submitter
@@ -282,7 +288,7 @@ function PendingTab() {
           <div className="flex items-center gap-2 min-w-0">
             <UserAvatar name={s.full_name} email={s.email} avatarUrl={s.avatar_url} />
             <div className="min-w-0">
-              <p className="text-sm truncate max-w-30 leading-tight">{s.full_name || s.email}</p>
+              <p className="text-sm truncate leading-tight">{s.full_name || s.email}</p>
               <p className="text-[11px] text-muted-foreground leading-tight">{timeAgo}</p>
             </div>
           </div>
@@ -290,6 +296,7 @@ function PendingTab() {
       },
     }),
     pendingCol.accessor('target_date', {
+      meta: { width: '12%' },
       header: ({ column }) => <SortableHeader column={column} label="Target" />,
       cell: ({ getValue }) => {
         const v = getValue()
@@ -346,12 +353,16 @@ function PendingTab() {
         <p className="py-16 text-center text-sm text-muted-foreground">No results match your search.</p>
       ) : (
         <div className="rounded-xl border border-border bg-card overflow-hidden">
-          <Table>
+          <Table className="table-fixed">
             <TableHeader>
               {table.getHeaderGroups().map((hg) => (
                 <TableRow key={hg.id} className="hover:bg-transparent">
                   {hg.headers.map((h) => (
-                    <TableHead key={h.id} className="py-3 px-4">
+                    <TableHead
+                      key={h.id}
+                      className="py-3 px-4"
+                      style={{ width: h.column.columnDef.meta?.width }}
+                    >
                       {flexRender(h.column.columnDef.header, h.getContext())}
                     </TableHead>
                   ))}
@@ -365,7 +376,7 @@ function PendingTab() {
                     <TableRow
                       key={row.id}
                       className="cursor-pointer hover:bg-muted/40 transition-colors"
-                      onClick={() => navigate(`/clients/${row.original.client_id}/posts/${row.original.actual_post_id}`)}
+                      onClick={() => navigate(`/clients/${row.original.client_id}/deliverables/${row.original.actual_post_id}`)}
                     >
                       {row.getVisibleCells().map((cell) => (
                         <TableCell key={cell.id} className="py-3 px-4">
@@ -409,6 +420,7 @@ function LogTab({ action, emptyLabel, emptyDescription }) {
   })
 
   const columns = useMemo(() => [
+    // No width — absorbs whatever the sized columns leave (see pending table).
     logCol.accessor('post_title', {
       header: () => <ColHeader label="Deliverable" />,
       enableSorting: false,
@@ -416,15 +428,15 @@ function LogTab({ action, emptyLabel, emptyDescription }) {
         const e = row.original
         return (
           <NavLink
-            to={`/clients/${e.client_id}/posts/${e.post_id}`}
+            to={`/clients/${e.client_id}/deliverables/${e.post_id}`}
             onClick={(ev) => ev.stopPropagation()}
             className="flex items-center gap-3 min-w-0 group/link"
           >
             <InlineThumb urls={e.post_media_urls} />
             <div className="min-w-0">
-              <p className="text-sm font-medium leading-tight truncate max-w-50 group-hover/link:underline">{e.post_title}</p>
+              <p className="text-sm font-medium leading-tight truncate group-hover/link:underline">{e.post_title}</p>
               {e.post_content && (
-                <p className="text-xs text-muted-foreground truncate max-w-50 mt-0.5">{e.post_content}</p>
+                <p className="text-xs text-muted-foreground truncate mt-0.5">{e.post_content}</p>
               )}
             </div>
           </NavLink>
@@ -432,6 +444,7 @@ function LogTab({ action, emptyLabel, emptyDescription }) {
       },
     }),
     logCol.accessor('client_name', {
+      meta: { width: '16%' },
       header: () => <ColHeader label="Client" />,
       enableSorting: false,
       cell: ({ row }) => {
@@ -439,12 +452,13 @@ function LogTab({ action, emptyLabel, emptyDescription }) {
         return (
           <div className="flex items-center gap-2 min-w-0">
             <ClientAvatar name={e.client_name} logoUrl={e.client_logo_url} />
-            <span className="text-sm truncate max-w-27.5">{e.client_name}</span>
+            <span className="text-sm truncate">{e.client_name}</span>
           </div>
         )
       },
     }),
     logCol.accessor('submitter_name', {
+      meta: { width: '16%' },
       header: () => <ColHeader label="Submitted by" />,
       enableSorting: false,
       cell: ({ row }) => {
@@ -453,12 +467,13 @@ function LogTab({ action, emptyLabel, emptyDescription }) {
         return (
           <div className="flex items-center gap-2 min-w-0">
             <UserAvatar name={e.submitter_name} email={e.submitter_email} avatarUrl={e.submitter_avatar_url} />
-            <span className="text-sm truncate max-w-32.5">{e.submitter_name || e.submitter_email}</span>
+            <span className="text-sm truncate">{e.submitter_name || e.submitter_email}</span>
           </div>
         )
       },
     }),
     logCol.accessor('actor_name', {
+      meta: { width: '16%' },
       header: () => <ColHeader label="By" />,
       enableSorting: false,
       cell: ({ row }) => {
@@ -466,22 +481,24 @@ function LogTab({ action, emptyLabel, emptyDescription }) {
         return (
           <div className="flex items-center gap-2 min-w-0">
             <UserAvatar name={e.actor_name} email={e.actor_email} avatarUrl={e.actor_avatar_url} />
-            <span className="text-sm truncate max-w-32.5">{e.actor_name}</span>
+            <span className="text-sm truncate">{e.actor_name}</span>
           </div>
         )
       },
     }),
     ...(action === 'changes_requested' ? [logCol.accessor('notes', {
+      meta: { width: '18%' },
       header: () => <ColHeader label="Notes" />,
       enableSorting: false,
       cell: ({ getValue }) => {
         const n = getValue()
         return n
-          ? <span className="text-sm text-muted-foreground truncate max-w-50 block">{n}</span>
+          ? <span className="text-sm text-muted-foreground truncate block">{n}</span>
           : <span className="text-sm text-muted-foreground/40">—</span>
       },
     })] : []),
     logCol.accessor('created_at', {
+      meta: { width: '13%' },
       header: () => <ColHeader label="When" />,
       enableSorting: false,
       cell: ({ getValue }) => (
@@ -492,6 +509,7 @@ function LogTab({ action, emptyLabel, emptyDescription }) {
     }),
     logCol.display({
       id: 'delete',
+      meta: { width: '5%' },
       cell: ({ row }) => (
         <button
           className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive p-1 rounded"
@@ -544,12 +562,16 @@ function LogTab({ action, emptyLabel, emptyDescription }) {
         </Empty>
       ) : (
         <div className="rounded-xl border border-border bg-card overflow-hidden">
-          <Table>
+          <Table className="table-fixed">
             <TableHeader>
               {table.getHeaderGroups().map((hg) => (
                 <TableRow key={hg.id} className="hover:bg-transparent">
                   {hg.headers.map((h) => (
-                    <TableHead key={h.id} className="py-3 px-4">
+                    <TableHead
+                      key={h.id}
+                      className="py-3 px-4"
+                      style={{ width: h.column.columnDef.meta?.width }}
+                    >
                       {flexRender(h.column.columnDef.header, h.getContext())}
                     </TableHead>
                   ))}

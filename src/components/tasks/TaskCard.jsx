@@ -52,6 +52,13 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
   Sheet,
   SheetContent,
   SheetTitle,
@@ -108,6 +115,8 @@ export const STATUS_DOT = {
   ARCHIVED:    'bg-zinc-400',
 }
 
+const STATUS_OPTIONS = ['TODO', 'IN_PROGRESS', 'COMPLETED', 'ARCHIVED']
+
 // ─── Task Detail Sheet ────────────────────────────────────────────────────────
 
 // A single linked-deliverable preview row (used in the detail sheet).
@@ -118,7 +127,7 @@ function DeliverablePreviewRow({ post, client }) {
   const health = !isCompleted ? getUrgencyStatus(post.target_date) : null
   return (
     <Link
-      to={`/clients/${post.client_id}/posts/${post.id}`}
+      to={`/clients/${post.client_id}/deliverables/${post.id}`}
       className="group flex items-center gap-4 flex-1 min-w-0 rounded-lg border border-border/50 hover:bg-muted/40 transition-colors px-3 py-2.5"
     >
       {post.media_urls?.[0] ? (
@@ -280,34 +289,29 @@ export function TaskDetailSheet({
             )}
 
             <div className="space-y-3">
-              {/* Status picker */}
-              <div className="flex items-start gap-3">
-                <span className="text-xs text-muted-foreground w-24 shrink-0 pt-1">Status</span>
-                <div className="flex flex-wrap gap-1.5">
-                  {[
-                    { key: 'TODO',        label: 'To Do',       dot: STATUS_DOT.TODO,        cls: STATUS_CONFIG.TODO.className },
-                    { key: 'IN_PROGRESS', label: 'In Progress', dot: STATUS_DOT.IN_PROGRESS, cls: STATUS_CONFIG.IN_PROGRESS.className },
-                    { key: 'COMPLETED',   label: 'Completed',   dot: STATUS_DOT.COMPLETED,   cls: STATUS_CONFIG.COMPLETED.className },
-                    { key: 'ARCHIVED',    label: 'Archived',    dot: STATUS_DOT.ARCHIVED,    cls: STATUS_CONFIG.ARCHIVED.className },
-                  ].map((s) => (
-                    <button
-                      key={s.key}
-                      onClick={() => task.status !== s.key && setStatus(s.key)}
-                      disabled={!canToggle || isBusy || task.status === s.key}
-                      className={cn(
-                        'flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full transition-all select-none',
-                        task.status === s.key
-                          ? s.cls
-                          : canToggle
-                            ? 'bg-muted/50 text-muted-foreground hover:bg-muted cursor-pointer'
-                            : 'bg-muted/30 text-muted-foreground/50 cursor-default',
-                      )}
-                    >
-                      <span className={cn('size-2 rounded-full shrink-0', s.dot)} />
-                      {s.label}
-                    </button>
-                  ))}
-                </div>
+              {/* Status picker — a select, so it reads as one editable value
+                  rather than a row of badges that look like display state. */}
+              <div className="flex items-center gap-3">
+                <span className="text-xs text-muted-foreground w-24 shrink-0">Status</span>
+                <Select
+                  value={task.status}
+                  onValueChange={(next) => next !== task.status && setStatus(next)}
+                  disabled={!canToggle || isBusy}
+                >
+                  <SelectTrigger size="sm" className="w-[170px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {STATUS_OPTIONS.map((key) => (
+                      <SelectItem key={key} value={key}>
+                        <span className="flex items-center gap-2">
+                          <span className={cn('size-2 rounded-full shrink-0', STATUS_DOT[key])} />
+                          {STATUS_CONFIG[key].label}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               {assignee && (

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { Link } from 'react-router-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { format, formatDistanceToNow } from 'date-fns'
 import { toast } from 'sonner'
@@ -82,6 +83,18 @@ function AuthorChip({ member }) {
 }
 
 /**
+ * One stacked label/value row of the meta list under the deliverable title.
+ */
+function MetaItem({ label, children }) {
+  return (
+    <div className="grid grid-cols-[96px_1fr] items-start gap-x-3">
+      <dt className="pt-px text-sm text-muted-foreground">{label}</dt>
+      <dd className="min-w-0 text-sm text-foreground">{children}</dd>
+    </div>
+  )
+}
+
+/**
  * Minimal status/feedback note — a plain left-border quote (accent color
  * only, no background fill or colored body text). Used in place of the old
  * filled alert boxes; `accent` keeps each status's color on the border only.
@@ -112,6 +125,46 @@ const PLATFORM_LABELS = {
   google_business: 'Google Business',
   youtube: 'YouTube',
   twitter: 'Twitter/X',
+}
+
+// Same palette the create-deliverable dialog uses for a selected platform, so
+// a platform reads identically wherever it appears.
+const PLATFORM_BADGE_CLASS = {
+  instagram:
+    'border-pink-400 bg-pink-50 text-pink-700 dark:border-pink-500/50 dark:bg-pink-500/15 dark:text-pink-300',
+  linkedin:
+    'border-blue-500 bg-blue-50 text-blue-700 dark:border-blue-500/50 dark:bg-blue-600/15 dark:text-blue-300',
+  facebook:
+    'border-sky-500 bg-sky-50 text-sky-700 dark:border-sky-500/50 dark:bg-sky-500/15 dark:text-sky-300',
+  google_business:
+    'border-amber-400 bg-amber-50 text-amber-700 dark:border-amber-500/50 dark:bg-amber-500/15 dark:text-amber-300',
+  youtube:
+    'border-red-500 bg-red-50 text-red-700 dark:border-red-500/50 dark:bg-red-600/15 dark:text-red-300',
+  twitter:
+    'border-slate-700 bg-slate-100 text-slate-900 dark:border-slate-400/50 dark:bg-slate-500/15 dark:text-slate-200',
+}
+
+/**
+ * Platform pill — icon + label, mirroring the create-deliverable dialog.
+ */
+function PlatformBadge({ name }) {
+  const fileName = name === 'google_business' ? 'google_busines' : name
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs',
+        PLATFORM_BADGE_CLASS[name] ?? 'text-muted-foreground',
+      )}
+    >
+      <img
+        src={`/platformIcons/${fileName}.png`}
+        alt=""
+        className="size-3.5 shrink-0 object-contain"
+        onError={(e) => (e.target.style.display = 'none')}
+      />
+      {PLATFORM_LABELS[name] ?? name}
+    </span>
+  )
 }
 
 const PlatformIcon = ({ name, size = 'md' }) => {
@@ -212,6 +265,7 @@ export default function PostContent({
   post,
   isInternal,
   canSendDeliverables,
+  showMeta,
   showHistory,
   setShowHistory,
   showComments,
@@ -300,157 +354,49 @@ export default function PostContent({
 
   const formatDate = (date) => (date ? format(new Date(date), 'dd MMM, p') : '')
 
+  // The single date worth surfacing in the meta grid. Skipped entirely when
+  // per-platform schedules exist — the Publish Plan grid lists them all.
+  const dateCell = (() => {
+    if (post.status === 'PUBLISHED')
+      return {
+        label: 'Published',
+        icon: <CheckCircle2 size={13} className="shrink-0 text-emerald-600" />,
+        value: post.published_at || post.updated_at,
+      }
+    if (post.platform_schedules || !post.target_date) return null
+    if (post.status === 'SCHEDULED')
+      return {
+        label: 'Scheduled for',
+        icon: <Clock size={13} className="shrink-0 text-violet-600" />,
+        value: post.target_date,
+      }
+    if (post.status === 'APPROVED')
+      return {
+        label: 'Deadline',
+        icon: <CalendarIcon size={13} className="shrink-0 text-teal-600" />,
+        value: post.target_date,
+      }
+    return {
+      label: 'Target date',
+      icon: <CalendarIcon size={13} className="shrink-0 text-muted-foreground" />,
+      value: post.target_date,
+    }
+  })()
+
   return (
     <div className="max-w-[1400px] mx-auto flex-1 p-8 space-y-6 min-w-0">
       {/* Main Header */}
       <div className="flex flex-col md:flex-row justify-between items-start gap-6">
-        <div className="space-y-6 flex-1">
-          <div className="flex flex-wrap items-center gap-3">
-            <StatusBadge status={getPublishState(post)} />
-            <div className="flex items-center gap-1.5">
-              {[].concat(post.platforms || []).map((p) => (
-                <PlatformIcon key={p} name={p} size="sm" />
-              ))}
-            </div>
-          </div>
+        <div className="min-w-0 flex-1 space-y-4">
+          <StatusBadge status={getPublishState(post)} />
 
-          <div className="space-y-4">
-            <div className="flex flex-row items-center gap-3">
-              <h1 className="text-3xl font-semibold tracking-tight bricolage">
-                {post.title}
-              </h1>
-              <Badge
-                variant="outline"
-                className="h-6 text-xs font-medium text-muted-foreground"
-              >
-                v{post.version_number}.0
-              </Badge>
-            </div>
-
-            {/* Row 1 — attribution */}
-            <div className="flex flex-wrap items-center gap-y-2 gap-x-6 py-1">
-              <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                <span>Created {format(new Date(post.created_at), 'dd MMM, yyyy')}</span>
-                {creator && (
-                  <>
-                    <span>by</span>
-                    <AuthorChip member={creator} />
-                  </>
-                )}
-              </div>
-
-              {updater && post.updated_at !== post.created_at && (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <div className="h-4 w-px bg-border hidden sm:block" />
-                  <span title={format(new Date(post.updated_at), 'dd MMM yyyy, HH:mm')}>
-                    Updated {formatDistanceToNow(new Date(post.updated_at), { addSuffix: true })}
-                  </span>
-                  <span>by</span>
-                  <AuthorChip member={updater} />
-                </div>
-              )}
-
-              {submitter && (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <div className="h-4 w-px bg-border hidden sm:block" />
-                  <span>Submitted {formatDistanceToNow(new Date(post.updated_at), { addSuffix: true })} by</span>
-                  <AuthorChip member={submitter} />
-                </div>
-              )}
-            </div>
-
-            {/* Row 2 — target / schedule / published */}
-            {(post.target_date || (post.platform_schedules && post.status === 'PUBLISHED')) && (
-              <div className="flex flex-wrap items-center gap-y-2 gap-x-6 py-0.5">
-                {/* Single-date display — only when no per-platform schedules */}
-                {!post.platform_schedules &&
-                  (post.status === 'PUBLISHED' ? (
-                    <div className="flex items-center gap-2 text-sm">
-                      <CheckCircle2 size={14} className="text-emerald-600" />
-                      <span className="font-medium">Published:</span>
-                      <Badge variant="secondary">
-                        {formatDate(post.published_at || post.updated_at)}
-                      </Badge>
-                    </div>
-                  ) : (
-                    post.target_date && (
-                      <div className="flex items-center gap-2 text-sm">
-                        {post.status === 'SCHEDULED' ? (
-                          <Clock size={14} className="text-violet-600" />
-                        ) : post.status === 'APPROVED' ? (
-                          <CalendarIcon size={14} className="text-teal-600" />
-                        ) : (
-                          <CalendarIcon size={14} />
-                        )}
-                        <span className="text-muted-foreground">
-                          {post.status === 'SCHEDULED'
-                            ? 'Scheduled for:'
-                            : post.status === 'APPROVED'
-                              ? 'Deadline:'
-                              : 'Target Date:'}
-                        </span>
-                        <Badge variant={post.status === 'SCHEDULED' ? 'secondary' : 'outline'}>
-                          {formatDate(post.target_date)}
-                        </Badge>
-                      </div>
-                    )
-                  ))}
-
-                {/* Per-platform: published state shows overall published badge */}
-                {post.platform_schedules && post.status === 'PUBLISHED' && (
-                  <div className="flex items-center gap-2 text-sm">
-                    <CheckCircle2 size={14} className="text-emerald-600" />
-                    <span className="font-medium">Published:</span>
-                    <Badge variant="secondary">
-                      {formatDate(post.published_at || post.updated_at)}
-                    </Badge>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Per-platform schedule grid */}
-            {post.platform_schedules && post.status !== 'PUBLISHED' && (
-              <div className="space-y-2 pt-1">
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                  Publish Plan
-                </p>
-                {Object.entries(post.platform_schedules).map(
-                  ([platformId, { scheduled_at, published_at }]) => (
-                    <div
-                      key={platformId}
-                      className="flex items-center gap-3 py-1"
-                    >
-                      <PlatformIcon name={platformId} size="sm" />
-                      <span className="text-sm font-medium w-[110px] shrink-0">
-                        {PLATFORM_LABELS[platformId] ?? platformId}
-                      </span>
-                      <span className="text-sm text-muted-foreground flex-1">
-                        {format(new Date(scheduled_at), 'dd MMM yyyy, p')}
-                      </span>
-                      {published_at ? (
-                        <CheckCircle2 size={14} className="text-emerald-500 shrink-0" />
-                      ) : post.status === 'SCHEDULED' ? (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-7 px-3 text-xs gap-1 shrink-0"
-                          disabled={!!publishingPlatformId}
-                          onClick={() => onPublishPlatform?.(platformId)}
-                        >
-                          {publishingPlatformId === platformId ? (
-                            <Loader2 size={11} className="animate-spin" />
-                          ) : (
-                            <Play size={11} />
-                          )}
-                          Publish
-                        </Button>
-                      ) : null}
-                    </div>
-                  ),
-                )}
-              </div>
-            )}
+          <div className="flex flex-row items-center gap-3">
+            <h1 className="text-4xl font-semibold tracking-tight bricolage">
+              {post.title}
+            </h1>
+            <Badge variant="secondary" className="h-6 text-xs font-medium">
+              v{post.version_number}.0
+            </Badge>
           </div>
         </div>
 
@@ -719,90 +665,224 @@ export default function PostContent({
         </div>
       </div>
 
-      {/* Phase 5: SUBMITTED — member perspective */}
-      {post.status === 'SUBMITTED' && !canSendDeliverables && (
-        <StatusNote title="Awaiting Internal Review" accent="border-amber-500">
-          This deliverable has been submitted and is waiting for an owner or admin to review it.
-        </StatusNote>
-      )}
-
-      {/* Phase 5: CHANGES_REQUESTED — member sees internal feedback */}
-      {post.status === 'CHANGES_REQUESTED' && (
-        <StatusNote title="Changes Requested" accent="border-rose-500">
-          {post.admin_notes || 'Edit this deliverable and resubmit when ready.'}
-        </StatusNote>
-      )}
-
-      {/* Phase 5: READY — owner/admin can now send to client */}
-      {post.status === 'READY' && canSendDeliverables && (
-        <StatusNote title="Internally Approved" accent="border-violet-500">
-          This deliverable has passed internal review. You can now send it to the client or schedule it.
-        </StatusNote>
-      )}
-
-      {/* Client feedback — shown inline instead of a separate alert */}
-      {post.status === 'NEEDS_REVISION' && (
-        <StatusNote
-          title={`Feedback from ${post.posts?.clients?.name || 'the client'}`}
-          accent="border-pink-500"
-        >
-          <span className="italic">
-            {post.client_notes ? `“${post.client_notes}”` : 'No feedback notes were provided for this revision request.'}
-          </span>
-          {post.updated_at && (
-            <span className="block mt-1 text-xs text-muted-foreground/70 not-italic">
-              {formatDistanceToNow(new Date(post.updated_at), { addSuffix: true })}
-            </span>
-          )}
-        </StatusNote>
-      )}
-
-      {post.status === 'DELIVERED' && (
-        <StatusNote title="Delivered" accent="border-teal-500">
-          This deliverable has been marked as delivered and is now complete.
-          {post.admin_notes && (
-            <span> Note: <em>{post.admin_notes}</em></span>
-          )}
-        </StatusNote>
-      )}
-
-      {/* Media Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4 py-4">
-        {post.media_urls?.map((url, i) => (
-          <div
-            key={url}
-            className="group relative aspect-square rounded-2xl overflow-hidden bg-muted cursor-pointer transition-all hover:scale-[1.02]"
-            onClick={() => {
-              setActiveIndex(i)
-              setIsPreviewOpen(true)
-            }}
-          >
-            <MediaItem
-              url={url}
-              className="transition group-hover:brightness-50"
-            />
-            {canEdit && (
-              <button
-                disabled={deleteMediaMutation.isPending}
-                onClick={(e) => {
-                  e.stopPropagation()
-                  setMediaToDelete(url)
-                }}
-                className="absolute top-3 right-3 p-2 bg-destructive/90 text-white rounded-xl opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive shadow-lg z-10"
-              >
-                <Trash2 size={16} />
-              </button>
-            )}
-            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 pointer-events-none">
-              <Eye size={20} className="text-white" />
+      {/* Body split: media + caption on the left, key/value meta on the right */}
+      <div className="flex flex-col gap-8 lg:flex-row lg:items-start">
+        <div className={cn('min-w-0 space-y-6', showMeta ? 'lg:w-2/3' : 'lg:w-full')}>
+          {/* Per-platform schedule grid — stays in the main column because it
+              carries the per-platform Publish buttons. */}
+          {post.platform_schedules && post.status !== 'PUBLISHED' && (
+            <div className="space-y-2">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                Publish Plan
+              </p>
+              {Object.entries(post.platform_schedules).map(
+                ([platformId, { scheduled_at, published_at }]) => (
+                  <div key={platformId} className="flex items-center gap-3 py-1">
+                    <PlatformIcon name={platformId} size="sm" />
+                    <span className="text-sm font-medium w-[110px] shrink-0">
+                      {PLATFORM_LABELS[platformId] ?? platformId}
+                    </span>
+                    <span className="text-sm text-muted-foreground flex-1">
+                      {format(new Date(scheduled_at), 'dd MMM yyyy, p')}
+                    </span>
+                    {published_at ? (
+                      <CheckCircle2 size={14} className="text-emerald-500 shrink-0" />
+                    ) : post.status === 'SCHEDULED' ? (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 px-3 text-xs gap-1 shrink-0"
+                        disabled={!!publishingPlatformId}
+                        onClick={() => onPublishPlatform?.(platformId)}
+                      >
+                        {publishingPlatformId === platformId ? (
+                          <Loader2 size={11} className="animate-spin" />
+                        ) : (
+                          <Play size={11} />
+                        )}
+                        Publish
+                      </Button>
+                    ) : null}
+                  </div>
+                ),
+              )}
             </div>
-          </div>
-        ))}
-      </div>
+          )}
 
-      <p className="text-base text-foreground leading-relaxed max-w-4xl whitespace-pre-wrap">
-        {renderCaption(post.content)}
-      </p>
+          {/* Phase 5: SUBMITTED — member perspective */}
+          {post.status === 'SUBMITTED' && !canSendDeliverables && (
+            <StatusNote title="Awaiting Internal Review" accent="border-amber-500">
+              This deliverable has been submitted and is waiting for an owner or admin to review it.
+            </StatusNote>
+          )}
+
+          {/* Phase 5: CHANGES_REQUESTED — member sees internal feedback */}
+          {post.status === 'CHANGES_REQUESTED' && (
+            <StatusNote title="Changes Requested" accent="border-rose-500">
+              {post.admin_notes || 'Edit this deliverable and resubmit when ready.'}
+            </StatusNote>
+          )}
+
+          {/* Phase 5: READY — owner/admin can now send to client */}
+          {post.status === 'READY' && canSendDeliverables && (
+            <StatusNote title="Internally Approved" accent="border-violet-500">
+              This deliverable has passed internal review. You can now send it to the client or schedule it.
+            </StatusNote>
+          )}
+
+          {/* Client feedback — shown inline instead of a separate alert */}
+          {post.status === 'NEEDS_REVISION' && (
+            <StatusNote
+              title={`Feedback from ${post.posts?.clients?.name || 'the client'}`}
+              accent="border-pink-500"
+            >
+              <span className="italic">
+                {post.client_notes ? `“${post.client_notes}”` : 'No feedback notes were provided for this revision request.'}
+              </span>
+              {post.updated_at && (
+                <span className="block mt-1 text-xs text-muted-foreground/70 not-italic">
+                  {formatDistanceToNow(new Date(post.updated_at), { addSuffix: true })}
+                </span>
+              )}
+            </StatusNote>
+          )}
+
+          {post.status === 'DELIVERED' && (
+            <StatusNote title="Delivered" accent="border-teal-500">
+              This deliverable has been marked as delivered and is now complete.
+              {post.admin_notes && (
+                <span> Note: <em>{post.admin_notes}</em></span>
+              )}
+            </StatusNote>
+          )}
+
+          {/* Media Grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+            {post.media_urls?.map((url, i) => (
+              <div
+                key={url}
+                className="group relative aspect-square rounded-2xl overflow-hidden bg-muted cursor-pointer transition-all hover:scale-[1.02]"
+                onClick={() => {
+                  setActiveIndex(i)
+                  setIsPreviewOpen(true)
+                }}
+              >
+                <MediaItem
+                  url={url}
+                  className="transition group-hover:brightness-50"
+                />
+                {canEdit && (
+                  <button
+                    disabled={deleteMediaMutation.isPending}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setMediaToDelete(url)
+                    }}
+                    className="absolute top-3 right-3 p-2 bg-destructive/90 text-white rounded-xl opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive shadow-lg z-10"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                )}
+                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 pointer-events-none">
+                  <Eye size={20} className="text-white" />
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <p className="text-base text-foreground leading-relaxed whitespace-pre-wrap">
+            {renderCaption(post.content)}
+          </p>
+
+          <PostLinkedTasks postId={post.actual_post_id} />
+        </div>
+
+        {/* Meta column — the deliverable's key facts as label/value rows. The
+            date row is omitted when per-platform schedules exist; those are
+            listed in full by the Publish Plan grid on the left. Yields the
+            space whenever a page-level right panel (version history or
+            comments) is open. */}
+        {showMeta && (
+          <aside className="w-full min-w-0 lg:sticky lg:top-20 lg:w-1/3">
+          <h2 className="mb-4 text-xs font-medium text-muted-foreground">
+            Meta Details
+          </h2>
+
+          <dl className="space-y-3.5">
+            <MetaItem label="Created on">
+              {format(new Date(post.created_at), 'dd MMM, yyyy')}
+            </MetaItem>
+
+            {creator && (
+              <MetaItem label="Created by">
+                <AuthorChip member={creator} />
+              </MetaItem>
+            )}
+
+            {post.clients?.name && (
+              <MetaItem label="Created for">
+                <span className="inline-flex items-center gap-1.5">
+                  <Avatar className="size-4 rounded-sm">
+                    <AvatarImage src={post.clients.logo_url} />
+                    <AvatarFallback className="rounded-sm text-[9px]">
+                      {post.clients.name[0]?.toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="truncate font-medium">{post.clients.name}</span>
+                </span>
+              </MetaItem>
+            )}
+
+            {dateCell && (
+              <MetaItem label={dateCell.label}>
+                <span className="inline-flex items-center gap-1.5">
+                  {dateCell.icon}
+                  {formatDate(dateCell.value)}
+                </span>
+              </MetaItem>
+            )}
+
+            {post.campaign?.name && (
+              <MetaItem label="Campaign">
+                <Link
+                  to={`/campaigns/${post.campaign.id}`}
+                  className="font-medium hover:underline"
+                >
+                  {post.campaign.name}
+                </Link>
+              </MetaItem>
+            )}
+
+            {post.platforms?.length > 0 && (
+              <MetaItem label="Platforms">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {[].concat(post.platforms).map((p) => (
+                    <PlatformBadge key={p} name={p} />
+                  ))}
+                </div>
+              </MetaItem>
+            )}
+
+            {updater && post.updated_at !== post.created_at && (
+              <MetaItem label="Updated">
+                <span title={format(new Date(post.updated_at), 'dd MMM yyyy, HH:mm')}>
+                  {formatDistanceToNow(new Date(post.updated_at), { addSuffix: true })}
+                </span>
+                <div className="mt-1">
+                  <AuthorChip member={updater} />
+                </div>
+              </MetaItem>
+            )}
+
+            {submitter && (
+              <MetaItem label="Submitted by">
+                <AuthorChip member={submitter} />
+              </MetaItem>
+            )}
+          </dl>
+          </aside>
+        )}
+      </div>
 
       {/* Media Dialogs (Preview & Delete) */}
       <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
@@ -893,8 +973,6 @@ export default function PostContent({
           />
         </div>
       )}
-
-      <PostLinkedTasks postId={post.actual_post_id} />
 
       <SocialMediaPreview
         isOpen={isSocialPreviewOpen}

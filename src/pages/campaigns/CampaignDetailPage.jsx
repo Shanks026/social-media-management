@@ -590,7 +590,7 @@ export default function CampaignDetailPage() {
                               className="group flex items-center gap-4 px-6 py-3 hover:bg-muted/40 transition-colors cursor-pointer"
                               onClick={() =>
                                 navigate(
-                                  `/clients/${post.client_id}/posts/${post.id}`,
+                                  `/clients/${post.client_id}/deliverables/${post.id}`,
                                 )
                               }
                             >

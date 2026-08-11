@@ -54,7 +54,7 @@ export default function VersionSidebar({
               // OPTIONAL: If you want history clicks to stay on the details page
               // but show a specific version, you'll need a version-specific route
               // or a state override. For now, this keeps your standard navigation:
-              onClick={() => navigate(`/clients/${clientId}/posts/${v.id}`)}
+              onClick={() => navigate(`/clients/${clientId}/deliverables/${v.id}`)}
               className={`group flex items-center border-none justify-between px-4 py-3 cursor-pointer rounded-xl transition-all ${
                 isSelected
                   ? 'bg-primary/5'

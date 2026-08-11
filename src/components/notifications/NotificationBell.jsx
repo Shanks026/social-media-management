@@ -71,7 +71,7 @@ function resolveRoute(notification) {
   const { entity_type, entity_id } = notification
   if (!entity_type || !entity_id) return null
   const map = {
-    post:     `/posts`,
+    post:     `/deliverables`,
     task:     `/tasks`,
     campaign: `/campaigns/${entity_id}`,
     invoice:  `/finance/invoices`,
