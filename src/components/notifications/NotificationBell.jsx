@@ -27,6 +27,7 @@ import {
   EmptyHeader,
 } from '@/components/ui/empty'
 import { cn } from '@/lib/utils'
+import { resolveNotificationRoute } from '@/components/notifications/routes'
 import { formatCompactTimeAgo } from '@/lib/helper'
 import {
   useUnreadNotificationCount,
@@ -66,19 +67,8 @@ function getInitials(name) {
   return ((first[0] ?? '') + (second[0] ?? '')).toUpperCase() || '?'
 }
 
-function resolveRoute(notification) {
-  if (notification.link) return notification.link
-  const { entity_type, entity_id } = notification
-  if (!entity_type || !entity_id) return null
-  const map = {
-    post:     `/deliverables`,
-    task:     `/tasks`,
-    campaign: `/campaigns/${entity_id}`,
-    invoice:  `/finance/invoices`,
-    team:     `/settings`,
-  }
-  return map[entity_type] ?? null
-}
+// Route resolution is shared with NotificationToaster — see ./routes.js
+const resolveRoute = resolveNotificationRoute
 
 // ─── Single row ────────────────────────────────────────────────────────────────
 

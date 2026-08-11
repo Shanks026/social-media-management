@@ -252,7 +252,7 @@ export function TaskDetailSheet({
       <Sheet open={open} onOpenChange={onOpenChange}>
         <SheetContent className="sm:max-w-[480px] flex flex-col p-0 gap-0">
           {/* Header */}
-          <div className="px-6 pt-10 pb-5 border-b border-border/50">
+          <div className="px-6 pt-8 pb-4 border-b border-border/50">
             <div className="flex items-center gap-2 mb-3">
               <Badge variant="outline" className={cn('gap-1.5 select-none', statusCfg.className)}>
                 <span className={cn('size-2 rounded-full shrink-0', STATUS_DOT[task.status] ?? 'bg-zinc-400')} />
