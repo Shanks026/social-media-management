@@ -103,9 +103,9 @@ export function ChatDeliverableCard({ reference }) {
   )
 }
 
-// Links to /tasks?task=<id> — TasksAndReminders.jsx auto-opens TaskDetailSheet
-// for the matching task on load, independent of whichever view (grid/table/
-// kanban) or filters happen to be active.
+// Links to the task's own page (/tasks/:taskId), which handles the "exists
+// but you can't see it" case itself — so a reference the viewer can't open
+// lands somewhere that explains why rather than on a filtered list.
 export function ChatTaskCard({ reference }) {
   const { data: tasks = [], isLoading } = useTasks()
   const { data: clientsData } = useClients()
@@ -136,7 +136,7 @@ export function ChatTaskCard({ reference }) {
 
   return (
     <Link
-      to={`/tasks?task=${task.id}`}
+      to={`/tasks/${task.id}`}
       className="mt-1.5 flex w-96 max-w-full flex-col gap-1.5 rounded-lg border border-border/70 px-3 py-2.5 transition-colors hover:bg-muted/40"
     >
       <div className="flex items-center gap-2">

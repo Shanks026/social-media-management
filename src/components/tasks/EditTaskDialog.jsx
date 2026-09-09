@@ -23,7 +23,6 @@ import { useClients } from '@/api/clients'
 import { fetchActiveCampaignsByClient } from '@/api/campaigns'
 import { fetchAllPostsByClient, fetchAllDeliverables } from '@/api/posts'
 import { useTeamMembers } from '@/api/team'
-import { usePermissions } from '@/api/usePermissions'
 import { useAuth } from '@/context/AuthContext'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
@@ -101,7 +100,6 @@ export default function EditTaskDialog({
   const [dueAt, setDueAt] = useState('')
   const [priority, setPriority] = useState(task?.priority ?? 'NORMAL')
 
-  const { canAssignTasks } = usePermissions()
   const { user, workspaceUserId } = useAuth()
   const { data: teamMembers = [] } = useTeamMembers()
   const assigneeOptions = useMemo(
@@ -296,65 +294,67 @@ export default function EditTaskDialog({
               </Select>
             </MetaRow>
 
-            {/* Assignee */}
-            {canAssignTasks && (
-              <MetaRow label="Assignee">
-                <Select
-                  value={assignedTo || NONE}
-                  onValueChange={(v) => setAssignedTo(v === NONE ? '' : v)}
-                >
-                  <SelectTrigger className="h-7 border-0 shadow-none bg-transparent hover:bg-muted/60 focus:ring-0 px-2 text-sm w-auto max-w-full">
-                    <SelectValue placeholder="Unassigned" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={NONE}>
-                      <span className="text-muted-foreground">Unassigned</span>
-                    </SelectItem>
-                    {assigneeOptions.map((m) => {
-                      const rolePalette =
-                        SYSTEM_ROLE_PALETTE[m.system_role] ??
-                        SYSTEM_ROLE_PALETTE.member
-                      return (
-                        <SelectItem
-                          key={m.member_user_id}
-                          value={m.member_user_id}
-                        >
-                          <div className="flex items-center gap-2 w-full min-w-0 pr-1">
-                            {m.avatar_url ? (
-                              <img
-                                src={m.avatar_url}
-                                alt=""
-                                className="size-5 rounded-full object-cover shrink-0"
-                              />
-                            ) : (
-                              <div className="size-5 rounded-full bg-primary/10 flex items-center justify-center text-[9px] font-semibold text-primary shrink-0">
-                                {(m.full_name ||
-                                  m.email ||
-                                  '?')[0].toUpperCase()}
-                              </div>
+            {/* Assignee — no canAssignTasks gate here. This dialog only ever
+                opens for canEdit (owner/creator, per TaskCard.jsx); tasks_update
+                RLS already permits a creator to change any field on their own
+                task, assigned_to included, so there was never a real
+                restriction here beyond the UI hiding the field. */}
+            <MetaRow label="Assignee">
+              <Select
+                value={assignedTo || NONE}
+                onValueChange={(v) => setAssignedTo(v === NONE ? '' : v)}
+              >
+                <SelectTrigger className="h-7 border-0 shadow-none bg-transparent hover:bg-muted/60 focus:ring-0 px-2 text-sm w-auto max-w-full">
+                  <SelectValue placeholder="Unassigned" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NONE}>
+                    <span className="text-muted-foreground">Unassigned</span>
+                  </SelectItem>
+                  {assigneeOptions.map((m) => {
+                    const rolePalette =
+                      SYSTEM_ROLE_PALETTE[m.system_role] ??
+                      SYSTEM_ROLE_PALETTE.member
+                    return (
+                      <SelectItem
+                        key={m.member_user_id}
+                        value={m.member_user_id}
+                      >
+                        <div className="flex items-center gap-2 w-full min-w-0 pr-1">
+                          {m.avatar_url ? (
+                            <img
+                              src={m.avatar_url}
+                              alt=""
+                              className="size-5 rounded-full object-cover shrink-0"
+                            />
+                          ) : (
+                            <div className="size-5 rounded-full bg-primary/10 flex items-center justify-center text-[9px] font-semibold text-primary shrink-0">
+                              {(m.full_name ||
+                                m.email ||
+                                '?')[0].toUpperCase()}
+                            </div>
+                          )}
+                          <span className="flex-1 truncate">
+                            {m.full_name || m.email}
+                            {m.member_user_id === user?.id && (
+                              <span className="text-muted-foreground ml-1">(You)</span>
                             )}
-                            <span className="flex-1 truncate">
-                              {m.full_name || m.email}
-                              {m.member_user_id === user?.id && (
-                                <span className="text-muted-foreground ml-1">(You)</span>
-                              )}
-                            </span>
-                            <Badge
-                              className={cn(
-                                'text-[9px] px-1.5 py-0 ml-2 shrink-0',
-                                rolePalette.badge,
-                              )}
-                            >
-                              {rolePalette.label}
-                            </Badge>
-                          </div>
-                        </SelectItem>
-                      )
-                    })}
-                  </SelectContent>
-                </Select>
-              </MetaRow>
-            )}
+                          </span>
+                          <Badge
+                            className={cn(
+                              'text-[9px] px-1.5 py-0 ml-2 shrink-0',
+                              rolePalette.badge,
+                            )}
+                          >
+                            {rolePalette.label}
+                          </Badge>
+                        </div>
+                      </SelectItem>
+                    )
+                  })}
+                </SelectContent>
+              </Select>
+            </MetaRow>
 
             {/* Priority */}
             <MetaRow label="Priority">

@@ -12,6 +12,7 @@ Tracks planned and built features. Each entry links to its full planning doc.
 | 06 | Multi-Account Switcher | [06-multi-account-switcher.md](06-multi-account-switcher.md) | ✅ Complete |
 | 07 | Invite Link Upgrade | [07-invite-link-upgrade.md](07-invite-link-upgrade.md) | 🟡 Built, pending verification |
 | 08 | Onboarding Enhancement | [08-onboarding-enhancement.md](08-onboarding-enhancement.md) | ✅ Complete |
+| 09 | Task Collaboration — History, Watchers & Detail Page | [09-task-collaboration.md](09-task-collaboration.md) | 🟡 Phase 1 of 4 built, pending live multi-account verification |
 
 ## Key Database Changes
 
@@ -23,6 +24,7 @@ Tracks planned and built features. Each entry links to its full planning doc.
 | `tasks` (new) | 04 | Replaces `client_notes`; team task management with assignment + priority + RBAC |
 | `client_notes` (dropped) | 04 | Replaced by `tasks`; data migrated in Phase 1 |
 | `agency_subscriptions` (columns) | 08 | `address`, `website` (Phase 1); `onboarding_completed_at`, `onboarding_skipped_steps` (Phase 3) |
+| `task_activity` (new) | 09 | Assignment + status history for tasks; also doubles as the watcher/participant list via `to_user_id` |
 
 ## Shared Infrastructure Notes
 

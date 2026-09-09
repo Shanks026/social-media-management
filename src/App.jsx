@@ -26,6 +26,7 @@ import Posts from './pages/Posts'
 import BillingUsage from './pages/billingAndUsage/BillingUsage'
 import CreateClientPage from './pages/clients/CreateClientPage'
 import TasksAndReminders from './pages/TasksAndReminders'
+import TaskDetailPage from './pages/tasks/TaskDetailPage'
 import Notes from './pages/Notes'
 import NoteEditorPage from './pages/NoteEditorPage'
 import MeetingsPage from './pages/MeetingsPage'
@@ -251,6 +252,7 @@ function AppRoutes() {
           <Route path="/deliverables" element={<Posts />} />
           <Route path="/posts" element={<Navigate to="/deliverables" replace />} />
           <Route path="/tasks" element={<TasksAndReminders />} />
+          <Route path="/tasks/:taskId" element={<TaskDetailPage />} />
           <Route path="/operations/notes" element={<Notes />} />
           <Route path="/operations/notes/:noteId" element={<NoteEditorPage />} />
           <Route path="/operations/meetings" element={<MeetingsPage />} />

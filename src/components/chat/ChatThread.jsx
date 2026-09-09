@@ -70,10 +70,7 @@ const SPECIAL_MENTIONS = [
 
 function referenceHref(reference) {
   if (reference.type === 'post') return `/clients/${reference.client_id}/deliverables/${reference.id}`
-  // ?task=<id> opens TaskDetailSheet on load (TasksAndReminders.jsx) —
-  // independent of the per-view local selection state each of the three
-  // views (grid/table/kanban) otherwise manages.
-  return `/tasks?task=${reference.id}`
+  return `/tasks/${reference.id}`
 }
 
 // Renders a message body that may contain both [[Title]] entity references

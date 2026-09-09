@@ -139,6 +139,89 @@ export async function updateTaskStatus(id, newStatus) {
   if (error) throw error
 }
 
+/**
+ * Hand a task off to another workspace member. tasks_update RLS blocks a
+ * direct .update() for anyone but the creator or an admin, so this RPC is the
+ * only path — mirroring updateTaskStatus's call to update_task_status. The
+ * reassign_task RPC itself checks the caller is a participant (creator,
+ * current assignee, past assignee, or admin) and the enforce_task_assignment
+ * trigger checks the target (active member, not owner/superadmin).
+ */
+export async function reassignTask(taskId, assignedTo) {
+  const { error } = await supabase.rpc('reassign_task', {
+    p_task_id: taskId,
+    p_assigned_to: assignedTo,
+  })
+  if (error) throw error
+}
+
+/**
+ * A single task by id, for the detail page (`/tasks/:taskId`). Returns null
+ * rather than throwing when the row isn't visible — `tasks_select` hides a
+ * task the caller has no hand in, and PostgREST reports that identically to a
+ * genuinely deleted row. The page pairs this with `useTaskExists` to tell the
+ * two apart, the same way ChatEntityCard already does.
+ *
+ * Client/campaign/member ids stay raw here; every task surface resolves them
+ * through `useTaskLookups()`, so duplicating that join server-side would give
+ * the page a second, divergent source for the same names.
+ */
+export function useTaskById(taskId) {
+  const { workspaceUserId } = useAuth()
+  return useQuery({
+    queryKey: ['tasks', 'detail', taskId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('tasks')
+        .select('*')
+        .eq('id', taskId)
+        .maybeSingle()
+      if (error) throw error
+      return data ?? null
+    },
+    enabled: !!taskId && !!workspaceUserId,
+  })
+}
+
+/**
+ * Assignment + status history for one task, newest first. Backs the Activity
+ * tab (Phase 2) and the "Assigned By" field, which previously — incorrectly —
+ * showed the task's creator regardless of who actually assigned it.
+ */
+export function useTaskActivity(taskId) {
+  const { workspaceUserId } = useAuth()
+  return useQuery({
+    queryKey: ['tasks', 'activity', taskId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('task_activity')
+        .select('*')
+        .eq('task_id', taskId)
+        .order('created_at', { ascending: false })
+      if (error) throw error
+      return data ?? []
+    },
+    enabled: !!taskId && !!workspaceUserId,
+  })
+}
+
+/**
+ * Watcher ids for a task: its creator plus everyone who has ever been
+ * assigned it, minus the current assignee (who's already shown separately as
+ * "Assigned To"). Derived from the same activity feed the Activity tab reads,
+ * so no extra round trip.
+ */
+export function useTaskWatchers(task) {
+  const { data: activity = [] } = useTaskActivity(task?.id)
+  if (!task) return []
+  const ids = new Set([task.created_by])
+  activity.forEach((row) => {
+    if (row.type === 'assigned' && row.to_user_id) ids.add(row.to_user_id)
+  })
+  ids.delete(task.assigned_to)
+  return [...ids]
+}
+
 export async function deleteTask(id) {
   const { error } = await supabase.from('tasks').delete().eq('id', id)
   if (error) throw error

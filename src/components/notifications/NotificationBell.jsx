@@ -15,6 +15,7 @@ import {
   Trash2,
   Users,
   TriangleAlert,
+  ArrowRightLeft,
 } from 'lucide-react'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Button } from '@/components/ui/button'
@@ -46,6 +47,8 @@ const TYPE_CONFIG = {
   post_status_changed:    { icon: FileText,       color: 'text-blue-500',   bg: 'bg-blue-100 dark:bg-blue-950' },
   task_assigned:          { icon: ClipboardList,   color: 'text-violet-500', bg: 'bg-violet-100 dark:bg-violet-950' },
   task_updated:           { icon: ClipboardList,   color: 'text-violet-500', bg: 'bg-violet-100 dark:bg-violet-950' },
+  task_reassigned:        { icon: ArrowRightLeft,  color: 'text-fuchsia-500', bg: 'bg-fuchsia-100 dark:bg-fuchsia-950' },
+  task_autocompleted:     { icon: CheckCircle2,    color: 'text-emerald-500', bg: 'bg-emerald-100 dark:bg-emerald-950' },
   campaign_review_shared: { icon: Share2,          color: 'text-amber-500',  bg: 'bg-amber-100 dark:bg-amber-950' },
   campaign_reviewed:      { icon: CheckCircle2,    color: 'text-green-500',  bg: 'bg-green-100 dark:bg-green-950' },
   team_member_joined:     { icon: UserPlus,        color: 'text-teal-500',   bg: 'bg-teal-100 dark:bg-teal-950' },
@@ -57,8 +60,10 @@ const TYPE_CONFIG = {
 
 // Label to show when a notification has no human actor (actor_user_id is null).
 const SYSTEM_ACTOR_LABEL = {
-  invoice_overdue:   'System',
-  campaign_reviewed: 'A client',
+  invoice_overdue:    'System',
+  campaign_reviewed:  'A client',
+  // Nobody moved the task — its deliverables shipping did.
+  task_autocompleted: 'System',
 }
 
 function getInitials(name) {

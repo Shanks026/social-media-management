@@ -300,7 +300,11 @@ export default function CreateTaskDialog({
               )}
             </MetaRow>
 
-            {/* Assignee */}
+            {/* Assignee — creation only, unlike handoff of an existing task.
+                tasks_insert RLS still requires assigned_to IS NULL OR
+                is_workspace_admin(); Phase 1 of task collaboration only added
+                a handoff path (reassign_task) for tasks that already exist, so
+                this stays gated exactly as before. */}
             {canAssignTasks && (
               <MetaRow label="Assignee">
                 <Select value={assignedTo} onValueChange={setAssignedTo}>

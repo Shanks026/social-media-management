@@ -15,11 +15,12 @@ import {
   Image as ImageIcon,
   Play,
   PencilRuler,
+  ArrowUpRight,
 } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
-import { updateTaskStatus, deleteTask, fetchTaskDeliverables } from '@/api/tasks'
+import { updateTaskStatus, deleteTask, fetchTaskDeliverables, reassignTask, useTaskActivity } from '@/api/tasks'
 import { usePermissions } from '@/api/usePermissions'
 import { getUrgencyStatus } from '@/lib/client-helpers'
 import StatusBadge from '@/components/StatusBadge'
@@ -117,12 +118,16 @@ export const STATUS_DOT = {
 
 const STATUS_OPTIONS = ['TODO', 'IN_PROGRESS', 'COMPLETED', 'ARCHIVED']
 
+// Sentinel for "no assignee" in the reassign picker — matches the pattern used
+// in CreateTaskDialog/EditTaskDialog (const NONE = '__none__').
+const UNASSIGNED = '__unassigned__'
+
 // ─── Task Detail Sheet ────────────────────────────────────────────────────────
 
 // A single linked-deliverable preview row (used in the detail sheet).
 // `client` is passed only for general (clientless) tasks, where linked
 // deliverables can span clients and need labelling.
-function DeliverablePreviewRow({ post, client }) {
+export function DeliverablePreviewRow({ post, client }) {
   const isCompleted = ['PUBLISHED', 'ARCHIVED'].includes(post.status)
   const health = !isCompleted ? getUrgencyStatus(post.target_date) : null
   return (
@@ -223,11 +228,22 @@ export function TaskDetailSheet({
     onError: (err) => toast.error('Failed to delete: ' + err.message),
   })
 
+  const { mutate: reassign, isPending: isReassigning } = useMutation({
+    // reassign_task RPC — tasks_update RLS blocks a direct .update() to
+    // assigned_to for anyone but the creator/admin, so this is the only path
+    // for a plain assignee handing work on to someone else.
+    mutationFn: (newAssigneeId) => reassignTask(task.id, newAssigneeId || null),
+    onSuccess: invalidate,
+    onError: (err) => toast.error('Failed to reassign: ' + err.message),
+  })
+
   const { data: linkedPosts = [] } = useQuery({
     queryKey: ['task-deliverables', task?.id],
     queryFn: () => fetchTaskDeliverables(task.id),
     enabled: !!task?.id,
   })
+
+  const { data: activity = [] } = useTaskActivity(task?.id)
 
   if (!task) return null
 
@@ -240,6 +256,26 @@ export function TaskDetailSheet({
     task.created_by === currentUserId
       ? 'You'
       : creatorMember?.full_name || creatorMember?.email || 'Team member'
+
+  // Who actually assigned the current holder — the latest 'assigned' activity
+  // row's actor, falling back to the creator when the task has never been
+  // reassigned. Previously this always showed the creator regardless.
+  const latestAssignment = activity.find((row) => row.type === 'assigned')
+  const assignerId = latestAssignment?.actor_user_id ?? task.created_by
+  const assignerMember = memberMap[assignerId]
+  const assignerName =
+    assignerId === currentUserId
+      ? 'You'
+      : assignerMember?.full_name || assignerMember?.email || 'Team member'
+
+  // Handing work on is not the same permission as rewriting the task: the
+  // current assignee may reassign even without canEdit (owner/creator).
+  const isCurrentAssignee = task.assigned_to === currentUserId
+  const canReassign = canEdit || isCurrentAssignee
+  const reassignOptions = Object.values(memberMap).filter(
+    (m) => !m._removed && m.system_role !== 'owner' && m.system_role !== 'superadmin',
+  )
+
   const statusCfg = STATUS_CONFIG[task.status] ?? STATUS_CONFIG.TODO
   const overdue =
     task.due_at &&
@@ -273,11 +309,24 @@ export function TaskDetailSheet({
             >
               {task.title}
             </SheetTitle>
-            {task.created_at && (
-              <SheetDescription className="mt-1">
-                Created {format(new Date(task.created_at), 'd MMM yyyy')}
-              </SheetDescription>
-            )}
+            <div className="mt-1 flex items-center justify-between gap-3">
+              {task.created_at ? (
+                <SheetDescription>
+                  Created {format(new Date(task.created_at), 'd MMM yyyy')}
+                </SheetDescription>
+              ) : (
+                <span />
+              )}
+              {/* The sheet stays a peek — the full record (activity, watchers,
+                  every linked deliverable) lives on the task's own page. */}
+              <Link
+                to={`/tasks/${task.id}`}
+                onClick={() => onOpenChange(false)}
+                className="inline-flex shrink-0 items-center gap-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+              >
+                Open task <ArrowUpRight className="size-3.5" />
+              </Link>
+            </div>
           </div>
 
           {/* Body */}
@@ -317,56 +366,94 @@ export function TaskDetailSheet({
               {assignee && (
                 <div className="flex items-center gap-3">
                   <span className="text-xs text-muted-foreground w-24 shrink-0">Assigned To</span>
-                  <div className={cn('flex items-center gap-2', assignee._removed && 'opacity-60')}>
-                    {assignee.avatar_url ? (
-                      <img
-                        src={assignee.avatar_url}
-                        alt=""
-                        className={cn('size-5 rounded-full object-cover shrink-0', assignee._removed && 'grayscale')}
-                      />
-                    ) : (
-                      <div
-                        className={cn(
-                          'size-5 rounded-full flex items-center justify-center text-[9px] font-semibold shrink-0',
-                          assignee._removed ? 'bg-muted text-muted-foreground' : 'bg-primary/10 text-primary',
-                        )}
-                      >
-                        {(assignee.full_name || assignee.email || '?')[0].toUpperCase()}
-                      </div>
-                    )}
-                    <span className="text-sm">
-                      {assignee.full_name || assignee.email}
-                      {assignee._removed && <span className="text-muted-foreground"> (Removed)</span>}
-                    </span>
-                  </div>
+                  {canReassign ? (
+                    <Select
+                      value={task.assigned_to}
+                      onValueChange={(next) =>
+                        reassign(next === UNASSIGNED ? null : next)
+                      }
+                      disabled={isReassigning}
+                    >
+                      <SelectTrigger className="h-7 border-0 shadow-none bg-transparent hover:bg-muted/60 focus:ring-0 px-2 text-sm w-auto max-w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={UNASSIGNED}>
+                          <span className="text-muted-foreground">Unassigned</span>
+                        </SelectItem>
+                        {reassignOptions.map((m) => (
+                          <SelectItem key={m.member_user_id} value={m.member_user_id}>
+                            <span className="flex items-center gap-2">
+                              {m.avatar_url ? (
+                                <img src={m.avatar_url} alt="" className="size-5 rounded-full object-cover shrink-0" />
+                              ) : (
+                                <div className="size-5 rounded-full bg-primary/10 flex items-center justify-center text-[9px] font-semibold text-primary shrink-0">
+                                  {(m.full_name || m.email || '?')[0].toUpperCase()}
+                                </div>
+                              )}
+                              <span className="truncate">
+                                {m.full_name || m.email}
+                                {m.member_user_id === currentUserId && (
+                                  <span className="text-muted-foreground ml-1">(You)</span>
+                                )}
+                              </span>
+                            </span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <div className={cn('flex items-center gap-2', assignee._removed && 'opacity-60')}>
+                      {assignee.avatar_url ? (
+                        <img
+                          src={assignee.avatar_url}
+                          alt=""
+                          className={cn('size-5 rounded-full object-cover shrink-0', assignee._removed && 'grayscale')}
+                        />
+                      ) : (
+                        <div
+                          className={cn(
+                            'size-5 rounded-full flex items-center justify-center text-[9px] font-semibold shrink-0',
+                            assignee._removed ? 'bg-muted text-muted-foreground' : 'bg-primary/10 text-primary',
+                          )}
+                        >
+                          {(assignee.full_name || assignee.email || '?')[0].toUpperCase()}
+                        </div>
+                      )}
+                      <span className="text-sm">
+                        {assignee.full_name || assignee.email}
+                        {assignee._removed && <span className="text-muted-foreground"> (Removed)</span>}
+                      </span>
+                    </div>
+                  )}
                 </div>
               )}
 
               {assignee && (
                 <div className="flex items-center gap-3">
                   <span className="text-xs text-muted-foreground w-24 shrink-0">Assigned By</span>
-                  <div className={cn('flex items-center gap-2', creatorMember?._removed && 'opacity-60')}>
-                    {task.created_by !== currentUserId && (
-                      creatorMember?.avatar_url ? (
+                  <div className={cn('flex items-center gap-2', assignerMember?._removed && 'opacity-60')}>
+                    {assignerId !== currentUserId && (
+                      assignerMember?.avatar_url ? (
                         <img
-                          src={creatorMember.avatar_url}
+                          src={assignerMember.avatar_url}
                           alt=""
-                          className={cn('size-5 rounded-full object-cover shrink-0', creatorMember?._removed && 'grayscale')}
+                          className={cn('size-5 rounded-full object-cover shrink-0', assignerMember?._removed && 'grayscale')}
                         />
                       ) : (
                         <div
                           className={cn(
                             'size-5 rounded-full flex items-center justify-center text-[9px] font-semibold shrink-0',
-                            creatorMember?._removed ? 'bg-muted text-muted-foreground' : 'bg-primary/10 text-primary',
+                            assignerMember?._removed ? 'bg-muted text-muted-foreground' : 'bg-primary/10 text-primary',
                           )}
                         >
-                          {(creatorMember?.full_name || creatorMember?.email || '?')[0].toUpperCase()}
+                          {(assignerMember?.full_name || assignerMember?.email || '?')[0].toUpperCase()}
                         </div>
                       )
                     )}
                     <span className="text-sm">
-                      {creatorName}
-                      {creatorMember?._removed && <span className="text-muted-foreground"> (Removed)</span>}
+                      {assignerName}
+                      {assignerMember?._removed && <span className="text-muted-foreground"> (Removed)</span>}
                     </span>
                   </div>
                 </div>
