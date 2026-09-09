@@ -13,6 +13,8 @@ import {
   updateMemberAccess,
   DEFAULT_INVITE_EXPIRY_DAYS,
   MAX_INVITE_EXPIRY_DAYS,
+  inviteExpiryInDays,
+  endOfDay,
 } from '@/api/team'
 import {
   SYSTEM_ROLE_PALETTE,
@@ -81,6 +83,7 @@ import {
   Loader2,
   RotateCcw,
   ShieldCheck,
+  UserCheck,
   ShieldMinus,
   FileText,
   Pencil,
@@ -151,13 +154,10 @@ function StepDot({ number, label, state }) {
   )
 }
 
-// DEFAULT_INVITE_EXPIRY_DAYS / MAX_INVITE_EXPIRY_DAYS now come from @/api/team,
-// so this dialog and the onboarding invite step share one source of truth.
-function addDays(days) {
-  const d = new Date()
-  d.setDate(d.getDate() + days)
-  return d
-}
+// DEFAULT_INVITE_EXPIRY_DAYS / MAX_INVITE_EXPIRY_DAYS and the date helpers now
+// all come from @/api/team, so this dialog and the onboarding invite step share
+// one source of truth — including the end-of-day rule, which the picker below
+// depends on to not issue a link that expires the morning it is labelled with.
 
 /**
  * `onGenerated` is optional — onboarding uses it to record that the owner
@@ -168,7 +168,7 @@ export function InviteDialog({ open, onOpenChange, onGenerated }) {
   const [label, setLabel] = useState('')
   const [systemRole, setSystemRole] = useState('member')
   const [docsLevel, setDocsLevel] = useState('view')
-  const [expiryDate, setExpiryDate] = useState(() => addDays(DEFAULT_INVITE_EXPIRY_DAYS))
+  const [expiryDate, setExpiryDate] = useState(() => inviteExpiryInDays(DEFAULT_INVITE_EXPIRY_DAYS))
   const [inviteUrl, setInviteUrl] = useState(null)
   const [copied, setCopied] = useState(false)
 
@@ -203,7 +203,7 @@ export function InviteDialog({ open, onOpenChange, onGenerated }) {
     setLabel('')
     setSystemRole('member')
     setDocsLevel('view')
-    setExpiryDate(addDays(DEFAULT_INVITE_EXPIRY_DAYS))
+    setExpiryDate(inviteExpiryInDays(DEFAULT_INVITE_EXPIRY_DAYS))
     setInviteUrl(null)
     setCopied(false)
   }
@@ -314,10 +314,12 @@ export function InviteDialog({ open, onOpenChange, onGenerated }) {
                   <Calendar
                     mode="single"
                     selected={expiryDate}
-                    onSelect={(date) => date && setExpiryDate(date)}
+                    // react-day-picker hands back local midnight; endOfDay
+                    // makes the label and the actual expiry agree.
+                    onSelect={(date) => date && setExpiryDate(endOfDay(date))}
                     disabled={(date) =>
                       date < new Date(new Date().setHours(0, 0, 0, 0)) ||
-                      date > addDays(MAX_INVITE_EXPIRY_DAYS)
+                      date > inviteExpiryInDays(MAX_INVITE_EXPIRY_DAYS)
                     }
                     initialFocus
                   />
@@ -455,7 +457,7 @@ export function InviteDialog({ open, onOpenChange, onGenerated }) {
                   </div>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Expires {formatDate(expiryDate)}. Whoever uses this link joins as a{' '}
+                  Expires {formatDate(expiryDate)}. Anyone who uses it before then joins as a{' '}
                   <span
                     className={cn(
                       'font-medium',
@@ -1171,6 +1173,12 @@ export default function TeamSettings({ onInviteClick = () => {} }) {
                         <Clock size={13} />
                         Expires {formatDate(invite.expires_at)}
                       </span>
+                      {invite.use_count > 0 && (
+                        <span className="flex items-center gap-1.5">
+                          <UserCheck size={13} />
+                          {invite.use_count} joined
+                        </span>
+                      )}
                     </div>
                   </div>
 

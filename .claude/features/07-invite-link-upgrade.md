@@ -233,3 +233,47 @@ No new tables. No storage bucket.
 - Editable invites (change name/expiry/role without revoking) — future build.
 - Bulk invite generation — future build.
 - Server-side (DB-level) expiry cap enforcement — client-side validation is sufficient for this owner-scoped, single-tenant action.
+
+---
+
+## Addendum — Invite links became multi-use (2026-09-09)
+
+Reported symptom: "the invite link shows invalid after I onboard a user."
+
+**Cause.** `join_team` stamped `accepted_at = now()` on join, and both
+`get_invite_by_token` and `join_team` filtered `accepted_at IS NULL`, so the first
+person through burned the link for everyone behind them. `usePendingInvites` filtered
+on it too, so the link simultaneously vanished from the copy-link section.
+
+**Change** (`supabase/migrations/20260909150000_reusable_invite_links.sql`):
+- Expiry — and revocation, which is a backdated `expires_at` — is now the only gate on
+  a link. Any number of people can join on one until it expires.
+- `accepted_at` kept but demoted to "first time anyone used it"; new `use_count` column
+  carries real usage, surfaced as "N joined" on the invite rows in `TeamPage.jsx` and
+  `TeamSettings.jsx`.
+- `join_team` is now idempotent for a repeat click: the member insert was already
+  `ON CONFLICT DO NOTHING`, but the "New team member joined" notification fired
+  unconditionally, so re-opening a link sent a duplicate every time. Both the counter
+  and the notification are now gated on `ROW_COUNT`.
+- Fixed that notification's link: it pointed at `/settings`, which has no team tab
+  (`Settings.jsx`'s `VALID_TABS` is `['profile','agency','invoice','danger']`, and an
+  unknown tab silently falls back to Profile). Now `/team`.
+- **All then-live links were retired** (`expires_at = now()`) at the owner's request:
+  previously-accepted ones would otherwise have come back to life once the
+  `accepted_at` gate was dropped, and every existing link had been handed out under
+  single-use expectations.
+
+Verified as three separate authenticated users joining on one link inside a rolled-back
+transaction: all three saw it valid, all three joined, the link stayed live,
+`use_count` reached 3, and a fourth (repeat) click added no member, no count and no
+notification.
+
+**Known tension with the RBAC model, deliberately left as-is.** A link carries a
+`system_role`, so a reusable link grants that role to *everyone* who joins on it —
+whereas `.claude/features/03-rbac-team-roles.md` specifies that invites carry no
+system_role and `join_team` force-clamps to `'member'`, with admin granted only by
+manual owner promotion. Raised with the owner on 2026-09-09; the decision was to keep
+the current static behaviour for now and revisit when per-workspace **dynamic roles**
+(owner-defined, create/delete only, visible to admins, hidden from members) are built.
+Practical mitigation until then: mint a member-role link for general onboarding and
+promote individuals afterwards, rather than circulating an admin link.

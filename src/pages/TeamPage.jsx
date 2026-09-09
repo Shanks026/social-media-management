@@ -55,6 +55,7 @@ import {
   Link,
   CalendarDays,
   Clock,
+  UserCheck,
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
@@ -535,6 +536,14 @@ export default function TeamPage() {
                                   <Clock size={11} />
                                   Expires {formatDate(invite.expires_at)}
                                 </span>
+                                {/* Links are multi-use — this is how many have
+                                    joined on it, not a limit. */}
+                                {invite.use_count > 0 && (
+                                  <span className="flex items-center gap-1">
+                                    <UserCheck size={11} />
+                                    {invite.use_count} joined
+                                  </span>
+                                )}
                               </div>
                             </div>
                             <div className="flex items-center gap-0.5 shrink-0">

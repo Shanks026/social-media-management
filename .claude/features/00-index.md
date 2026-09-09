@@ -10,9 +10,9 @@ Tracks planned and built features. Each entry links to its full planning doc.
 | 02 | Note Tags | [02-note-tags.md](02-note-tags.md) | ✅ Complete |
 | 04 | Team Task Management | [04-team-task-management.md](04-team-task-management.md) | 🔵 Planned |
 | 06 | Multi-Account Switcher | [06-multi-account-switcher.md](06-multi-account-switcher.md) | ✅ Complete |
-| 07 | Invite Link Upgrade | [07-invite-link-upgrade.md](07-invite-link-upgrade.md) | 🟡 Built, pending verification |
+| 07 | Invite Link Upgrade | [07-invite-link-upgrade.md](07-invite-link-upgrade.md) | 🟡 Built + links now multi-use (see addendum); pending verification |
 | 08 | Onboarding Enhancement | [08-onboarding-enhancement.md](08-onboarding-enhancement.md) | ✅ Complete |
-| 09 | Task Collaboration — History, Watchers & Detail Page | [09-task-collaboration.md](09-task-collaboration.md) | 🟡 Phase 1 of 4 built, pending live multi-account verification |
+| 09 | Task Collaboration — History, Watchers & Detail Page | [09-task-collaboration.md](09-task-collaboration.md) | 🟢 All 4 phases built and applied; pending live multi-account smoke test |
 
 ## Key Database Changes
 
