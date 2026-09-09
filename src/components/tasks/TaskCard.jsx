@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query'
 import {
   Building2,
@@ -7,7 +7,6 @@ import {
   CircleDashed,
   CheckCircle2,
   Archive,
-  RotateCcw,
   Pencil,
   Trash2,
   MoreVertical,
@@ -15,12 +14,11 @@ import {
   Image as ImageIcon,
   Play,
   PencilRuler,
-  ArrowUpRight,
 } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
-import { updateTaskStatus, deleteTask, fetchTaskDeliverables, reassignTask, useTaskActivity } from '@/api/tasks'
+import { updateTaskStatus, deleteTask, fetchTaskDeliverables } from '@/api/tasks'
 import { usePermissions } from '@/api/usePermissions'
 import { getUrgencyStatus } from '@/lib/client-helpers'
 import StatusBadge from '@/components/StatusBadge'
@@ -52,19 +50,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import {
-  Sheet,
-  SheetContent,
-  SheetTitle,
-  SheetDescription,
-} from '@/components/ui/sheet'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -116,17 +101,32 @@ export const STATUS_DOT = {
   ARCHIVED:    'bg-zinc-400',
 }
 
-const STATUS_OPTIONS = ['TODO', 'IN_PROGRESS', 'COMPLETED', 'ARCHIVED']
+/**
+ * A status rendered inline inside a sentence — the activity feed's "moved this
+ * from X to Y", and the notification bell's "Task status updated to X". Lives
+ * here rather than at either call site because both need the same pill and it
+ * reads straight off the two maps above.
+ */
+export function StatusChip({ status }) {
+  const cfg = STATUS_CONFIG[status]
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 align-middle text-xs font-medium',
+        cfg?.className ?? 'bg-muted text-muted-foreground',
+      )}
+    >
+      <span className={cn('size-1.5 shrink-0 rounded-full', STATUS_DOT[status] ?? 'bg-zinc-400')} />
+      {cfg?.label ?? status ?? 'Unknown'}
+    </span>
+  )
+}
 
-// Sentinel for "no assignee" in the reassign picker — matches the pattern used
-// in CreateTaskDialog/EditTaskDialog (const NONE = '__none__').
-const UNASSIGNED = '__unassigned__'
+// ─── Deliverable Preview Row ───────────────────────────────────────────────────
 
-// ─── Task Detail Sheet ────────────────────────────────────────────────────────
-
-// A single linked-deliverable preview row (used in the detail sheet).
-// `client` is passed only for general (clientless) tasks, where linked
-// deliverables can span clients and need labelling.
+// A single linked-deliverable preview row, used on the task detail page's
+// Deliverables tab. `client` is passed only for general (clientless) tasks,
+// where linked deliverables can span clients and need labelling.
 export function DeliverablePreviewRow({ post, client }) {
   const isCompleted = ['PUBLISHED', 'ARCHIVED'].includes(post.status)
   const health = !isCompleted ? getUrgencyStatus(post.target_date) : null
@@ -194,437 +194,24 @@ export function DeliverablePreviewRow({ post, client }) {
   )
 }
 
-export function TaskDetailSheet({
-  task,
-  open,
-  onOpenChange,
-  clientMap,
-  campaignMap = {},
-  memberMap,
-  currentUserId,
-  canEdit,
-  canToggle,
-}) {
-  const queryClient = useQueryClient()
-  const [editOpen, setEditOpen] = useState(false)
-  const [deleteOpen, setDeleteOpen] = useState(false)
-
-  const invalidate = () =>
-    queryClient.invalidateQueries({ queryKey: ['tasks', 'list'], exact: false })
-
-  const { mutate: setStatus, isPending: isSettingStatus } = useMutation({
-    mutationFn: (newStatus) => updateTaskStatus(task.id, newStatus),
-    onSuccess: invalidate,
-    onError: (err) => toast.error('Failed to update: ' + err.message),
-  })
-
-  const { mutate: remove, isPending: isDeleting } = useMutation({
-    mutationFn: () => deleteTask(task.id),
-    onSuccess: () => {
-      invalidate()
-      onOpenChange(false)
-      toast.success('Task deleted')
-    },
-    onError: (err) => toast.error('Failed to delete: ' + err.message),
-  })
-
-  const { mutate: reassign, isPending: isReassigning } = useMutation({
-    // reassign_task RPC — tasks_update RLS blocks a direct .update() to
-    // assigned_to for anyone but the creator/admin, so this is the only path
-    // for a plain assignee handing work on to someone else.
-    mutationFn: (newAssigneeId) => reassignTask(task.id, newAssigneeId || null),
-    onSuccess: invalidate,
-    onError: (err) => toast.error('Failed to reassign: ' + err.message),
-  })
-
-  const { data: linkedPosts = [] } = useQuery({
-    queryKey: ['task-deliverables', task?.id],
-    queryFn: () => fetchTaskDeliverables(task.id),
-    enabled: !!task?.id,
-  })
-
-  const { data: activity = [] } = useTaskActivity(task?.id)
-
-  if (!task) return null
-
-  const isBusy = isSettingStatus || isDeleting
-  const client = clientMap[String(task.client_id)]
-  const campaign = task.campaign_id ? campaignMap[String(task.campaign_id)] : null
-  const assignee = task.assigned_to ? memberMap[task.assigned_to] : null
-  const creatorMember = memberMap[task.created_by]
-  const creatorName =
-    task.created_by === currentUserId
-      ? 'You'
-      : creatorMember?.full_name || creatorMember?.email || 'Team member'
-
-  // Who actually assigned the current holder — the latest 'assigned' activity
-  // row's actor, falling back to the creator when the task has never been
-  // reassigned. Previously this always showed the creator regardless.
-  const latestAssignment = activity.find((row) => row.type === 'assigned')
-  const assignerId = latestAssignment?.actor_user_id ?? task.created_by
-  const assignerMember = memberMap[assignerId]
-  const assignerName =
-    assignerId === currentUserId
-      ? 'You'
-      : assignerMember?.full_name || assignerMember?.email || 'Team member'
-
-  // Handing work on is not the same permission as rewriting the task: the
-  // current assignee may reassign even without canEdit (owner/creator).
-  const isCurrentAssignee = task.assigned_to === currentUserId
-  const canReassign = canEdit || isCurrentAssignee
-  const reassignOptions = Object.values(memberMap).filter(
-    (m) => !m._removed && m.system_role !== 'owner' && m.system_role !== 'superadmin',
-  )
-
-  const statusCfg = STATUS_CONFIG[task.status] ?? STATUS_CONFIG.TODO
-  const overdue =
-    task.due_at &&
-    new Date(task.due_at).getTime() < new Date().getTime() &&
-    task.status !== 'COMPLETED' &&
-    task.status !== 'ARCHIVED'
-
-  return (
-    <>
-      <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent className="sm:max-w-[480px] flex flex-col p-0 gap-0">
-          {/* Header */}
-          <div className="px-6 pt-8 pb-4 border-b border-border/50">
-            <div className="flex items-center gap-2 mb-3">
-              <Badge variant="outline" className={cn('gap-1.5 select-none', statusCfg.className)}>
-                <span className={cn('size-2 rounded-full shrink-0', STATUS_DOT[task.status] ?? 'bg-zinc-400')} />
-                {statusCfg.label}
-              </Badge>
-              {PRIORITY_CONFIG[task.priority] && (
-                <Badge variant="outline" className="gap-1.5">
-                  <span className={cn('size-2 rounded-full shrink-0', PRIORITY_CONFIG[task.priority].dot)} />
-                  {PRIORITY_CONFIG[task.priority].label}
-                </Badge>
-              )}
-            </div>
-            <SheetTitle
-              className={cn(
-                'text-xl font-bold leading-snug',
-                task.status === 'COMPLETED' && 'line-through text-muted-foreground',
-              )}
-            >
-              {task.title}
-            </SheetTitle>
-            <div className="mt-1 flex items-center justify-between gap-3">
-              {task.created_at ? (
-                <SheetDescription>
-                  Created {format(new Date(task.created_at), 'd MMM yyyy')}
-                </SheetDescription>
-              ) : (
-                <span />
-              )}
-              {/* The sheet stays a peek — the full record (activity, watchers,
-                  every linked deliverable) lives on the task's own page. */}
-              <Link
-                to={`/tasks/${task.id}`}
-                onClick={() => onOpenChange(false)}
-                className="inline-flex shrink-0 items-center gap-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
-              >
-                Open task <ArrowUpRight className="size-3.5" />
-              </Link>
-            </div>
-          </div>
-
-          {/* Body */}
-          <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
-            {task.description && (
-              <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
-                {task.description}
-              </p>
-            )}
-
-            <div className="space-y-3">
-              {/* Status picker — a select, so it reads as one editable value
-                  rather than a row of badges that look like display state. */}
-              <div className="flex items-center gap-3">
-                <span className="text-xs text-muted-foreground w-24 shrink-0">Status</span>
-                <Select
-                  value={task.status}
-                  onValueChange={(next) => next !== task.status && setStatus(next)}
-                  disabled={!canToggle || isBusy}
-                >
-                  <SelectTrigger size="sm" className="w-[170px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {STATUS_OPTIONS.map((key) => (
-                      <SelectItem key={key} value={key}>
-                        <span className="flex items-center gap-2">
-                          <span className={cn('size-2 rounded-full shrink-0', STATUS_DOT[key])} />
-                          {STATUS_CONFIG[key].label}
-                        </span>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {assignee && (
-                <div className="flex items-center gap-3">
-                  <span className="text-xs text-muted-foreground w-24 shrink-0">Assigned To</span>
-                  {canReassign ? (
-                    <Select
-                      value={task.assigned_to}
-                      onValueChange={(next) =>
-                        reassign(next === UNASSIGNED ? null : next)
-                      }
-                      disabled={isReassigning}
-                    >
-                      <SelectTrigger className="h-7 border-0 shadow-none bg-transparent hover:bg-muted/60 focus:ring-0 px-2 text-sm w-auto max-w-full">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value={UNASSIGNED}>
-                          <span className="text-muted-foreground">Unassigned</span>
-                        </SelectItem>
-                        {reassignOptions.map((m) => (
-                          <SelectItem key={m.member_user_id} value={m.member_user_id}>
-                            <span className="flex items-center gap-2">
-                              {m.avatar_url ? (
-                                <img src={m.avatar_url} alt="" className="size-5 rounded-full object-cover shrink-0" />
-                              ) : (
-                                <div className="size-5 rounded-full bg-primary/10 flex items-center justify-center text-[9px] font-semibold text-primary shrink-0">
-                                  {(m.full_name || m.email || '?')[0].toUpperCase()}
-                                </div>
-                              )}
-                              <span className="truncate">
-                                {m.full_name || m.email}
-                                {m.member_user_id === currentUserId && (
-                                  <span className="text-muted-foreground ml-1">(You)</span>
-                                )}
-                              </span>
-                            </span>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  ) : (
-                    <div className={cn('flex items-center gap-2', assignee._removed && 'opacity-60')}>
-                      {assignee.avatar_url ? (
-                        <img
-                          src={assignee.avatar_url}
-                          alt=""
-                          className={cn('size-5 rounded-full object-cover shrink-0', assignee._removed && 'grayscale')}
-                        />
-                      ) : (
-                        <div
-                          className={cn(
-                            'size-5 rounded-full flex items-center justify-center text-[9px] font-semibold shrink-0',
-                            assignee._removed ? 'bg-muted text-muted-foreground' : 'bg-primary/10 text-primary',
-                          )}
-                        >
-                          {(assignee.full_name || assignee.email || '?')[0].toUpperCase()}
-                        </div>
-                      )}
-                      <span className="text-sm">
-                        {assignee.full_name || assignee.email}
-                        {assignee._removed && <span className="text-muted-foreground"> (Removed)</span>}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {assignee && (
-                <div className="flex items-center gap-3">
-                  <span className="text-xs text-muted-foreground w-24 shrink-0">Assigned By</span>
-                  <div className={cn('flex items-center gap-2', assignerMember?._removed && 'opacity-60')}>
-                    {assignerId !== currentUserId && (
-                      assignerMember?.avatar_url ? (
-                        <img
-                          src={assignerMember.avatar_url}
-                          alt=""
-                          className={cn('size-5 rounded-full object-cover shrink-0', assignerMember?._removed && 'grayscale')}
-                        />
-                      ) : (
-                        <div
-                          className={cn(
-                            'size-5 rounded-full flex items-center justify-center text-[9px] font-semibold shrink-0',
-                            assignerMember?._removed ? 'bg-muted text-muted-foreground' : 'bg-primary/10 text-primary',
-                          )}
-                        >
-                          {(assignerMember?.full_name || assignerMember?.email || '?')[0].toUpperCase()}
-                        </div>
-                      )
-                    )}
-                    <span className="text-sm">
-                      {assignerName}
-                      {assignerMember?._removed && <span className="text-muted-foreground"> (Removed)</span>}
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              <div className="flex items-center gap-3">
-                <span className="text-xs text-muted-foreground w-24 shrink-0">Created By</span>
-                <div className={cn('flex items-center gap-2', creatorMember?._removed && 'opacity-60')}>
-                  {task.created_by !== currentUserId && (
-                    creatorMember?.avatar_url ? (
-                      <img
-                        src={creatorMember.avatar_url}
-                        alt=""
-                        className={cn('size-5 rounded-full object-cover shrink-0', creatorMember?._removed && 'grayscale')}
-                      />
-                    ) : (
-                      <div
-                        className={cn(
-                          'size-5 rounded-full flex items-center justify-center text-[9px] font-semibold shrink-0',
-                          creatorMember?._removed ? 'bg-muted text-muted-foreground' : 'bg-primary/10 text-primary',
-                        )}
-                      >
-                        {(creatorMember?.full_name || creatorMember?.email || '?')[0].toUpperCase()}
-                      </div>
-                    )
-                  )}
-                  <span className="text-sm">
-                    {creatorName}
-                    {creatorMember?._removed && <span className="text-muted-foreground"> (Removed)</span>}
-                  </span>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <span className="text-xs text-muted-foreground w-24 shrink-0">Client</span>
-                <div className="flex items-center gap-2">
-                  {client ? (
-                    <>
-                      <ClientAvatar client={client} size="sm" />
-                      <span className="text-sm">{client.name}</span>
-                    </>
-                  ) : (
-                    <span className="text-sm text-muted-foreground">General (no client)</span>
-                  )}
-                </div>
-              </div>
-
-              {campaign && (
-                <div className="flex items-center gap-3">
-                  <span className="text-xs text-muted-foreground w-24 shrink-0">Campaign</span>
-                  <div className="flex items-center gap-2">
-                    <Megaphone className="size-3.5 text-muted-foreground shrink-0" />
-                    <Link
-                      to={`/campaigns/${campaign.id}`}
-                      className="text-sm text-blue-600 dark:text-blue-400 underline underline-offset-2 hover:text-blue-700 dark:hover:text-blue-300"
-                    >
-                      {campaign.name}
-                    </Link>
-                  </div>
-                </div>
-              )}
-
-              {task.due_at && (
-                <div className="flex items-center gap-3">
-                  <span className="text-xs text-muted-foreground w-24 shrink-0">Due</span>
-                  <span className={cn('text-sm', overdue && 'text-destructive font-medium')}>
-                    {format(new Date(task.due_at), 'd MMM yyyy')}
-                    {overdue && ' · Overdue'}
-                  </span>
-                </div>
-              )}
-
-              {task.completed_at && (
-                <div className="flex items-center gap-3">
-                  <span className="text-xs text-muted-foreground w-24 shrink-0">Completed</span>
-                  <span className="text-sm">{format(new Date(task.completed_at), 'd MMM yyyy')}</span>
-                </div>
-              )}
-            </div>
-
-            {linkedPosts.length > 0 && (
-              <div className="space-y-2.5 border-t border-border/50 pt-5">
-                <div className="flex items-center gap-2">
-                  <h4 className="text-sm font-semibold">Deliverables</h4>
-                  <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-muted px-1.5 text-[11px] font-medium text-muted-foreground">
-                    {linkedPosts.length}
-                  </span>
-                </div>
-                <div className="flex flex-col gap-2">
-                  {linkedPosts.map((post) => (
-                    <DeliverablePreviewRow
-                      key={post.id}
-                      post={post}
-                      client={!task.client_id ? clientMap?.[String(post.client_id)] : undefined}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Footer actions */}
-          {canEdit && (
-            <div className="px-6 py-4 border-t border-border/50 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" onClick={() => setEditOpen(true)} disabled={isBusy}>
-                  <Pencil className="size-3.5 mr-1.5" /> Edit
-                </Button>
-                {task.status !== 'ARCHIVED' ? (
-                  <Button variant="outline" size="sm" onClick={() => setStatus('ARCHIVED')} disabled={isBusy}>
-                    <Archive className="size-3.5 mr-1.5" /> Archive
-                  </Button>
-                ) : (
-                  <Button variant="outline" size="sm" onClick={() => setStatus('TODO')} disabled={isBusy}>
-                    <RotateCcw className="size-3.5 mr-1.5" /> Restore
-                  </Button>
-                )}
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                onClick={() => setDeleteOpen(true)}
-                disabled={isBusy}
-              >
-                <Trash2 className="size-3.5 mr-1.5" /> Delete
-              </Button>
-            </div>
-          )}
-        </SheetContent>
-      </Sheet>
-
-      <EditTaskDialog task={task} open={editOpen} onOpenChange={setEditOpen} />
-
-      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete task?</AlertDialogTitle>
-            <AlertDialogDescription>
-              "{task.title}" will be permanently deleted. This cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={() => remove()}
-              disabled={isDeleting}
-            >
-              {isDeleting ? 'Deleting…' : 'Delete'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </>
-  )
-}
-
 // ─── Task Card ────────────────────────────────────────────────────────────────
 
 export default function TaskCard({ task, clientMap, campaignMap = {}, memberMap = {}, currentUserId = null }) {
+  const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [editOpen, setEditOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
-  const [sheetOpen, setSheetOpen] = useState(false)
-  const { isOwner, canAssignTasks } = usePermissions()
+  const { isAdmin, canAssignTasks } = usePermissions()
 
   const isCreator  = task.created_by === currentUserId
   const isAssignee = task.assigned_to === currentUserId
-  const canEdit    = isOwner || isCreator
-  const canToggle  = isOwner || isCreator || isAssignee
+  // isAdmin already means owner OR admin OR superadmin — matches the DB's
+  // is_workspace_admin(), which update_task_status/reassign_task actually
+  // check. This was isOwner alone, so an admin who reassigned a task away
+  // from themselves lost canEdit/canToggle here even though the RPCs would
+  // still have allowed them. Same fix in TaskDetailPage.jsx.
+  const canEdit    = isAdmin || isCreator
+  const canToggle  = isAdmin || isCreator || isAssignee
 
   const invalidate = () =>
     queryClient.invalidateQueries({ queryKey: ['tasks', 'list'], exact: false })
@@ -672,7 +259,7 @@ export default function TaskCard({ task, clientMap, campaignMap = {}, memberMap 
   return (
     <>
       <div
-        onClick={() => setSheetOpen(true)}
+        onClick={() => navigate(`/tasks/${task.id}`)}
         className={cn(
           'flex flex-col bg-card rounded-xl shadow-sm ring-1 ring-border/50 overflow-hidden transition-all hover:shadow-md cursor-pointer',
           task.status === 'ARCHIVED' && 'opacity-60',
@@ -889,18 +476,6 @@ export default function TaskCard({ task, clientMap, campaignMap = {}, memberMap 
           )}
         </div>
       </div>
-
-      <TaskDetailSheet
-        task={task}
-        open={sheetOpen}
-        onOpenChange={setSheetOpen}
-        clientMap={clientMap}
-        campaignMap={campaignMap}
-        memberMap={memberMap}
-        currentUserId={currentUserId}
-        canEdit={canEdit}
-        canToggle={canToggle}
-      />
 
       <EditTaskDialog task={task} open={editOpen} onOpenChange={setEditOpen} />
 

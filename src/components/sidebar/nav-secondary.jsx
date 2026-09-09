@@ -36,7 +36,7 @@ import {
 } from '@/components/ui/tooltip'
 
 const SETTINGS_ITEMS = [
-  { title: 'General Settings', url: '/settings', icon: Settings2 },
+  { title: 'General', url: '/settings', icon: Settings2 },
   { title: 'Team', url: '/team', icon: Users },
   { title: 'Billing & Usage', url: '/billing', icon: CreditCard },
   { title: 'Help & Info', url: '/help', icon: LifeBuoy },

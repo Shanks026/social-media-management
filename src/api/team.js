@@ -408,7 +408,7 @@ export function useMyMemberRecord() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('agency_members')
-        .select('id, functional_role, system_role, permissions')
+        .select('id, system_role, permissions, email_task_assignments')
         .eq('agency_user_id', workspaceUserId)
         .eq('member_user_id', user.id)
         .single()
@@ -417,6 +417,21 @@ export function useMyMemberRecord() {
     },
     enabled: !!user?.id && !!workspaceUserId,
   })
+}
+
+/**
+ * The caller's own opt-out for task-assignment emails.
+ *
+ * Goes through an RPC rather than a direct .update() because the only UPDATE
+ * policy on agency_members is owner-only (auth.uid() = agency_user_id) — a
+ * member cannot write their own row, and they are exactly who sets this. The
+ * function is SECURITY DEFINER and scoped to the caller's own row.
+ */
+export async function setMyEmailTaskAssignments(enabled) {
+  const { error } = await supabase.rpc('set_my_email_task_assignments', {
+    p_enabled: enabled,
+  })
+  if (error) throw error
 }
 
 // ─── Public (unauthenticated) ──────────────────────────────────────────────────
@@ -432,15 +447,20 @@ export async function fetchInviteByToken(token) {
 }
 
 /**
- * Complete the team join flow after Supabase auth signup.
- * functional_role and permissions come from the invite (set by the owner).
+ * No job title is passed any more — a member no longer self-declares one on the
+ * join form, and one person can hold several. The owner assigns job roles from
+ * the Team page after they join (see `setMemberJobRoles` in `@/api/jobRoles`).
+ * Completes the join flow after Supabase auth signup; permissions and system
+ * role come from the invite.
  */
-export async function joinTeam({ token, firstName, lastName, functional_role }) {
+export async function joinTeam({ token, firstName, lastName, mobileNumber }) {
   const { data, error } = await supabase.rpc('join_team', {
     p_token: token,
     p_first_name: firstName,
     p_last_name: lastName,
-    p_functional_role: functional_role ?? null,
+    // Optional. Blank is sent as null so a retry can't wipe a number the
+    // person already gave.
+    p_mobile_number: mobileNumber?.trim() || null,
   })
   if (error) throw error
   return data
@@ -450,14 +470,12 @@ export async function joinTeam({ token, firstName, lastName, functional_role }) 
  * Promote, demote, or update a team member's access. Owner-only.
  * system_role: 'admin' | 'member'
  * permissions: { documents: 'none' | 'view' | 'manage' }
- * functional_role: optional string (null = keep current)
  */
-export async function updateMemberAccess(memberId, { system_role, permissions, functional_role, roles_and_responsibilities }) {
+export async function updateMemberAccess(memberId, { system_role, permissions, roles_and_responsibilities }) {
   const { error } = await supabase.rpc('update_member_access', {
     p_member_id: memberId,
     p_system_role: system_role,
     p_permissions: permissions,
-    p_functional_role: functional_role ?? null,
     p_roles_and_responsibilities: roles_and_responsibilities ?? null,
   })
   if (error) throw error

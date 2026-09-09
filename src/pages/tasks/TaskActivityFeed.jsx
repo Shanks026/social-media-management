@@ -1,11 +1,34 @@
 import { format } from 'date-fns'
-import { UserRoundCog, CircleDot } from 'lucide-react'
-import { STATUS_CONFIG, STATUS_DOT } from '@/components/tasks/TaskCard'
+import { UserRoundCog, CircleDot, Bot } from 'lucide-react'
+import { STATUS_DOT, StatusChip } from '@/components/tasks/TaskCard'
 import { Empty, EmptyHeader, EmptyTitle, EmptyDescription, EmptyMedia } from '@/components/ui/empty'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 
-const statusLabel = (key) => STATUS_CONFIG[key]?.label ?? key ?? 'Unknown'
+// A person's name rendered with their avatar right beside it, wherever a
+// name appears in a sentence — not just the leading actor. `member` is a
+// memberMap entry (already resolves to the current user's own profile for
+// "You", so self shows a real photo too, not a bare word). A null member
+// (the system actor, e.g. Phase 4's auto-completion) falls back to a small
+// bot glyph instead of initials.
+function NameTag({ member, children }) {
+  return (
+    <span className="inline-flex items-center gap-1 align-middle">
+      {member?.avatar_url ? (
+        <img src={member.avatar_url} alt="" className="size-4 shrink-0 rounded-full object-cover" />
+      ) : member ? (
+        <span className="flex size-4 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[8px] font-semibold text-primary">
+          {(member.full_name || member.email || '?')[0].toUpperCase()}
+        </span>
+      ) : (
+        <span className="flex size-4 shrink-0 items-center justify-center rounded-full border border-border bg-background text-muted-foreground">
+          <Bot className="size-2.5" />
+        </span>
+      )}
+      <b className="font-medium text-foreground">{children}</b>
+    </span>
+  )
+}
 
 /**
  * One task_activity row rendered as a sentence. Two event types only —
@@ -15,45 +38,52 @@ const statusLabel = (key) => STATUS_CONFIG[key]?.label ?? key ?? 'Unknown'
 function ActivityRow({ row, memberMap, currentUserId, isLast }) {
   const name = (id, fallback) => {
     if (!id) return fallback
-    if (id === currentUserId) return 'You'
     const m = memberMap[id]
-    return m?.full_name || m?.email || 'Team member'
+    const label = m?.full_name || m?.email || 'Team member'
+    return id === currentUserId ? `${label} (You)` : label
   }
 
   // A null actor is the system, not a person — Phase 4's auto-completion
   // writes rows that way.
+  const actorMember = row.actor_user_id ? memberMap[row.actor_user_id] : null
   const actor = row.actor_user_id ? name(row.actor_user_id) : 'Tercero'
+  const fromMember = row.from_user_id ? memberMap[row.from_user_id] : null
+  const toMember = row.to_user_id ? memberMap[row.to_user_id] : null
   const isAssignment = row.type === 'assigned'
 
   let sentence
   if (isAssignment) {
-    if (!row.to_user_id) sentence = <><b className="font-medium text-foreground">{actor}</b> unassigned this task</>
+    if (!row.to_user_id)
+      sentence = (
+        <>
+          <NameTag member={actorMember}>{actor}</NameTag> unassigned this task
+        </>
+      )
     else if (row.from_user_id)
       sentence = (
         <>
-          <b className="font-medium text-foreground">{actor}</b> reassigned this from{' '}
-          <b className="font-medium text-foreground">{name(row.from_user_id)}</b> to{' '}
-          <b className="font-medium text-foreground">{name(row.to_user_id)}</b>
+          <NameTag member={actorMember}>{actor}</NameTag> reassigned this from{' '}
+          <NameTag member={fromMember}>{name(row.from_user_id)}</NameTag> to{' '}
+          <NameTag member={toMember}>{name(row.to_user_id)}</NameTag>
         </>
       )
     else
       sentence = (
         <>
-          <b className="font-medium text-foreground">{actor}</b> assigned this to{' '}
-          <b className="font-medium text-foreground">{name(row.to_user_id)}</b>
+          <NameTag member={actorMember}>{actor}</NameTag> assigned this to{' '}
+          <NameTag member={toMember}>{name(row.to_user_id)}</NameTag>
         </>
       )
   } else {
     sentence = row.from_status ? (
       <>
-        <b className="font-medium text-foreground">{actor}</b> moved this from{' '}
-        {statusLabel(row.from_status)} to{' '}
-        <b className="font-medium text-foreground">{statusLabel(row.to_status)}</b>
+        <NameTag member={actorMember}>{actor}</NameTag> moved this from{' '}
+        <StatusChip status={row.from_status} /> to <StatusChip status={row.to_status} />
       </>
     ) : (
       <>
-        <b className="font-medium text-foreground">{actor}</b> created this as{' '}
-        <b className="font-medium text-foreground">{statusLabel(row.to_status)}</b>
+        <NameTag member={actorMember}>{actor}</NameTag> created this as{' '}
+        <StatusChip status={row.to_status} />
       </>
     )
   }
@@ -61,11 +91,10 @@ function ActivityRow({ row, memberMap, currentUserId, isLast }) {
   return (
     <li className="relative flex gap-3 pb-5 last:pb-0">
       {!isLast && <span className="absolute left-3 top-7 bottom-0 w-px bg-border" aria-hidden />}
-      <span
-        className={cn(
-          'relative z-10 flex size-6 shrink-0 items-center justify-center rounded-full border border-border bg-background',
-        )}
-      >
+      {/* The event-type icon — assignment vs status change — not the actor's
+          identity. Who did it is now shown inline with their name in the
+          sentence itself, via NameTag. */}
+      <span className="relative z-10 flex size-6 shrink-0 items-center justify-center rounded-full border border-border bg-background">
         {isAssignment ? (
           <UserRoundCog className="size-3 text-muted-foreground" />
         ) : (

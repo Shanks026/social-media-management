@@ -123,9 +123,14 @@ export default function CreateTaskDialog({
   const assigneeOptions = useMemo(
     () =>
       teamMembers.filter(
-        (m) => m.system_role !== 'owner' && m.system_role !== 'superadmin',
+        // Owner/superadmin are excluded as an assignment *target* for anyone
+        // else, but the current user can always assign a task to themselves —
+        // enforce_task_assignment permits self-assignment regardless of role.
+        (m) =>
+          m.member_user_id === user?.id ||
+          (m.system_role !== 'owner' && m.system_role !== 'superadmin'),
       ),
-    [teamMembers],
+    [teamMembers, user?.id],
   )
 
   useEffect(() => {

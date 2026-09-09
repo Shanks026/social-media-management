@@ -84,7 +84,7 @@ export async function notifyFromMutation(opts) {
 
 /**
  * Unread notification count for the badge.
- * Mirrors the shape of useMyOverdueTaskCount() in tasks.js.
+ * Mirrors the shape of useMyOpenTaskCount() in tasks.js.
  */
 export function useUnreadNotificationCount() {
   const { user, workspaceUserId } = useAuth()

@@ -5,21 +5,11 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { supabase } from '@/lib/supabase'
 import { fetchInviteByToken, joinTeam } from '@/api/team'
-import { SYSTEM_ROLE_PALETTE, AGENCY_ROLE_GROUPS, getRolePalette } from '@/lib/team-roles'
-import { cn } from '@/lib/utils'
+import { SYSTEM_ROLE_PALETTE } from '@/lib/team-roles'
 import { useAuth } from '@/context/AuthContext'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { Loader2, AlertCircle, Building2 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 
@@ -28,6 +18,16 @@ const schema = z
     firstName: z.string().min(1, 'First name is required'),
     lastName: z.string().min(1, 'Last name is required'),
     email: z.string().min(1, 'Email is required').email({ message: 'Enter a valid email address' }),
+    // Optional, and deliberately permissive: people write numbers with spaces,
+    // dashes, brackets and country codes, and rejecting a valid number is worse
+    // than storing a slightly untidy one. Only obvious nonsense is caught.
+    mobileNumber: z
+      .string()
+      .trim()
+      .refine((v) => v === '' || /^[+]?[\d\s()-]{7,20}$/.test(v), {
+        message: 'Enter a valid mobile number',
+      })
+      .optional(),
     password: z.string().min(8, 'Password must be at least 8 characters'),
     confirmPassword: z.string(),
   })
@@ -46,8 +46,6 @@ export default function JoinTeam() {
   const [tokenLoading, setTokenLoading] = useState(true)
   const [submitError, setSubmitError] = useState(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [functionalRole, setFunctionalRole] = useState('')
-  const [customRole, setCustomRole] = useState('')
 
   useEffect(() => {
     let cancelled = false
@@ -102,8 +100,36 @@ export default function JoinTeam() {
         if (signInError) throw signInError
       }
 
-      const resolvedRole = functionalRole === '__custom__' ? customRole.trim() || null : functionalRole || null
-      await joinTeam({ token, firstName: values.firstName, lastName: values.lastName, functional_role: resolvedRole })
+      // No job title here: a member no longer self-declares one. The owner
+      // assigns job roles from the Team page after they join — titles are the
+      // agency's label, and one person can hold several.
+      const result = await joinTeam({
+        token,
+        firstName: values.firstName,
+        lastName: values.lastName,
+        mobileNumber: values.mobileNumber,
+      })
+
+      // Welcome email — only for a genuinely new member, since links are
+      // multi-use and re-opening one is normal. Deliberately not awaited into
+      // the failure path: a bounced greeting must never strand someone who has
+      // already joined, so it logs and moves on.
+      if (result?.is_new_member) {
+        supabase.functions
+          .invoke('send-team-welcome', {
+            body: {
+              email: values.email,
+              name: `${values.firstName} ${values.lastName}`.trim(),
+              agency_name: invite?.agency_name,
+              system_role: invite?.system_role,
+            },
+          })
+          .then(({ error: fnError }) => {
+            if (fnError) console.error('[send-team-welcome]', fnError)
+          })
+          .catch((fnErr) => console.error('[send-team-welcome]', fnErr))
+      }
+
       await refreshWorkspace()
       navigate('/dashboard', { replace: true })
     } catch (err) {
@@ -207,10 +233,25 @@ export default function JoinTeam() {
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label>Email address <span className="text-destructive">*</span></Label>
-              <Input type="email" {...register('email')} placeholder="jane@example.com" />
-              {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label>Email address <span className="text-destructive">*</span></Label>
+                <Input type="email" {...register('email')} placeholder="jane@example.com" />
+                {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
+              </div>
+              <div className="space-y-2">
+                <Label>
+                  Mobile number{' '}
+                  <span className="font-normal text-muted-foreground">(optional)</span>
+                </Label>
+                <Input type="tel" {...register('mobileNumber')} placeholder="+91 98765 43210" />
+                {errors.mobileNumber && (
+                  <p className="text-xs text-destructive">{errors.mobileNumber.message}</p>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  Only your workspace owner and admins see this.
+                </p>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -224,47 +265,6 @@ export default function JoinTeam() {
                 <Input type="password" {...register('confirmPassword')} placeholder="Repeat your password" />
                 {errors.confirmPassword && <p className="text-xs text-destructive">{errors.confirmPassword.message}</p>}
               </div>
-            </div>
-          </section>
-
-          {/* ── Your Role ── */}
-          <section className="space-y-8">
-            <h2 className="text-2xl font-normal bricolage">Your Role</h2>
-            <div className="space-y-2">
-              <Label>Job title <span className="text-muted-foreground font-normal">(optional)</span></Label>
-              <Select value={functionalRole} onValueChange={setFunctionalRole}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select your role" />
-                </SelectTrigger>
-                <SelectContent>
-                  {AGENCY_ROLE_GROUPS.map((group) => (
-                    <SelectGroup key={group.label}>
-                      <SelectLabel>{group.label}</SelectLabel>
-                      {group.roles.map((role) => (
-                        <SelectItem key={role} value={role}>
-                          <span className="flex items-center gap-2">
-                            <span className={`size-2 rounded-full shrink-0 ${getRolePalette(role)?.dot ?? 'bg-muted-foreground/30'}`} />
-                            {role}
-                          </span>
-                        </SelectItem>
-                      ))}
-                    </SelectGroup>
-                  ))}
-                  <SelectGroup>
-                    <SelectLabel>Other</SelectLabel>
-                    <SelectItem value="__custom__">Custom…</SelectItem>
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
-              {functionalRole === '__custom__' && (
-                <Input
-                  placeholder="e.g. Video Producer, Paralegal…"
-                  value={customRole}
-                  onChange={(e) => setCustomRole(e.target.value)}
-                  className="mt-2"
-                />
-              )}
-              <p className="text-xs text-muted-foreground">This is cosmetic — it shows on your team profile and can be changed later.</p>
             </div>
           </section>
 

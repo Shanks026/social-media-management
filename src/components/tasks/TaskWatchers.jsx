@@ -1,6 +1,6 @@
 import { Eye } from 'lucide-react'
 import { HoverCard, HoverCardTrigger, HoverCardContent } from '@/components/ui/hover-card'
-import { getRolePalette } from '@/lib/team-roles'
+import JobRoleBadges from '@/components/team/JobRoleBadges'
 import { cn } from '@/lib/utils'
 
 /**
@@ -23,7 +23,7 @@ export default function TaskWatchers({ watcherIds = [], memberMap = {} }) {
       <HoverCardTrigger asChild>
         <button
           type="button"
-          className="inline-flex items-center gap-1.5 rounded-full border border-border/60 px-2 py-0.5 text-xs text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
+          className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/40 px-2 py-0.5 text-xs font-medium text-foreground/80 transition-colors hover:bg-muted/70 hover:text-foreground"
         >
           <Eye className="size-3.5 shrink-0" />
           {watchers.length}
@@ -34,9 +34,7 @@ export default function TaskWatchers({ watcherIds = [], memberMap = {} }) {
           Notified about this task
         </p>
         <div className="flex flex-col py-1">
-          {watchers.map((m) => {
-            const palette = getRolePalette(m.functional_role)
-            return (
+          {watchers.map((m) => (
               <div key={m.member_user_id} className={cn('flex items-center gap-2.5 px-3 py-1.5', m._removed && 'opacity-60')}>
                 {m.avatar_url ? (
                   <img
@@ -59,16 +57,12 @@ export default function TaskWatchers({ watcherIds = [], memberMap = {} }) {
                     {m.full_name || m.email}
                     {m._removed && <span className="text-muted-foreground"> (Removed)</span>}
                   </p>
-                  {m.functional_role && (
-                    <span className="mt-0.5 flex items-center gap-1.5">
-                      <span className={cn('size-1.5 shrink-0 rounded-full', palette?.dot ?? 'bg-muted-foreground/50')} />
-                      <span className="truncate text-xs text-muted-foreground">{m.functional_role}</span>
-                    </span>
-                  )}
+                  {/* Capped at two: the card is 256px wide, so an unbounded
+                      row of pills would overflow it. */}
+                  <JobRoleBadges roles={m.job_roles} max={2} size="xs" className="mt-1" />
                 </div>
               </div>
-            )
-          })}
+          ))}
         </div>
       </HoverCardContent>
     </HoverCard>

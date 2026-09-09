@@ -29,6 +29,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { splitMentions, detectMention, MENTION_CLASS, MY_MENTION_CLASS, MENTION_TEXT_CLASS, MY_MENTION_TEXT_CLASS } from '@/lib/mentions'
+import { SYSTEM_ROLE_PALETTE } from '@/lib/team-roles'
 import { formatCompactTimeAgo } from '@/lib/helper'
 import {
   AlertDialog,
@@ -238,7 +239,9 @@ function CommentRow({ comment, author, mentionNames, myMentionName, memberMap, c
 
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2 min-w-0">
-          <span className="text-sm font-medium truncate">{name}</span>
+          <span className={cn('text-sm font-medium truncate', SYSTEM_ROLE_PALETTE[author?.system_role]?.name)}>
+            {name}
+          </span>
           {isAuthor && (
             <span className="text-[10px] text-muted-foreground bg-muted rounded px-1 py-px shrink-0">
               You
@@ -322,7 +325,7 @@ function CommentRow({ comment, author, mentionNames, myMentionName, memberMap, c
 
 // ─── Thread ────────────────────────────────────────────────────────────────────
 
-export function CommentThread({ entityType, entityId }) {
+export function CommentThread({ entityType, entityId, composerPosition = 'bottom' }) {
   const { user } = useAuth()
   const { isAdmin } = usePermissions()
   const queryClient = useQueryClient()
@@ -531,131 +534,191 @@ export function CommentThread({ entityType, entityId }) {
     }
   }
 
-  return (
-    <div className="flex flex-col h-full min-h-0">
-      {/* Feed */}
-      <ScrollArea className="flex-1 min-h-0">
-        <div className="px-1" aria-label="Comments">
-          {isLoading ? (
-            <div className="space-y-4 py-3">
-              {Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="flex gap-3">
-                  <Skeleton className="size-7 rounded-full shrink-0" />
-                  <div className="flex-1 space-y-1.5">
-                    <Skeleton className="h-3 w-28" />
-                    <Skeleton className="h-3.5 w-full" />
-                    <Skeleton className="h-3.5 w-2/3" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : comments.length === 0 ? (
-            <div className="flex flex-col items-center justify-center text-center py-14 gap-2">
-              <div className="text-4xl leading-none select-none mb-1">💬</div>
-              <p className="text-base font-normal text-foreground">No comments yet</p>
-              <p className="text-sm text-muted-foreground">
-                Start the discussion — leave a note for your team.
-              </p>
-            </div>
-          ) : (
-            comments.map((c) => (
-              <CommentRow
-                key={c.id}
-                comment={c}
-                author={memberMap[c.author_user_id]}
-                mentionNames={mentionNamesFor(c)}
-                myMentionName={myMentionName}
-                memberMap={memberMap}
-                currentUserId={user?.id}
-                canModify={c.author_user_id === user?.id || isAdmin}
-                highlighted={c.id === highlightedId}
-                onEdited={invalidate}
-                onDeleted={setDeleting}
-              />
-            ))
-          )}
-        </div>
-      </ScrollArea>
+  // `composerPosition`: 'bottom' (default, unchanged from every existing
+  // caller) keeps posts/campaigns' current chat layout — a caller-provided
+  // fixed-height box, composer after the feed, oldest comment first. 'top'
+  // is what tasks use — the YouTube/Jira layout: composer first (and
+  // visually minimal, not a chat bubble — see `minimalComposer` below), no
+  // box or fixed height at all (the page just scrolls, like every real
+  // comment section), newest comment first since it lands right under what
+  // you just wrote instead of at the bottom of a long list.
+  //
+  // Two boxed, height-managed variants ('sticky-bottom', then a fixed
+  // 600px box before that) were tried and dropped for tasks along the way —
+  // natural page flow turned out to need none of that machinery.
+  const composerOnTop = composerPosition === 'top'
 
-      {/* Composer */}
-      <div className="shrink-0 pt-3 mt-1">
-        {/* Pending mention chips */}
-        {pendingMentions.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 mb-2">
-            {pendingMentions.map((m) => (
-              <span key={m.id} className={cn(MENTION_CLASS, 'inline-flex items-center gap-1 text-xs')}>
-                @{m.name}
-                <button
-                  onClick={() => removeMention(m)}
-                  className="hover:text-destructive"
-                  aria-label={`Remove mention ${m.name}`}
-                >
-                  <X className="size-3" />
-                </button>
-              </span>
-            ))}
-          </div>
-        )}
+  // Newest-first only for 'top': it reads correctly right under a composer
+  // that's also at the top. 'bottom' keeps posts/campaigns' existing
+  // oldest-first order untouched.
+  const orderedComments = useMemo(
+    () => (composerOnTop ? [...comments].reverse() : comments),
+    [comments, composerOnTop],
+  )
 
-        <InputGroup className="rounded-2xl">
-          {/* @mention autocomplete menu (opens above the composer) */}
-          {mentionMenuOpen && (
-            <div className="absolute bottom-full mb-2 left-0 z-50 w-64 rounded-md border bg-popover shadow-lg p-1">
-              <div className="max-h-56 overflow-y-auto">
-                {filteredMentions.map((m, i) => (
-                  <button
-                    key={m.id}
-                    onMouseDown={(e) => { e.preventDefault(); selectMention(m) }}
-                    onMouseEnter={() => setActiveIdx(i)}
-                    className={cn(
-                      'w-full flex items-center gap-2 rounded-md px-2 py-1.5 text-sm text-left transition-colors',
-                      i === activeIdx ? 'bg-muted' : 'hover:bg-muted/60',
-                    )}
-                  >
-                    <MemberAvatar member={m} size="size-5" />
-                    <span className="truncate">{m.name}</span>
-                  </button>
-                ))}
+  const feedContent = (
+    <div className="px-1" aria-label="Comments">
+      {isLoading ? (
+        <div className="space-y-4 py-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="flex gap-3">
+              <Skeleton className="size-7 rounded-full shrink-0" />
+              <div className="flex-1 space-y-1.5">
+                <Skeleton className="h-3 w-28" />
+                <Skeleton className="h-3.5 w-full" />
+                <Skeleton className="h-3.5 w-2/3" />
               </div>
             </div>
-          )}
-
-          <InputGroupTextarea
-            ref={taRef}
-            value={body}
-            onChange={handleBodyChange}
-            onKeyDown={handleKeyDown}
-            placeholder="Write a comment… (@ to mention)"
-            rows={2}
-            aria-label="Write a comment"
-            className="min-h-14"
+          ))}
+        </div>
+      ) : comments.length === 0 ? (
+        <div className="flex flex-col items-center justify-center text-center py-14 gap-2">
+          <div className="text-4xl leading-none select-none mb-1">💬</div>
+          <p className="text-base font-normal text-foreground">No comments yet</p>
+          <p className="text-sm text-muted-foreground">
+            Start the discussion — leave a note for your team.
+          </p>
+        </div>
+      ) : (
+        orderedComments.map((c) => (
+          <CommentRow
+            key={c.id}
+            comment={c}
+            author={memberMap[c.author_user_id]}
+            mentionNames={mentionNamesFor(c)}
+            myMentionName={myMentionName}
+            memberMap={memberMap}
+            currentUserId={user?.id}
+            canModify={c.author_user_id === user?.id || isAdmin}
+            highlighted={c.id === highlightedId}
+            onEdited={invalidate}
+            onDeleted={setDeleting}
           />
+        ))
+      )}
+    </div>
+  )
 
-          <InputGroupAddon align="block-end">
-            <InputGroupButton
-              variant="outline"
-              size="icon-sm"
-              className="rounded-full"
-              onClick={handleMentionButtonClick}
-              title="Mention a teammate"
-              aria-label="Mention a teammate"
+  // 'bottom' (legacy default, posts/campaigns): needs an internally-scrolling
+  // region because it's meant to sit in a caller-provided fixed-height box.
+  // 'top': no such box — the whole page scrolls instead, Jira/YouTube style.
+  const feed = composerOnTop ? (
+    feedContent
+  ) : (
+    <ScrollArea className="flex-1 min-h-0">{feedContent}</ScrollArea>
+  )
+
+  // Pending-mention chips: identical in both modes, factored out so neither
+  // composer variant below repeats it.
+  const pendingMentionChips = pendingMentions.length > 0 && (
+    <div className="flex flex-wrap gap-1.5 mb-2">
+      {pendingMentions.map((m) => (
+        <span key={m.id} className={cn(MENTION_CLASS, 'inline-flex items-center gap-1 text-xs')}>
+          @{m.name}
+          <button
+            onClick={() => removeMention(m)}
+            className="hover:text-destructive"
+            aria-label={`Remove mention ${m.name}`}
+          >
+            <X className="size-3" />
+          </button>
+        </span>
+      ))}
+    </div>
+  )
+
+  // @mention autocomplete menu. Shared markup, but each composer variant
+  // renders it in a differently-positioned `relative` wrapper, so it's a
+  // function rather than a plain JSX const.
+  const mentionMenu = (openDirection) =>
+    mentionMenuOpen && (
+      <div
+        className={cn(
+          'absolute left-0 z-50 w-64 rounded-md border bg-popover shadow-lg p-1',
+          openDirection === 'down' ? 'top-full mt-2' : 'bottom-full mb-2',
+        )}
+      >
+        <div className="max-h-56 overflow-y-auto">
+          {filteredMentions.map((m, i) => (
+            <button
+              key={m.id}
+              onMouseDown={(e) => { e.preventDefault(); selectMention(m) }}
+              onMouseEnter={() => setActiveIdx(i)}
+              className={cn(
+                'w-full flex items-center gap-2 rounded-md px-2 py-1.5 text-sm text-left transition-colors',
+                i === activeIdx ? 'bg-muted' : 'hover:bg-muted/60',
+              )}
             >
-              <Plus className="size-4" />
-            </InputGroupButton>
-            <InputGroupButton
-              variant="default"
-              size="icon-sm"
-              className="ml-auto rounded-full"
-              disabled={sending || !body.trim()}
-              onClick={handleSend}
-              title={`Post comment (${navigator.platform?.includes('Mac') ? '⌘' : 'Ctrl'} + Enter)`}
-              aria-label="Post comment"
-            >
-              <ArrowUp className="size-4" />
-            </InputGroupButton>
-          </InputGroupAddon>
-        </InputGroup>
+              <MemberAvatar member={m} size="size-5" />
+              <span className="truncate">{m.name}</span>
+            </button>
+          ))}
+        </div>
       </div>
+    )
+
+  // The original composer — InputGroup, rounded pill, icon buttons glued
+  // inside the field — used by both modes now. A custom single-row
+  // underline field (bottom border only, icons flanking it) was tried for
+  // 'top' and reverted; this is what posts and campaigns already use, and
+  // what tasks are going back to. Only the wrapper padding and the mention
+  // menu's open direction depend on `composerOnTop` — everything else about
+  // the field itself is identical between modes.
+  const composer = (
+    <div className={cn('shrink-0', composerOnTop ? 'pb-3' : 'pt-3 mt-1')}>
+      {pendingMentionChips}
+      <InputGroup className="rounded-2xl">
+        {mentionMenu(composerOnTop ? 'down' : 'up')}
+        <InputGroupTextarea
+          ref={taRef}
+          value={body}
+          onChange={handleBodyChange}
+          onKeyDown={handleKeyDown}
+          placeholder="Write a comment… (@ to mention)"
+          rows={2}
+          aria-label="Write a comment"
+          className="min-h-14 field-sizing-fixed"
+        />
+        <InputGroupAddon align="block-end">
+          <InputGroupButton
+            variant="outline"
+            size="icon-sm"
+            className="rounded-full"
+            onClick={handleMentionButtonClick}
+            title="Mention a teammate"
+            aria-label="Mention a teammate"
+          >
+            <Plus className="size-4" />
+          </InputGroupButton>
+          <InputGroupButton
+            variant="default"
+            size="icon-sm"
+            className="ml-auto rounded-full"
+            disabled={sending || !body.trim()}
+            onClick={handleSend}
+            title={`Post comment (${navigator.platform?.includes('Mac') ? '⌘' : 'Ctrl'} + Enter)`}
+            aria-label="Post comment"
+          >
+            <ArrowUp className="size-4" />
+          </InputGroupButton>
+        </InputGroupAddon>
+      </InputGroup>
+    </div>
+  )
+
+  return (
+    <div className={cn('flex flex-col', composerOnTop ? 'gap-4' : 'h-full min-h-0')}>
+      {composerOnTop ? (
+        <>
+          {composer}
+          {feed}
+        </>
+      ) : (
+        <>
+          {feed}
+          {composer}
+        </>
+      )}
 
       {/* Delete confirm */}
       <AlertDialog open={!!deleting} onOpenChange={(v) => !v && setDeleting(null)}>

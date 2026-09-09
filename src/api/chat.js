@@ -58,10 +58,13 @@ export function useMemberMap() {
   return useMemo(() => {
     const map = {}
     teamMembers.forEach((m) => {
-      map[m.member_user_id] = { id: m.member_user_id, full_name: m.full_name, avatar_url: m.avatar_url, email: m.email }
+      map[m.member_user_id] = { id: m.member_user_id, full_name: m.full_name, avatar_url: m.avatar_url, email: m.email, system_role: m.system_role }
     })
     if (owner && !map[owner.user_id]) {
-      map[owner.user_id] = { id: owner.user_id, full_name: owner.full_name, avatar_url: owner.avatar_url, email: owner.email }
+      // Reached only when the owner has no agency_members row of their own,
+      // so there is no system_role to carry over — but this branch is the
+      // workspace owner by definition.
+      map[owner.user_id] = { id: owner.user_id, full_name: owner.full_name, avatar_url: owner.avatar_url, email: owner.email, system_role: 'owner' }
     }
     if (user && !map[user.id]) {
       map[user.id] = {

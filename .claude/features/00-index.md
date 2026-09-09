@@ -13,6 +13,7 @@ Tracks planned and built features. Each entry links to its full planning doc.
 | 07 | Invite Link Upgrade | [07-invite-link-upgrade.md](07-invite-link-upgrade.md) | 🟡 Built + links now multi-use (see addendum); pending verification |
 | 08 | Onboarding Enhancement | [08-onboarding-enhancement.md](08-onboarding-enhancement.md) | ✅ Complete |
 | 09 | Task Collaboration — History, Watchers & Detail Page | [09-task-collaboration.md](09-task-collaboration.md) | 🟢 All 4 phases built and applied; pending live multi-account smoke test |
+| 10 | Job Roles — Owner-Defined Job Titles | [10-job-roles.md](10-job-roles.md) | ✅ Complete |
 
 ## Key Database Changes
 
@@ -25,6 +26,9 @@ Tracks planned and built features. Each entry links to its full planning doc.
 | `client_notes` (dropped) | 04 | Replaced by `tasks`; data migrated in Phase 1 |
 | `agency_subscriptions` (columns) | 08 | `address`, `website` (Phase 1); `onboarding_completed_at`, `onboarding_skipped_steps` (Phase 3) |
 | `task_activity` (new) | 09 | Assignment + status history for tasks; also doubles as the watcher/participant list via `to_user_id` |
+| `agency_job_roles` (new) | 10 | Owner-defined job titles per workspace (name + color). Identification only — never affects access |
+| `agency_member_job_roles` (new) | 10 | Member↔job-role junction; one member holds many titles. `ON DELETE CASCADE` from the role |
+| `agency_members.functional_role` (dropped) | 10 | Replaced by the junction table; single-value column removed in Phase 2 |
 
 ## Shared Infrastructure Notes
 

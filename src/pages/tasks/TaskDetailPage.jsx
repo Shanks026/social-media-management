@@ -41,9 +41,9 @@ import {
 } from '@/components/ui/alert-dialog'
 
 /**
- * `/tasks/:taskId` — the task as a linkable page. The kanban/list sheet stays
- * as a quick peek; this is where notifications, chat references and a
- * deliverable's linked-task rows point.
+ * `/tasks/:taskId` — the task as a linkable page; every task surface
+ * navigates straight here (no in-place peek any more) — notifications, chat
+ * references, a deliverable's linked-task rows, and every task list/board.
  *
  * The three ways a task can fail to render are kept distinct on purpose:
  * still loading, genuinely deleted, or existing but outside this member's
@@ -56,7 +56,7 @@ export default function TaskDetailPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { setHeader } = useHeader()
-  const { isOwner } = usePermissions()
+  const { isAdmin } = usePermissions()
   const { clientMap, campaignMap, memberMap, currentUserId } = useTaskLookups()
 
   const [editOpen, setEditOpen] = useState(false)
@@ -172,12 +172,25 @@ export default function TaskDetailPage() {
 
   const isCreator = task.created_by === currentUserId
   const isAssignee = task.assigned_to === currentUserId
-  const canEdit = isOwner || isCreator
+  // isAdmin already means owner OR admin OR superadmin (matches the DB's
+  // is_workspace_admin(), which update_task_status/reassign_task actually
+  // check) — this was isOwner alone, so an admin who reassigned a task away
+  // from themselves lost canToggle/canEdit in the UI even though the RPCs
+  // would still have allowed them. Same fix in TaskCard.jsx below.
+  const canEdit = isAdmin || isCreator
   const canToggle = canEdit || isAssignee
-  // Handing work on isn't the same permission as rewriting the task — the
-  // same split TaskDetailSheet makes. The `reassign_task` RPC is the real
-  // gate; this only decides whether to render the picker.
-  const canReassign = canEdit || isAssignee
+  // Handing work on isn't the same permission as rewriting the task. The
+  // `reassign_task` RPC is the real gate; this only decides whether to
+  // render the picker.
+  //
+  // Includes past assignees too, matching reassign_task's own access check
+  // (creator, current assignee, ANY past assignee, or admin) — this had
+  // drifted to current-assignee-only, which meant handing a task off cost you
+  // every control over it, with no way to take back a mistaken handoff.
+  const wasPastAssignee = activity.some(
+    (row) => row.type === 'assigned' && row.to_user_id === currentUserId,
+  )
+  const canReassign = canEdit || isAssignee || wasPastAssignee
 
   const isBusy = isSettingStatus || isReassigning || isDeleting
   const statusCfg = STATUS_CONFIG[task.status] ?? STATUS_CONFIG.TODO
@@ -237,10 +250,13 @@ export default function TaskDetailPage() {
         )}
       </div>
 
-      {/* Body split: description + tabs on the left, meta rail on the right —
-          the same proportions as the deliverable detail page. */}
+      {/* Body split: description + tabs on the left, meta rail on the right.
+          The rail is narrower than the deliverable detail page's — a task's
+          meta is a handful of short rows (status, assignee, due date),
+          nowhere near the deliverable page's platform badges and publish
+          plan, so it doesn't need a third of the page. */}
       <div className="flex flex-col gap-8 lg:flex-row lg:items-start">
-        <div className="min-w-0 space-y-6 lg:w-2/3">
+        <div className="min-w-0 space-y-6 lg:w-[70%]">
           {task.description && (
             <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">{task.description}</p>
           )}
@@ -300,12 +316,18 @@ export default function TaskDetailPage() {
               )}
             </TabsContent>
 
-            {/* CommentThread manages its own scroll, so it needs a bounded
-                height the way the campaign page's thread does. */}
+            {/* composerPosition="top": the YouTube/Jira layout — composer
+                first, newest comment right under it, no fixed-height box at
+                all, the tab's own content area just scrolls with the page
+                like every other tab here. The composer itself is the same
+                InputGroup field posts/campaigns use — a from-scratch
+                minimal single-row field was tried and reverted. Two boxed/
+                height-managed attempts (a flat 600px box, then a viewport-
+                measured sticky-bottom composer) were tried and dropped too
+                — natural page flow needed none of it. Trial on tasks first,
+                before touching posts/campaigns. */}
             <TabsContent value="comments" className="pt-4">
-              <div className="h-150">
-                <CommentThread entityType="task" entityId={task.id} />
-              </div>
+              <CommentThread entityType="task" entityId={task.id} composerPosition="top" />
             </TabsContent>
 
             <TabsContent value="activity" className="pt-4">

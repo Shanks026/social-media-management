@@ -90,7 +90,7 @@ import {
   SheetDescription,
 } from '@/components/ui/sheet'
 
-import { useSearchParams, Navigate } from 'react-router-dom'
+import { useSearchParams, Navigate, useNavigate } from 'react-router-dom'
 import { useHeader } from '@/components/misc/header-context'
 import { useAuth } from '@/context/AuthContext'
 import { useClients } from '@/api/clients'
@@ -101,7 +101,7 @@ import { usePermissions } from '@/api/usePermissions'
 import CreateTaskDialog from '@/components/tasks/CreateTaskDialog'
 import EditTaskDialog from '@/components/tasks/EditTaskDialog'
 import { ClientAvatar } from '@/components/tasks/ClientAvatar'
-import TaskCard, { TaskDetailSheet, STATUS_CONFIG, PRIORITY_CONFIG, STATUS_DOT } from '@/components/tasks/TaskCard'
+import TaskCard, { STATUS_CONFIG, PRIORITY_CONFIG, STATUS_DOT } from '@/components/tasks/TaskCard'
 import AssigneeFilterPopover from '@/components/tasks/AssigneeFilterPopover'
 import { cn } from '@/lib/utils'
 import {
@@ -386,9 +386,8 @@ function TaskTableRowSkeleton() {
 }
 
 function TasksTableView({ tasks, isLoading, clientMap, campaignMap, memberMap, currentUserId }) {
-  const { isOwner } = usePermissions()
+  const navigate = useNavigate()
   const [sorting, setSorting] = useState([])
-  const [selectedTask, setSelectedTask] = useState(null)
 
   const columns = useMemo(() => [
     // No width — absorbs whatever the sized columns leave, so the title
@@ -548,11 +547,6 @@ function TasksTableView({ tasks, isLoading, clientMap, campaignMap, memberMap, c
     getSortedRowModel: getSortedRowModel(),
   })
 
-  const selCanEdit = selectedTask ? (isOwner || selectedTask.created_by === currentUserId) : false
-  const selCanToggle = selectedTask
-    ? (isOwner || selectedTask.created_by === currentUserId || selectedTask.assigned_to === currentUserId)
-    : false
-
   return (
     <>
       <div className="rounded-xl border border-border bg-card overflow-hidden mt-4">
@@ -579,7 +573,7 @@ function TasksTableView({ tasks, isLoading, clientMap, campaignMap, memberMap, c
                   <TableRow
                     key={row.id}
                     className="cursor-pointer hover:bg-muted/40 transition-colors"
-                    onClick={() => setSelectedTask(row.original)}
+                    onClick={() => navigate(`/tasks/${row.original.id}`)}
                   >
                     {row.getVisibleCells().map((cell) => (
                       <TableCell key={cell.id} className="py-3 px-4">
@@ -592,18 +586,6 @@ function TasksTableView({ tasks, isLoading, clientMap, campaignMap, memberMap, c
           </TableBody>
         </Table>
       </div>
-
-      <TaskDetailSheet
-        task={selectedTask}
-        open={!!selectedTask}
-        onOpenChange={(open) => { if (!open) setSelectedTask(null) }}
-        clientMap={clientMap}
-        campaignMap={campaignMap}
-        memberMap={memberMap}
-        currentUserId={currentUserId}
-        canEdit={selCanEdit}
-        canToggle={selCanToggle}
-      />
     </>
   )
 }

@@ -28,10 +28,15 @@ function UnreadBadge({ count, mentioned }) {
     return <span className="ml-auto text-sm font-bold text-rose-500 dark:text-rose-400 shrink-0">@</span>
   }
   if (!count) return null
+  // A dot rather than the exact count — which conversation has something new
+  // is the useful signal in a list this short; the number was precision
+  // nobody acted on. The count still reaches screen readers via aria-label.
   return (
-    <span className="ml-auto flex h-4.5 min-w-4.5 items-center justify-center rounded-md bg-rose-100 px-1 text-[10px] font-bold text-rose-600 dark:bg-rose-500/10 dark:text-rose-400 shrink-0">
-      {count > 99 ? '99+' : count}
-    </span>
+    <span
+      role="status"
+      aria-label={`${count} unread message${count === 1 ? '' : 's'}`}
+      className="ml-auto size-2 shrink-0 rounded-full bg-rose-500 dark:bg-rose-400"
+    />
   )
 }
 
@@ -49,7 +54,7 @@ function formatChatTimestamp(dateStr) {
 // Two-line row shared by the workspace channel and DMs that have at least one
 // message — avatar left, name+timestamp on top, last-message preview+unread
 // badge below. Bold/dark when unread, muted when read (WhatsApp convention).
-function ChannelRow({ avatar, name, isActive, onClick, lastMessageAt, lastMessageBody, unreadCount, hasUnreadMention }) {
+function ChannelRow({ avatar, name, isActive, onClick, lastMessageAt, lastMessageBody, lastMessageSender, unreadCount, hasUnreadMention }) {
   const unread = !!unreadCount || hasUnreadMention
   return (
     <SidebarMenuButton
@@ -72,6 +77,12 @@ function ChannelRow({ avatar, name, isActive, onClick, lastMessageAt, lastMessag
         </div>
         <div className="flex items-center gap-2">
           <span className={cn('truncate flex-1 min-w-0 text-xs', unread ? 'text-foreground/80 font-medium' : 'text-muted-foreground')}>
+            {/* Only the shared room prefixes the sender — in a DM the preview
+                is from one of two people and the row already names the other,
+                so "Lex: ..." would just be noise. */}
+            {lastMessageBody && lastMessageSender && (
+              <span className="font-medium">{lastMessageSender}: </span>
+            )}
             {lastMessageBody || 'No messages yet'}
           </span>
           <UnreadBadge count={unreadCount} mentioned={hasUnreadMention} />
@@ -98,6 +109,15 @@ export function ChatSidebar() {
   const { data: channels = [], isLoading } = useMyChannels()
 
   const workspaceChannel = channels.find((c) => c.type === 'workspace')
+
+  // Who wrote the shared room's last message, for the "Name: message" preview.
+  // First name only — the row is narrow and the body is the part worth reading.
+  const workspaceSenderId = workspaceChannel?.last_message_author_id
+  const workspaceSenderName = !workspaceSenderId
+    ? null
+    : workspaceSenderId === user?.id
+      ? 'You'
+      : (memberMap[workspaceSenderId]?.full_name || memberMap[workspaceSenderId]?.email || 'Someone').split(' ')[0]
 
   // get_my_chat_channels() already orders by last_message_at (most recent
   // first) — preserve that order rather than re-deriving it client-side.
@@ -180,6 +200,7 @@ export function ChatSidebar() {
                     onClick={() => selectChannel(workspaceChannel.channel_id)}
                     lastMessageAt={workspaceChannel.last_message_at}
                     lastMessageBody={workspaceChannel.last_message_body}
+                    lastMessageSender={workspaceSenderName}
                     unreadCount={workspaceChannel.unread_count}
                     hasUnreadMention={workspaceChannel.has_unread_mention}
                   />
@@ -224,16 +245,22 @@ export function ChatSidebar() {
                   )
                 })}
 
-              {/* Teammates you haven't messaged yet — alphabetical, no preview/badge */}
+              {/* Teammates you haven't messaged yet — alphabetical. Same row
+                  as an active conversation, so "No messages yet" is visible
+                  in the list itself; this used to be a shorter one-line
+                  button, which meant you had to open a teammate to find out
+                  there was nothing in it. */}
               {!isLoading && noChatTeammates.length > 0 && (
                 <>
                   {dmChannels.length > 0 && <div className="my-1.5 border-t border-sidebar-border" />}
                   {noChatTeammates.map((member) => (
                     <SidebarMenuItem key={member.id}>
-                      <SidebarMenuButton onClick={() => openDm(member.id)} className="gap-2">
-                        <MemberAvatar member={member} className="size-6" />
-                        <span className="truncate">{member.full_name || member.email}</span>
-                      </SidebarMenuButton>
+                      <ChannelRow
+                        avatar={<MemberAvatar member={member} className="size-8 shrink-0" />}
+                        name={member.full_name || member.email}
+                        isActive={false}
+                        onClick={() => openDm(member.id)}
+                      />
                     </SidebarMenuItem>
                   ))}
                 </>

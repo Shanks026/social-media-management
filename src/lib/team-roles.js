@@ -1,69 +1,55 @@
-// System-role display palette (Owner / Admin / Member badges on member rows)
+// System-role display palette (Owner / Admin / Member badges on member rows).
+//
+// This file used to also carry the job-title palette (NAMED_ROLE_COLORS), a
+// hash-based FALLBACK_PALETTE for custom titles, getRolePalette(), and the
+// hardcoded AGENCY_ROLE_GROUPS / AGENCY_ROLE_OPTIONS list. All of that was
+// retired by feature 10: job titles are now owner-defined rows in
+// `agency_job_roles`, each carrying its own color key, so a title's color is
+// chosen rather than derived from a hash of its name. See `src/lib/job-roles.js`.
+//
+// System roles stay hardcoded on purpose — owner/admin/member is the access
+// model, not a list anyone can edit.
+// `name` is the Discord-style author-name color used in conversational
+// surfaces (chat + comment threads) — a text-on-page color, so it can't
+// reuse `badge`, whose text tones are picked to sit on a tinted chip.
+//
+// The four hues are not free choices. Chat and comments already spend color:
+// indigo = @mentions of others (and the deep-link highlight background),
+// rose = a mention of *you*, red = @Important, blue = entity-reference links
+// and `--primary`. A role tone in any of those families reads as the wrong
+// thing — an admin in blue looks like a hyperlink sitting next to real ones.
+//
+// Superadmin is amber, and is the one role at -800 rather than -700 in light
+// mode. Warm hues carry the least luminance headroom of any family here:
+// amber-700 measures 4.52:1 and yellow-700 actually fails at 4.40:1, so -800
+// is the first amber step with real margin (6.38:1). It is also the rarest
+// role — in practice never rendered — so breaking the uniform step costs
+// nothing visually.
+//
+// Light tones are otherwise -700, that being the LIGHTEST step of those hues
+// still clearing WCAG AA (4.5:1) for normal text on every surface a name can
+// land on: the white page, the muted background, and the indigo highlight a
+// deep-linked comment flashes — the last being darkest, so it sets the floor.
+// -700 is that floor, not a preference; at -600 these hues measure 3.2–4.2:1.
+// Measured worst case across the set is emerald at 4.80:1.
+//
+// Dark tones are -400. On a dark page lighter means MORE contrast, so there
+// is headroom here that light mode does not have; the set runs 5.42–8.80:1.
+//
+// Member is emerald rather than green because green carries less luminance
+// per unit of chroma: green-700 lands at 4.42:1, under the floor, which would
+// force member alone down to green-800 and leave it visibly darker than the
+// other three. Emerald-700 reads as the same kind of green at 4.80:1.
+//
+// One caveat before touching owner: pink-700/400 is the closest any role tone
+// comes to an already-spoken-for hue — ΔE 0.051 from the rose that marks a
+// mention of *you*, only 13° of hue apart. They sit in different places (role
+// tint on the author name, rose inline in the body), but a message where the
+// owner mentions you puts both on screen at once. Moving owner toward fuchsia
+// (hue 324 vs pink's 4) widens the gap if that ever reads wrong in practice.
 export const SYSTEM_ROLE_PALETTE = {
-  owner:      { badge: 'border-0 bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300', dot: 'bg-violet-500', label: 'Owner' },
-  admin:      { badge: 'border-0 bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',         dot: 'bg-blue-500',   label: 'Admin' },
-  member:     { badge: 'border-0 bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300', dot: 'bg-emerald-500', label: 'Member' },
-  superadmin: { badge: 'border-0 bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',     dot: 'bg-amber-500',  label: 'Superadmin' },
-}
-
-// Functional role colors — cosmetic badge only, never affects access
-export const NAMED_ROLE_COLORS = {
-  // Leadership
-  'Founder':                   { badge: 'bg-violet-100 text-violet-600 dark:text-violet-400',   dot: 'bg-violet-500' },
-  'Co-founder':                { badge: 'bg-purple-100 text-purple-600 dark:text-purple-400',   dot: 'bg-purple-500' },
-  'CEO / Managing Director':   { badge: 'bg-fuchsia-100 text-fuchsia-600 dark:text-fuchsia-400', dot: 'bg-fuchsia-500' },
-  // Client & Strategy
-  'Account Manager':           { badge: 'bg-emerald-100 text-emerald-600 dark:text-emerald-400', dot: 'bg-emerald-500' },
-  'Project Manager':           { badge: 'bg-teal-100 text-teal-600 dark:text-teal-400',           dot: 'bg-teal-500' },
-  'Strategist':                { badge: 'bg-indigo-100 text-indigo-600 dark:text-indigo-400',     dot: 'bg-indigo-500' },
-  'Creative Director':         { badge: 'bg-purple-100 text-purple-600 dark:text-purple-400',   dot: 'bg-purple-500' },
-  // Content & Creative
-  'Social Media Manager':      { badge: 'bg-rose-100 text-rose-600 dark:text-rose-400',           dot: 'bg-rose-500' },
-  'Content Creator':           { badge: 'bg-pink-100 text-pink-600 dark:text-pink-400',           dot: 'bg-pink-500' },
-  'Designer':                  { badge: 'bg-violet-100 text-violet-600 dark:text-violet-400',   dot: 'bg-violet-500' },
-  'Copywriter':                { badge: 'bg-sky-100 text-sky-600 dark:text-sky-400',               dot: 'bg-sky-500' },
-  'Video Editor / Producer':   { badge: 'bg-amber-100 text-amber-600 dark:text-amber-400',       dot: 'bg-amber-500' },
-  // Growth & Specialist
-  'Marketing Specialist':      { badge: 'bg-blue-100 text-blue-600 dark:text-blue-400',           dot: 'bg-blue-500' },
-  'Community Manager':         { badge: 'bg-pink-100 text-pink-600 dark:text-pink-400',           dot: 'bg-pink-500' },
-  'SEO / Media Buyer':         { badge: 'bg-green-100 text-green-600 dark:text-green-400',         dot: 'bg-green-500' },
-  'Developer':                 { badge: 'bg-cyan-100 text-cyan-600 dark:text-cyan-400',           dot: 'bg-cyan-500' },
-  'Analyst':                   { badge: 'bg-slate-100 text-slate-600 dark:text-slate-400',         dot: 'bg-slate-500' },
-  // Finance & Ops
-  'Finance Manager':           { badge: 'bg-emerald-100 text-emerald-600 dark:text-emerald-400', dot: 'bg-emerald-500' },
-  'Operations Manager':        { badge: 'bg-orange-100 text-orange-600 dark:text-orange-400',   dot: 'bg-orange-500' },
-}
-
-// Grouped structure for InviteDialog select (with Custom free-text)
-export const AGENCY_ROLE_GROUPS = [
-  { label: 'Leadership',          roles: ['Founder', 'Co-founder', 'CEO / Managing Director'] },
-  { label: 'Client & Strategy',   roles: ['Account Manager', 'Project Manager', 'Strategist', 'Creative Director'] },
-  { label: 'Content & Creative',  roles: ['Social Media Manager', 'Content Creator', 'Designer', 'Copywriter', 'Video Editor / Producer'] },
-  { label: 'Growth & Specialist', roles: ['Marketing Specialist', 'Community Manager', 'SEO / Media Buyer', 'Developer', 'Analyst'] },
-  { label: 'Finance & Ops',       roles: ['Finance Manager', 'Operations Manager'] },
-]
-
-// Flat list derived from groups (for getRolePalette hash + backward compat)
-export const AGENCY_ROLE_OPTIONS = AGENCY_ROLE_GROUPS.flatMap((g) => g.roles)
-
-export const FALLBACK_PALETTE = [
-  { badge: 'bg-blue-100 text-blue-600 dark:text-blue-400',          dot: 'bg-blue-500' },
-  { badge: 'bg-emerald-100 text-emerald-600 dark:text-emerald-400', dot: 'bg-emerald-500' },
-  { badge: 'bg-amber-100 text-amber-600 dark:text-amber-400',       dot: 'bg-amber-500' },
-  { badge: 'bg-rose-100 text-rose-600 dark:text-rose-400',          dot: 'bg-rose-500' },
-  { badge: 'bg-cyan-100 text-cyan-600 dark:text-cyan-400',          dot: 'bg-cyan-500' },
-  { badge: 'bg-orange-100 text-orange-600 dark:text-orange-400',    dot: 'bg-orange-500' },
-  { badge: 'bg-pink-100 text-pink-600 dark:text-pink-400',          dot: 'bg-pink-500' },
-  { badge: 'bg-teal-100 text-teal-600 dark:text-teal-400',          dot: 'bg-teal-500' },
-]
-
-export const ADMIN_PALETTE   = { badge: 'bg-violet-100 text-violet-600 dark:text-violet-400', dot: 'bg-violet-500' }
-export const REMOVED_PALETTE = { dot: 'bg-muted-foreground/50' }
-
-export function getRolePalette(role) {
-  if (!role) return null
-  if (NAMED_ROLE_COLORS[role]) return NAMED_ROLE_COLORS[role]
-  let hash = 0
-  for (const ch of role) hash = (hash * 31 + ch.charCodeAt(0)) & 0xffffffff
-  return FALLBACK_PALETTE[Math.abs(hash) % FALLBACK_PALETTE.length]
+  owner:      { badge: 'border-0 bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-300',   dot: 'bg-pink-500',  name: 'text-pink-700 dark:text-pink-400',   label: 'Owner' },
+  admin:      { badge: 'border-0 bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300',   dot: 'bg-purple-500',  name: 'text-purple-700 dark:text-purple-400',   label: 'Admin' },
+  member:     { badge: 'border-0 bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300', dot: 'bg-emerald-500', name: 'text-emerald-700 dark:text-emerald-400', label: 'Member' },
+  superadmin: { badge: 'border-0 bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',       dot: 'bg-amber-500',   name: 'text-amber-800 dark:text-amber-400',     label: 'Superadmin' },
 }

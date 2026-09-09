@@ -491,7 +491,9 @@ No routing or nav changes in this phase.
 - No auto-completion (Phase 4)
 - No unwatch/mute — deliberately deferred until real notification volume is observed
 - No change to who may **edit** a task (still owner/creator)
-- Owner/superadmin remain unassignable
+- Owner/superadmin remain unassignable **by anyone else** — see the 2026-09-10
+  addendum below: the owner may assign a task to *themselves*, which is a
+  narrower carve-out than reversing this rule entirely.
 
 ### 1.7 Phase 1 Checklist — Before Marking Complete
 
@@ -1112,6 +1114,47 @@ None. No storage in any phase.
   deliverables.
 - **Mute / unwatch** — deferred deliberately until real notification volume is observed
   rather than guessed at.
-- **Owner as assignee** — owner/superadmin stay unassignable, per the current filter.
+- **Owner assigned by someone else** — still blocked. See the 2026-09-10 addendum: the
+  owner may assign a task to *themselves*; nobody else may assign a task to the owner.
 - **Generic audit log** — `task_activity` stays at two event types. Field-level history
   (due date, priority, title) is not recorded.
+
+---
+
+## Addendum — Owner self-assignment (2026-09-10)
+
+Reported: testing as the workspace owner, there was no way to assign a task to
+oneself — the owner didn't even appear in the assignee picker.
+
+**Cause.** `enforce_task_assignment()` (Phase 1) unconditionally rejected any
+`assigned_to` resolving to `owner`/`superadmin`, with no exception for the
+caller assigning to themselves. That rule was written to close a specific gap —
+*"an admin could currently assign a task to the owner via a crafted request,
+and nothing would stop it"* — i.e. to stop **someone else** routing work onto
+the owner without consent. It was never framed around the owner choosing to
+pick something up themselves, but the blanket check caught that case too.
+
+**Change** (`supabase/migrations/20260910050000_allow_owner_self_assign_tasks.sql`):
+the trigger now short-circuits when `new.assigned_to = auth.uid()` — self-assignment
+is always allowed, for any role, before the owner/superadmin check ever runs.
+Third-party assignment *to* the owner is completely unchanged and still blocked.
+Confirmed via a real authenticated owner/admin/member, in rolled-back transactions:
+
+```
+owner self-assigns at creation          -> allowed
+owner reassign_task's to self           -> allowed
+admin assigns a task TO the owner       -> still blocked
+admin self-assigns (already worked)     -> unaffected
+member reassign_task's to self          -> unaffected
+```
+
+The four assignee-option filters (`CreateTaskDialog`, `EditTaskDialog`,
+`TaskCard`'s `reassignOptions`, `TaskMetaRail`'s `assigneeOptions`) were each
+widened from `system_role !== 'owner' && system_role !== 'superadmin'` to also
+admit the current user regardless of role — matching the trigger exactly. Each
+already rendered a `(You)` label for a self-match; they just never got the
+chance to, since the owner was filtered out of the list before that check ran.
+
+This is a narrower change than reversing "owner/superadmin remain unassignable"
+— raised with the owner mid-build, given it contradicts a decision this doc
+explicitly recorded; they chose to keep it.

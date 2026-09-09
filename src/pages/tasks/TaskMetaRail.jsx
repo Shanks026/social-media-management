@@ -31,25 +31,30 @@ function MemberChip({ member, isSelf }) {
   if (!member) return <span className="text-muted-foreground">Unassigned</span>
   return (
     <span className={cn('inline-flex items-center gap-1.5', member._removed && 'opacity-60')}>
-      {!isSelf &&
-        (member.avatar_url ? (
-          <img
-            src={member.avatar_url}
-            alt=""
-            className={cn('size-4 shrink-0 rounded-full object-cover', member._removed && 'grayscale')}
-          />
-        ) : (
-          <span
-            className={cn(
-              'flex size-4 shrink-0 items-center justify-center rounded-full text-[8px] font-semibold',
-              member._removed ? 'bg-muted text-muted-foreground' : 'bg-primary/10 text-primary',
-            )}
-          >
-            {(member.full_name || member.email || '?')[0].toUpperCase()}
-          </span>
-        ))}
+      {/* size-5, matching the Assigned To select's avatars and ClientAvatar
+          size="sm" below. Avatar and real name are shown even for the
+          current user, with "(You)" appended rather than substituted — this
+          used to skip the avatar and show only the bare word "You", leaving
+          "Assigned by"/"Created by" unreadable without hovering. */}
+      {member.avatar_url ? (
+        <img
+          src={member.avatar_url}
+          alt=""
+          className={cn('size-5 shrink-0 rounded-full object-cover', member._removed && 'grayscale')}
+        />
+      ) : (
+        <span
+          className={cn(
+            'flex size-5 shrink-0 items-center justify-center rounded-full text-[9px] font-semibold',
+            member._removed ? 'bg-muted text-muted-foreground' : 'bg-primary/10 text-primary',
+          )}
+        >
+          {(member.full_name || member.email || '?')[0].toUpperCase()}
+        </span>
+      )}
       <span className="truncate font-medium">
-        {isSelf ? 'You' : member.full_name || member.email}
+        {member.full_name || member.email}
+        {isSelf && <span className="font-normal text-muted-foreground"> (You)</span>}
         {member._removed && <span className="font-normal text-muted-foreground"> (Removed)</span>}
       </span>
     </span>
@@ -83,7 +88,13 @@ export default function TaskMetaRail({
   const assigner = task.assigner_id ? memberMap[task.assigner_id] : null
 
   const assigneeOptions = Object.values(memberMap).filter(
-    (m) => !m._removed && m.system_role !== 'owner' && m.system_role !== 'superadmin',
+    (m) =>
+      !m._removed &&
+      // Owner/superadmin are excluded as a target for anyone else, but the
+      // current user can always assign a task to themselves —
+      // enforce_task_assignment permits self-assignment regardless of role.
+      (m.member_user_id === currentUserId ||
+        (m.system_role !== 'owner' && m.system_role !== 'superadmin')),
   )
 
   const overdue =
@@ -92,7 +103,7 @@ export default function TaskMetaRail({
     !['COMPLETED', 'ARCHIVED'].includes(task.status)
 
   return (
-    <aside className="w-full min-w-0 lg:sticky lg:top-20 lg:w-1/3">
+    <aside className="w-full min-w-0 lg:sticky lg:top-20 lg:w-[30%]">
       <div className="mb-4 flex items-center justify-between gap-2">
         <h2 className="text-xs font-medium text-muted-foreground">Task Details</h2>
         <TaskWatchers watcherIds={watcherIds} memberMap={memberMap} />
@@ -128,7 +139,12 @@ export default function TaskMetaRail({
               onValueChange={(next) => onReassign(next === UNASSIGNED ? null : next)}
               disabled={isBusy}
             >
-              <SelectTrigger className="h-7 w-auto max-w-full border-0 bg-transparent px-2 text-sm shadow-none hover:bg-muted/60 focus:ring-0">
+              {/* -ml-2 cancels the trigger's own px-2 so the avatar lines up
+                  flush-left with every other row's (Assigned by, Created by,
+                  Client, all unpadded) — the px-2 itself stays, so the hover
+                  highlight still has comfortable room around the content
+                  rather than hugging it. */}
+              <SelectTrigger className="-ml-2 h-7 w-auto max-w-full border-0 bg-transparent px-2 text-sm shadow-none hover:bg-muted/60 focus:ring-0">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>

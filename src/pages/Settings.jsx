@@ -33,7 +33,7 @@ export default function Settings() {
       title: 'Settings',
       breadcrumbs: [
         { label: 'Settings', href: '/settings' },
-        { label: 'General Settings' },
+        { label: 'General' },
       ],
     })
   }, [setHeader])
@@ -49,7 +49,7 @@ export default function Settings() {
           {/* PAGE HEADER */}
           <div className="space-y-1">
             <h1 className="text-3xl font-normal tracking-tight text-foreground bricolage">
-              General Settings
+              General
             </h1>
             <p className="text-sm text-muted-foreground font-normal">
               Manage your profile and agency workspace.

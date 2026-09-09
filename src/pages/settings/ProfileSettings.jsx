@@ -7,8 +7,10 @@ import { format } from 'date-fns'
 import { useSubscription } from '@/api/useSubscription'
 import { PlanOverview } from '../billingAndUsage/PlanOverview'
 import { allPlanMeta } from '../billingAndUsage/planMeta'
-import { useMyMemberRecord } from '@/api/team'
-import { getRolePalette, SYSTEM_ROLE_PALETTE } from '@/lib/team-roles'
+import { useMyMemberRecord, setMyEmailTaskAssignments } from '@/api/team'
+import { SYSTEM_ROLE_PALETTE } from '@/lib/team-roles'
+import { useMemberJobRoles } from '@/api/jobRoles'
+import JobRoleBadges from '@/components/team/JobRoleBadges'
 import { Badge } from '@/components/ui/badge'
 
 // UI
@@ -16,6 +18,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
+import { Switch } from '@/components/ui/switch'
 import {
   Dialog,
   DialogContent,
@@ -28,6 +31,7 @@ import {
 // Icons
 import {
   Mail,
+  Phone,
   CalendarDays,
   Hash,
   Copy,
@@ -58,9 +62,32 @@ export default function ProfileSettings() {
   const navigate = useNavigate()
   const { data: sub, isLoading } = useSubscription()
   const { data: memberRecord } = useMyMemberRecord()
+  const { data: memberJobRoles = {} } = useMemberJobRoles()
 
   const systemRole = memberRecord?.system_role ?? null
-  const functionalRole = memberRecord?.functional_role ?? null
+  // A member can hold several job titles, so these come from the join table
+  // rather than a column on the member row.
+  const myJobRoles = memberJobRoles[user?.id] ?? []
+
+  // Optimistic: the switch tracks local state so it moves under the finger,
+  // and falls back to the saved value (defaulting on) until the record loads.
+  const [prefOverride, setPrefOverride] = useState(null)
+  const [isSavingPrefs, setIsSavingPrefs] = useState(false)
+  const emailTaskAssignments = prefOverride ?? memberRecord?.email_task_assignments ?? true
+
+  async function handleToggleAssignmentEmails(next) {
+    setPrefOverride(next)
+    setIsSavingPrefs(true)
+    try {
+      await setMyEmailTaskAssignments(next)
+      toast.success(next ? 'Assignment emails on' : 'Assignment emails off')
+    } catch (err) {
+      setPrefOverride(!next)
+      toast.error(err.message || 'Could not save that preference')
+    } finally {
+      setIsSavingPrefs(false)
+    }
+  }
 
   const currentPlanName = sub?.plan_name?.toLowerCase() || 'ignite'
   const currentPlan = allPlanMeta[currentPlanName] || allPlanMeta.ignite
@@ -71,6 +98,7 @@ export default function ProfileSettings() {
 
   // Profile fields
   const [fullName, setFullName] = useState(user?.user_metadata?.full_name || '')
+  const [mobileNumber, setMobileNumber] = useState(user?.user_metadata?.mobile_number || '')
   const [avatarUrl, setAvatarUrl] = useState(
     user?.user_metadata?.avatar_url || '',
   )
@@ -134,7 +162,7 @@ export default function ProfileSettings() {
     try {
       const previousAvatarUrl = user?.user_metadata?.avatar_url || ''
       const { error } = await supabase.auth.updateUser({
-        data: { full_name: fullName, avatar_url: avatarUrl },
+        data: { full_name: fullName, avatar_url: avatarUrl, mobile_number: mobileNumber.trim() || null },
       })
       if (error) throw error
 
@@ -165,6 +193,7 @@ export default function ProfileSettings() {
 
   const hasChanges =
     fullName !== (user?.user_metadata?.full_name || '') ||
+    mobileNumber !== (user?.user_metadata?.mobile_number || '') ||
     avatarUrl !== (user?.user_metadata?.avatar_url || '')
 
   return (
@@ -257,6 +286,19 @@ export default function ProfileSettings() {
             />
           </div>
 
+          <div className="space-y-2">
+            <Label>Mobile Number</Label>
+            <Input
+              type="tel"
+              value={mobileNumber}
+              onChange={(e) => setMobileNumber(e.target.value)}
+              placeholder="+91 98765 43210"
+            />
+            <p className="text-xs text-muted-foreground">
+              Only your workspace owner and admins can see this.
+            </p>
+          </div>
+
           {systemRole && (
             <>
               <InfoRow
@@ -270,13 +312,10 @@ export default function ProfileSettings() {
               />
               <InfoRow
                 icon={<Briefcase size={16} />}
-                label="Job Title"
+                label={myJobRoles.length > 1 ? 'Job Titles' : 'Job Title'}
                 value={
-                  functionalRole ? (
-                    <span className="flex items-center gap-2">
-                      <span className={cn('size-2 rounded-full shrink-0', getRolePalette(functionalRole)?.dot ?? 'bg-muted-foreground/40')} />
-                      {functionalRole}
-                    </span>
+                  myJobRoles.length > 0 ? (
+                    <JobRoleBadges roles={myJobRoles} max={4} />
                   ) : (
                     <span className="text-muted-foreground">—</span>
                   )
@@ -290,6 +329,17 @@ export default function ProfileSettings() {
               icon={<Mail size={16} />}
               label="Email Address"
               value={user?.email || '—'}
+            />
+            <InfoRow
+              icon={<Phone size={16} />}
+              label="Mobile Number"
+              value={
+                user?.user_metadata?.mobile_number || (
+                  <span className="text-muted-foreground">
+                    — <span className="text-xs">(add it in Profile above)</span>
+                  </span>
+                )
+              }
             />
             <InfoRow
               icon={<CalendarDays size={16} />}
@@ -350,6 +400,33 @@ export default function ProfileSettings() {
             onUpgradeClick={handleUpgradeClick}
           />
         )}
+      </section>
+
+      <Separator className="opacity-50" />
+
+      {/* ── Section: Notifications ── */}
+      <section className="space-y-6">
+        <div className="space-y-1">
+          <h2 className="text-2xl font-normal tracking-tight bricolage">Notifications</h2>
+          <p className="text-sm text-muted-foreground font-normal">
+            Choose what reaches your inbox. Everything else stays in the app.
+          </p>
+        </div>
+
+        <div className="flex items-center justify-between rounded-xl border border-border bg-card px-5 py-4">
+          <div className="space-y-0.5 pr-4">
+            <p className="text-sm font-semibold text-foreground">Task assignments</p>
+            <p className="text-xs text-muted-foreground">
+              Email me when someone assigns a task to me. Status changes and
+              comments are not emailed.
+            </p>
+          </div>
+          <Switch
+            checked={emailTaskAssignments}
+            disabled={memberRecord === undefined || isSavingPrefs}
+            onCheckedChange={handleToggleAssignmentEmails}
+          />
+        </div>
       </section>
 
       <Separator className="opacity-50" />

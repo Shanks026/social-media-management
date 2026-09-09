@@ -1,12 +1,13 @@
 import { useMemo } from 'react'
 import { useTeamMembers, useRemovedMembers } from '@/api/team'
+import { useMemberJobRoles } from '@/api/jobRoles'
 import { useClients } from '@/api/clients'
 import { useCampaigns } from '@/api/campaigns'
 import { useAuth } from '@/context/AuthContext'
 
 /**
- * The id→record lookups every task surface needs to render a TaskCard or
- * TaskDetailSheet: clients, campaigns and members keyed by id, plus the
+ * The id→record lookups every task surface needs to render a TaskCard or the
+ * task detail page: clients, campaigns and members keyed by id, plus the
  * current user id.
  *
  * Removed members are merged in (flagged _removed) purely so an existing
@@ -17,6 +18,7 @@ export function useTaskLookups() {
   const { user } = useAuth()
   const { data: teamMembers = [] } = useTeamMembers()
   const { data: removedMembers = [] } = useRemovedMembers()
+  const { data: memberJobRoles = {} } = useMemberJobRoles()
   const { data: clientsData } = useClients()
   const { data: allCampaigns = [] } = useCampaigns()
 
@@ -33,8 +35,14 @@ export function useTaskLookups() {
         avatar_url: user.user_metadata?.avatar_url || null,
       }
     }
+    // Job titles live in their own table (one member holds several), so they're
+    // merged in here rather than arriving on the member row. One merge point
+    // keeps every consumer of memberMap reading them the same way.
+    for (const [id, member] of Object.entries(map)) {
+      map[id] = { ...member, job_roles: memberJobRoles[id] ?? [] }
+    }
     return map
-  }, [teamMembers, removedMembers, user])
+  }, [teamMembers, removedMembers, user, memberJobRoles])
 
   const clientMap = useMemo(() => {
     const all = [
