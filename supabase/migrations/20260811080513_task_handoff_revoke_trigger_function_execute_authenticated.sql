@@ -5,3 +5,4 @@
 -- and is_task_participant (both intentionally callable by authenticated).
 revoke execute on function public.enforce_task_assignment() from authenticated;
 revoke execute on function public.tg_log_task_activity()    from authenticated;
+;

@@ -91,3 +91,26 @@ Current functions: `send-approval-email`, `send-client-welcome`, `send-password-
 ```js
 supabase.from('view_client_profitability').select('*').eq('client_id', id).single()
 ```
+
+## Migrations
+
+`supabase/migrations/` must mirror the remote history table exactly — it is the
+only way the schema can be rebuilt, and the CLI pairs the two by the numeric
+version prefix in the filename, not by name.
+
+Applying a migration through the Supabase MCP (or the dashboard SQL editor)
+writes it to the remote and records it in `supabase_migrations.schema_migrations`,
+but **does not create a local file**. Hand-writing one afterwards does not fix
+it either: an invented timestamp does not match the version the remote
+recorded, so the CLI reads it as a pending migration and would re-apply it on
+the next `db push`.
+
+After applying anything remotely, sync the directory instead of writing files
+by hand:
+
+```bash
+npx supabase migration fetch --linked   # writes local files from the history table
+npx supabase migration list --linked    # every row should have both columns filled
+```
+
+Any row with an empty Local or Remote column means the two have diverged.

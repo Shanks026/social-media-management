@@ -1,0 +1,4 @@
+
+ALTER TYPE public.post_status ADD VALUE IF NOT EXISTS 'APPROVED';
+ALTER TYPE public.post_status ADD VALUE IF NOT EXISTS 'DELIVERED';
+;

@@ -1,0 +1,1 @@
+ALTER TABLE client_documents ADD COLUMN IF NOT EXISTS notes TEXT;;

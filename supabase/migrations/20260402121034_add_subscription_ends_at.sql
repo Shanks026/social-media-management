@@ -1,0 +1,1 @@
+ALTER TABLE agency_subscriptions ADD COLUMN IF NOT EXISTS subscription_ends_at TIMESTAMPTZ; UPDATE agency_subscriptions SET subscription_ends_at = created_at + INTERVAL '30 days' WHERE plan_name NOT IN ('trial') AND subscription_ends_at IS NULL;;
