@@ -112,12 +112,19 @@ export function ChatSidebar() {
 
   // Who wrote the shared room's last message, for the "Name: message" preview.
   // First name only — the row is narrow and the body is the part worth reading.
+  // Falls back to the name snapshotted on the message, so the preview keeps
+  // working after the author is hard-deleted (their id is nulled and they are
+  // no longer in memberMap).
   const workspaceSenderId = workspaceChannel?.last_message_author_id
-  const workspaceSenderName = !workspaceSenderId
-    ? null
-    : workspaceSenderId === user?.id
+  const workspaceSenderSnapshot = workspaceChannel?.last_message_author_name
+  const workspaceSenderName =
+    workspaceSenderId === user?.id && workspaceSenderId
       ? 'You'
-      : (memberMap[workspaceSenderId]?.full_name || memberMap[workspaceSenderId]?.email || 'Someone').split(' ')[0]
+      : (memberMap[workspaceSenderId]?.full_name ||
+          memberMap[workspaceSenderId]?.email ||
+          workspaceSenderSnapshot ||
+          null
+        )?.split(' ')[0] ?? null
 
   // get_my_chat_channels() already orders by last_message_at (most recent
   // first) — preserve that order rather than re-deriving it client-side.
@@ -228,12 +235,24 @@ export function ChatSidebar() {
               {!isLoading &&
                 dmChannels.map((dm) => {
                   const member = memberMap[dm.other_user_id]
-                  if (!member) return null
+                  // A hard-deleted partner's chat_channel_members row cascades
+                  // away, so other_user_id comes back null and there is no
+                  // memberMap entry. This used to `return null`, which hid the
+                  // whole conversation — the messages were never deleted, just
+                  // unreachable. Fall back to the name snapshotted on their
+                  // messages so the history stays readable.
+                  const departedName = !member ? dm.other_user_name : null
+                  if (!member && !departedName) return null
                   return (
                     <SidebarMenuItem key={dm.channel_id}>
                       <ChannelRow
-                        avatar={<MemberAvatar member={member} className="size-8 shrink-0" />}
-                        name={member.full_name || member.email}
+                        avatar={
+                          <MemberAvatar
+                            member={member ?? { full_name: departedName }}
+                            className="size-8 shrink-0"
+                          />
+                        }
+                        name={member ? member.full_name || member.email : departedName}
                         isActive={activeChannelId === dm.channel_id}
                         onClick={() => selectChannel(dm.channel_id)}
                         lastMessageAt={dm.last_message_at}

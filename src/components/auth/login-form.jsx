@@ -4,12 +4,10 @@ import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { useNavigate } from 'react-router-dom'
 import { Loader2, AlertCircle } from 'lucide-react'
 import ForgotPasswordDialog from './ForgotPasswordDialog'
 
 export function LoginForm({ className, client = supabase, onSuccess, ...props }) {
-  const navigate = useNavigate()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [isForgotOpen, setIsForgotOpen] = useState(false)
@@ -40,8 +38,16 @@ export function LoginForm({ className, client = supabase, onSuccess, ...props })
         setError(error.message)
       }
     } else if (data?.session) {
+      // No navigate() here on purpose. signInWithPassword resolves before
+      // AuthContext's onAuthStateChange listener has committed setSession, so
+      // navigating in this tick lands on a router that still has only the
+      // unauthenticated routes mounted — /dashboard doesn't exist yet, the `*`
+      // catch-all matches, and it redirects straight back to /login. That is
+      // what made signing in take two attempts.
+      //
+      // PublicOnlyRoute already redirects to /dashboard the moment `session`
+      // lands, so letting the route react is both correct and race-free.
       if (onSuccess) onSuccess(data.session)
-      else navigate('/dashboard')
     }
   }
 

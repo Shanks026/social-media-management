@@ -15,7 +15,6 @@ import { cn } from '@/lib/utils'
 import { formatDate } from '@/lib/helper'
 import { useUrgentClients } from '@/api/clients'
 import { NotificationBell } from '@/components/notifications/NotificationBell'
-import { NotificationToaster } from '@/components/notifications/NotificationToaster'
 
 function TrialStatusPill({ phase, daysRemaining, endsAt }) {
   const navigate = useNavigate()
@@ -261,9 +260,6 @@ export function AppHeader({ agencySettings }) {
         )}
         {header.actions}
         <UrgencyAlertIndicator />
-        {/* Renders nothing — listens for notifications arriving mid-session
-            and toasts them. Mounted here so there is exactly one listener. */}
-        <NotificationToaster />
         <NotificationBell />
         <ModeToggle />
 

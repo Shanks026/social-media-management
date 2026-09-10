@@ -193,7 +193,21 @@ function LegacyPostRedirect() {
 }
 
 function AppRoutes() {
-  const { session, user } = useAuth()
+  const { session, user, loading } = useAuth()
+
+  // Nothing is mounted until the stored session has actually been read.
+  //
+  // The route tree below is split on `session`, and the unauthenticated half's
+  // only route is `*` -> Navigate to /login. So while the initial
+  // supabase.auth.getSession() was still in flight, `session` was null and ANY
+  // protected URL matched that catch-all and redirected — with `replace`, so
+  // the intended destination was destroyed too. That is the refresh-lands-on-
+  // login behaviour, and the reason a fresh sign-in bounced back once before
+  // working: the redirect fired in the window before setSession() committed.
+  //
+  // `loading` flips in a .finally() on that first read, so this resolves on
+  // both the signed-in and signed-out paths.
+  if (loading) return <div className="h-screen w-full bg-background" />
 
   return (
     <Routes>

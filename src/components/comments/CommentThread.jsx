@@ -2,7 +2,7 @@ import { useMemo, useState, useRef, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { useQueryClient } from '@tanstack/react-query'
-import { Pencil, Trash2, X, Check, Plus, ArrowUp, SmilePlus } from 'lucide-react'
+import { Pencil, Trash2, X, Check, Plus, ArrowUp, SmilePlus, UserRoundPlus } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/context/AuthContext'
 import { usePermissions } from '@/api/usePermissions'
@@ -325,7 +325,19 @@ function CommentRow({ comment, author, mentionNames, myMentionName, memberMap, c
 
 // ─── Thread ────────────────────────────────────────────────────────────────────
 
-export function CommentThread({ entityType, entityId, composerPosition = 'bottom' }) {
+/**
+ * `mentionAccessIds` — the set of user ids that can already see this entity.
+ * Only tasks pass it: they are restricted (creator, assignee, past assignees,
+ * admins) whereas posts and campaigns are visible workspace-wide, so leaving it
+ * undefined keeps those threads offering one flat list as before.
+ *
+ * When supplied, the mention menu splits into people who already have access
+ * and people who will be GRANTED it by being mentioned — the grant itself is
+ * done server-side by tg_comment_adds_task_participants. Splitting the list is
+ * the whole point: it turns "typing @ silently widened who can see this task"
+ * into a labelled, deliberate choice.
+ */
+export function CommentThread({ entityType, entityId, composerPosition = 'bottom', mentionAccessIds }) {
   const { user } = useAuth()
   const { isAdmin } = usePermissions()
   const queryClient = useQueryClient()
@@ -407,11 +419,19 @@ export function CommentThread({ entityType, entityId, composerPosition = 'bottom
   )
 
   const mentionQuery = mention?.query ?? ''
-  const filteredMentions = mention
-    ? mentionCandidates.filter((c) =>
-        c.name.toLowerCase().includes(mentionQuery.toLowerCase()),
-      )
-    : []
+  // Access-holders first, then everyone else, as one flat array — the keyboard
+  // navigation below indexes into this, so the two rendered groups have to be
+  // contiguous slices of a single ordered list rather than separate arrays.
+  const filteredMentions = !mention
+    ? []
+    : (() => {
+        const matches = mentionCandidates.filter((c) =>
+          c.name.toLowerCase().includes(mentionQuery.toLowerCase()),
+        )
+        if (!mentionAccessIds) return matches.map((m) => ({ ...m, hasAccess: true }))
+        const flagged = matches.map((m) => ({ ...m, hasAccess: mentionAccessIds.has(m.id) }))
+        return [...flagged.filter((m) => m.hasAccess), ...flagged.filter((m) => !m.hasAccess)]
+      })()
   const mentionMenuOpen = !!mention && filteredMentions.length > 0
 
   function mentionNamesFor(comment) {
@@ -639,21 +659,50 @@ export function CommentThread({ entityType, entityId, composerPosition = 'bottom
         )}
       >
         <div className="max-h-56 overflow-y-auto">
-          {filteredMentions.map((m, i) => (
-            <button
-              key={m.id}
-              onMouseDown={(e) => { e.preventDefault(); selectMention(m) }}
-              onMouseEnter={() => setActiveIdx(i)}
-              className={cn(
-                'w-full flex items-center gap-2 rounded-md px-2 py-1.5 text-sm text-left transition-colors',
-                i === activeIdx ? 'bg-muted' : 'hover:bg-muted/60',
-              )}
-            >
-              <MemberAvatar member={m} size="size-5" />
-              <span className="truncate">{m.name}</span>
-            </button>
-          ))}
+          {filteredMentions.map((m, i) => {
+            // Headers are rendered inline at the boundary rather than by
+            // grouping into separate lists, so `i` stays the index the
+            // keyboard navigation uses.
+            const first = i === 0
+            const groupChanged = !first && filteredMentions[i - 1].hasAccess !== m.hasAccess
+            const showHeader = mentionAccessIds && (first || groupChanged)
+            return (
+              <div key={m.id}>
+                {showHeader && (
+                  <p className={cn(
+                    'px-2 pb-1 text-[11px] font-medium text-muted-foreground',
+                    first ? 'pt-1' : 'mt-1 border-t border-border/60 pt-2',
+                  )}>
+                    {m.hasAccess ? 'Has access' : 'Will be given access'}
+                  </p>
+                )}
+                <button
+                  onMouseDown={(e) => { e.preventDefault(); selectMention(m) }}
+                  onMouseEnter={() => setActiveIdx(i)}
+                  className={cn(
+                    'w-full flex items-center gap-2 rounded-md px-2 py-1.5 text-sm text-left transition-colors',
+                    i === activeIdx ? 'bg-muted' : 'hover:bg-muted/60',
+                  )}
+                >
+                  <MemberAvatar member={m} size="size-5" />
+                  <span className="truncate">{m.name}</span>
+                  {mentionAccessIds && !m.hasAccess && (
+                    <UserRoundPlus className="ml-auto size-3.5 shrink-0 text-muted-foreground" />
+                  )}
+                </button>
+              </div>
+            )
+          })}
         </div>
+        {/* Says what the second group actually does, at the moment of choosing
+            — the grant is a real consequence and should not be discovered
+            after the fact. */}
+        {mentionAccessIds && filteredMentions.some((m) => !m.hasAccess) && (
+          <p className="border-t border-border/60 px-2 pt-2 pb-1 text-[11px] leading-relaxed text-muted-foreground">
+            Mentioning someone without access adds them as a participant — they
+            will be able to see and act on this task.
+          </p>
+        )}
       </div>
     )
 

@@ -51,11 +51,20 @@ export default function ChatPage() {
         {isWorkspaceChannel ? (
           <TeamChatAvatar logoUrl={sub?.logo_url} name={sub?.agency_name} />
         ) : (
-          <MemberAvatar member={dmMember} />
+          <MemberAvatar member={dmMember ?? (activeChannel.other_user_name ? { full_name: activeChannel.other_user_name } : null)} />
         )}
         <span className="font-medium truncate">
-          {isWorkspaceChannel ? teamChatName : dmMember?.full_name || dmMember?.email || 'Direct Message'}
+          {isWorkspaceChannel
+            ? teamChatName
+            : dmMember?.full_name || dmMember?.email || activeChannel.other_user_name || 'Direct Message'}
         </span>
+        {/* Their account is gone, so dmMember is null and the name above came
+            from the snapshot on their messages. */}
+        {!isWorkspaceChannel && !dmMember && activeChannel.other_user_name && (
+          <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground">
+            No longer available
+          </span>
+        )}
       </div>
       <ChatThread
         key={activeChannelId}

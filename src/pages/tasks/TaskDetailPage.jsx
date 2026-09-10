@@ -114,6 +114,26 @@ export default function TaskDetailPage() {
     return activity.find((row) => row.type === 'assigned')?.actor_user_id ?? task.created_by
   }, [activity, task])
 
+  // Mirrors tasks_select: admins, the creator, the current assignee, and
+  // anyone with an 'assigned' or 'participant_added' row. Passed to the
+  // comment thread so the mention menu can separate people who can already
+  // see this task from people who would be granted access by being mentioned.
+  const mentionAccessIds = useMemo(() => {
+    if (!task) return null
+    const ids = new Set()
+    Object.values(memberMap).forEach((m) => {
+      if (['owner', 'admin', 'superadmin'].includes(m.system_role)) ids.add(m.member_user_id)
+    })
+    if (task.created_by) ids.add(task.created_by)
+    if (task.assigned_to) ids.add(task.assigned_to)
+    activity.forEach((row) => {
+      if (['assigned', 'participant_added'].includes(row.type) && row.to_user_id) {
+        ids.add(row.to_user_id)
+      }
+    })
+    return ids
+  }, [task, memberMap, activity])
+
   useEffect(() => {
     if (!task) return
     setHeader({
@@ -327,7 +347,12 @@ export default function TaskDetailPage() {
                 — natural page flow needed none of it. Trial on tasks first,
                 before touching posts/campaigns. */}
             <TabsContent value="comments" className="pt-4">
-              <CommentThread entityType="task" entityId={task.id} composerPosition="top" />
+              <CommentThread
+                entityType="task"
+                entityId={task.id}
+                composerPosition="top"
+                mentionAccessIds={mentionAccessIds}
+              />
             </TabsContent>
 
             <TabsContent value="activity" className="pt-4">

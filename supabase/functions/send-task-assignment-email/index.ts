@@ -25,7 +25,14 @@ serve(async (req) => {
     return new Response('ok', { headers: corsHeaders })
   }
 
-  const json = (body: unknown, status = 200) =>
+  // Logged so the edge logs can tell a real send from a deliberate skip —
+  // every skip also returns 200, so the HTTP status alone says nothing.
+  const json = (body: unknown, status = 200) => {
+    console.log('[send-task-assignment-email]', status, JSON.stringify(body).slice(0, 200))
+    return rawJson(body, status)
+  }
+
+  const rawJson = (body: unknown, status = 200) =>
     new Response(JSON.stringify(body), {
       status,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -141,8 +148,8 @@ serve(async (req) => {
       `,
     })
 
-    if (error) return json(error, 500)
-    return json(data)
+    if (error) return json({ send_failed: error }, 500)
+    return json({ sent_to: to, resend_id: data?.id ?? null })
   } catch (err: any) {
     return json({ error: err.message }, 500)
   }

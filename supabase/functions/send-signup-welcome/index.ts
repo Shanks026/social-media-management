@@ -28,7 +28,7 @@ serve(async (req) => {
     const { data, error } = await resend.emails.send({
       from: 'Tercero <notifications@tercerospace.com>',
       to: [email],
-      subject: 'Welcome to Tercero — your workspace is ready',
+      subject: 'Welcome to Tercero. Your workspace is ready',
       html: `
         <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 560px; margin: auto; background: #ffffff; color: #111827; border: 1px solid #E5E7EB;">
           <div style="padding: 40px 48px 0;">

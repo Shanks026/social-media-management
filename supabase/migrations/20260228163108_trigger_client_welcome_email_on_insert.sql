@@ -1,11 +1,11 @@
--- SECURITY: the Authorization header below originally embedded this project's
--- literal service_role JWT (full RLS bypass, expiring 2036). It is redacted so
--- the repository does not carry a live credential.
+-- SECURITY: this trigger originally embedded the project's literal service_role
+-- JWT (full RLS bypass, expiring 2036) in its Authorization header. Redacted
+-- so the repository does not carry a live credential.
 --
--- This migration is historical and already applied; the trigger exists in the
--- database with its original header. If replayed against a fresh project the
--- trigger is created with the placeholder and the welcome-email call fails
--- auth until set properly — read the key from Vault, do not paste it back.
+-- NOTE: `supabase migration fetch` regenerates this file from
+-- supabase_migrations.schema_migrations, which still holds the original SQL,
+-- so it WILL restore the key. Re-check this file after any fetch until the
+-- key is rotated and the stored statement is corrected at source.
 --
 
 CREATE OR REPLACE TRIGGER trigger_client_welcome_email

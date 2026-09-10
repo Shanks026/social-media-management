@@ -108,11 +108,11 @@ serve(async (req) => {
 
     if (isInternal) {
       // ── INTERNAL: Agency onboarding themselves ──────────────────
-      subject = `Welcome aboard — your workspace is ready`
+      subject = `${clientName} is ready to go`
       bodyHtml = `
-        <h1 style="font-size: 26px; font-weight: 700; line-height: 1.2; margin: 0 0 16px; color: #111827;">Your workspace is live. Let's get to work.</h1>
+        <h1 style="font-size: 26px; font-weight: 700; line-height: 1.2; margin: 0 0 16px; color: #111827;">Everything is set up for ${clientName}.</h1>
         <p style="font-size: 15px; color: #6B7280; line-height: 1.6; margin: 0 0 32px;">
-          Congratulations on setting up <strong style="color: #111827;">${clientName}</strong> — your internal workspace is fully configured and ready to go.
+          Congratulations on setting up <strong style="color: #111827;">${clientName}</strong>. Your internal workspace is fully configured and ready to go.
           Think of it as your creative command centre: a dedicated space to plan, draft, and manage your own social presence without the noise.
         </p>
 
@@ -127,17 +127,17 @@ serve(async (req) => {
         </div>
 
         <p style="font-size: 14px; color: #6B7280; line-height: 1.7; margin: 0;">
-          Start by scheduling your first post or invite your team to collaborate. Everything you build here stays yours — polished, on-brand, and ready to publish on your schedule.
+          Start by scheduling your first post or invite your team to collaborate. Everything you build here stays yours: polished, on-brand, and ready to publish on your schedule.
         </p>
       `
     } else {
       // ── EXTERNAL: Agency onboarding a new client ─────────────────
-      subject = `You're in — ${agencyName} has set you up`
+      subject = `${agencyName} just set up your workspace`
       bodyHtml = `
-        <h1 style="font-size: 26px; font-weight: 700; line-height: 1.2; margin: 0 0 16px; color: #111827;">Welcome, ${clientName}.</h1>
+        <h1 style="font-size: 26px; font-weight: 700; line-height: 1.2; margin: 0 0 16px; color: #111827;">Your workspace is open, ${clientName}.</h1>
         <p style="font-size: 15px; color: #6B7280; line-height: 1.6; margin: 0 0 32px;">
-          Great news — <strong style="color: #111827;">${agencyName}</strong> has set up your dedicated workspace.
-          From here, your content is professionally managed, reviewed with your input, and published on time — every time.
+          <strong style="color: #111827;">${agencyName}</strong> has built you a space of your own. This is where your content gets
+          planned, shaped and shipped. It’s also where you get a say before any of it goes live.
         </p>
 
         <div style="border-top: 1px solid #E5E7EB; padding: 24px 0;">
@@ -151,8 +151,7 @@ serve(async (req) => {
         </div>
 
         <p style="font-size: 14px; color: #6B7280; line-height: 1.7; margin: 0;">
-          When your team has content ready for your eyes, you'll get a private review link directly in your inbox — no logins, no complexity.
-          Just your view, your feedback, and your approval. That's the whole deal.
+          When something’s ready for you, a private review link lands in your inbox. No password, no faff. You look, you say what you think, you approve. That’s it.
         </p>
       `
     }
