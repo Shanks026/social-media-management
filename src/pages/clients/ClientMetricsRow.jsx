@@ -1,12 +1,18 @@
 import { PencilRuler, Megaphone, ListTodo, CircleDollarSign, Percent } from 'lucide-react'
 
-const TotalStatItem = ({ icon: Icon, count, label, valueClassName = 'text-foreground' }) => (
-  <div className="flex items-center gap-1.5">
-    <Icon className="size-3.5 text-muted-foreground shrink-0" />
-    <span className={`text-xs font-bold ${valueClassName}`}>{count}</span>
-    <span className="text-xs text-muted-foreground">{label}</span>
-  </div>
-)
+// A zero is dimmed rather than hidden: the row is a fixed set of three, so
+// dropping an item would shuffle the others sideways between cards and make
+// the grid harder to scan. Dimming keeps the position but drops the weight.
+const TotalStatItem = ({ icon: Icon, count, label, valueClassName = 'text-foreground' }) => {
+  const empty = !count
+  return (
+    <div className={`flex items-center gap-1.5 ${empty ? 'opacity-45' : ''}`}>
+      <Icon className="size-3.5 text-muted-foreground shrink-0" />
+      <span className={`text-xs font-bold ${empty ? 'text-muted-foreground' : valueClassName}`}>{count}</span>
+      <span className="text-xs text-muted-foreground">{label}</span>
+    </div>
+  )
+}
 
 const formatMRR = (val) =>
   new Intl.NumberFormat('en-IN', {
@@ -38,7 +44,7 @@ export default function ClientMetricsRow({ client, section = 'all', className = 
 
   const financials =
     showFinancials && (client.avg_monthly_retainer > 0 || margin > 0) ? (
-      <div className="flex items-center gap-5">
+      <div className="flex items-center gap-8">
         {client.avg_monthly_retainer > 0 && (
           <TotalStatItem
             icon={CircleDollarSign}
@@ -70,7 +76,7 @@ export default function ClientMetricsRow({ client, section = 'all', className = 
 
   return (
     <div className={`${className} flex items-center justify-between gap-4`}>
-      <div className="flex items-center gap-5">
+      <div className="flex items-center gap-8">
         <TotalStatItem icon={PencilRuler} count={client.total_deliverables ?? 0} label="Deliverables" />
         <TotalStatItem icon={Megaphone} count={client.total_campaigns ?? 0} label="Campaigns" />
         <TotalStatItem icon={ListTodo} count={client.total_tasks ?? 0} label="Tasks" />

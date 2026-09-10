@@ -21,6 +21,7 @@ import { useTaskLookups } from '@/components/tasks/useTaskLookups'
 import { STATUS_CONFIG, STATUS_DOT, PRIORITY_CONFIG, DeliverablePreviewRow } from '@/components/tasks/TaskCard'
 import EditTaskDialog from '@/components/tasks/EditTaskDialog'
 import { CommentThread } from '@/components/comments/CommentThread'
+import { useCommentCount } from '@/api/comments'
 import TaskMetaRail from './TaskMetaRail'
 import TaskActivityFeed from './TaskActivityFeed'
 
@@ -65,6 +66,7 @@ export default function TaskDetailPage() {
   const { data: task, isLoading, error } = useTaskById(taskId)
   const { data: activity = [], isLoading: isLoadingActivity } = useTaskActivity(taskId)
   const watcherIds = useTaskWatchers(task)
+  const { data: commentCount = 0 } = useCommentCount({ entityType: 'task', entityId: taskId })
 
   // Only asked once we know the row isn't visible — it answers "does this id
   // exist at all", nothing about its contents.
@@ -113,6 +115,26 @@ export default function TaskDetailPage() {
     if (!task) return null
     return activity.find((row) => row.type === 'assigned')?.actor_user_id ?? task.created_by
   }, [activity, task])
+
+  // Mirrors tasks_select: admins, the creator, the current assignee, and
+  // anyone with an 'assigned' or 'participant_added' row. Passed to the
+  // comment thread so the mention menu can separate people who can already
+  // see this task from people who would be granted access by being mentioned.
+  const mentionAccessIds = useMemo(() => {
+    if (!task) return null
+    const ids = new Set()
+    Object.values(memberMap).forEach((m) => {
+      if (['owner', 'admin', 'superadmin'].includes(m.system_role)) ids.add(m.member_user_id)
+    })
+    if (task.created_by) ids.add(task.created_by)
+    if (task.assigned_to) ids.add(task.assigned_to)
+    activity.forEach((row) => {
+      if (['assigned', 'participant_added'].includes(row.type) && row.to_user_id) {
+        ids.add(row.to_user_id)
+      }
+    })
+    return ids
+  }, [task, memberMap, activity])
 
   useEffect(() => {
     if (!task) return
@@ -271,7 +293,14 @@ export default function TaskDetailPage() {
                   </span>
                 )}
               </TabsTrigger>
-              <TabsTrigger value="comments">Comments</TabsTrigger>
+              <TabsTrigger value="comments">
+                Comments
+                {commentCount > 0 && (
+                  <span className="ml-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-muted px-1.5 text-[11px] font-medium text-muted-foreground">
+                    {commentCount}
+                  </span>
+                )}
+              </TabsTrigger>
               <TabsTrigger value="activity">Activity</TabsTrigger>
             </TabsList>
 
@@ -327,7 +356,12 @@ export default function TaskDetailPage() {
                 — natural page flow needed none of it. Trial on tasks first,
                 before touching posts/campaigns. */}
             <TabsContent value="comments" className="pt-4">
-              <CommentThread entityType="task" entityId={task.id} composerPosition="top" />
+              <CommentThread
+                entityType="task"
+                entityId={task.id}
+                composerPosition="top"
+                mentionAccessIds={mentionAccessIds}
+              />
             </TabsContent>
 
             <TabsContent value="activity" className="pt-4">

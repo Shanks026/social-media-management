@@ -40,8 +40,8 @@ serve(async (req) => {
     const isRenewal = requestType === 'renewal'
     const typeLabel = isRenewal ? 'Renewal Request' : 'Upgrade Request'
     const subject = isRenewal
-      ? `[Renewal Request] ${agencyName} — ${currentPlan}`
-      : `[Upgrade Request] ${agencyName} — ${currentPlan} → ${requestedPlan}`
+      ? `[Renewal Request] ${agencyName}: ${currentPlan}`
+      : `[Upgrade Request] ${agencyName}: ${currentPlan} → ${requestedPlan}`
 
     const badgeColor = isRenewal ? '#FEF3C7' : '#EDE9FE'
     const badgeText = isRenewal ? '#92400E' : '#6D28D9'

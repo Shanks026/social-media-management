@@ -258,7 +258,13 @@ function ChatMessageRow({ message, author, isOwn, canModify, canDelete, showRole
   const [draft, setDraft] = useState(message.body)
   const [saving, setSaving] = useState(false)
   const isDeleted = !!message.deleted_at
-  const name = author?.full_name || author?.email || 'Unknown'
+  // A hard-deleted member is gone from memberMap, and their message rows have
+  // had author_user_id nulled — so the name comes off the snapshot stored on
+  // the message itself. Without this the log would read "Unknown" (or, before
+  // the rows stopped being reassigned, the owner's name, which was worse: it
+  // put words in someone's mouth).
+  const departed = !author && !!message.author_name
+  const name = author?.full_name || author?.email || message.author_name || 'Unknown'
 
   async function handleSaveEdit() {
     const trimmed = draft.trim()
@@ -298,7 +304,9 @@ function ChatMessageRow({ message, author, isOwn, canModify, canDelete, showRole
     >
       {!isOwn && (
         <MessageAvatarSlot className="size-7 min-w-7 bg-transparent">
-          <MemberAvatar member={author} />
+          {/* Falls back to the snapshot so a departed author still gets their
+              own initial rather than a "?" placeholder. */}
+          <MemberAvatar member={author ?? (departed ? { full_name: message.author_name } : null)} />
         </MessageAvatarSlot>
       )}
       <MessageContent className={message.references?.length === 1 ? 'max-w-full' : 'max-w-[70%]'}>
@@ -310,6 +318,20 @@ function ChatMessageRow({ message, author, isOwn, canModify, canDelete, showRole
             <span className={cn('font-medium text-foreground', showRoleColor && SYSTEM_ROLE_PALETTE[author?.system_role]?.name)}>
               {name}
             </span>
+          )}
+          {/* They no longer have an account, so the name is all that is left —
+              say so rather than letting it read as a current teammate. */}
+          {departed && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="rounded bg-muted px-1 py-px text-[10px] font-medium text-muted-foreground">
+                  no longer available
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>
+                This person has been removed from the workspace. Their messages are kept for reference.
+              </TooltipContent>
+            </Tooltip>
           )}
           {message.body?.includes('@Important') && (
             <TriangleAlert className="size-3 shrink-0 text-red-500" aria-label="Important message" />

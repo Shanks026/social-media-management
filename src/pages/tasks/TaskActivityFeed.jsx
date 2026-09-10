@@ -1,5 +1,5 @@
 import { format } from 'date-fns'
-import { UserRoundCog, CircleDot, Bot } from 'lucide-react'
+import { UserRoundCog, UserRoundPlus, CircleDot, Bot } from 'lucide-react'
 import { STATUS_DOT, StatusChip } from '@/components/tasks/TaskCard'
 import { Empty, EmptyHeader, EmptyTitle, EmptyDescription, EmptyMedia } from '@/components/ui/empty'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -50,9 +50,19 @@ function ActivityRow({ row, memberMap, currentUserId, isLast }) {
   const fromMember = row.from_user_id ? memberMap[row.from_user_id] : null
   const toMember = row.to_user_id ? memberMap[row.to_user_id] : null
   const isAssignment = row.type === 'assigned'
+  const isParticipant = row.type === 'participant_added'
 
   let sentence
-  if (isAssignment) {
+  if (isParticipant) {
+    // Access grants are logged so they are auditable — a task quietly becoming
+    // visible to more people should be visible in the task's own history.
+    sentence = (
+      <>
+        <NameTag member={actorMember}>{actor}</NameTag> added{' '}
+        <NameTag member={toMember}>{name(row.to_user_id)}</NameTag> as a participant
+      </>
+    )
+  } else if (isAssignment) {
     if (!row.to_user_id)
       sentence = (
         <>
@@ -95,7 +105,9 @@ function ActivityRow({ row, memberMap, currentUserId, isLast }) {
           identity. Who did it is now shown inline with their name in the
           sentence itself, via NameTag. */}
       <span className="relative z-10 flex size-6 shrink-0 items-center justify-center rounded-full border border-border bg-background">
-        {isAssignment ? (
+        {isParticipant ? (
+          <UserRoundPlus className="size-3 text-muted-foreground" />
+        ) : isAssignment ? (
           <UserRoundCog className="size-3 text-muted-foreground" />
         ) : (
           <CircleDot className={cn('size-3', STATUS_DOT[row.to_status] ? 'text-foreground' : 'text-muted-foreground')} />

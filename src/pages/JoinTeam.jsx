@@ -176,10 +176,28 @@ export default function JoinTeam() {
           {/* ── Title ── */}
           <div className="space-y-6">
             <div className="flex items-center justify-between gap-3">
-              <img src="/TerceroLand.svg" alt="Tercero" className="h-6 object-contain shrink-0" />
+              {/* Masked rather than an <img>: TerceroLand.svg is fill="black",
+                  so as a plain image it disappears against bg-background in
+                  dark mode. bg-foreground paints it with the theme's own text
+                  colour, which is the same treatment AppSidebarHeader uses. */}
+              <div
+                role="img"
+                aria-label="Tercero"
+                className="h-6 w-32 shrink-0 bg-foreground"
+                style={{
+                  maskImage: 'url(/TerceroLand.svg)',
+                  maskRepeat: 'no-repeat',
+                  maskPosition: 'center left',
+                  maskSize: 'contain',
+                  WebkitMaskImage: 'url(/TerceroLand.svg)',
+                  WebkitMaskRepeat: 'no-repeat',
+                  WebkitMaskPosition: 'center left',
+                  WebkitMaskSize: 'contain',
+                }}
+              />
 
               {invite?.logo_horizontal_url ? (
-                <img src={invite.logo_horizontal_url} alt={invite.agency_name} className="h-12 object-contain shrink-0" />
+                <img src={invite.logo_horizontal_url} alt={invite.agency_name} className="h-12 object-contain shrink-0 rounded-lg" />
               ) : invite?.logo_url ? (
                 <div className="flex items-center gap-3">
                   {invite?.agency_name && (

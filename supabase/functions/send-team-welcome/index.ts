@@ -35,16 +35,16 @@ serve(async (req) => {
     const { data, error } = await resend.emails.send({
       from: 'Tercero <notifications@tercerospace.com>',
       to: [email],
-      subject: `You're in — ${agency} on Tercero`,
+      subject: `Welcome aboard, ${firstName}. ${agency} just got bigger`,
       html: `
         <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 560px; margin: auto; background: #ffffff; color: #111827; border: 1px solid #E5E7EB;">
           <div style="padding: 40px 48px 0;">
             <p style="font-size: 13px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #6B7280; margin: 0 0 32px;">Tercero</p>
           </div>
           <div style="padding: 0 48px 40px;">
-            <h1 style="font-size: 26px; font-weight: 700; line-height: 1.2; margin: 0 0 16px; color: #111827;">You're in, ${firstName}.</h1>
+            <h1 style="font-size: 26px; font-weight: 700; line-height: 1.2; margin: 0 0 16px; color: #111827;">Good to have you, ${firstName}.</h1>
             <p style="font-size: 15px; color: #6B7280; line-height: 1.6; margin: 0 0 32px;">
-              You've joined <strong style="color: #111827;">${agency}</strong> on Tercero. Everything the team is working on — clients, content, deadlines — is now in one place.
+              You’re officially part of <strong style="color: #111827;">${agency}</strong> now. Everything the team has on, from clients and content to the deadlines nobody wants to think about, is all in one place. Have a poke around.
             </p>
 
             <div style="border-top: 1px solid #E5E7EB; padding: 24px 0;">
@@ -55,7 +55,7 @@ serve(async (req) => {
 
             <div style="border-top: 1px solid #E5E7EB; padding: 24px 0 32px;">
               <p style="font-size: 14px; color: #6B7280; line-height: 1.7; margin: 0 0 24px;">
-                Start with Tasks to see what's assigned to you. Your workspace owner can adjust your access and job titles at any time.
+                Head to Tasks first. Anything with your name on it is waiting there. Your job titles and access are set by whoever runs the workspace, so give them a nudge if something looks off.
               </p>
               <a href="${appUrl}/tasks" style="display: inline-block; background: #111827; color: #ffffff; font-size: 14px; font-weight: 600; text-decoration: none; padding: 12px 24px; border-radius: 6px;">Open Tercero</a>
             </div>

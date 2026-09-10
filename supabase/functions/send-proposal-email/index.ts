@@ -81,7 +81,7 @@ serve(async (req) => {
     const { data, error } = await resend.emails.send({
       from: `${branding.name} <notifications@tercerospace.com>`,
       to: [recipient_email],
-      subject: `${title} — from ${branding.name}`,
+      subject: `${title} from ${branding.name}`,
       html: `
         <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 560px; margin: auto; background: #ffffff; color: #111827; border: 1px solid #E5E7EB;">
           <div style="padding: 40px 48px 0;">

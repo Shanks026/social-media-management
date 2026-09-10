@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { toast } from 'sonner'
 import { useQueryClient } from '@tanstack/react-query'
 import {
@@ -13,10 +13,12 @@ import {
   MessageCircle,
   CheckCheck,
   Trash2,
+  X,
   Users,
   TriangleAlert,
   ArrowRightLeft,
   AtSign,
+  UserRoundPlus,
 } from 'lucide-react'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Button } from '@/components/ui/button'
@@ -38,6 +40,7 @@ import {
   markAllNotificationsRead,
   deleteNotification,
   notificationKeys,
+  useNotificationStream,
 } from '@/api/notifications'
 import { useTeamMembers } from '@/api/team'
 import { STATUS_CONFIG, StatusChip } from '@/components/tasks/TaskCard'
@@ -56,6 +59,9 @@ const TYPE_CONFIG = {
   team_member_joined:     { icon: UserPlus,        color: 'text-teal-500',   bg: 'bg-teal-100 dark:bg-teal-950' },
   invoice_overdue:        { icon: AlertCircle,     color: 'text-destructive', bg: 'bg-red-100 dark:bg-red-950' },
   comment_added:          { icon: MessageCircle,   color: 'text-sky-500',    bg: 'bg-sky-100 dark:bg-sky-950' },
+  // Mentioned into a task you couldn't previously see — the mention granted
+  // access, so this is a "you're in" event rather than thread noise.
+  task_participant_added: { icon: UserRoundPlus,   color: 'text-violet-500', bg: 'bg-violet-100 dark:bg-violet-950' },
   chat_important:         { icon: TriangleAlert,   color: 'text-red-500',    bg: 'bg-red-100 dark:bg-red-950' },
   chat_everyone:          { icon: Users,           color: 'text-indigo-500', bg: 'bg-indigo-100 dark:bg-indigo-950' },
   chat_mention:           { icon: AtSign,          color: 'text-indigo-500', bg: 'bg-indigo-100 dark:bg-indigo-950' },
@@ -100,7 +106,8 @@ function getInitials(name) {
   return ((first[0] ?? '') + (second[0] ?? '')).toUpperCase() || '?'
 }
 
-// Route resolution is shared with NotificationToaster — see ./routes.js
+// Route resolution lives in ./routes.js so the panel rows and the arrival
+// card land on the same screen for a given notification.
 const resolveRoute = resolveNotificationRoute
 
 // ─── Single row ────────────────────────────────────────────────────────────────
@@ -314,12 +321,180 @@ function NotificationPanel() {
 
 // ─── Bell button ───────────────────────────────────────────────────────────────
 
+/**
+ * The two notification surfaces, kept deliberately distinct:
+ *
+ *   the bell popover — the inbox. Everything, kept, browsable on demand.
+ *   these cards      — the announcement. One per event, large, transient.
+ *
+ * Cards stack rather than collapsing into a count, because each one IS a
+ * notification: three arriving means three things happened, and squashing them
+ * into "3 new notifications" throws away the part worth reading.
+ *
+ * There is exactly one realtime consumer, and it lives here. The stream uses a
+ * fixed channel topic per user, and Supabase registers postgres_changes filters
+ * only for the FIRST join on a topic — a second subscriber silently never
+ * fires. This is also why the previous corner-toast component was removed
+ * rather than kept alongside.
+ */
+const ARRIVAL_CARD_MS = 7000
+// The header has finite room and these overlay the page; beyond a few the
+// stack stops being readable and starts being a wall.
+const MAX_STACKED_CARDS = 3
+
+function ArrivalCard({ card, onOpen, onDismiss }) {
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      className="relative w-80 origin-top-right animate-in fade-in slide-in-from-top-2 duration-200"
+    >
+      {/* hover:bg-accent, not bg-accent/40 — an alpha variant REPLACES the
+          opaque bg-popover rather than layering over it, so hovering turned the
+          whole card 40% transparent and the page showed through it. */}
+      <button
+        onClick={onOpen}
+        className="w-full rounded-xl border border-border bg-popover p-4 text-left shadow-xl ring-1 ring-black/5 transition-colors hover:bg-accent"
+      >
+        <div className="flex items-start gap-3">
+          {/* A plain emoji rather than an icon in a tinted tile — the tile was
+              chrome around a glyph that reads perfectly well on its own. */}
+          <span className="mt-0.5 shrink-0 text-base leading-none" aria-hidden="true">🔔</span>
+          <div className="min-w-0 flex-1 pr-5">
+            <p className="text-sm font-semibold leading-snug text-foreground">
+              <NotificationTitle title={card.title} />
+            </p>
+            {card.body && (
+              <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-muted-foreground">{card.body}</p>
+            )}
+          </div>
+        </div>
+      </button>
+      <button
+        onClick={onDismiss}
+        aria-label="Dismiss"
+        className="absolute right-2 top-2 rounded-md p-1 text-muted-foreground/70 transition-colors hover:bg-muted hover:text-foreground"
+      >
+        <X className="size-3.5" />
+      </button>
+    </div>
+  )
+}
+
 export function NotificationBell() {
   const [open, setOpen] = useState(false)
-  const { data: unreadCount = 0 } = useUnreadNotificationCount()
+  const { data: unreadCount = 0, isSuccess: countLoaded, isFetching: isFetchingCount } = useUnreadNotificationCount()
+  const location = useLocation()
+  const navigate = useNavigate()
+  const { user } = useAuth()
+  const [cards, setCards] = useState([])
+  const timers = useRef(new Map())
+
+  const dropCard = useCallback((id) => {
+    const t = timers.current.get(id)
+    if (t) clearTimeout(t)
+    timers.current.delete(id)
+    setCards((prev) => prev.filter((c) => c.id !== id))
+  }, [])
+
+  const clearAllCards = useCallback(() => {
+    timers.current.forEach(clearTimeout)
+    timers.current.clear()
+    setCards([])
+  }, [])
+
+  const pushCard = useCallback(
+    (card) => {
+      setCards((prev) => [card, ...prev].slice(0, MAX_STACKED_CARDS))
+      timers.current.set(
+        card.id,
+        setTimeout(() => {
+          timers.current.delete(card.id)
+          setCards((prev) => prev.filter((c) => c.id !== card.id))
+        }, ARRIVAL_CARD_MS),
+      )
+    },
+    [],
+  )
+
+  const handleArrival = useCallback(
+    (row) => {
+      // A chat mention while the channel is already on screen is noise — the
+      // message itself is right there.
+      if (row.type?.startsWith('chat_') && location.pathname.startsWith('/chat')) return
+      pushCard({
+        id: row.id,
+        type: row.type,
+        title: row.title,
+        body: row.body || null,
+        route: resolveNotificationRoute(row),
+      })
+    },
+    [location.pathname, pushCard],
+  )
+
+  useNotificationStream(handleArrival)
+
+  // The same card, once per sign-in, saying what is already waiting. The badge
+  // states "you have unread" permanently, but a badge is easy to walk past —
+  // at the start of a session it is worth saying out loud, once.
+  //
+  // Keyed in sessionStorage by user id so it survives remounts and route
+  // changes, and so switching accounts announces the new account's own unread
+  // rather than staying silent. Fires for any count of 1 or more.
+  //
+  // Deferred rather than fired synchronously: it lets the page paint first, so
+  // the card slides in over a settled screen instead of racing the first
+  // render (and keeps the setState out of the effect body).
+  //
+  // Tracks WHICH user was announced rather than a boolean: switching to
+  // another already-signed-in account does not remount this component, so a
+  // latched flag meant the new account's unread was never announced. Comparing
+  // ids means every switch announces the account you land on.
+  //
+  // `isFetchingCount` matters for the same reason — the count query is keyed by
+  // user id, so immediately after a switch it may still hold the previous
+  // account's number. Waiting for the refetch avoids showing "You have 5
+  // unread" from the account you just left.
+  //
+  // There is deliberately NO sessionStorage guard. One was here and it was the
+  // bug: sessionStorage lives for the whole browser tab, so after the card had
+  // shown once for an account, signing out and back in — or switching away and
+  // back — in that same tab silently suppressed it forever. The ref alone
+  // gives the right lifetime: once per sign-in, once per account switch, and
+  // again after a genuine page reload, which is a new session to the user too.
+  const announcedForUser = useRef(null)
+  useEffect(() => {
+    if (!countLoaded || isFetchingCount || !user?.id) return
+    if (announcedForUser.current === user.id || unreadCount < 1) return
+    announcedForUser.current = user.id
+    const t = setTimeout(() => {
+      pushCard({
+        id: `unread-${user.id}`,
+        type: '__unread__',
+        title: unreadCount === 1 ? 'You have 1 unread notification' : `You have ${unreadCount} unread notifications`,
+        body: 'Open the bell to catch up on what happened while you were away.',
+        route: null,
+      })
+    }, 700)
+    return () => clearTimeout(t)
+  }, [countLoaded, isFetchingCount, unreadCount, user?.id, pushCard])
+
+  useEffect(() => () => {
+    timers.current.forEach(clearTimeout)
+    timers.current.clear()
+  }, [])
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next)
+        // Opening the inbox answers every card, so none should linger.
+        if (next) clearAllCards()
+      }}
+    >
+      <div className="relative">
       <PopoverTrigger asChild>
         <button
           className="relative flex size-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -341,6 +516,30 @@ export function NotificationBell() {
       >
         <NotificationPanel onClose={() => setOpen(false)} />
       </PopoverContent>
+
+      {/* Sibling of the trigger inside the relative wrapper, not inside the
+          PopoverContent — these have to show while the panel is shut. Newest
+          sits at the top of the stack, which is the order pushCard maintains. */}
+      {!open && cards.length > 0 && (
+        <div className="absolute right-0 top-full z-50 mt-2 flex flex-col gap-2">
+          {cards.map((card) => (
+            <ArrivalCard
+              key={card.id}
+              card={card}
+              onOpen={() => {
+                dropCard(card.id)
+                // A card for a specific notification goes to that thing; the
+                // start-of-session unread notice has nowhere specific to go,
+                // so it opens the inbox instead.
+                if (card.route) navigate(card.route)
+                else setOpen(true)
+              }}
+              onDismiss={() => dropCard(card.id)}
+            />
+          ))}
+        </div>
+      )}
+      </div>
     </Popover>
   )
 }

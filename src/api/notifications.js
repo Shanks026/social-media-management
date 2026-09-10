@@ -134,7 +134,7 @@ export function useUnreadNotificationCount() {
  * user while the app is open. Purely a delivery stream — no toasting or
  * routing here, so the data layer stays free of UI concerns.
  *
- * Mount this ONCE (see NotificationToaster). It deliberately uses its own
+ * Mount this ONCE (currently NotificationBell). It deliberately uses its own
  * channel topic rather than piggybacking on useUnreadNotificationCount's,
  * because that hook renders in two places at once when the bell popover is
  * open and would deliver every arrival twice.
