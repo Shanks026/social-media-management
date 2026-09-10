@@ -21,6 +21,7 @@ import { useTaskLookups } from '@/components/tasks/useTaskLookups'
 import { STATUS_CONFIG, STATUS_DOT, PRIORITY_CONFIG, DeliverablePreviewRow } from '@/components/tasks/TaskCard'
 import EditTaskDialog from '@/components/tasks/EditTaskDialog'
 import { CommentThread } from '@/components/comments/CommentThread'
+import { useCommentCount } from '@/api/comments'
 import TaskMetaRail from './TaskMetaRail'
 import TaskActivityFeed from './TaskActivityFeed'
 
@@ -65,6 +66,7 @@ export default function TaskDetailPage() {
   const { data: task, isLoading, error } = useTaskById(taskId)
   const { data: activity = [], isLoading: isLoadingActivity } = useTaskActivity(taskId)
   const watcherIds = useTaskWatchers(task)
+  const { data: commentCount = 0 } = useCommentCount({ entityType: 'task', entityId: taskId })
 
   // Only asked once we know the row isn't visible — it answers "does this id
   // exist at all", nothing about its contents.
@@ -291,7 +293,14 @@ export default function TaskDetailPage() {
                   </span>
                 )}
               </TabsTrigger>
-              <TabsTrigger value="comments">Comments</TabsTrigger>
+              <TabsTrigger value="comments">
+                Comments
+                {commentCount > 0 && (
+                  <span className="ml-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-muted px-1.5 text-[11px] font-medium text-muted-foreground">
+                    {commentCount}
+                  </span>
+                )}
+              </TabsTrigger>
               <TabsTrigger value="activity">Activity</TabsTrigger>
             </TabsList>
 

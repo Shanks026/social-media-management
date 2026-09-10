@@ -8,6 +8,58 @@ import { resolveWorkspace } from '@/lib/workspace'
 
 export const commentKeys = {
   thread: (entityType, entityId) => ['comments', entityType, entityId],
+  count: (entityType, entityId) => ['comments', 'count', entityType, entityId],
+}
+
+/**
+ * Just how many live comments an entity has, for a tab badge.
+ *
+ * Separate from useComments rather than counting its result, because that hook
+ * only runs where the thread is rendered — inside a Tabs panel that Radix
+ * unmounts while another tab is open — so the badge would read zero until you
+ * clicked the very tab it is meant to label.
+ *
+ * The channel topic is deliberately NOT `comments:${type}:${id}`, which
+ * useComments already uses. Supabase registers postgres_changes filters only
+ * for the first join on a topic, and a later unmount removing that topic would
+ * take the other subscriber's updates down with it.
+ *
+ * Counts exclude soft-deleted rows: the thread renders those as "This comment
+ * was deleted", which is a tombstone rather than a comment worth advertising.
+ */
+export function useCommentCount({ entityType, entityId }) {
+  const { workspaceUserId } = useAuth()
+  const queryClient = useQueryClient()
+
+  useEffect(() => {
+    if (!entityType || !entityId) return
+    const channel = supabase
+      .channel(`comment-count:${entityType}:${entityId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'comments', filter: `entity_id=eq.${entityId}` },
+        () => queryClient.invalidateQueries({ queryKey: commentKeys.count(entityType, entityId) }),
+      )
+      .subscribe()
+    return () => supabase.removeChannel(channel)
+  }, [entityType, entityId, queryClient])
+
+  return useQuery({
+    queryKey: commentKeys.count(entityType, entityId),
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from('comments')
+        .select('*', { count: 'exact', head: true })
+        .eq('entity_type', entityType)
+        .eq('entity_id', entityId)
+        .is('deleted_at', null)
+      if (error) throw error
+      return count ?? 0
+    },
+    enabled: !!entityType && !!entityId && !!workspaceUserId,
+    staleTime: 30000,
+    retry: 1,
+  })
 }
 
 // ─── Read Hook ─────────────────────────────────────────────────────────────────

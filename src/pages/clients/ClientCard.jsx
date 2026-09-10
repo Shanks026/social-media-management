@@ -25,16 +25,73 @@ import TierBadge from '@/components/TierBadge'
 import { PlatformStack } from '@/components/PlatformIcon'
 import ClientMetricsRow from './ClientMetricsRow'
 
+// The deliverable pipeline, showing only the stages that actually have work.
+//
+// Two earlier shapes were tried and rejected. A five-column grid of counts
+// reserved space for every stage even though most clients occupy two, so it
+// read as mostly empty. A segmented colour bar was compact but meaningless
+// without hovering for a legend, and worse: a client whose deliverables were
+// all one status rendered as a single full-width bar, which reads as a
+// progress bar at 100% rather than "all of these are drafts".
+//
+// Approved comes from the 6-arg get_clients_with_pipeline overload, which is
+// the one the client calls. Do not go looking for it in the function's return
+// type: that overload returns jsonb, so its column names are invisible in the
+// signature. The 1-arg overload DOES return a TABLE and genuinely omits
+// approved, which makes it an easy thing to mis-read.
+//
+// The stages are deliberately NOT weighted equally. Awaiting approval and In
+// revision are blocked work someone may need to chase today, so they get a
+// tinted chip. Drafts, Approved and Scheduled are just state, so they stay
+// quiet behind a coloured dot. Scanning the grid should surface what needs
+// attention rather than require reading five numbers per card.
+const PIPELINE_STAGES = [
+  { key: 'pending',   label: 'awaiting approval', one: 'awaiting approval', dot: 'bg-orange-500', chip: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300', urgent: true },
+  { key: 'revisions', label: 'in revision',       one: 'in revision',       dot: 'bg-pink-500',   chip: 'bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-300',        urgent: true },
+  { key: 'drafts',    label: 'drafts',            one: 'draft',            dot: 'bg-blue-500' },
+  { key: 'approved',  label: 'approved',          one: 'approved',         dot: 'bg-green-500' },
+  { key: 'scheduled', label: 'scheduled',         one: 'scheduled',        dot: 'bg-purple-500' },
+]
 
-const StatItem = ({ count, label, colorClass }) => {
-  if (!count || count < 1) return null
-  return (
-    <div className="flex flex-col gap-2.5">
+const PipelineStages = ({ pipeline }) => {
+  const stages = PIPELINE_STAGES
+    .map((s) => ({ ...s, count: pipeline[s.key] || 0 }))
+    .filter((s) => s.count > 0)
+
+  if (stages.length === 0) {
+    return (
       <div className="flex items-center gap-1.5">
-        <div className={`size-2 rounded-full ${colorClass}`} />
-        <span className="text-xs text-muted-foreground leading-none truncate">{label}</span>
+        <span className="size-1.5 shrink-0 rounded-full bg-muted-foreground/30" />
+        <span className="text-xs text-muted-foreground">No active workflow</span>
       </div>
-      <span className="text-sm font-bold text-foreground leading-none">{count}</span>
+    )
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+      {stages.map((s) =>
+        s.urgent ? (
+          <span
+            key={s.key}
+            className={cn(
+              'inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium capitalize',
+              s.chip,
+            )}
+          >
+            <span className="font-semibold tabular-nums">{s.count}</span>
+            {s.count === 1 ? s.one : s.label}
+          </span>
+        ) : (
+          <span
+            key={s.key}
+            className="inline-flex items-center gap-1 py-0.5 text-xs capitalize text-muted-foreground"
+          >
+            <span className={cn('size-1.5 shrink-0 rounded-full', s.dot)} />
+            <span className="font-semibold tabular-nums text-foreground/70">{s.count}</span>
+            {s.count === 1 ? s.one : s.label}
+          </span>
+        ),
+      )}
     </div>
   )
 }
@@ -76,10 +133,6 @@ function ClientCard({ client, onOpen, onDelete }) {
         .slice(0, 2)
     : 'CL'
 
-  const activePipelineCount = [pipeline.drafts, pipeline.pending, pipeline.revisions, pipeline.approved, pipeline.scheduled].filter(
-    (v) => v > 0,
-  ).length
-  const hasPipelineData = activePipelineCount > 0
 
   return (
     <>
@@ -125,19 +178,9 @@ function ClientCard({ client, onOpen, onDelete }) {
             </div>
           </div>
 
-          {/* Pipeline stats */}
+          {/* Pipeline: only the stages that have work, blocked ones emphasised */}
           <div className="pt-4">
-            {hasPipelineData ? (
-              <div className="grid grid-cols-5">
-                <StatItem count={pipeline.drafts} label="Drafts" colorClass="bg-blue-500" />
-                <StatItem count={pipeline.pending} label="Approval" colorClass="bg-orange-500" />
-                <StatItem count={pipeline.revisions} label="Revision" colorClass="bg-pink-500" />
-                <StatItem count={pipeline.approved} label="Approved" colorClass="bg-green-500" />
-                <StatItem count={pipeline.scheduled} label="Sched." colorClass="bg-purple-500" />
-              </div>
-            ) : (
-              <span className="text-xs italic text-muted-foreground">No active workflow</span>
-            )}
+            <PipelineStages pipeline={pipeline} />
           </div>
 
           <ClientMetricsRow client={client} />
