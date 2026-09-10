@@ -13,12 +13,22 @@ import {
   updateMemberAccess,
   DEFAULT_INVITE_EXPIRY_DAYS,
   MAX_INVITE_EXPIRY_DAYS,
+  inviteExpiryInDays,
+  endOfDay,
 } from '@/api/team'
+import { SYSTEM_ROLE_PALETTE } from '@/lib/team-roles'
+// Job roles replace the hardcoded AGENCY_ROLE_GROUPS list in this dialog.
 import {
-  SYSTEM_ROLE_PALETTE,
-  AGENCY_ROLE_GROUPS,
-  getRolePalette,
-} from '@/lib/team-roles'
+  useJobRoles,
+  useMemberJobRoles,
+  createJobRole,
+  setMemberJobRoles,
+  setMemberResponsibilities,
+} from '@/api/jobRoles'
+import { nextJobRoleColor } from '@/lib/job-roles'
+import JobRolePill from '@/components/team/JobRolePill'
+import JobRolePicker from '@/components/team/JobRolePicker'
+import JobRoleBadges from '@/components/team/JobRoleBadges'
 import { formatDate } from '@/lib/helper'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
@@ -49,15 +59,6 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
@@ -76,11 +77,11 @@ import {
   Link,
   Trash2,
   CalendarDays,
-  Briefcase,
   Clock,
   Loader2,
   RotateCcw,
   ShieldCheck,
+  UserCheck,
   ShieldMinus,
   FileText,
   Pencil,
@@ -151,13 +152,10 @@ function StepDot({ number, label, state }) {
   )
 }
 
-// DEFAULT_INVITE_EXPIRY_DAYS / MAX_INVITE_EXPIRY_DAYS now come from @/api/team,
-// so this dialog and the onboarding invite step share one source of truth.
-function addDays(days) {
-  const d = new Date()
-  d.setDate(d.getDate() + days)
-  return d
-}
+// DEFAULT_INVITE_EXPIRY_DAYS / MAX_INVITE_EXPIRY_DAYS and the date helpers now
+// all come from @/api/team, so this dialog and the onboarding invite step share
+// one source of truth — including the end-of-day rule, which the picker below
+// depends on to not issue a link that expires the morning it is labelled with.
 
 /**
  * `onGenerated` is optional — onboarding uses it to record that the owner
@@ -168,7 +166,7 @@ export function InviteDialog({ open, onOpenChange, onGenerated }) {
   const [label, setLabel] = useState('')
   const [systemRole, setSystemRole] = useState('member')
   const [docsLevel, setDocsLevel] = useState('view')
-  const [expiryDate, setExpiryDate] = useState(() => addDays(DEFAULT_INVITE_EXPIRY_DAYS))
+  const [expiryDate, setExpiryDate] = useState(() => inviteExpiryInDays(DEFAULT_INVITE_EXPIRY_DAYS))
   const [inviteUrl, setInviteUrl] = useState(null)
   const [copied, setCopied] = useState(false)
 
@@ -203,7 +201,7 @@ export function InviteDialog({ open, onOpenChange, onGenerated }) {
     setLabel('')
     setSystemRole('member')
     setDocsLevel('view')
-    setExpiryDate(addDays(DEFAULT_INVITE_EXPIRY_DAYS))
+    setExpiryDate(inviteExpiryInDays(DEFAULT_INVITE_EXPIRY_DAYS))
     setInviteUrl(null)
     setCopied(false)
   }
@@ -314,10 +312,12 @@ export function InviteDialog({ open, onOpenChange, onGenerated }) {
                   <Calendar
                     mode="single"
                     selected={expiryDate}
-                    onSelect={(date) => date && setExpiryDate(date)}
+                    // react-day-picker hands back local midnight; endOfDay
+                    // makes the label and the actual expiry agree.
+                    onSelect={(date) => date && setExpiryDate(endOfDay(date))}
                     disabled={(date) =>
                       date < new Date(new Date().setHours(0, 0, 0, 0)) ||
-                      date > addDays(MAX_INVITE_EXPIRY_DAYS)
+                      date > inviteExpiryInDays(MAX_INVITE_EXPIRY_DAYS)
                     }
                     initialFocus
                   />
@@ -455,7 +455,7 @@ export function InviteDialog({ open, onOpenChange, onGenerated }) {
                   </div>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Expires {formatDate(expiryDate)}. Whoever uses this link joins as a{' '}
+                  Expires {formatDate(expiryDate)}. Anyone who uses it before then joins as a{' '}
                   <span
                     className={cn(
                       'font-medium',
@@ -561,14 +561,14 @@ function AnimatedHeight({ children }) {
 
 // ─── Edit Member Dialog ────────────────────────────────────────────────────────
 
-export function EditAccessDialog({ member, open, onOpenChange, onSave }) {
+export function EditAccessDialog({ member, open, onOpenChange, onSave, onSaved, onManageJobRoles }) {
+  // The owner's own row: descriptive fields are editable, access is not.
+  const isOwnerRow =
+    member?.system_role === 'owner' || member?.member_user_id === member?.agency_user_id
+
   const [systemRole, setSystemRole] = useState(
     member?.system_role === 'admin' ? 'admin' : 'member',
   )
-  const [functionalRole, setFunctionalRole] = useState(
-    member?.functional_role || '',
-  )
-  const [customRole, setCustomRole] = useState('')
   const [docsLevel, setDocsLevel] = useState(
     member?.permissions?.documents || 'view',
   )
@@ -577,23 +577,84 @@ export function EditAccessDialog({ member, open, onOpenChange, onSave }) {
   )
   const [saving, setSaving] = useState(false)
 
-  const isCustom =
-    functionalRole !== '' &&
-    !AGENCY_ROLE_GROUPS.flatMap((g) => g.roles).includes(functionalRole)
+  const { isOwner } = usePermissions()
+  const { workspaceUserId } = useAuth()
+  const queryClient = useQueryClient()
+  const canManageJobRoles = isOwner
+  const { data: allJobRoles = [] } = useJobRoles()
+  const { data: memberJobRoles = {} } = useMemberJobRoles()
+
+  // Held locally so the picker feels immediate; committed on save alongside
+  // the access change.
+  const [jobRoleIds, setJobRoleIds] = useState([])
+  useEffect(() => {
+    setJobRoleIds((memberJobRoles[member?.member_user_id] ?? []).map((r) => r.id))
+  }, [memberJobRoles, member?.member_user_id])
+
+  const selectedJobRoles = allJobRoles.filter((r) => jobRoleIds.includes(r.id))
+
+  const toggleJobRole = (id) =>
+    setJobRoleIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))
+
+  const handleCreateJobRole = async (name) => {
+    try {
+      const created = await createJobRole({ name, color: nextJobRoleColor(allJobRoles.length) })
+
+      // The picker switches the new id on immediately, but the pill is
+      // rendered by looking that id up in `allJobRoles` — so without seeding
+      // the cache here, a freshly created role vanished until the next
+      // refetch. Seed for the instant render, then invalidate so the server
+      // stays the source of truth.
+      queryClient.setQueryData(['job-roles', 'list', workspaceUserId], (old) =>
+        [...(old ?? []), created].sort((a, b) => a.name.localeCompare(b.name)),
+      )
+      queryClient.invalidateQueries({ queryKey: ['job-roles'] })
+
+      return created
+    } catch (err) {
+      toast.error(
+        err.message?.includes('duplicate') || err.message?.includes('unique')
+          ? 'A job role with that name already exists'
+          : err.message || 'Failed to create job role',
+      )
+      return null
+    }
+  }
 
   const handleSave = async () => {
     setSaving(true)
     try {
-      const resolvedRole =
-        functionalRole === '__custom__'
-          ? customRole.trim()
-          : functionalRole || member?.functional_role || null
-      await onSave(member.id, {
-        system_role: systemRole,
-        permissions: { documents: systemRole === 'admin' ? 'manage' : docsLevel },
-        functional_role: resolvedRole,
-        roles_and_responsibilities: rolesAndResponsibilities.trim() || null,
-      })
+      // Three narrow operations rather than one wide one: access, job titles
+      // and the responsibilities note are separate, separately-auditable
+      // writes. That separation is what lets the owner edit their own
+      // description while update_member_access still refuses their row.
+      if (isOwnerRow) {
+        await setMemberResponsibilities(
+          member.member_user_id,
+          rolesAndResponsibilities.trim() || null,
+        )
+      } else {
+        await onSave(member.id, {
+          system_role: systemRole,
+          permissions: { documents: systemRole === 'admin' ? 'manage' : docsLevel },
+          roles_and_responsibilities: rolesAndResponsibilities.trim() || null,
+        })
+      }
+
+      // Only the owner may assign job titles, so this is skipped for anyone
+      // else. It works on the owner's own row too — they are an ordinary
+      // member of agency_members.
+      if (canManageJobRoles) {
+        await setMemberJobRoles(member.member_user_id, jobRoleIds)
+        // setMemberJobRoles is a plain async function, not a mutation with its
+        // own onSuccess — nothing else invalidates the by-member map this
+        // writes into. Without this, the team table (and every other reader
+        // of useMemberJobRoles) kept showing the old titles until an
+        // unrelated refetch happened to run.
+        queryClient.invalidateQueries({ queryKey: ['job-roles'] })
+      }
+
+      if (isOwnerRow) onSaved?.()
       onOpenChange(false)
     } catch (err) {
       toast.error(err.message || 'Failed to update member')
@@ -620,9 +681,6 @@ export function EditAccessDialog({ member, open, onOpenChange, onSave }) {
               </DialogTitle>
               <DialogDescription className="truncate">
                 {member?.email}
-                {member?.functional_role && (
-                  <span className="text-muted-foreground/60"> · {member.functional_role}</span>
-                )}
               </DialogDescription>
             </div>
           </div>
@@ -633,8 +691,12 @@ export function EditAccessDialog({ member, open, onOpenChange, onSave }) {
         {/* Scrollable body */}
         <div className="overflow-y-auto px-6 py-5">
           <AnimatedHeight>
-          <Tabs defaultValue="access" className="w-full">
-            <TabsList className="w-full">
+          {/* The owner's own row has no editable access — update_member_access
+              refuses it in the database, deliberately, so nobody can demote the
+              owner. Showing an Access tab that cannot be saved would be a lie,
+              so their dialog is Details only. */}
+          <Tabs defaultValue={isOwnerRow ? 'details' : 'access'} className="w-full">
+            <TabsList className={cn('w-full', isOwnerRow && 'hidden')}>
               <TabsTrigger value="access" className="flex-1">Access</TabsTrigger>
               <TabsTrigger value="details" className="flex-1">Details</TabsTrigger>
             </TabsList>
@@ -702,44 +764,33 @@ export function EditAccessDialog({ member, open, onOpenChange, onSave }) {
             {/* ── Details tab ── */}
             <TabsContent value="details" className="space-y-5 mt-4">
               <div className="space-y-2">
-                <Label>Role / Job title</Label>
-                <Select
-                  value={isCustom ? '__custom__' : functionalRole}
-                  onValueChange={(v) => {
-                    setFunctionalRole(v)
-                    if (v !== '__custom__') setCustomRole('')
-                  }}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select a role" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {AGENCY_ROLE_GROUPS.map((group) => (
-                      <SelectGroup key={group.label}>
-                        <SelectLabel>{group.label}</SelectLabel>
-                        {group.roles.map((role) => (
-                          <SelectItem key={role} value={role}>
-                            <span className="flex items-center gap-2">
-                              <span className={cn('size-2 rounded-full shrink-0', getRolePalette(role)?.dot ?? 'bg-muted-foreground/30')} />
-                              {role}
-                            </span>
-                          </SelectItem>
-                        ))}
-                      </SelectGroup>
-                    ))}
-                    <SelectGroup>
-                      <SelectLabel>Other</SelectLabel>
-                      <SelectItem value="__custom__">Custom…</SelectItem>
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
-                {(functionalRole === '__custom__' || isCustom) && (
-                  <Input
-                    placeholder="e.g. Paralegal, Video Producer…"
-                    value={customRole || (isCustom ? member.functional_role : '')}
-                    onChange={(e) => setCustomRole(e.target.value)}
-                    className="mt-2"
+                <Label>Job roles</Label>
+                {/* A member can hold several titles, so this is a multi-select
+                    over the workspace's own list — replacing the old fixed
+                    dropdown plus free-text "Custom…" box, which is what
+                    produced near-duplicate titles. Identification only; it
+                    never affects access. */}
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {selectedJobRoles.map((role) => (
+                    <JobRolePill
+                      key={role.id}
+                      role={role}
+                      onRemove={canManageJobRoles ? () => toggleJobRole(role.id) : undefined}
+                    />
+                  ))}
+                  <JobRolePicker
+                    selectedRoleIds={jobRoleIds}
+                    allRoles={allJobRoles}
+                    onToggle={toggleJobRole}
+                    onCreate={handleCreateJobRole}
+                    onManage={onManageJobRoles}
+                    canCreate={canManageJobRoles}
                   />
+                </div>
+                {selectedJobRoles.length === 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    No job roles yet — they describe what someone does, not what they can access.
+                  </p>
                 )}
               </div>
 
@@ -816,6 +867,7 @@ export default function TeamSettings({ onInviteClick = () => {} }) {
   const { data: members = [], isLoading: membersLoading } = useTeamMembers()
   const { data: pendingInvites = [] } = usePendingInvites()
   const { data: removedMembers = [] } = useRemovedMembers()
+  const { data: memberJobRoles = {} } = useMemberJobRoles()
   const removeMember = useRemoveMember()
   const revokeInvite = useRevokeInvite()
   const restoreMember = useRestoreMember()
@@ -878,7 +930,6 @@ export default function TeamSettings({ onInviteClick = () => {} }) {
       await updateMemberAccess(member.id, {
         system_role: 'admin',
         permissions: { documents: 'manage' },
-        functional_role: null,
       })
       queryClient.invalidateQueries({
         queryKey: teamKeys.members(workspaceUserId),
@@ -894,7 +945,6 @@ export default function TeamSettings({ onInviteClick = () => {} }) {
       await updateMemberAccess(member.id, {
         system_role: 'member',
         permissions: { documents: 'view' },
-        functional_role: null,
       })
       queryClient.invalidateQueries({
         queryKey: teamKeys.members(workspaceUserId),
@@ -967,7 +1017,6 @@ export default function TeamSettings({ onInviteClick = () => {} }) {
               const rolePalette =
                 SYSTEM_ROLE_PALETTE[member.system_role] ??
                 SYSTEM_ROLE_PALETTE.member
-              const funcPalette = getRolePalette(member.functional_role)
               const docsLevel =
                 isOwnerRow || isAdminRow
                   ? null
@@ -995,18 +1044,8 @@ export default function TeamSettings({ onInviteClick = () => {} }) {
                         {rolePalette.label}
                       </Badge>
 
-                      {/* Functional role */}
-                      {member.functional_role && funcPalette && (
-                        <Badge variant="outline" className="gap-1.5">
-                          <span
-                            className={cn(
-                              'size-1.5 rounded-full shrink-0',
-                              funcPalette.dot,
-                            )}
-                          />
-                          {member.functional_role}
-                        </Badge>
-                      )}
+                      {/* Job titles — a member can hold several. */}
+                      <JobRoleBadges roles={memberJobRoles[member.member_user_id]} max={2} />
 
                       {isSelf && (
                         <Badge variant="outline" className="text-xs">
@@ -1171,6 +1210,12 @@ export default function TeamSettings({ onInviteClick = () => {} }) {
                         <Clock size={13} />
                         Expires {formatDate(invite.expires_at)}
                       </span>
+                      {invite.use_count > 0 && (
+                        <span className="flex items-center gap-1.5">
+                          <UserCheck size={13} />
+                          {invite.use_count} joined
+                        </span>
+                      )}
                     </div>
                   </div>
 
@@ -1236,12 +1281,9 @@ export default function TeamSettings({ onInviteClick = () => {} }) {
                     </p>
                   </div>
 
-                  {member.functional_role && (
-                    <div className="hidden sm:flex items-center gap-1.5 text-xs text-muted-foreground shrink-0">
-                      <Briefcase size={12} />
-                      {member.functional_role}
-                    </div>
-                  )}
+                  <div className="hidden shrink-0 sm:flex">
+                    <JobRoleBadges roles={memberJobRoles[member.member_user_id]} max={2} size="xs" />
+                  </div>
 
                   <div className="flex items-center gap-1 shrink-0">
                     <Tooltip>

@@ -104,7 +104,7 @@ export default function DashboardScheduledPosts() {
     <Card className="border-none shadow-sm ring-1 ring-border/50 bg-card/50 dark:bg-card/30 flex flex-col gap-2 h-full">
       <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
         <CardTitle className="text-lg font-medium bricolage">Upcoming Deliverables</CardTitle>
-        <Button variant="ghost" size="icon" className="h-8 w-8 -mr-2" onClick={() => navigate('/posts')}>
+        <Button variant="ghost" size="icon" className="h-8 w-8 -mr-2" onClick={() => navigate('/deliverables')}>
            <ArrowUpRight className="h-4 w-4" />
         </Button>
       </CardHeader>
@@ -148,7 +148,7 @@ export default function DashboardScheduledPosts() {
                   variant="ghost"
                   size="sm"
                   className="h-7 text-xs px-2 text-muted-foreground hover:text-foreground -mr-2"
-                  onClick={() => navigate('/posts')}
+                  onClick={() => navigate('/deliverables')}
                 >
                   View all posts <ArrowUpRight className="ml-1 h-3 w-3" />
                 </Button>

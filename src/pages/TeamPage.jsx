@@ -55,12 +55,14 @@ import {
   Link,
   CalendarDays,
   Clock,
+  UserCheck,
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
   RotateCcw,
   Search,
   Pencil,
+  Briefcase,
 } from 'lucide-react'
 import {
   useTeamMembers,
@@ -86,11 +88,12 @@ import {
   EmptyDescription,
 } from '@/components/ui/empty'
 
-import {
-  SYSTEM_ROLE_PALETTE,
-  getRolePalette,
-} from '@/lib/team-roles'
+import { SYSTEM_ROLE_PALETTE } from '@/lib/team-roles'
 import { usePermissions } from '@/api/usePermissions'
+import { useJobRoles, useMemberJobRoles } from '@/api/jobRoles'
+import ManageJobRolesDialog from '@/components/team/ManageJobRolesDialog'
+import JobRoleBadges from '@/components/team/JobRoleBadges'
+import { getJobRoleColor } from '@/lib/job-roles'
 
 // ─── Sub-components ─────────────────────────────────────────────────────────
 
@@ -140,7 +143,7 @@ const columnHelper = createColumnHelper()
 export default function TeamPage() {
   const { setHeader } = useHeader()
   const { user, workspaceUserId } = useAuth()
-  const { canManageTeam } = usePermissions()
+  const { canManageTeam, isAdmin, isOwner } = usePermissions()
   const queryClient = useQueryClient()
 
   const [activeTab, setActiveTab] = useState('active')
@@ -151,10 +154,13 @@ export default function TeamPage() {
   const [removingMember, setRemovingMember] = useState(null)
   const [deletingMember, setDeletingMember] = useState(null)
   const [editingMember, setEditingMember] = useState(null)
+  const [jobRolesOpen, setJobRolesOpen] = useState(false)
 
   const { data: members = [], isLoading: membersLoading } = useTeamMembers()
   const { data: pendingInvites = [] } = usePendingInvites()
   const { data: removedMembers = [] } = useRemovedMembers()
+  const { data: jobRoles = [] } = useJobRoles()
+  const { data: memberJobRoles = {} } = useMemberJobRoles()
   const removeMember = useRemoveMember()
   const revokeInvite = useRevokeInvite()
   const restoreMember = useRestoreMember()
@@ -222,6 +228,17 @@ export default function TeamPage() {
     toast.success('Member updated')
   }, [queryClient, workspaceUserId])
 
+  // jobRoleId → how many members hold it. Derived from the map already loaded
+  // for the roster, so the delete confirmation can state its blast radius
+  // without another query.
+  const jobRoleMemberCounts = useMemo(() => {
+    const counts = {}
+    for (const roles of Object.values(memberJobRoles)) {
+      for (const role of roles) counts[role.id] = (counts[role.id] ?? 0) + 1
+    }
+    return counts
+  }, [memberJobRoles])
+
   const handleCopyInviteLink = useCallback((token) => {
     const baseUrl = import.meta.env.VITE_APP_URL || window.location.origin
     navigator.clipboard.writeText(`${baseUrl}/join/${token}`)
@@ -230,31 +247,38 @@ export default function TeamPage() {
 
   // ── Filter chips + table data ─────────────────────────────────────────────
 
+  // Chips are keyed by job role id, not by title string. A member holds several
+  // titles now, so "does this member hold role X" replaces the old equality
+  // check against a single column — and only roles someone actually holds are
+  // offered, so no chip ever returns an empty table.
   const roleOptions = useMemo(() => {
     const hasOwnerOrAdmin = members.some((m) => m.system_role === 'owner' || m.system_role === 'admin')
-    const functionalRoles = [
-      ...new Set(
-        members
-          .filter((m) => m.functional_role && m.system_role === 'member')
-          .map((m) => m.functional_role),
-      ),
-    ]
+    const held = new Map()
+    for (const m of members) {
+      for (const role of memberJobRoles[m.member_user_id] ?? []) held.set(role.id, role)
+    }
     const opts = [{ key: 'all', label: 'All Members', dot: null }]
     if (hasOwnerOrAdmin) opts.push({ key: 'elevated', label: 'Owner / Admin', dot: SYSTEM_ROLE_PALETTE.owner.dot })
-    functionalRoles.forEach((r) => opts.push({ key: r, label: r, dot: getRolePalette(r)?.dot }))
+    ;[...held.values()]
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .forEach((r) => opts.push({ key: r.id, label: r.name, dot: getJobRoleColor(r.color).dot }))
     return opts
-  }, [members])
+  }, [members, memberJobRoles])
 
   const tableData = useMemo(() => {
     if (activeTab === 'removed') return removedMembers.map((m) => ({ ...m, _removed: true }))
     if (roleFilter === 'all') return members
     if (roleFilter === 'elevated') return members.filter((m) => m.system_role === 'owner' || m.system_role === 'admin')
-    return members.filter((m) => m.functional_role === roleFilter)
-  }, [members, removedMembers, roleFilter, activeTab])
+    return members.filter((m) =>
+      (memberJobRoles[m.member_user_id] ?? []).some((r) => r.id === roleFilter),
+    )
+  }, [members, removedMembers, roleFilter, activeTab, memberJobRoles])
 
   // ── Column definitions ────────────────────────────────────────────────────
 
   const columns = useMemo(() => [
+    // No width — absorbs whatever the sized columns leave, so the name/email
+    // truncate to the column instead of a hard-coded max-width.
     columnHelper.accessor((row) => row.full_name || row.email, {
       id: 'member',
       header: ({ column }) => <SortableHeader column={column} label="Member" />,
@@ -275,9 +299,26 @@ export default function TeamPage() {
                   </Badge>
                 )}
               </div>
-              <p className="text-xs text-muted-foreground mt-0.5 truncate max-w-55">
-                {m.email}
-              </p>
+              {/* Mobile sits with the email rather than in its own column —
+                  the table already carries six and was crowding out the name.
+                  get_team_members nulls it for anyone but owner/admin (or the
+                  person themselves), so this simply renders nothing for a
+                  member. The email truncates and the number does not: a
+                  half-shown phone number is useless. */}
+              <div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
+                <span className="truncate">{m.email}</span>
+                {m.mobile_number && (
+                  <>
+                    <span className="text-muted-foreground/40">·</span>
+                    <a
+                      href={`tel:${m.mobile_number.replace(/[^\d+]/g, '')}`}
+                      className="shrink-0 tabular-nums hover:text-foreground hover:underline"
+                    >
+                      {m.mobile_number}
+                    </a>
+                  </>
+                )}
+              </div>
             </div>
           </div>
         )
@@ -286,6 +327,7 @@ export default function TeamPage() {
 
     columnHelper.accessor('system_role', {
       id: 'system_role',
+      meta: { width: '14%' },
       header: () => <span className="text-xs font-medium text-muted-foreground">Access</span>,
       cell: ({ row }) => {
         const m = row.original
@@ -298,24 +340,22 @@ export default function TeamPage() {
       },
     }),
 
-    columnHelper.accessor('functional_role', {
+    columnHelper.display({
       id: 'job_title',
-      header: () => <span className="text-xs font-medium text-muted-foreground">Job Title</span>,
+      meta: { width: '18%' },
+      header: () => <span className="text-xs font-medium text-muted-foreground">Job Titles</span>,
       cell: ({ row }) => {
-        const m = row.original
-        const funcPalette = m.functional_role ? getRolePalette(m.functional_role) : null
-        if (!funcPalette) return <span className="text-xs text-muted-foreground">—</span>
-        return (
-          <Badge variant="outline" className="gap-1.5 font-normal">
-            <span className={cn('size-1.5 rounded-full shrink-0', funcPalette.dot)} />
-            {m.functional_role}
-          </Badge>
-        )
+        const roles = memberJobRoles[row.original.member_user_id] ?? []
+        if (roles.length === 0) return <span className="text-xs text-muted-foreground">—</span>
+        // Capped at one pill + a "+N" chip for the rest — this column is
+        // 18% of a table row, too narrow for two full titles side by side.
+        return <JobRoleBadges roles={roles} max={1} size="xs" />
       },
     }),
 
     ...(canManageTeam ? [columnHelper.accessor('roles_and_responsibilities', {
       id: 'roles_responsibilities',
+      meta: { width: '22%' },
       header: () => <span className="text-xs font-medium text-muted-foreground">Roles &amp; Responsibilities</span>,
       cell: ({ getValue }) => {
         const val = getValue()
@@ -323,7 +363,7 @@ export default function TeamPage() {
         return (
           <Tooltip>
             <TooltipTrigger asChild>
-              <span className="text-xs text-muted-foreground truncate max-w-52 block cursor-default">
+              <span className="text-xs text-muted-foreground truncate block cursor-default">
                 {val}
               </span>
             </TooltipTrigger>
@@ -337,6 +377,7 @@ export default function TeamPage() {
 
     columnHelper.accessor('joined_at', {
       id: 'joined',
+      meta: { width: '13%' },
       header: ({ column }) => <SortableHeader column={column} label="Joined" />,
       sortingFn: 'datetime',
       cell: ({ row }) => {
@@ -355,6 +396,7 @@ export default function TeamPage() {
 
     columnHelper.display({
       id: 'actions',
+      meta: { width: '6%' },
       header: () => null,
       cell: ({ row }) => {
         const m = row.original
@@ -389,6 +431,29 @@ export default function TeamPage() {
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>Delete permanently</TooltipContent>
+              </Tooltip>
+            </div>
+          )
+        }
+
+        // The owner editing their own row: job titles and responsibilities
+        // only. Their access is immutable by design (update_member_access
+        // refuses the owner row), so no Remove action accompanies it.
+        if (canManageTeam && isOwner && isSelf) {
+          return (
+            <div className="flex items-center justify-end gap-0.5">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-8 text-muted-foreground hover:text-foreground"
+                    onClick={() => setEditingMember(m)}
+                  >
+                    <Pencil className="size-3.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Edit your job titles and responsibilities</TooltipContent>
               </Tooltip>
             </div>
           )
@@ -430,7 +495,7 @@ export default function TeamPage() {
         return null
       },
     }),
-  ], [user?.id, canManageTeam, handleRestore])
+  ], [user?.id, canManageTeam, handleRestore, memberJobRoles])
 
   const table = useReactTable({
     data: tableData,
@@ -460,8 +525,23 @@ export default function TeamPage() {
               </p>
             </div>
 
-            {canManageTeam && (
+            {isAdmin && (
               <div className="flex items-center gap-2 shrink-0">
+                {/* Job titles for the workspace. Admins get a read-only view —
+                    every write is owner-gated in RLS — so this sits outside the
+                    canManageTeam block that wraps invite + active links. */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                  onClick={() => setJobRolesOpen(true)}
+                >
+                  <Briefcase size={14} />
+                  {canManageTeam ? 'Manage job roles' : 'Job roles'}
+                </Button>
+
+                {canManageTeam && (
+                  <>
                 {/* ── Active Links popover ── */}
                 <Popover>
                   <PopoverTrigger asChild>
@@ -478,8 +558,11 @@ export default function TeamPage() {
                   <PopoverContent className="w-105 p-0" align="end">
                     <div className="px-4 pt-4 pb-3 border-b border-border/50">
                       <p className="text-base font-semibold">Active Links</p>
+                      {/* Copy corrected: links are multi-use now, so "haven't
+                          been accepted yet" was describing the old behaviour —
+                          a link stays here after someone joins on it. */}
                       <p className="text-sm text-muted-foreground mt-0.5">
-                        Active invite links that haven&apos;t been accepted yet.
+                        Anyone with one of these links can join until it expires.
                       </p>
                     </div>
                     {pendingInvites.length === 0 ? (
@@ -487,7 +570,7 @@ export default function TeamPage() {
                         <span className="text-3xl leading-none select-none">📬</span>
                         <p className="text-sm font-medium mt-1">No active links</p>
                         <p className="text-xs text-muted-foreground">
-                          Links you generate will appear here until accepted.
+                          Links you generate appear here until they expire.
                         </p>
                       </div>
                     ) : (
@@ -497,58 +580,96 @@ export default function TeamPage() {
                             <div className="size-9 rounded-lg bg-muted flex items-center justify-center shrink-0">
                               <Link size={13} className="text-muted-foreground" />
                             </div>
-                            <div className="flex-1 min-w-0 space-y-1">
+                            <div className="flex-1 min-w-0 space-y-1.5">
                               <div className="flex items-center gap-1.5 min-w-0">
                                 <p className="text-sm font-medium text-foreground truncate">
-                                  {invite.label || `/join/${invite.token.slice(0, 18)}…`}
+                                  {invite.label || 'Untitled link'}
                                 </p>
-                                {invite.permissions?.documents && (() => {
-                                  const docsCfg = DOCS_LEVEL_CONFIG[invite.permissions.documents]
-                                  const DocsIcon = docsCfg?.icon
-                                  if (!DocsIcon) return null
-                                  return (
-                                    <DocsIcon
-                                      className="size-3.5 text-muted-foreground shrink-0"
-                                      title={`Document access: ${docsCfg.label}`}
-                                    />
-                                  )
-                                })()}
+                                {/* The role the link grants is the single most
+                                    important thing about it — a reusable admin
+                                    link makes an admin of everyone who opens
+                                    it — so it leads rather than being implied. */}
+                                <Badge
+                                  className={cn(
+                                    'shrink-0 text-[10px] px-1.5 py-0 h-4 font-medium',
+                                    (SYSTEM_ROLE_PALETTE[invite.system_role] ?? SYSTEM_ROLE_PALETTE.member).badge,
+                                  )}
+                                >
+                                  {(SYSTEM_ROLE_PALETTE[invite.system_role] ?? SYSTEM_ROLE_PALETTE.member).label}
+                                </Badge>
                               </div>
-                              {invite.label && (
-                                <p className="text-xs font-mono text-muted-foreground/70 truncate">
-                                  /join/{invite.token.slice(0, 18)}…
-                                </p>
-                              )}
-                              <div className="flex items-center gap-2.5 text-xs text-muted-foreground">
-                                <span className="flex items-center gap-1">
-                                  <CalendarDays size={11} />
-                                  {formatDate(invite.created_at)}
-                                </span>
+
+                              <p className="text-xs font-mono text-muted-foreground/70 truncate">
+                                /join/{invite.token.slice(0, 18)}…
+                              </p>
+
+                              <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-muted-foreground">
                                 <span className="flex items-center gap-1">
                                   <Clock size={11} />
                                   Expires {formatDate(invite.expires_at)}
                                 </span>
+                                {/* Links are multi-use — this is how many have
+                                    joined on it, not a limit. */}
+                                {invite.use_count > 0 && (
+                                  <span className="flex items-center gap-1">
+                                    <UserCheck size={11} />
+                                    {invite.use_count} joined
+                                  </span>
+                                )}
+                                {/* Was a bare Ban glyph with only a title
+                                    attribute, which read as "disabled" rather
+                                    than "no document access". Labelled now, with
+                                    a real tooltip. */}
+                                {invite.permissions?.documents && (() => {
+                                  const docsCfg = DOCS_LEVEL_CONFIG[invite.permissions.documents]
+                                  const DocsIcon = docsCfg?.icon
+                                  if (!docsCfg) return null
+                                  return (
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <span className="flex items-center gap-1">
+                                          {DocsIcon && <DocsIcon size={11} />}
+                                          Docs: {docsCfg.label}
+                                        </span>
+                                      </TooltipTrigger>
+                                      <TooltipContent>{docsCfg.description}</TooltipContent>
+                                    </Tooltip>
+                                  )
+                                })()}
                               </div>
                             </div>
                             <div className="flex items-center gap-0.5 shrink-0">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="size-7 text-muted-foreground hover:text-foreground"
-                                onClick={() => handleCopyInviteLink(invite.token)}
-                                title="Copy link"
-                              >
-                                <Copy className="size-3" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="size-7 text-muted-foreground hover:text-destructive"
-                                onClick={() => handleRevoke(invite.id)}
-                                title="Revoke"
-                              >
-                                <Trash2 className="size-3" />
-                              </Button>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="size-7 text-muted-foreground hover:text-foreground"
+                                    onClick={() => handleCopyInviteLink(invite.token)}
+                                  >
+                                    <Copy className="size-3" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Copy link</TooltipContent>
+                              </Tooltip>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="size-7 text-muted-foreground hover:text-destructive"
+                                    onClick={() => handleRevoke(invite.id)}
+                                  >
+                                    <Trash2 className="size-3" />
+                                  </Button>
+                                </TooltipTrigger>
+                                {/* Revoking kills the link for everyone, not
+                                    just future joiners — worth saying, since
+                                    one link may now be out with several people. */}
+                                <TooltipContent>
+                                  Revoke — stops anyone else joining on this link
+                                </TooltipContent>
+                              </Tooltip>
                             </div>
                           </div>
                         ))}
@@ -561,6 +682,8 @@ export default function TeamPage() {
                   <UserPlus size={14} />
                   Invite Team Member
                 </Button>
+                  </>
+                )}
               </div>
             )}
           </div>
@@ -574,7 +697,7 @@ export default function TeamPage() {
             >
               <TabsList className="bg-transparent h-auto w-full justify-start rounded-none p-0 gap-8 border-b border-border/40">
                 {[
-                  { key: 'active', label: 'Active Team Members', count: members.length },
+                  { key: 'active', label: 'Active Members', count: members.length },
                   { key: 'removed', label: 'Removed', count: removedMembers.length },
                 ].map((tab) => (
                   <TabsTrigger
@@ -697,12 +820,16 @@ export default function TeamPage() {
             </Empty>
           ) : (
             <div className="rounded-xl border border-border/50 overflow-hidden">
-              <Table>
+              <Table className="table-fixed">
                 <TableHeader>
                   {table.getHeaderGroups().map((hg) => (
                     <TableRow key={hg.id} className="hover:bg-transparent border-b border-border/50 bg-muted/20">
                       {hg.headers.map((header) => (
-                        <TableHead key={header.id} className="px-4 h-10">
+                        <TableHead
+                          key={header.id}
+                          className="px-4 h-10"
+                          style={{ width: header.column.columnDef.meta?.width }}
+                        >
                           {header.isPlaceholder
                             ? null
                             : flexRender(header.column.columnDef.header, header.getContext())}
@@ -735,12 +862,27 @@ export default function TeamPage() {
           {/* ── Dialogs ── */}
           <InviteDialog open={inviteOpen} onOpenChange={setInviteOpen} />
 
+          <ManageJobRolesDialog
+            open={jobRolesOpen}
+            onOpenChange={setJobRolesOpen}
+            roles={jobRoles}
+            memberCounts={jobRoleMemberCounts}
+            canManage={isOwner}
+          />
+
           {editingMember && (
             <EditAccessDialog
               member={editingMember}
               open={!!editingMember}
               onOpenChange={(v) => { if (!v) setEditingMember(null) }}
               onSave={handleSaveAccess}
+              // The owner-row path writes via set_member_responsibilities
+              // instead of onSave, so it needs its own refresh + toast.
+              onSaved={() => {
+                queryClient.invalidateQueries({ queryKey: teamKeys.members(workspaceUserId) })
+                toast.success('Details updated')
+              }}
+              onManageJobRoles={() => setJobRolesOpen(true)}
             />
           )}
 

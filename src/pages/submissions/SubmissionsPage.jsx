@@ -151,6 +151,8 @@ function SubmissionsTab({ tab }) {
 
   const columns = useMemo(() => {
     const base = [
+      // No width — absorbs whatever the sized columns leave, so the title
+      // truncates to the column instead of a hard-coded max-width.
       subCol.accessor('post_title', {
         header: () => <ColHeader label="Deliverable" />,
         enableSorting: false,
@@ -159,17 +161,17 @@ function SubmissionsTab({ tab }) {
           const mediaArr = Array.isArray(item.post_media_urls) ? item.post_media_urls : []
           return (
             <NavLink
-              to={`/clients/${item.client_id}/posts/${item.post_id}`}
+              to={`/clients/${item.client_id}/deliverables/${item.post_id}`}
               onClick={(e) => e.stopPropagation()}
               className="flex items-center gap-3 min-w-0 group/link"
             >
               <Thumbnail mediaUrls={mediaArr} />
               <div className="min-w-0">
-                <p className="text-sm font-medium truncate max-w-55 group-hover/link:underline">
+                <p className="text-sm font-medium truncate group-hover/link:underline">
                   {item.post_title || 'Untitled'}
                 </p>
                 {item.post_content && (
-                  <p className="text-xs text-muted-foreground truncate max-w-55 mt-0.5">
+                  <p className="text-xs text-muted-foreground truncate mt-0.5">
                     {item.post_content}
                   </p>
                 )}
@@ -179,6 +181,7 @@ function SubmissionsTab({ tab }) {
         },
       }),
       subCol.accessor('post_platform', {
+        meta: { width: '12%' },
         header: () => <ColHeader label="Platforms" />,
         enableSorting: false,
         cell: ({ getValue }) => {
@@ -189,6 +192,7 @@ function SubmissionsTab({ tab }) {
         },
       }),
       subCol.accessor('client_name', {
+        meta: { width: '17%' },
         header: () => <ColHeader label="Client" />,
         enableSorting: false,
         cell: ({ row }) => {
@@ -196,12 +200,13 @@ function SubmissionsTab({ tab }) {
           return (
             <div className="flex items-center gap-2 min-w-0">
               <ClientAvatar name={item.client_name} logoUrl={item.client_logo_url} />
-              <span className="text-sm truncate max-w-30">{item.client_name}</span>
+              <span className="text-sm truncate">{item.client_name}</span>
             </div>
           )
         },
       }),
       subCol.accessor('submitted_at', {
+        meta: { width: '13%' },
         header: () => <ColHeader label="Submitted" />,
         enableSorting: false,
         cell: ({ getValue }) => (
@@ -215,6 +220,7 @@ function SubmissionsTab({ tab }) {
     if (tab !== 'pending') {
       base.push(
         subCol.accessor('actor_name', {
+          meta: { width: '15%' },
           header: () => <ColHeader label="By" />,
           enableSorting: false,
           cell: ({ row }) => {
@@ -229,7 +235,7 @@ function SubmissionsTab({ tab }) {
                   email={item.actor_email}
                   avatarUrl={item.actor_avatar_url}
                 />
-                <span className="text-sm truncate max-w-30">
+                <span className="text-sm truncate">
                   {item.actor_name || item.actor_email}
                 </span>
               </div>
@@ -242,13 +248,14 @@ function SubmissionsTab({ tab }) {
     if (tab === 'changes') {
       base.push(
         subCol.accessor('decision_notes', {
+          meta: { width: '18%' },
           header: () => <ColHeader label="Notes" />,
           enableSorting: false,
           cell: ({ getValue }) => {
             const notes = getValue()
             if (!notes) return <span className="text-sm text-muted-foreground/40">—</span>
             return (
-              <span className="text-sm text-muted-foreground truncate max-w-50 block" title={notes}>
+              <span className="text-sm text-muted-foreground truncate block" title={notes}>
                 {notes}
               </span>
             )
@@ -260,6 +267,7 @@ function SubmissionsTab({ tab }) {
     if (tab !== 'pending') {
       base.push(
         subCol.accessor('decision_at', {
+          meta: { width: '13%' },
           header: () => <ColHeader label="When" />,
           enableSorting: false,
           cell: ({ getValue }) => (
@@ -275,6 +283,7 @@ function SubmissionsTab({ tab }) {
       base.push(
         subCol.display({
           id: 'delete',
+          meta: { width: '5%' },
           header: '',
           cell: ({ row }) => {
             const item = row.original
@@ -372,7 +381,7 @@ function SubmissionsTab({ tab }) {
     <div className="space-y-4">
       {searchBar}
       <div className="rounded-xl border border-border overflow-hidden">
-      <Table>
+      <Table className="table-fixed">
         <TableHeader>
           {table.getHeaderGroups().map((hg) => (
             <TableRow key={hg.id} className="hover:bg-transparent border-b border-border">
@@ -380,6 +389,7 @@ function SubmissionsTab({ tab }) {
                 <TableHead
                   key={header.id}
                   className="text-xs font-medium text-muted-foreground h-10 px-4"
+                  style={{ width: header.column.columnDef.meta?.width }}
                 >
                   {header.isPlaceholder
                     ? null
@@ -407,7 +417,7 @@ function SubmissionsTab({ tab }) {
                     key={row.id}
                     className="border-b border-border last:border-0 cursor-pointer hover:bg-muted/40 transition-colors"
                     onClick={() =>
-                      navigate(`/clients/${item.client_id}/posts/${item.post_id}`)
+                      navigate(`/clients/${item.client_id}/deliverables/${item.post_id}`)
                     }
                   >
                     {row.getVisibleCells().map((cell) => (

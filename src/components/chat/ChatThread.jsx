@@ -28,6 +28,7 @@ import {
   IMPORTANT_MENTION_CLASS,
   IMPORTANT_TEXT_CLASS,
 } from '@/lib/mentions'
+import { SYSTEM_ROLE_PALETTE } from '@/lib/team-roles'
 import { detectSlashCommand, splitReferences } from '@/lib/references'
 import { MemberAvatar } from '@/components/chat/MemberAvatar'
 import { AttachEntityMenu } from '@/components/chat/AttachEntityMenu'
@@ -69,11 +70,8 @@ const SPECIAL_MENTIONS = [
 ]
 
 function referenceHref(reference) {
-  if (reference.type === 'post') return `/clients/${reference.client_id}/posts/${reference.id}`
-  // ?task=<id> opens TaskDetailSheet on load (TasksAndReminders.jsx) —
-  // independent of the per-view local selection state each of the three
-  // views (grid/table/kanban) otherwise manages.
-  return `/tasks?task=${reference.id}`
+  if (reference.type === 'post') return `/clients/${reference.client_id}/deliverables/${reference.id}`
+  return `/tasks/${reference.id}`
 }
 
 // Renders a message body that may contain both [[Title]] entity references
@@ -255,7 +253,7 @@ function BubbleReactionsRow({ messageId, reactions, memberMap, currentUserId, on
   )
 }
 
-function ChatMessageRow({ message, author, isOwn, canModify, canDelete, mentionNames, myMentionName, memberMap, currentUserId, highlighted, onReacted, onDeleted, visibleTaskIds }) {
+function ChatMessageRow({ message, author, isOwn, canModify, canDelete, showRoleColor, mentionNames, myMentionName, memberMap, currentUserId, highlighted, onReacted, onDeleted, visibleTaskIds }) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(message.body)
   const [saving, setSaving] = useState(false)
@@ -305,7 +303,14 @@ function ChatMessageRow({ message, author, isOwn, canModify, canDelete, mentionN
       )}
       <MessageContent className={message.references?.length === 1 ? 'max-w-full' : 'max-w-[70%]'}>
         <MessageHeader className={cn(isOwn && 'flex-row-reverse')}>
-          {!isOwn && <span className="font-medium text-foreground">{name}</span>}
+          {/* Role tint only in the shared workspace room. A DM has exactly two
+              people in it and you already know who the other one is, so the
+              color carries no information there. */}
+          {!isOwn && (
+            <span className={cn('font-medium text-foreground', showRoleColor && SYSTEM_ROLE_PALETTE[author?.system_role]?.name)}>
+              {name}
+            </span>
+          )}
           {message.body?.includes('@Important') && (
             <TriangleAlert className="size-3 shrink-0 text-red-500" aria-label="Important message" />
           )}
@@ -796,6 +801,7 @@ export function ChatThread({ channelId, channelType, otherUserId }) {
                   isOwn={isOwn}
                   canModify={isOwn}
                   canDelete={isOwn || (isAdmin && channelType === 'workspace')}
+                  showRoleColor={channelType === 'workspace'}
                   mentionNames={mentionNamesFor(m)}
                   myMentionName={myMentionName}
                   memberMap={memberMap}

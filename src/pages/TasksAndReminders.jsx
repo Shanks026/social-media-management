@@ -90,7 +90,7 @@ import {
   SheetDescription,
 } from '@/components/ui/sheet'
 
-import { useSearchParams } from 'react-router-dom'
+import { useSearchParams, Navigate, useNavigate } from 'react-router-dom'
 import { useHeader } from '@/components/misc/header-context'
 import { useAuth } from '@/context/AuthContext'
 import { useClients } from '@/api/clients'
@@ -101,7 +101,7 @@ import { usePermissions } from '@/api/usePermissions'
 import CreateTaskDialog from '@/components/tasks/CreateTaskDialog'
 import EditTaskDialog from '@/components/tasks/EditTaskDialog'
 import { ClientAvatar } from '@/components/tasks/ClientAvatar'
-import TaskCard, { TaskDetailSheet, STATUS_CONFIG, PRIORITY_CONFIG, STATUS_DOT } from '@/components/tasks/TaskCard'
+import TaskCard, { STATUS_CONFIG, PRIORITY_CONFIG, STATUS_DOT } from '@/components/tasks/TaskCard'
 import AssigneeFilterPopover from '@/components/tasks/AssigneeFilterPopover'
 import { cn } from '@/lib/utils'
 import {
@@ -386,11 +386,12 @@ function TaskTableRowSkeleton() {
 }
 
 function TasksTableView({ tasks, isLoading, clientMap, campaignMap, memberMap, currentUserId }) {
-  const { isOwner } = usePermissions()
+  const navigate = useNavigate()
   const [sorting, setSorting] = useState([])
-  const [selectedTask, setSelectedTask] = useState(null)
 
   const columns = useMemo(() => [
+    // No width — absorbs whatever the sized columns leave, so the title
+    // truncates to the column instead of a hard-coded max-width.
     taskCol.accessor('title', {
       header: ({ column }) => <SortableColHeader column={column} label="Title" />,
       cell: ({ row }) => {
@@ -398,19 +399,20 @@ function TasksTableView({ tasks, isLoading, clientMap, campaignMap, memberMap, c
         return (
           <div className="min-w-0">
             <p className={cn(
-              'text-sm font-medium leading-tight truncate max-w-72',
+              'text-sm font-medium leading-tight truncate',
               task.status === 'COMPLETED' && 'line-through text-muted-foreground',
             )}>
               {task.title}
             </p>
             {task.description && (
-              <p className="text-xs text-muted-foreground truncate max-w-72 mt-0.5">{task.description}</p>
+              <p className="text-xs text-muted-foreground truncate mt-0.5">{task.description}</p>
             )}
           </div>
         )
       },
     }),
     taskCol.accessor('status', {
+      meta: { width: '12%' },
       header: ({ column }) => <SortableColHeader column={column} label="Status" />,
       cell: ({ getValue }) => {
         const status = getValue()
@@ -424,6 +426,7 @@ function TasksTableView({ tasks, isLoading, clientMap, campaignMap, memberMap, c
       },
     }),
     taskCol.accessor('priority', {
+      meta: { width: '10%' },
       header: ({ column }) => <SortableColHeader column={column} label="Priority" />,
       cell: ({ getValue }) => {
         const priority = getValue()
@@ -439,6 +442,7 @@ function TasksTableView({ tasks, isLoading, clientMap, campaignMap, memberMap, c
     }),
     taskCol.accessor('assigned_to', {
       id: 'assignee',
+      meta: { width: '16%' },
       header: () => <ColHeader label="Assigned To" />,
       enableSorting: false,
       cell: ({ getValue }) => {
@@ -462,7 +466,7 @@ function TasksTableView({ tasks, isLoading, clientMap, campaignMap, memberMap, c
                 {(assignee.full_name || assignee.email || '?')[0].toUpperCase()}
               </div>
             )}
-            <span className="text-sm truncate max-w-32">
+            <span className="text-sm truncate">
               {assignee.full_name || assignee.email}
               {assignee._removed && <span className="text-muted-foreground ml-1">(Removed)</span>}
               {getValue() === currentUserId && (
@@ -475,6 +479,7 @@ function TasksTableView({ tasks, isLoading, clientMap, campaignMap, memberMap, c
     }),
     taskCol.accessor('client_id', {
       id: 'client',
+      meta: { width: '16%' },
       header: ({ column }) => <SortableColHeader column={column} label="Client" />,
       sortingFn: (a, b) => {
         const nameA = clientMap[String(a.original.client_id)]?.name ?? ''
@@ -488,13 +493,14 @@ function TasksTableView({ tasks, isLoading, clientMap, campaignMap, memberMap, c
         return (
           <div className="flex items-center gap-2 min-w-0">
             <ClientAvatar client={client} size="sm" />
-            <span className="text-sm truncate max-w-32">{client.name}</span>
+            <span className="text-sm truncate">{client.name}</span>
           </div>
         )
       },
     }),
     taskCol.accessor('campaign_id', {
       id: 'campaign',
+      meta: { width: '16%' },
       header: () => <ColHeader label="Campaign" />,
       enableSorting: false,
       cell: ({ getValue }) => {
@@ -503,12 +509,13 @@ function TasksTableView({ tasks, isLoading, clientMap, campaignMap, memberMap, c
         return (
           <div className="flex items-center gap-1.5 min-w-0">
             <Megaphone className="size-3.5 text-muted-foreground shrink-0" />
-            <span className="text-sm truncate max-w-32">{campaign.name}</span>
+            <span className="text-sm truncate">{campaign.name}</span>
           </div>
         )
       },
     }),
     taskCol.accessor('due_at', {
+      meta: { width: '10%' },
       header: ({ column }) => <SortableColHeader column={column} label="Due" />,
       cell: ({ row }) => {
         const task = row.original
@@ -540,20 +547,19 @@ function TasksTableView({ tasks, isLoading, clientMap, campaignMap, memberMap, c
     getSortedRowModel: getSortedRowModel(),
   })
 
-  const selCanEdit = selectedTask ? (isOwner || selectedTask.created_by === currentUserId) : false
-  const selCanToggle = selectedTask
-    ? (isOwner || selectedTask.created_by === currentUserId || selectedTask.assigned_to === currentUserId)
-    : false
-
   return (
     <>
       <div className="rounded-xl border border-border bg-card overflow-hidden mt-4">
-        <Table>
+        <Table className="table-fixed">
           <TableHeader>
             {table.getHeaderGroups().map((hg) => (
               <TableRow key={hg.id} className="hover:bg-transparent">
                 {hg.headers.map((h) => (
-                  <TableHead key={h.id} className="py-3 px-4">
+                  <TableHead
+                    key={h.id}
+                    className="py-3 px-4"
+                    style={{ width: h.column.columnDef.meta?.width }}
+                  >
                     {flexRender(h.column.columnDef.header, h.getContext())}
                   </TableHead>
                 ))}
@@ -567,7 +573,7 @@ function TasksTableView({ tasks, isLoading, clientMap, campaignMap, memberMap, c
                   <TableRow
                     key={row.id}
                     className="cursor-pointer hover:bg-muted/40 transition-colors"
-                    onClick={() => setSelectedTask(row.original)}
+                    onClick={() => navigate(`/tasks/${row.original.id}`)}
                   >
                     {row.getVisibleCells().map((cell) => (
                       <TableCell key={cell.id} className="py-3 px-4">
@@ -580,18 +586,6 @@ function TasksTableView({ tasks, isLoading, clientMap, campaignMap, memberMap, c
           </TableBody>
         </Table>
       </div>
-
-      <TaskDetailSheet
-        task={selectedTask}
-        open={!!selectedTask}
-        onOpenChange={(open) => { if (!open) setSelectedTask(null) }}
-        clientMap={clientMap}
-        campaignMap={campaignMap}
-        memberMap={memberMap}
-        currentUserId={currentUserId}
-        canEdit={selCanEdit}
-        canToggle={selCanToggle}
-      />
     </>
   )
 }
@@ -713,20 +707,12 @@ export default function TasksAndReminders() {
 
   const { data: fetchedTasks = [], isLoading: isLoadingTasks } = useTasks()
 
-  // Deep-link from a chat/notification reference (?task=<id>) — opens the
-  // sheet regardless of which view (grid/table/kanban) or filters are active,
-  // and independent of each view's own local selection state. Looks up
-  // against the unfiltered list so a deep link still works even if the
-  // task's status/client is hidden by the current filter selection.
+  // Legacy deep link (?task=<id>) — tasks have their own page now, so this
+  // redirects rather than opening a sheet over the list. Kept because chat
+  // messages and notification rows sent before Phase 2 still carry the old
+  // shape. The redirect is unconditional: /tasks/:taskId itself distinguishes
+  // deleted from "exists but outside your RLS scope", which this list can't.
   const deepLinkedTaskId = searchParams.get('task')
-  const deepLinkedTask = useMemo(
-    () => (deepLinkedTaskId ? fetchedTasks.find((t) => t.id === deepLinkedTaskId) ?? null : null),
-    [fetchedTasks, deepLinkedTaskId],
-  )
-  const deepLinkCanEdit = deepLinkedTask ? (isOwner || deepLinkedTask.created_by === currentUserId) : false
-  const deepLinkCanToggle = deepLinkedTask
-    ? (isOwner || deepLinkedTask.created_by === currentUserId || deepLinkedTask.assigned_to === currentUserId)
-    : false
 
   const allTasks = useMemo(() => {
     if (selectedClient === 'all') return fetchedTasks
@@ -775,6 +761,9 @@ export default function TasksAndReminders() {
   )
 
   // -- Render --
+
+  // After every hook, so the redirect never changes the hook order.
+  if (deepLinkedTaskId) return <Navigate to={`/tasks/${deepLinkedTaskId}`} replace />
 
   return (
     <div className="p-8 max-w-350 mx-auto space-y-6 animate-in fade-in duration-500">
@@ -1050,18 +1039,6 @@ export default function TasksAndReminders() {
           </div>
         )}
       </Tabs>
-
-      <TaskDetailSheet
-        task={deepLinkedTask}
-        open={!!deepLinkedTask}
-        onOpenChange={(open) => { if (!open) setParam('task', null) }}
-        clientMap={clientMap}
-        campaignMap={campaignMap}
-        memberMap={memberMap}
-        currentUserId={currentUserId}
-        canEdit={deepLinkCanEdit}
-        canToggle={deepLinkCanToggle}
-      />
     </div>
   )
 }

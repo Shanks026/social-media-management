@@ -15,6 +15,8 @@ import {
   Trash2,
   Users,
   TriangleAlert,
+  ArrowRightLeft,
+  AtSign,
 } from 'lucide-react'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Button } from '@/components/ui/button'
@@ -27,6 +29,7 @@ import {
   EmptyHeader,
 } from '@/components/ui/empty'
 import { cn } from '@/lib/utils'
+import { resolveNotificationRoute } from '@/components/notifications/routes'
 import { formatCompactTimeAgo } from '@/lib/helper'
 import {
   useUnreadNotificationCount,
@@ -37,6 +40,7 @@ import {
   notificationKeys,
 } from '@/api/notifications'
 import { useTeamMembers } from '@/api/team'
+import { STATUS_CONFIG, StatusChip } from '@/components/tasks/TaskCard'
 import { useAuth } from '@/context/AuthContext'
 
 // ─── Type config ───────────────────────────────────────────────────────────────
@@ -45,6 +49,8 @@ const TYPE_CONFIG = {
   post_status_changed:    { icon: FileText,       color: 'text-blue-500',   bg: 'bg-blue-100 dark:bg-blue-950' },
   task_assigned:          { icon: ClipboardList,   color: 'text-violet-500', bg: 'bg-violet-100 dark:bg-violet-950' },
   task_updated:           { icon: ClipboardList,   color: 'text-violet-500', bg: 'bg-violet-100 dark:bg-violet-950' },
+  task_reassigned:        { icon: ArrowRightLeft,  color: 'text-fuchsia-500', bg: 'bg-fuchsia-100 dark:bg-fuchsia-950' },
+  task_autocompleted:     { icon: CheckCircle2,    color: 'text-emerald-500', bg: 'bg-emerald-100 dark:bg-emerald-950' },
   campaign_review_shared: { icon: Share2,          color: 'text-amber-500',  bg: 'bg-amber-100 dark:bg-amber-950' },
   campaign_reviewed:      { icon: CheckCircle2,    color: 'text-green-500',  bg: 'bg-green-100 dark:bg-green-950' },
   team_member_joined:     { icon: UserPlus,        color: 'text-teal-500',   bg: 'bg-teal-100 dark:bg-teal-950' },
@@ -52,12 +58,40 @@ const TYPE_CONFIG = {
   comment_added:          { icon: MessageCircle,   color: 'text-sky-500',    bg: 'bg-sky-100 dark:bg-sky-950' },
   chat_important:         { icon: TriangleAlert,   color: 'text-red-500',    bg: 'bg-red-100 dark:bg-red-950' },
   chat_everyone:          { icon: Users,           color: 'text-indigo-500', bg: 'bg-indigo-100 dark:bg-indigo-950' },
+  chat_mention:           { icon: AtSign,          color: 'text-indigo-500', bg: 'bg-indigo-100 dark:bg-indigo-950' },
+  // No longer emitted — tg_notify_chat_message stopped notifying on every DM
+  // message. Kept so the rows written before that change still render as chat
+  // rather than falling through to the generic bell fallback.
+  chat_dm:                { icon: MessageCircle,   color: 'text-sky-500',    bg: 'bg-sky-100 dark:bg-sky-950' },
 }
 
 // Label to show when a notification has no human actor (actor_user_id is null).
 const SYSTEM_ACTOR_LABEL = {
-  invoice_overdue:   'System',
-  campaign_reviewed: 'A client',
+  invoice_overdue:    'System',
+  campaign_reviewed:  'A client',
+  // Nobody moved the task — its deliverables shipping did.
+  task_autocompleted: 'System',
+}
+
+// The task-status triggers build their title as
+// `'Task status updated to ' || new.status`, so the raw enum (IN_PROGRESS)
+// lands in the text with no structural field beside it to read instead.
+// Rather than migrate every trigger and the emit_notifications signature to
+// carry the status separately, the known prefix is matched here and the enum
+// rendered as the same pill the task page uses. Anything that doesn't match a
+// real STATUS_CONFIG key falls through to the title verbatim, so an unknown
+// or reworded title degrades to what it does today rather than breaking.
+const STATUS_TITLE_RE = /^(Task status updated to )([A-Z_]+)$/
+
+function NotificationTitle({ title }) {
+  const match = title?.match(STATUS_TITLE_RE)
+  if (!match || !STATUS_CONFIG[match[2]]) return title
+  return (
+    <>
+      {match[1]}
+      <StatusChip status={match[2]} />
+    </>
+  )
 }
 
 function getInitials(name) {
@@ -66,19 +100,8 @@ function getInitials(name) {
   return ((first[0] ?? '') + (second[0] ?? '')).toUpperCase() || '?'
 }
 
-function resolveRoute(notification) {
-  if (notification.link) return notification.link
-  const { entity_type, entity_id } = notification
-  if (!entity_type || !entity_id) return null
-  const map = {
-    post:     `/posts`,
-    task:     `/tasks`,
-    campaign: `/campaigns/${entity_id}`,
-    invoice:  `/finance/invoices`,
-    team:     `/settings`,
-  }
-  return map[entity_type] ?? null
-}
+// Route resolution is shared with NotificationToaster — see ./routes.js
+const resolveRoute = resolveNotificationRoute
 
 // ─── Single row ────────────────────────────────────────────────────────────────
 
@@ -165,7 +188,7 @@ function NotificationRow({ notification, memberMap, onRead, onDeleted }) {
       <div className="min-w-0 flex-1">
         <div className="flex items-start justify-between gap-2">
           <p className={cn('text-sm leading-snug', isUnread ? 'font-medium' : 'text-muted-foreground')}>
-            {notification.title}
+            <NotificationTitle title={notification.title} />
           </p>
           {isUnread && (
             <span aria-hidden="true" className="mt-1.5 size-2 shrink-0 rounded-full bg-rose-500" />

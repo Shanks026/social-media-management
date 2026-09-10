@@ -1,7 +1,7 @@
 import { supabase } from '@/lib/supabase'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/context/AuthContext'
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { resolveWorkspace } from '@/lib/workspace'
 
 // ─── Query Keys ────────────────────────────────────────────────────────────────
@@ -84,7 +84,7 @@ export async function notifyFromMutation(opts) {
 
 /**
  * Unread notification count for the badge.
- * Mirrors the shape of useMyOverdueTaskCount() in tasks.js.
+ * Mirrors the shape of useMyOpenTaskCount() in tasks.js.
  */
 export function useUnreadNotificationCount() {
   const { user, workspaceUserId } = useAuth()
@@ -127,6 +127,45 @@ export function useUnreadNotificationCount() {
     },
     enabled: !!user?.id && !!workspaceUserId,
   })
+}
+
+/**
+ * Fires `onInsert(row)` for each notification that arrives for the current
+ * user while the app is open. Purely a delivery stream — no toasting or
+ * routing here, so the data layer stays free of UI concerns.
+ *
+ * Mount this ONCE (see NotificationToaster). It deliberately uses its own
+ * channel topic rather than piggybacking on useUnreadNotificationCount's,
+ * because that hook renders in two places at once when the bell popover is
+ * open and would deliver every arrival twice.
+ */
+export function useNotificationStream(onInsert) {
+  const { user } = useAuth()
+  // Ref-held so a caller passing an inline arrow doesn't resubscribe each render.
+  const handlerRef = useRef(onInsert)
+  useEffect(() => {
+    handlerRef.current = onInsert
+  }, [onInsert])
+
+  useEffect(() => {
+    if (!user?.id) return
+
+    const channel = supabase
+      .channel(`notification-stream:${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'notifications',
+          filter: `recipient_user_id=eq.${user.id}`,
+        },
+        (payload) => handlerRef.current?.(payload.new),
+      )
+      .subscribe()
+
+    return () => supabase.removeChannel(channel)
+  }, [user?.id])
 }
 
 /**

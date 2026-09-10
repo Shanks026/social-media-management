@@ -10,6 +10,11 @@ import { cn } from '@/lib/utils'
  * deliverable. Renders nothing when there are none, so it never adds noise to
  * posts without linked work.
  *
+ * Rows stay compact — client and campaign are already in the deliverable's
+ * meta column, so repeating them here would be noise. Clicking a row
+ * navigates straight to the task's own page — there's no in-place peek any
+ * more (the detail sheet was removed workspace-wide).
+ *
  * postId must be the real posts.id (post.actual_post_id).
  */
 export default function PostLinkedTasks({ postId }) {
@@ -22,7 +27,7 @@ export default function PostLinkedTasks({ postId }) {
       <div className="flex items-center gap-2 mb-2">
         <ClipboardList className="size-4 text-muted-foreground" />
         <h3 className="text-sm font-semibold">Linked tasks</h3>
-        <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-muted px-1.5 text-[11px] font-medium text-muted-foreground">
+        <span className="flex h-5 min-w-5 items-center justify-center rounded-md bg-muted px-1.5 text-[11px] font-medium text-muted-foreground">
           {tasks.length}
         </span>
       </div>
@@ -34,8 +39,8 @@ export default function PostLinkedTasks({ postId }) {
           return (
             <Link
               key={task.id}
-              to="/tasks"
-              className="group flex items-center gap-2.5 rounded-lg border border-border/50 px-3 py-2 hover:bg-muted/40 transition-colors"
+              to={`/tasks/${task.id}`}
+              className="group flex w-full items-center gap-2.5 rounded-lg border border-border/50 px-3 py-2 text-left hover:bg-muted/40 transition-colors"
             >
               {priorityCfg && (
                 <span

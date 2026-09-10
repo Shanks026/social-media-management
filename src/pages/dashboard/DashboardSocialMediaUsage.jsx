@@ -91,7 +91,7 @@ export default function DashboardSocialMediaUsage() {
           variant="ghost"
           size="icon"
           className="h-8 w-8 -mr-2"
-          onClick={() => navigate('/posts')}
+          onClick={() => navigate('/deliverables')}
         >
           <ArrowUpRight className="h-4 w-4" />
         </Button>

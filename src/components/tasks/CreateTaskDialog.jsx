@@ -123,9 +123,14 @@ export default function CreateTaskDialog({
   const assigneeOptions = useMemo(
     () =>
       teamMembers.filter(
-        (m) => m.system_role !== 'owner' && m.system_role !== 'superadmin',
+        // Owner/superadmin are excluded as an assignment *target* for anyone
+        // else, but the current user can always assign a task to themselves —
+        // enforce_task_assignment permits self-assignment regardless of role.
+        (m) =>
+          m.member_user_id === user?.id ||
+          (m.system_role !== 'owner' && m.system_role !== 'superadmin'),
       ),
-    [teamMembers],
+    [teamMembers, user?.id],
   )
 
   useEffect(() => {
@@ -300,7 +305,11 @@ export default function CreateTaskDialog({
               )}
             </MetaRow>
 
-            {/* Assignee */}
+            {/* Assignee — creation only, unlike handoff of an existing task.
+                tasks_insert RLS still requires assigned_to IS NULL OR
+                is_workspace_admin(); Phase 1 of task collaboration only added
+                a handoff path (reassign_task) for tasks that already exist, so
+                this stays gated exactly as before. */}
             {canAssignTasks && (
               <MetaRow label="Assignee">
                 <Select value={assignedTo} onValueChange={setAssignedTo}>

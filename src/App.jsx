@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { Routes, Route, Navigate, useParams } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { AuthProvider, useAuth } from '../src/context/AuthContext'
@@ -26,6 +26,7 @@ import Posts from './pages/Posts'
 import BillingUsage from './pages/billingAndUsage/BillingUsage'
 import CreateClientPage from './pages/clients/CreateClientPage'
 import TasksAndReminders from './pages/TasksAndReminders'
+import TaskDetailPage from './pages/tasks/TaskDetailPage'
 import Notes from './pages/Notes'
 import NoteEditorPage from './pages/NoteEditorPage'
 import MeetingsPage from './pages/MeetingsPage'
@@ -184,6 +185,13 @@ function ChatRoute() {
   return <ChatPage />
 }
 
+// Deliverable detail used to live at /clients/:clientId/posts/:postId. Old
+// links (stored notification rows, bookmarks) forward to the current path.
+function LegacyPostRedirect() {
+  const { clientId, postId } = useParams()
+  return <Navigate to={`/clients/${clientId}/deliverables/${postId}`} replace />
+}
+
 function AppRoutes() {
   const { session, user } = useAuth()
 
@@ -223,8 +231,14 @@ function AppRoutes() {
           />
           <Route path="/clients/:clientId" element={<ClientDetails />} />
           <Route
-            path="/clients/:clientId/posts/:postId"
+            path="/clients/:clientId/deliverables/:postId"
             element={<PostDetails />}
+          />
+          {/* Legacy path — links minted before the rename (notification rows,
+              bookmarks, pasted URLs) still resolve. */}
+          <Route
+            path="/clients/:clientId/posts/:postId"
+            element={<LegacyPostRedirect />}
           />
           <Route path="/prospects" element={<RequirePermission cap="prospects"><ProspectsPage /></RequirePermission>} />
           <Route path="/prospects/:prospectId" element={<RequirePermission cap="prospects"><ProspectDetailPage /></RequirePermission>} />
@@ -235,8 +249,10 @@ function AppRoutes() {
           <Route path="/campaigns" element={<CampaignsPage />} />
           <Route path="/campaigns/:campaignId" element={<CampaignDetailPage />} />
           <Route path="/ads" element={<AdsPage />} />
-          <Route path="/posts" element={<Posts />} />
+          <Route path="/deliverables" element={<Posts />} />
+          <Route path="/posts" element={<Navigate to="/deliverables" replace />} />
           <Route path="/tasks" element={<TasksAndReminders />} />
+          <Route path="/tasks/:taskId" element={<TaskDetailPage />} />
           <Route path="/operations/notes" element={<Notes />} />
           <Route path="/operations/notes/:noteId" element={<NoteEditorPage />} />
           <Route path="/operations/meetings" element={<MeetingsPage />} />

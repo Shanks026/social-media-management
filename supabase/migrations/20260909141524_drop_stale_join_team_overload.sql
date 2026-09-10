@@ -1,0 +1,13 @@
+-- Drop the stale 3-arg join_team.
+--
+-- 20260910000000 added p_mobile_number with a DEFAULT via CREATE OR REPLACE.
+-- A different argument list is a different function, so that created a second
+-- overload instead of replacing the first — leaving a 3-arg version behind
+-- that knows nothing about mobile numbers or is_new_member.
+--
+-- PostgREST resolves by named arguments, so the current client (which always
+-- sends p_mobile_number) hits the 4-arg one and the stale copy is unreachable
+-- from the app. But it is exactly the kind of silently-diverging duplicate
+-- that the dead update_member_access overload turned out to be, so it goes now
+-- rather than after it has drifted further.
+drop function if exists public.join_team(text, text, text);;

@@ -129,7 +129,7 @@ export default function PostDetails() {
         return { ...oldData, status: 'ARCHIVED' }
       })
 
-      navigate(`/clients/${clientId}/posts/${newVersionId}`)
+      navigate(`/clients/${clientId}/deliverables/${newVersionId}`)
     },
     onError: (err) => {
       console.error('Revision Mutation Failed:', err)
@@ -410,6 +410,8 @@ export default function PostDetails() {
         post={post}
         isInternal={isInternal}
         canSendDeliverables={canSendDeliverables}
+        // Meta column yields whenever a page-level right panel takes the space
+        showMeta={!showHistory && !showComments}
         showHistory={showHistory}
         setShowHistory={(v) => { setShowHistory(v); if (v) setShowComments(false) }}
         showComments={showComments}

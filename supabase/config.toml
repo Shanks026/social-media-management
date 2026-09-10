@@ -416,7 +416,22 @@ verify_jwt = false
 verify_jwt = false
 [functions.send-signup-welcome]
 verify_jwt = false
+[functions.send-team-welcome]
+# verify_jwt=true: invoked from JoinTeam.jsx immediately after join_team
+# succeeds, by which point the joiner is signed in — so a valid JWT is always
+# available and there is no reason to accept unauthenticated callers. Unlike
+# the other send-* functions, this one is never triggered by a webhook or a
+# public token flow. Matches delete-team-member.
+verify_jwt = true
 [functions.delete-team-member]
 verify_jwt = true
 [functions.delete-workspace]
 verify_jwt = false
+
+[functions.send-task-assignment-email]
+# verify_jwt=true: only ever invoked from the app by a signed-in member right
+# after reassign_task / task insert succeeds, so a valid JWT always exists.
+# The function additionally checks that caller is a member of the task's own
+# workspace before sending — verify_jwt alone would let any authenticated
+# user of any workspace trigger mail by guessing a task id.
+verify_jwt = true

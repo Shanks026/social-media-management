@@ -339,22 +339,24 @@ export function ProposalTab({ clientId, prospectId, prospectName, prospectEmail 
         </Empty>
       ) : (
         <div className="rounded-xl border border-border/50 overflow-hidden bg-card">
-          <Table>
+          {/* Percentage widths + table-fixed: the Proposal column declares
+              none, so it absorbs the remainder and truncates to fit. */}
+          <Table className="table-fixed">
             <TableHeader>
               <TableRow className="hover:bg-transparent bg-muted/30">
                 <TableHead className="px-4 py-2.5 text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
                   Proposal
                 </TableHead>
-                <TableHead className="px-4 py-2.5 text-[11px] font-medium text-muted-foreground uppercase tracking-wider text-right">
+                <TableHead className="w-[15%] px-4 py-2.5 text-[11px] font-medium text-muted-foreground uppercase tracking-wider text-right">
                   Total
                 </TableHead>
-                <TableHead className="px-4 py-2.5 text-[11px] font-medium text-muted-foreground uppercase tracking-wider text-center">
+                <TableHead className="w-[16%] px-4 py-2.5 text-[11px] font-medium text-muted-foreground uppercase tracking-wider text-center">
                   Status
                 </TableHead>
-                <TableHead className="px-4 py-2.5 text-[11px] font-medium text-muted-foreground uppercase tracking-wider text-right">
+                <TableHead className="w-[16%] px-4 py-2.5 text-[11px] font-medium text-muted-foreground uppercase tracking-wider text-right">
                   Valid Until
                 </TableHead>
-                <TableHead className="px-4 py-2.5" />
+                <TableHead className="w-[8%] px-4 py-2.5" />
               </TableRow>
             </TableHeader>
             <TableBody>

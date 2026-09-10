@@ -66,6 +66,60 @@ export const TAG_COLORS = {
     dot: 'bg-pink-500',
     swatch: 'bg-pink-500',
   },
+  rose: {
+    label: 'Rose',
+    pill: 'bg-rose-100 text-rose-700 border-rose-200 dark:bg-rose-950 dark:text-rose-300 dark:border-rose-900',
+    dot: 'bg-rose-500',
+    swatch: 'bg-rose-500',
+  },
+  fuchsia: {
+    label: 'Fuchsia',
+    pill: 'bg-fuchsia-100 text-fuchsia-700 border-fuchsia-200 dark:bg-fuchsia-950 dark:text-fuchsia-300 dark:border-fuchsia-900',
+    dot: 'bg-fuchsia-500',
+    swatch: 'bg-fuchsia-500',
+  },
+  purple: {
+    label: 'Purple',
+    pill: 'bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-950 dark:text-purple-300 dark:border-purple-900',
+    dot: 'bg-purple-500',
+    swatch: 'bg-purple-500',
+  },
+  sky: {
+    label: 'Sky',
+    pill: 'bg-sky-100 text-sky-700 border-sky-200 dark:bg-sky-950 dark:text-sky-300 dark:border-sky-900',
+    dot: 'bg-sky-500',
+    swatch: 'bg-sky-500',
+  },
+  cyan: {
+    label: 'Cyan',
+    pill: 'bg-cyan-100 text-cyan-700 border-cyan-200 dark:bg-cyan-950 dark:text-cyan-300 dark:border-cyan-900',
+    dot: 'bg-cyan-500',
+    swatch: 'bg-cyan-500',
+  },
+  emerald: {
+    label: 'Emerald',
+    pill: 'bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-900',
+    dot: 'bg-emerald-500',
+    swatch: 'bg-emerald-500',
+  },
+  lime: {
+    label: 'Lime',
+    pill: 'bg-lime-100 text-lime-800 border-lime-200 dark:bg-lime-950 dark:text-lime-300 dark:border-lime-900',
+    dot: 'bg-lime-500',
+    swatch: 'bg-lime-500',
+  },
+  yellow: {
+    label: 'Yellow',
+    pill: 'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-950 dark:text-yellow-300 dark:border-yellow-900',
+    dot: 'bg-yellow-500',
+    swatch: 'bg-yellow-500',
+  },
+  stone: {
+    label: 'Stone',
+    pill: 'bg-stone-100 text-stone-700 border-stone-200 dark:bg-stone-800 dark:text-stone-300 dark:border-stone-700',
+    dot: 'bg-stone-400',
+    swatch: 'bg-stone-400',
+  },
 }
 
 export const TAG_COLOR_KEYS = Object.keys(TAG_COLORS)

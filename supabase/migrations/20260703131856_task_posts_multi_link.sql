@@ -1,10 +1,5 @@
 -- Multiple deliverable (post) links per task.
 -- Replaces the single tasks.post_id FK with a many-to-many join table.
---
--- Chosen over a post_id uuid[] column so that:
---   * a deleted post cleanly removes its link (ON DELETE CASCADE) instead of
---     leaving a stale id behind, and
---   * "all tasks for this deliverable" is a simple indexed join.
 
 create table if not exists public.task_posts (
   task_id      uuid        not null references public.tasks(id) on delete cascade,
@@ -26,8 +21,7 @@ on conflict do nothing;
 
 alter table public.tasks drop column if exists post_id;
 
--- RLS: workspace members manage links within their own workspace, mirroring
--- the scoping used on tasks/notifications (get_my_agency_user_id()).
+-- RLS: workspace members manage links within their own workspace.
 alter table public.task_posts enable row level security;
 
 create policy "task_posts_select" on public.task_posts
@@ -40,4 +34,4 @@ create policy "task_posts_insert" on public.task_posts
 
 create policy "task_posts_delete" on public.task_posts
   for delete to authenticated
-  using (workspace_id = public.get_my_agency_user_id());
+  using (workspace_id = public.get_my_agency_user_id());;

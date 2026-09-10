@@ -69,6 +69,9 @@ export async function createTask({ post_ids, ...data }) {
   if (post_ids?.length) {
     await replaceTaskDeliverables(row.id, post_ids, workspaceUserId)
   }
+  // Creating a task already assigned to someone is a handoff too, so it
+  // emails on the same terms as a reassignment.
+  if (data.assigned_to) notifyAssignee(row.id)
   return row.id
 }
 
@@ -139,6 +142,106 @@ export async function updateTaskStatus(id, newStatus) {
   if (error) throw error
 }
 
+/**
+ * Hand a task off to another workspace member. tasks_update RLS blocks a
+ * direct .update() for anyone but the creator or an admin, so this RPC is the
+ * only path — mirroring updateTaskStatus's call to update_task_status. The
+ * reassign_task RPC itself checks the caller is a participant (creator,
+ * current assignee, past assignee, or admin) and the enforce_task_assignment
+ * trigger checks the target (active member, not owner/superadmin).
+ */
+export async function reassignTask(taskId, assignedTo) {
+  const { error } = await supabase.rpc('reassign_task', {
+    p_task_id: taskId,
+    p_assigned_to: assignedTo,
+  })
+  if (error) throw error
+  notifyAssignee(taskId)
+}
+
+/**
+ * Emails whoever the task now belongs to. Deliberately not awaited and never
+ * rethrows: the assignment is already committed by the time this runs, so a
+ * mail failure must not surface as a failed reassignment.
+ *
+ * Only the task id goes over the wire. The recipient, the sender's name and
+ * the per-member opt-out are all resolved inside the edge function, which
+ * also drops self-assignments — so there is nothing to decide here, and no
+ * way for a caller to aim the mail at an address of their choosing.
+ */
+function notifyAssignee(taskId) {
+  supabase.functions
+    .invoke('send-task-assignment-email', { body: { task_id: taskId } })
+    .catch(() => {})
+}
+
+/**
+ * A single task by id, for the detail page (`/tasks/:taskId`). Returns null
+ * rather than throwing when the row isn't visible — `tasks_select` hides a
+ * task the caller has no hand in, and PostgREST reports that identically to a
+ * genuinely deleted row. The page pairs this with `useTaskExists` to tell the
+ * two apart, the same way ChatEntityCard already does.
+ *
+ * Client/campaign/member ids stay raw here; every task surface resolves them
+ * through `useTaskLookups()`, so duplicating that join server-side would give
+ * the page a second, divergent source for the same names.
+ */
+export function useTaskById(taskId) {
+  const { workspaceUserId } = useAuth()
+  return useQuery({
+    queryKey: ['tasks', 'detail', taskId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('tasks')
+        .select('*')
+        .eq('id', taskId)
+        .maybeSingle()
+      if (error) throw error
+      return data ?? null
+    },
+    enabled: !!taskId && !!workspaceUserId,
+  })
+}
+
+/**
+ * Assignment + status history for one task, newest first. Backs the Activity
+ * tab (Phase 2) and the "Assigned By" field, which previously — incorrectly —
+ * showed the task's creator regardless of who actually assigned it.
+ */
+export function useTaskActivity(taskId) {
+  const { workspaceUserId } = useAuth()
+  return useQuery({
+    queryKey: ['tasks', 'activity', taskId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('task_activity')
+        .select('*')
+        .eq('task_id', taskId)
+        .order('created_at', { ascending: false })
+      if (error) throw error
+      return data ?? []
+    },
+    enabled: !!taskId && !!workspaceUserId,
+  })
+}
+
+/**
+ * Watcher ids for a task: its creator plus everyone who has ever been
+ * assigned it, minus the current assignee (who's already shown separately as
+ * "Assigned To"). Derived from the same activity feed the Activity tab reads,
+ * so no extra round trip.
+ */
+export function useTaskWatchers(task) {
+  const { data: activity = [] } = useTaskActivity(task?.id)
+  if (!task) return []
+  const ids = new Set([task.created_by])
+  activity.forEach((row) => {
+    if (row.type === 'assigned' && row.to_user_id) ids.add(row.to_user_id)
+  })
+  ids.delete(task.assigned_to)
+  return [...ids]
+}
+
 export async function deleteTask(id) {
   const { error } = await supabase.from('tasks').delete().eq('id', id)
   if (error) throw error
@@ -187,19 +290,33 @@ export function useMyTasks() {
   })
 }
 
-export function useMyOverdueTaskCount() {
+/**
+ * Open work assigned to the caller — everything that isn't COMPLETED or
+ * ARCHIVED — for the sidebar's Tasks & Todos count.
+ *
+ * Two things this deliberately does NOT do, both of which it used to:
+ *
+ * Filter on `due_at < now()`. That made the number an overdue counter, so a
+ * task assigned to you with a future due date — or no due date at all, since
+ * NULL fails the comparison rather than passing it — was invisible, and the
+ * sidebar read zero while you had work waiting.
+ *
+ * Match `created_by` as well as `assigned_to`. That counted tasks you raised
+ * for other people, so the number mixed your own work with work you were
+ * waiting on someone else to finish.
+ */
+export function useMyOpenTaskCount() {
   const { workspaceUserId, user } = useAuth()
   return useQuery({
-    queryKey: ['tasks', 'list', 'overdue-count', user?.id],
+    queryKey: ['tasks', 'list', 'my-open-count', user?.id],
     queryFn: async () => {
       if (!user?.id) return 0
       const { count, error } = await supabase
         .from('tasks')
         .select('*', { count: 'exact', head: true })
         .eq('workspace_id', workspaceUserId)
-        .lt('due_at', new Date().toISOString())
         .not('status', 'in', '("COMPLETED","ARCHIVED")')
-        .or(`assigned_to.eq.${user.id},created_by.eq.${user.id}`)
+        .eq('assigned_to', user.id)
       if (error) throw error
       return count ?? 0
     },

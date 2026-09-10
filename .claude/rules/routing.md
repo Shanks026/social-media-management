@@ -16,8 +16,9 @@ Protected routes (inside <AppShell>):
 /clients/create       → CreateClientPage
 /clients/:clientId    → ClientDetails (tabs: Overview, Management, Workflow, Campaigns, Documents)
 /clients/:clientId/edit         → CreateClientPage (edit mode)
-/clients/:clientId/posts/:postId → PostDetails
-/posts                → Posts list
+/clients/:clientId/deliverables/:postId → PostDetails
+                      (legacy /clients/:clientId/posts/:postId redirects here)
+/deliverables         → Posts list (legacy /posts redirects here)
 /calendar             → ContentCalendar
 /campaigns            → CampaignsPage (Velocity+ gated)
 /campaigns/:campaignId → CampaignDetailPage (Velocity+ gated)

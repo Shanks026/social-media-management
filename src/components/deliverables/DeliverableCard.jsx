@@ -13,6 +13,7 @@ import {
   FileText,
   Video,
   PencilRuler,
+  ClipboardList,
 } from 'lucide-react'
 import {
   Tooltip,
@@ -53,6 +54,7 @@ import { DELETABLE_POST_STATUSES } from '@/lib/post-statuses'
 import { useTeamMembers, useRemovedMembers } from '@/api/team'
 import { useQueryClient, useMutation } from '@tanstack/react-query'
 import { deletePost, createRevision } from '@/api/posts'
+import { useTasksForPost } from '@/api/tasks'
 import DraftPostForm from '@/pages/posts/DraftPostForm'
 import { toast } from 'sonner'
 import { AssignCampaignDialog } from '@/components/campaigns/AssignCampaignDialog'
@@ -155,7 +157,7 @@ const PlatformIcon = ({ name }) => {
   const imgSrc = `/platformIcons/${fileName}.png`
 
   return (
-    <div className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-card bg-white dark:bg-zinc-900 shadow-sm transition-transform hover:scale-110 overflow-hidden relative z-10">
+    <div className="flex h-6 w-6 items-center justify-center rounded-full border-2 border-card bg-white dark:bg-zinc-900 shadow-sm transition-transform hover:scale-110 overflow-hidden relative z-10">
       <img
         src={imgSrc}
         alt={name}
@@ -187,6 +189,8 @@ export function DeliverableCard({ post, client }) {
   const { data: sub } = useSubscription()
   const { data: members = [] } = useTeamMembers()
   const { data: removedMembers = [] } = useRemovedMembers()
+  // post.id is the parent posts.id, which is what task_posts links against.
+  const { data: linkedTasks = [] } = useTasksForPost(post.id)
 
   const createRevisionMutation = useMutation({
     mutationFn: () => createRevision(post.version_id, user?.id),
@@ -195,7 +199,7 @@ export function DeliverableCard({ post, client }) {
       queryClient.invalidateQueries({ queryKey: ['global-posts'] })
       queryClient.invalidateQueries({ queryKey: ['global-calendar'] })
       toast.success('New version created')
-      navigate(`/clients/${post.client_id}/posts/${newVersionId}`)
+      navigate(`/clients/${post.client_id}/deliverables/${newVersionId}`)
     },
     onError: (err) => {
       toast.error(err.message || 'Failed to create new version')
@@ -223,7 +227,7 @@ export function DeliverableCard({ post, client }) {
   })
 
   const handleCardClick = () => {
-    navigate(`/clients/${post.client_id}/posts/${post.version_id}`)
+    navigate(`/clients/${post.client_id}/deliverables/${post.version_id}`)
   }
 
   const handlePrev = (e) => {
@@ -354,10 +358,38 @@ export function DeliverableCard({ post, client }) {
                 </Tooltip>
               </TooltipProvider>
             )}
+
+            {/* Mirrors the deliverable badge on TaskCard: the same link, seen
+                from the other side. */}
+            {linkedTasks.length > 0 && (
+              <TooltipProvider>
+                <Tooltip delayDuration={300}>
+                  <TooltipTrigger asChild>
+                    <Badge
+                      variant="secondary"
+                      className={cn(
+                        'rounded-full flex items-center justify-center gap-1 border-none hover:bg-muted/80',
+                        linkedTasks.length > 1 ? 'h-6 px-1.5' : 'size-6 p-0',
+                      )}
+                    >
+                      <PencilRuler className="h-3 w-3 text-muted-foreground" />
+                      {linkedTasks.length > 1 && (
+                        <span className="text-[11px] font-medium leading-none text-muted-foreground">
+                          {linkedTasks.length}
+                        </span>
+                      )}
+                    </Badge>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{linkedTasks.map((t) => t.title || 'Untitled').join(', ')}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
           </div>
 
           <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
-            <div className="flex -space-x-1">
+            <div className="flex -space-x-2">
               {displayedPlatforms.map((p, idx) => (
                 <PlatformIcon key={`${p}-${idx}`} name={p} />
               ))}

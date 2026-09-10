@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/context/AuthContext'
@@ -63,9 +63,40 @@ export function useTeamMembers() {
 }
 
 /**
+ * Ticks on a timer so a list filtered by "is this still in the future" keeps
+ * shedding rows as time passes.
+ *
+ * Expiry is the one state change in this table that produces no event: no row
+ * is written when a timestamp quietly goes by, so the Realtime subscription
+ * never fires for it, and with `refetchOnWindowFocus` off nothing else
+ * re-evaluates the list either. Without this, an invite that expires while
+ * someone is sitting on the Team page stays listed — stale date, working-
+ * looking Copy button, dead URL.
+ *
+ * The timer only runs while there is actually something that can expire.
+ */
+function useNow(enabled, intervalMs = 15000) {
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    if (!enabled) return
+    const id = setInterval(() => setNow(Date.now()), intervalMs)
+    return () => clearInterval(id)
+  }, [enabled, intervalMs])
+  return now
+}
+
+/**
  * Fetch pending (unused, non-expired) invites for the workspace.
  * Only shown to admins. Realtime subscription keeps list fresh when
  * an invite is accepted or revoked from another session.
+ *
+ * Any number of invites can be live at once, each with its own `expires_at` —
+ * there is no cap, and they are independent: one expiring never affects
+ * another. Revoking backdates `expires_at`, so "delete" and "expired" are the
+ * same state and drop out through the same filter.
+ *
+ * Links are also multi-use: `use_count` is how many people have joined on one,
+ * not a limit. A link keeps working until it expires or is revoked.
  */
 export function usePendingInvites() {
   const { workspaceUserId } = useAuth()
@@ -95,14 +126,17 @@ export function usePendingInvites() {
     }
   }, [workspaceUserId, queryClient])
 
-  return useQuery({
+  const query = useQuery({
     queryKey: teamKeys.invites(workspaceUserId),
     queryFn: async () => {
       const { data, error } = await supabase
         .from('agency_invites')
-        .select('id, token, created_at, expires_at, system_role, label, permissions')
+        .select('id, token, created_at, expires_at, system_role, label, permissions, use_count')
         .eq('agency_user_id', workspaceUserId)
-        .is('accepted_at', null)
+        // Deliberately not filtered by accepted_at: links are multi-use, so
+        // someone having joined on one says nothing about whether it is still
+        // good. Expiry (and revocation, which is a backdated expiry) is the
+        // only thing that retires a link.
         .gt('expires_at', new Date().toISOString())
         .order('created_at', { ascending: false })
 
@@ -111,6 +145,19 @@ export function usePendingInvites() {
     },
     enabled: !!workspaceUserId,
   })
+
+  // The server filter above is only correct at the moment it runs. Re-applying
+  // it on a tick is what actually makes a link vanish at its own expiry rather
+  // than at the next refetch — and it stays a pure client-side narrowing of
+  // rows already fetched, so it costs no extra requests.
+  const rows = query.data
+  const now = useNow((rows?.length ?? 0) > 0)
+  const data = useMemo(
+    () => (rows ?? []).filter((i) => new Date(i.expires_at).getTime() > now),
+    [rows, now],
+  )
+
+  return { ...query, data }
 }
 
 // ─── Invite defaults ───────────────────────────────────────────────────────────
@@ -121,10 +168,31 @@ export const DEFAULT_INVITE_EXPIRY_DAYS = 7
 export const MAX_INVITE_EXPIRY_DAYS = 30
 export const DEFAULT_INVITE_PERMISSIONS = { documents: 'view' }
 
-export function defaultInviteExpiry() {
-  const d = new Date()
-  d.setDate(d.getDate() + DEFAULT_INVITE_EXPIRY_DAYS)
+/**
+ * Invite expiry is a *date*, not an instant: a link labelled "Expires 23 Sep"
+ * has to keep working all through the 23rd, so every date the invite flow
+ * produces is pinned to the end of its day.
+ *
+ * This is not cosmetic. The dialog's calendar hands back local midnight, which
+ * expired a link at the *start* of the day it was labelled with — a day early
+ * — and made "today" a link that was already in the past the moment it was
+ * generated: shown in the dialog with a Copy button, absent from the pending
+ * list, and rejected by `join_team`.
+ */
+export function endOfDay(date) {
+  const d = new Date(date)
+  d.setHours(23, 59, 59, 999)
   return d
+}
+
+export function inviteExpiryInDays(days) {
+  const d = new Date()
+  d.setDate(d.getDate() + days)
+  return endOfDay(d)
+}
+
+export function defaultInviteExpiry() {
+  return inviteExpiryInDays(DEFAULT_INVITE_EXPIRY_DAYS)
 }
 
 // ─── Mutations ─────────────────────────────────────────────────────────────────
@@ -340,7 +408,7 @@ export function useMyMemberRecord() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('agency_members')
-        .select('id, functional_role, system_role, permissions')
+        .select('id, system_role, permissions, email_task_assignments')
         .eq('agency_user_id', workspaceUserId)
         .eq('member_user_id', user.id)
         .single()
@@ -349,6 +417,21 @@ export function useMyMemberRecord() {
     },
     enabled: !!user?.id && !!workspaceUserId,
   })
+}
+
+/**
+ * The caller's own opt-out for task-assignment emails.
+ *
+ * Goes through an RPC rather than a direct .update() because the only UPDATE
+ * policy on agency_members is owner-only (auth.uid() = agency_user_id) — a
+ * member cannot write their own row, and they are exactly who sets this. The
+ * function is SECURITY DEFINER and scoped to the caller's own row.
+ */
+export async function setMyEmailTaskAssignments(enabled) {
+  const { error } = await supabase.rpc('set_my_email_task_assignments', {
+    p_enabled: enabled,
+  })
+  if (error) throw error
 }
 
 // ─── Public (unauthenticated) ──────────────────────────────────────────────────
@@ -364,15 +447,20 @@ export async function fetchInviteByToken(token) {
 }
 
 /**
- * Complete the team join flow after Supabase auth signup.
- * functional_role and permissions come from the invite (set by the owner).
+ * No job title is passed any more — a member no longer self-declares one on the
+ * join form, and one person can hold several. The owner assigns job roles from
+ * the Team page after they join (see `setMemberJobRoles` in `@/api/jobRoles`).
+ * Completes the join flow after Supabase auth signup; permissions and system
+ * role come from the invite.
  */
-export async function joinTeam({ token, firstName, lastName, functional_role }) {
+export async function joinTeam({ token, firstName, lastName, mobileNumber }) {
   const { data, error } = await supabase.rpc('join_team', {
     p_token: token,
     p_first_name: firstName,
     p_last_name: lastName,
-    p_functional_role: functional_role ?? null,
+    // Optional. Blank is sent as null so a retry can't wipe a number the
+    // person already gave.
+    p_mobile_number: mobileNumber?.trim() || null,
   })
   if (error) throw error
   return data
@@ -382,14 +470,12 @@ export async function joinTeam({ token, firstName, lastName, functional_role }) 
  * Promote, demote, or update a team member's access. Owner-only.
  * system_role: 'admin' | 'member'
  * permissions: { documents: 'none' | 'view' | 'manage' }
- * functional_role: optional string (null = keep current)
  */
-export async function updateMemberAccess(memberId, { system_role, permissions, functional_role, roles_and_responsibilities }) {
+export async function updateMemberAccess(memberId, { system_role, permissions, roles_and_responsibilities }) {
   const { error } = await supabase.rpc('update_member_access', {
     p_member_id: memberId,
     p_system_role: system_role,
     p_permissions: permissions,
-    p_functional_role: functional_role ?? null,
     p_roles_and_responsibilities: roles_and_responsibilities ?? null,
   })
   if (error) throw error
