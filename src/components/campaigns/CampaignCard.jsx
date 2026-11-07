@@ -50,8 +50,14 @@ const CircularProgress = ({ progress, size = 32, strokeWidth = 3 }) => {
     <div
       className="relative flex items-center justify-center shrink-0"
       style={{ width: size, height: size }}
+      role="progressbar"
+      aria-valuenow={progress}
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-label={`${progress}% published`}
+      data-testid="progress-bar"
     >
-      <svg className="-rotate-90" width={size} height={size}>
+      <svg className="-rotate-90" width={size} height={size} aria-hidden="true">
         {/* Background circle */}
         <circle
           className="text-muted/30"

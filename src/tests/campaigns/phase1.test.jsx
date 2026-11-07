@@ -25,6 +25,11 @@ vi.mock('@/lib/supabase', () => ({
   },
 }))
 
+// useCampaigns scopes by workspaceUserId from the auth context (ADR 0001).
+vi.mock('@/context/AuthContext', () => ({
+  useAuth: () => ({ user: { id: 'user-123' }, workspaceUserId: 'user-123' }),
+}))
+
 // Group C: closure ref so each test can reset the create mutation spy
 let mockCreate = vi.fn()
 
@@ -56,7 +61,9 @@ vi.mock('@/api/clients', () => ({
 
 // Group F — gate logic mocks
 vi.mock('@/api/useSubscription', () => ({ useSubscription: vi.fn() }))
-vi.mock('@/components/misc/header-context', () => ({ useHeader: vi.fn() }))
+vi.mock('@/components/misc/header-context', () => ({
+  useHeader: vi.fn(() => ({ setHeader: vi.fn() })),
+}))
 
 // Stub CampaignTab so Group F renders cleanly without triggering data queries
 vi.mock('@/components/campaigns/CampaignTab', () => ({
@@ -315,7 +322,9 @@ describe('Group D — CampaignCard', () => {
       onDelete: vi.fn(),
       onStatusChange: vi.fn(),
     })
-    expect(screen.getByText(/30%/i)).toBeInTheDocument()
+    // The ring carries its value for assistive tech rather than as visible text.
+    const bar = screen.getByRole('progressbar', { name: /30% published/i })
+    expect(bar).toHaveAttribute('aria-valuenow', '30')
   })
 
   it('renders Archived status badge for archived campaigns', () => {
@@ -369,6 +378,7 @@ describe('Group F — CampaignsPage', () => {
       <MemoryRouter>
         <CampaignsPage />
       </MemoryRouter>,
+      { wrapper: createWrapper() },
     )
     expect(screen.getByTestId('campaign-tab')).toBeInTheDocument()
     expect(screen.queryByText(/Campaigns are a Velocity feature/i)).toBeNull()
@@ -380,6 +390,7 @@ describe('Group F — CampaignsPage', () => {
       <MemoryRouter>
         <CampaignsPage />
       </MemoryRouter>,
+      { wrapper: createWrapper() },
     )
     expect(
       screen.getByText(/Campaigns are a Velocity feature/i),

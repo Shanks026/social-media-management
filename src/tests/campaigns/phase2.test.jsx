@@ -17,7 +17,9 @@ vi.mock('@/lib/supabase', () => ({
 }))
 
 vi.mock('@/api/useSubscription', () => ({ useSubscription: vi.fn() }))
-vi.mock('@/components/misc/header-context', () => ({ useHeader: vi.fn() }))
+vi.mock('@/components/misc/header-context', () => ({
+  useHeader: vi.fn(() => ({ setHeader: vi.fn() })),
+}))
 
 // Single campaigns mock: preserve real useCampaignAnalytics for Group A;
 // stub useCampaign for Group D (avoids QueryClient requirement from within the page).
@@ -47,15 +49,15 @@ vi.mock('@/api/campaigns', async (importOriginal) => {
 vi.mock('@/api/useGlobalPosts', () => ({
   useGlobalPosts: () => ({
     data: [
+      // The shape useGlobalPosts returns after normalising the Supabase rows.
       {
         id: 'p1',
         client_id: 'client-1',
-        post_versions: {
-          title: 'Post One',
-          status: 'PUBLISHED',
-          platform: ['Instagram'],
-          target_date: '2026-03-10',
-        },
+        title: 'Post One',
+        status: 'PUBLISHED',
+        platforms: ['Instagram'],
+        target_date: '2026-03-10',
+        campaign_id: 'camp-1',
       },
     ],
     isLoading: false,
