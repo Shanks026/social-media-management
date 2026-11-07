@@ -435,7 +435,8 @@ export default function CampaignReview() {
     if (isSubmitting || !selectedPost?.review_token) return
     setIsSubmitting(true)
     try {
-      const approvalStatus = (selectedPost.platforms?.length ?? 0) > 0 ? 'SCHEDULED' : 'APPROVED'
+      // get_campaign_by_review_token returns the version's platforms as `platform`.
+      const approvalStatus = (selectedPost.platform?.length ?? 0) > 0 ? 'SCHEDULED' : 'APPROVED'
       await submitCampaignPostReview(selectedPost.review_token, approvalStatus, '')
       setApprovedIds((prev) => new Set([...prev, selectedPost.post_id]))
       setFeedback('')

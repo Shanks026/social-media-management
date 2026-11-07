@@ -1180,6 +1180,7 @@ export default function CampaignDetailPage() {
                 size="icon"
                 className="shrink-0"
                 onClick={handleCopyLink}
+                aria-label="Copy review link"
               >
                 <Copy className="size-4" />
               </Button>

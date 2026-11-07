@@ -2,6 +2,7 @@ import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { MemoryRouter } from 'react-router-dom'
 import { createWrapper } from '../test-utils'
 
 // ─── Mocks ───────────────────────────────────────────────────────────────────
@@ -32,17 +33,23 @@ vi.mock('@/api/comments', () => ({
   createComment: (...args) => mockCreate(...args),
   updateComment: vi.fn(),
   softDeleteComment: vi.fn(),
+  toggleReaction: vi.fn(),
+  REACTION_EMOJIS: ['👍', '❤️', '🎉'],
   commentKeys: { thread: () => ['comments'] },
 }))
 
 import { CommentThread } from '@/components/comments/CommentThread'
+import { MENTION_TEXT_CLASS } from '@/lib/mentions'
 
 function renderThread() {
   const Wrapper = createWrapper()
   return render(
-    <Wrapper>
-      <CommentThread entityType="campaign" entityId="camp-1" />
-    </Wrapper>,
+    // CommentThread reads ?comment= from the URL to deep-link a comment.
+    <MemoryRouter>
+      <Wrapper>
+        <CommentThread entityType="campaign" entityId="camp-1" />
+      </Wrapper>
+    </MemoryRouter>,
   )
 }
 
@@ -83,10 +90,10 @@ describe('CommentThread', () => {
       },
     ]
     renderThread()
-    // The mention token renders in its own muted span
+    // The mention token renders in its own span, styled like every other mention.
     const mention = screen.getByText('@Tanya Benedict')
     expect(mention).toBeInTheDocument()
-    expect(mention.className).toMatch(/bg-muted/)
+    expect(mention.className).toContain(MENTION_TEXT_CLASS)
   })
 
   it('posts a comment via createComment with the entity context', async () => {

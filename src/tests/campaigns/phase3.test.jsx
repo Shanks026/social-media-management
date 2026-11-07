@@ -117,11 +117,22 @@ describe('Group A — Token RPC / useCampaignReview hook', () => {
 
 // ─── Group B — Page states ────────────────────────────────────────────────────
 
-// We mock useCampaignReview to control page state in render tests
+// Every exported function is wrapped in vi.fn around the real implementation:
+// Group A exercises the real hooks against the mocked supabase client, while
+// later groups stub them per test with vi.mocked(...).mockReturnValue.
 vi.mock('@/api/campaigns', async (importOriginal) => {
   const actual = await importOriginal()
-  return { ...actual }
+  return Object.fromEntries(
+    Object.entries(actual).map(([name, value]) => [
+      name,
+      typeof value === 'function' ? vi.fn(value) : value,
+    ]),
+  )
 })
+
+vi.mock('@/api/useGlobalPosts', () => ({
+  useGlobalPosts: vi.fn(() => ({ data: [], isLoading: false })),
+}))
 
 function renderReview(token = 'test-token') {
   return render(
@@ -170,7 +181,7 @@ describe('Group B — Page states', () => {
 
     renderReview()
 
-    expect(screen.getByText(/this link is not valid or has expired/i)).toBeInTheDocument()
+    expect(screen.getByText(/this review link has expired/i)).toBeInTheDocument()
   })
 
   it('shows "nothing to review" when posts array is empty', async () => {
@@ -196,9 +207,10 @@ describe('Group B — Page states', () => {
 
     renderReview()
 
-    expect(screen.getByText('First Post')).toBeInTheDocument()
+    // The selected deliverable's title shows in both the list and the main panel.
+    expect(screen.getAllByText('First Post').length).toBeGreaterThan(0)
     expect(screen.getByText('Second Post')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /approve this post/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /approve this deliverable/i })).toBeInTheDocument()
   })
 })
 
@@ -218,7 +230,7 @@ describe('Group C — Per-post actions', () => {
 
     renderReview()
 
-    const approveBtn = screen.getByRole('button', { name: /approve this post/i })
+    const approveBtn = screen.getByRole('button', { name: /approve this deliverable/i })
     await act(async () => fireEvent.click(approveBtn))
 
     expect(submitCampaignPostReview).toHaveBeenCalledWith('token-post-1', 'SCHEDULED', '')
@@ -273,12 +285,12 @@ describe('Group C — Per-post actions', () => {
 
     renderReview()
 
-    const approveBtn = screen.getByRole('button', { name: /approve this post/i })
+    const approveBtn = screen.getByRole('button', { name: /approve this deliverable/i })
     await act(async () => fireEvent.click(approveBtn))
 
     expect(toast.error).toHaveBeenCalledWith('Failed to submit — please try again')
     // Post is still shown in the left panel
-    expect(screen.getByText('First Post')).toBeInTheDocument()
+    expect(screen.getAllByText('First Post').length).toBeGreaterThan(0)
   })
 })
 
@@ -297,7 +309,7 @@ describe('Group D — Progress + auto-advance', () => {
 
     renderReview()
 
-    expect(screen.getByText(/0 of 2 posts reviewed/i)).toBeInTheDocument()
+    expect(screen.getByText(/0 of 2 deliverables reviewed/i)).toBeInTheDocument()
   })
 
   it('shows "1 of 2 posts reviewed" after approving the first post', async () => {
@@ -311,10 +323,10 @@ describe('Group D — Progress + auto-advance', () => {
 
     renderReview()
 
-    const approveBtn = screen.getByRole('button', { name: /approve this post/i })
+    const approveBtn = screen.getByRole('button', { name: /approve this deliverable/i })
     await act(async () => fireEvent.click(approveBtn))
 
-    expect(screen.getByText(/1 of 2 posts reviewed/i)).toBeInTheDocument()
+    expect(screen.getByText(/1 of 2 deliverables reviewed/i)).toBeInTheDocument()
   })
 
   it('shows completion screen after all posts are actioned', async () => {
@@ -328,7 +340,7 @@ describe('Group D — Progress + auto-advance', () => {
 
     renderReview()
 
-    const approveBtn = screen.getByRole('button', { name: /approve this post/i })
+    const approveBtn = screen.getByRole('button', { name: /approve this deliverable/i })
     await act(async () => fireEvent.click(approveBtn))
 
     expect(screen.getByText(/all posts reviewed/i)).toBeInTheDocument()
@@ -419,7 +431,7 @@ const baseCampaignRow = {
   review_token: 'campaign-review-token-abc',
 }
 
-describe('Group F — Share Review Link button', () => {
+describe('Group F — Send for Approval button', () => {
   beforeEach(() => vi.clearAllMocks())
 
   it('shows Share Review Link button when PENDING_APPROVAL posts exist', async () => {
@@ -437,9 +449,10 @@ describe('Group F — Share Review Link button', () => {
           <Route path="/campaigns/:campaignId" element={<CampaignDetailPage />} />
         </Routes>
       </MemoryRouter>,
+      { wrapper: createWrapper() },
     )
 
-    expect(screen.getByRole('button', { name: /share review link/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /send for approval/i })).toBeInTheDocument()
   })
 
   it('hides Share Review Link button when no PENDING_APPROVAL posts', async () => {
@@ -457,9 +470,10 @@ describe('Group F — Share Review Link button', () => {
           <Route path="/campaigns/:campaignId" element={<CampaignDetailPage />} />
         </Routes>
       </MemoryRouter>,
+      { wrapper: createWrapper() },
     )
 
-    expect(screen.queryByRole('button', { name: /share review link/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /send for approval/i })).not.toBeInTheDocument()
   })
 
   it('hides Share Review Link button when campaign.review_token is null', async () => {
@@ -480,12 +494,13 @@ describe('Group F — Share Review Link button', () => {
           <Route path="/campaigns/:campaignId" element={<CampaignDetailPage />} />
         </Routes>
       </MemoryRouter>,
+      { wrapper: createWrapper() },
     )
 
-    expect(screen.queryByRole('button', { name: /share review link/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /send for approval/i })).not.toBeInTheDocument()
   })
 
-  it('calls clipboard.writeText with the correct URL on share click', async () => {
+  it('copies the review URL from the Send for Approval dialog', async () => {
     const writeMock = vi.fn().mockResolvedValue(undefined)
     Object.defineProperty(navigator, 'clipboard', {
       value: { writeText: writeMock },
@@ -507,18 +522,22 @@ describe('Group F — Share Review Link button', () => {
           <Route path="/campaigns/:campaignId" element={<CampaignDetailPage />} />
         </Routes>
       </MemoryRouter>,
+      { wrapper: createWrapper() },
     )
 
-    const shareBtn = screen.getByRole('button', { name: /share review link/i })
+    // "Send for Approval" opens the review-link dialog; copying is its own button.
+    const shareBtn = screen.getByRole('button', { name: /send for approval/i })
     await act(async () => fireEvent.click(shareBtn))
+    const copyBtn = screen.getByRole('button', { name: /copy review link/i })
+    await act(async () => fireEvent.click(copyBtn))
 
     expect(writeMock).toHaveBeenCalledWith(
       expect.stringContaining('/campaign-review/campaign-review-token-abc'),
     )
-    expect(toast.success).toHaveBeenCalledWith('Review link copied to clipboard')
+    expect(toast.success).toHaveBeenCalledWith('Review link copied')
   })
 
-  it('opens fallback dialog when clipboard write fails', async () => {
+  it('keeps the link on screen and reports the error when clipboard write fails', async () => {
     Object.defineProperty(navigator, 'clipboard', {
       value: { writeText: vi.fn().mockRejectedValue(new Error('denied')) },
       writable: true,
@@ -539,12 +558,17 @@ describe('Group F — Share Review Link button', () => {
           <Route path="/campaigns/:campaignId" element={<CampaignDetailPage />} />
         </Routes>
       </MemoryRouter>,
+      { wrapper: createWrapper() },
     )
 
-    const shareBtn = screen.getByRole('button', { name: /share review link/i })
+    const shareBtn = screen.getByRole('button', { name: /send for approval/i })
     await act(async () => fireEvent.click(shareBtn))
+    const copyBtn = screen.getByRole('button', { name: /copy review link/i })
+    await act(async () => fireEvent.click(copyBtn))
 
+    // The copy failed: the link stays on screen to copy by hand, and the user is told.
     expect(screen.getByText(/campaign review link/i)).toBeInTheDocument()
-    expect(screen.getByDisplayValue(expect.stringContaining('/campaign-review/'))).toBeInTheDocument()
+    expect(screen.getByDisplayValue(/\/campaign-review\/campaign-review-token-abc/)).toBeInTheDocument()
+    expect(toast.error).toHaveBeenCalledWith('Could not copy — select and copy the link manually')
   })
 })
