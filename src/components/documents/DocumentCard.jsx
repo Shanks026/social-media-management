@@ -73,7 +73,6 @@ import {
 import { formatDate, formatFileSize } from '@/lib/helper'
 import DocumentCategoryBadge from './DocumentCategoryBadge'
 import { DOCUMENT_CATEGORIES } from './UploadMetaDialog'
-import { useAuth } from '@/context/AuthContext'
 import { Building2, Lock, ShieldAlert } from 'lucide-react'
 import DocumentPreviewModal from './DocumentPreviewModal'
 import MoveToCollectionDialog from './MoveToCollectionDialog'
@@ -97,7 +96,6 @@ const editSchema = z.object({
 })
 
 export default function DocumentCard({ doc, canManage = true }) {
-  const { user } = useAuth()
   const queryClient = useQueryClient()
   const { data: sub } = useSubscription()
   const [deleteOpen, setDeleteOpen] = useState(false)
@@ -122,8 +120,6 @@ export default function DocumentCard({ doc, canManage = true }) {
       deleteDocument({
         id: doc.id,
         storagePath: doc.storage_path,
-        fileSizeBytes: doc.file_size_bytes,
-        userId: user.id,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['documents', 'list'] })

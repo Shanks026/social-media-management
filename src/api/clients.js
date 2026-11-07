@@ -209,8 +209,6 @@ export async function updateClientStatus(clientId, status) {
  */
 export async function deleteClient(clientId) {
   try {
-    const { workspaceUserId } = await resolveWorkspace()
-
     // 1. Fetch the client logo URL
     const { data: client, error: clientError } = await supabase
       .from('clients')
@@ -228,10 +226,10 @@ export async function deleteClient(clientId) {
 
     if (fetchError) throw fetchError
 
-    // 3. Fetch all document storage paths and sizes for this client
+    // 3. Fetch all document storage paths for this client
     const { data: docs, error: docsError } = await supabase
       .from('client_documents')
-      .select('storage_path, file_size_bytes')
+      .select('storage_path')
       .eq('client_id', clientId)
 
     if (docsError) throw docsError
@@ -242,9 +240,8 @@ export async function deleteClient(clientId) {
 
     const postMediaPaths = [...new Set(postMediaUrls.map(getPathFromUrl))].filter(Boolean)
 
-    // 5. Build document storage paths and total size
+    // 5. Build document storage paths
     const documentPaths = (docs || []).map((d) => d.storage_path).filter(Boolean)
-    const totalDocBytes = (docs || []).reduce((sum, d) => sum + (d.file_size_bytes || 0), 0)
 
     // 6. Delete post-media files
     if (postMediaPaths.length > 0) {
@@ -259,7 +256,7 @@ export async function deleteClient(clientId) {
       }
     }
 
-    // 7. Delete document files and decrement storage counter
+    // 7. Delete document files
     if (documentPaths.length > 0) {
       const { error: docStorageError } = await supabase.storage
         .from('client-documents')
@@ -270,15 +267,6 @@ export async function deleteClient(clientId) {
       } else {
         console.log(`Removed ${documentPaths.length} document files.`)
       }
-    }
-
-    // Decrement storage counter for all deleted documents (even if storage removal errored,
-    // the DB rows will be cascade-deleted so the bytes are gone from the user's perspective)
-    if (totalDocBytes > 0) {
-      await supabase.rpc('decrement_storage_used', {
-        p_user_id: workspaceUserId,
-        p_bytes: totalDocBytes,
-      }).throwOnError()
     }
 
     // 7b. Delete proposal files (proposal-files bucket) for this client's proposals
