@@ -41,7 +41,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { fetchGlobalCalendar } from '@/api/posts'
+import { useGlobalCalendar } from '@/api/posts'
 import { useAuth } from '@/context/AuthContext'
 import { useHeader } from '@/components/misc/header-context'
 import { cn } from '@/lib/utils'
@@ -107,21 +107,10 @@ export default function ContentCalendar({
   const [clientFilter, setClientFilter] = useState(clientId || 'all')
   const [platformFilter, setPlatformFilter] = useState('all')
 
-  const { data: posts = [], isLoading } = useQuery({
-    queryKey: [
-      'calendar',
-      user?.id,
-      clientId,
-      view,
-      format(currentDate, 'yyyy-MM-dd'),
-    ],
-    queryFn: () =>
-      fetchGlobalCalendar({
-        userId: user?.id,
-        currentMonth: currentDate,
-        clientId: clientId,
-      }),
-    enabled: !!user?.id,
+  const { data: posts = [], isLoading } = useGlobalCalendar({
+    currentMonth: currentDate,
+    clientId,
+    view,
   })
 
   const { data: subscription } = useSubscription()

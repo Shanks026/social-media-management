@@ -19,14 +19,6 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { Switch } from '@/components/ui/switch'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from '@/components/ui/dialog'
 
 // Icons
 import {
@@ -36,16 +28,14 @@ import {
   Hash,
   Copy,
   Check,
-  Trash2,
   Loader2,
   Camera,
   ImagePlus,
-  AlertTriangle,
-  Heart,
   Save,
   X,
   Briefcase,
   ShieldCheck,
+  ArrowRight,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import ChangePasswordDialog from '@/components/settings/ChangePasswordDialog'
@@ -58,8 +48,9 @@ function extractStoragePath(publicUrl) {
 }
 
 export default function ProfileSettings() {
-  const { user } = useAuth()
+  const { user, workspaceUserId } = useAuth()
   const navigate = useNavigate()
+  const isOwner = !!user?.id && user.id === workspaceUserId
   const { data: sub, isLoading } = useSubscription()
   const { data: memberRecord } = useMyMemberRecord()
   const { data: memberJobRoles = {} } = useMemberJobRoles()
@@ -105,11 +96,6 @@ export default function ProfileSettings() {
   const [isSaving, setIsSaving] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
   const fileInputRef = useRef(null)
-
-  // Delete
-  const [isDeleteAccountOpen, setIsDeleteAccountOpen] = useState(false)
-  const [deleteConfirmText, setDeleteConfirmText] = useState('')
-  const [isDeleting, setIsDeleting] = useState(false)
 
   // Change Password
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false)
@@ -177,17 +163,6 @@ export default function ProfileSettings() {
       toast.error('Failed to update profile.')
     } finally {
       setIsSaving(false)
-    }
-  }
-
-  const handleDeleteAccount = async () => {
-    setIsDeleting(true)
-    try {
-      await supabase.auth.signOut()
-      navigate('/login')
-    } catch {
-      toast.error('Something went wrong.')
-      setIsDeleting(false)
     }
   }
 
@@ -472,104 +447,30 @@ export default function ProfileSettings() {
           </p>
         </div>
 
-        <div className="flex items-center justify-between rounded-xl border border-destructive/20 bg-destructive/5 px-5 py-4">
+        <div className="flex items-center justify-between gap-4 rounded-xl border border-destructive/20 bg-destructive/5 px-5 py-4">
           <div className="space-y-0.5">
             <p className="text-sm font-semibold text-foreground">
-              Delete Account
+              Delete Workspace
             </p>
             <p className="text-xs text-muted-foreground">
-              Permanently remove your account and all associated data.
+              {isOwner
+                ? 'Schedule your workspace and all its data for permanent deletion.'
+                : 'Only the workspace owner can delete the workspace. To leave it, ask the owner to remove you from the team.'}
             </p>
           </div>
-          <Button
-            variant="destructive"
-            size="sm"
-            onClick={() => setIsDeleteAccountOpen(true)}
-            className="gap-2"
-          >
-            <Trash2 size={14} />
-            Delete
-          </Button>
-        </div>
-      </section>
-
-      {/* ── Delete Account Dialog ── */}
-      <Dialog
-        open={isDeleteAccountOpen}
-        onOpenChange={(val) => {
-          setIsDeleteAccountOpen(val)
-          if (!val) setDeleteConfirmText('')
-        }}
-      >
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader className="space-y-4">
-            <div className="mx-auto h-16 w-16 rounded-full bg-destructive/10 flex items-center justify-center">
-              <Heart size={28} className="text-destructive" />
-            </div>
-            <div className="text-center space-y-2">
-              <DialogTitle className="text-xl font-semibold tracking-tight">
-                We&apos;re sad to see you go
-              </DialogTitle>
-              <DialogDescription className="text-sm leading-relaxed text-muted-foreground">
-                It&apos;s been a wonderful journey. If you ever change your
-                mind, we&apos;ll be right here &mdash; ready to welcome you back
-                with open arms.
-              </DialogDescription>
-            </div>
-          </DialogHeader>
-
-          <div className="space-y-4 pt-2">
-            <div className="bg-destructive/5 border border-destructive/20 rounded-lg p-4 space-y-2">
-              <div className="flex items-center gap-2 text-destructive text-xs font-bold uppercase tracking-tight">
-                <AlertTriangle size={14} />
-                This action is irreversible
-              </div>
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                Your account, agency data, clients, posts, and all associated
-                content will be permanently removed.
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <p className="text-xs font-medium text-muted-foreground">
-                Type <strong className="text-foreground">DELETE</strong> to
-                confirm
-              </p>
-              <Input
-                value={deleteConfirmText}
-                onChange={(e) => setDeleteConfirmText(e.target.value)}
-                placeholder="Type DELETE"
-                className="font-mono"
-              />
-            </div>
-          </div>
-
-          <DialogFooter className="flex-col sm:flex-row gap-3 pt-4">
-            <Button
-              variant="outline"
-              className="flex-1"
-              onClick={() => {
-                setIsDeleteAccountOpen(false)
-                setDeleteConfirmText('')
-              }}
-            >
-              Keep My Account
-            </Button>
+          {isOwner && (
             <Button
               variant="destructive"
-              className="flex-1"
-              disabled={deleteConfirmText !== 'DELETE' || isDeleting}
-              onClick={handleDeleteAccount}
+              size="sm"
+              onClick={() => navigate('/settings?tab=danger')}
+              className="gap-2 shrink-0"
             >
-              {isDeleting ? (
-                <Loader2 size={16} className="animate-spin" />
-              ) : (
-                'Goodbye, for now'
-              )}
+              Go to Danger Zone
+              <ArrowRight size={14} />
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          )}
+        </div>
+      </section>
 
       {/* ── Change Password Dialog ── */}
       <ChangePasswordDialog

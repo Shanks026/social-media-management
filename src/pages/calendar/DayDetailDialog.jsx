@@ -27,9 +27,7 @@ import {
   EmptyMedia,
 } from '@/components/ui/empty'
 import MeetingRow from '@/components/MeetingRow'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { deleteMeeting } from '@/api/meetings'
-import { toast } from 'sonner'
+import { useMarkMeetingDone } from '@/hooks/useMarkMeetingDone'
 import { getPublishState } from '@/lib/helper'
 
 const STATUS_STATS_CONFIG = [
@@ -46,7 +44,6 @@ export function DayDetailDialog({ date, posts = [], open, onOpenChange }) {
   const [statusFilter, setStatusFilter] = useState('all')
   const [clientFilter, setClientFilter] = useState('all')
   const [activeTab, setActiveTab] = useState('posts')
-  const queryClient = useQueryClient()
 
   const regularPosts = useMemo(() => posts.filter((p) => !p.isMeeting), [posts])
   const meetings = useMemo(() => posts.filter((p) => p.isMeeting), [posts])
@@ -67,14 +64,7 @@ export function DayDetailDialog({ date, posts = [], open, onOpenChange }) {
     [meetings],
   )
 
-  const { mutate: markMeetingDone, isPending: isCompletingMeeting } = useMutation({
-    mutationFn: (meetingId) => deleteMeeting(meetingId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['meetings'] })
-      toast.success('Meeting marked as done')
-    },
-    onError: (err) => toast.error('Failed to update meeting: ' + err.message),
-  })
+  const { markMeetingDone, isCompletingMeeting } = useMarkMeetingDone()
 
   const uniqueClients = useMemo(() => {
     const clients = regularPosts.map((p) => p.client_name)
