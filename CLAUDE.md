@@ -19,7 +19,7 @@ Tests use **Vitest** + jsdom. Test files live in `src/tests/`. Run a single file
 
 **Tercero** — a React 19 + Supabase SPA for social media agency management. Client-side only (no SSR). The `@` alias maps to `./src`. Plain JavaScript throughout — no TypeScript.
 
-Full architecture reference: **`.claude/CLAUDE.md`** (auto-loaded). Feature planning docs and implementation checklists: **`.claude/features/`**.
+Full architecture reference: **`.claude/CLAUDE.md`** (auto-loaded). Feature reference docs: **`documentation/features/`**.
 
 ## The Most Important Things to Know
 

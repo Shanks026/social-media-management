@@ -58,7 +58,7 @@ export function AppShell({ user }) {
     try { return !sessionStorage.getItem(settingsKey) } catch { return true }
   })
 
-  // Onboarding is owner-only (see .claude/features/03-rbac-team-roles.md): every
+  // Onboarding is owner-only (see documentation/features/rbac-team-roles.md): every
   // field it writes — agency identity, invoice signatory, team invites — is
   // owner-only. Admins are view-only on workspace settings; members have none.
   // AuthProvider withholds children until resolveWorkspace settles, so the role

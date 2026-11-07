@@ -175,7 +175,7 @@ export default function SetupChecklistCard() {
 
   const isDismissed = (sub?.onboarding_skipped_steps ?? []).length === 0
 
-  // Owner-only, per .claude/features/03-rbac-team-roles.md: agency branding,
+  // Owner-only, per documentation/features/rbac-team-roles.md: agency branding,
   // invoice signatory and team invites are all owner-exclusive, and admins are
   // view-only on workspace settings — every row would be a dead link for them.
   if (!canEditWorkspace || isDismissed) return null

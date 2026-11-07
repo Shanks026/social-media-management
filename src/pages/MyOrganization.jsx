@@ -65,7 +65,7 @@ export default function MyOrganization() {
   }, [setHeader])
 
   // Editing agency identity is owner-only — admins are view-only on workspace
-  // settings (.claude/features/03-rbac-team-roles.md).
+  // settings (documentation/features/rbac-team-roles.md).
   const handleOpenSetup = () => {
     if (!canEditWorkspace) return
     setIsSetupModalOpen(true)
