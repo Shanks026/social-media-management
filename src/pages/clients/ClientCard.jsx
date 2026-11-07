@@ -47,7 +47,7 @@ import ClientMetricsRow from './ClientMetricsRow'
 // attention rather than require reading five numbers per card.
 const PIPELINE_STAGES = [
   { key: 'pending',   label: 'awaiting approval', one: 'awaiting approval', dot: 'bg-orange-500', chip: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300', urgent: true },
-  { key: 'revisions', label: 'in revision',       one: 'in revision',       dot: 'bg-pink-500',   chip: 'bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-300',        urgent: true },
+  { key: 'revisions', label: 'in revision',       one: 'in revision',       dot: 'bg-amber-500',  chip: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',        urgent: true },
   { key: 'drafts',    label: 'drafts',            one: 'draft',            dot: 'bg-blue-500' },
   { key: 'approved',  label: 'approved',          one: 'approved',         dot: 'bg-green-500' },
   { key: 'scheduled', label: 'scheduled',         one: 'scheduled',        dot: 'bg-purple-500' },
