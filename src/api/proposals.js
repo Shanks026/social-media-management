@@ -236,13 +236,6 @@ export async function uploadProposalFile(proposalId, workspaceUserId, file) {
     .upload(path, file, { upsert: true })
   if (uploadError) throw uploadError
 
-  // Track storage usage
-  const { error: storageError } = await supabase.rpc('increment_storage_used', {
-    p_user_id: workspaceUserId,
-    p_bytes: file.size,
-  })
-  if (storageError) console.warn('Storage tracking error:', storageError)
-
   const { data } = supabase.storage.from('proposal-files').getPublicUrl(path)
   return data.publicUrl
 }

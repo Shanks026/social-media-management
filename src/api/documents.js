@@ -136,12 +136,6 @@ export async function uploadDocument({ clientId, prospectId, file, displayName, 
     throw insertError
   }
 
-  // 3. Update agency storage usage
-  await supabase.rpc('increment_storage_used', {
-    p_user_id: workspaceUserId,
-    p_bytes: file.size,
-  }).throwOnError()
-
   return data
 }
 
@@ -214,7 +208,7 @@ export async function moveDocumentToCollection(documentId, collectionId) {
 /**
  * Delete a document from storage and remove its metadata row.
  */
-export async function deleteDocument({ id, storagePath, fileSizeBytes, userId }) {
+export async function deleteDocument({ id, storagePath }) {
   // 1. Delete from storage
   const { error: storageError } = await supabase.storage
     .from('client-documents')
@@ -227,12 +221,6 @@ export async function deleteDocument({ id, storagePath, fileSizeBytes, userId })
     .delete()
     .eq('id', id)
   if (dbError) throw dbError
-
-  // 3. Decrement agency storage usage
-  await supabase.rpc('decrement_storage_used', {
-    p_user_id: userId,
-    p_bytes: fileSizeBytes,
-  }).throwOnError()
 }
 
 // ─── Collections ───────────────────────────────────────────────────────────────

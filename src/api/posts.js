@@ -1,6 +1,5 @@
 import { supabase } from '@/lib/supabase'
 import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, format } from 'date-fns'
-import { resolveWorkspace } from '@/lib/workspace'
 
 /**
  * Fetches all posts for a client, joining the current version data.
@@ -154,17 +153,6 @@ const getPathFromUrl = (url) => {
   return null
 }
 
-// Queries the storage API for a file's byte size before deletion
-const getFileSize = async (path) => {
-  const parts = path.split('/')
-  const folder = parts.slice(0, -1).join('/')
-  const filename = parts[parts.length - 1]
-  const { data } = await supabase.storage
-    .from('post-media')
-    .list(folder, { search: filename })
-  return data?.[0]?.metadata?.size ?? 0
-}
-
 /**
  * Fetches details for a post, joining client branding data.
  */
@@ -307,16 +295,9 @@ export const deletePost = async (postId) => {
       throw new Error('You can only delete deliverables you created.')
     }
 
-    // Row is gone → safe to clean up its media + storage accounting.
+    // Row is gone → safe to clean up its media. Storage usage is updated by
+    // the storage.objects trigger.
     if (uniquePaths.length > 0) {
-      let totalBytes = 0
-      try {
-        const sizes = await Promise.all(uniquePaths.map(getFileSize))
-        totalBytes = sizes.reduce((sum, s) => sum + s, 0)
-      } catch {
-        // non-fatal
-      }
-
       const { error: storageError } = await supabase.storage
         .from('post-media')
         .remove(uniquePaths)
@@ -324,18 +305,6 @@ export const deletePost = async (postId) => {
       if (storageError) {
         console.error('Storage cleanup failed:', storageError)
         // Row already deleted — surface but don't fail the whole op.
-      }
-
-      if (totalBytes > 0) {
-        try {
-          const { workspaceUserId } = await resolveWorkspace()
-          await supabase.rpc('decrement_storage_used', {
-            p_user_id: workspaceUserId,
-            p_bytes: totalBytes,
-          })
-        } catch {
-          // non-fatal
-        }
       }
     }
 
@@ -480,30 +449,11 @@ export async function deleteIndividualMedia(
 
   // 3. Only delete from storage if count is 0 (no other version references it)
   if (count === 0) {
-    let sizeBytes = 0
-    try {
-      sizeBytes = await getFileSize(path)
-    } catch {
-      // non-fatal
-    }
-
     const { error: storageError } = await supabase.storage
       .from('post-media')
       .remove([path])
 
     if (storageError) console.error('Storage cleanup failed:', storageError)
-
-    if (sizeBytes > 0) {
-      try {
-        const { workspaceUserId } = await resolveWorkspace()
-        await supabase.rpc('decrement_storage_used', {
-          p_user_id: workspaceUserId,
-          p_bytes: sizeBytes,
-        })
-      } catch {
-        // non-fatal
-      }
-    }
   }
 
   return updatedUrls
@@ -512,12 +462,11 @@ export async function deleteIndividualMedia(
 /**
  * Called from DraftPostForm (edit mode) before updatePost.
  * Checks each removed URL — if only the current version references it (count <= 1),
- * deletes from the bucket and decrements the storage counter.
+ * deletes from the bucket (the storage.objects trigger updates usage).
  */
 export async function cleanupRemovedMedia(urlsToRemove) {
   if (!urlsToRemove.length) return
 
-  let totalFreedBytes = 0
   const pathsToDelete = []
 
   for (const url of urlsToRemove) {
@@ -532,30 +481,12 @@ export async function cleanupRemovedMedia(urlsToRemove) {
       .contains('media_urls', [url])
 
     if (count <= 1) {
-      try {
-        const sizeBytes = await getFileSize(path)
-        totalFreedBytes += sizeBytes
-      } catch {
-        // non-fatal
-      }
       pathsToDelete.push(path)
     }
   }
 
   if (pathsToDelete.length > 0) {
     await supabase.storage.from('post-media').remove(pathsToDelete)
-
-    if (totalFreedBytes > 0) {
-      try {
-        const { workspaceUserId } = await resolveWorkspace()
-        await supabase.rpc('decrement_storage_used', {
-          p_user_id: workspaceUserId,
-          p_bytes: totalFreedBytes,
-        })
-      } catch {
-        // non-fatal
-      }
-    }
   }
 }
 
