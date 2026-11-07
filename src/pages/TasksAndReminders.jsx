@@ -19,14 +19,6 @@ import {
 import {
   Plus,
   Filter,
-  Building2,
-  Circle,
-  CircleDashed,
-  CheckCircle2,
-  Archive,
-  RotateCcw,
-  Pencil,
-  Trash2,
   Search,
   LayoutGrid,
   Columns3,
@@ -34,7 +26,6 @@ import {
   ChevronDown,
   ChevronRight,
   User,
-  MoreVertical,
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
@@ -65,30 +56,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import {
-  Sheet,
-  SheetContent,
-  SheetTitle,
-  SheetDescription,
-} from '@/components/ui/sheet'
 
 import { useSearchParams, Navigate, useNavigate } from 'react-router-dom'
 import { useHeader } from '@/components/misc/header-context'
@@ -99,7 +67,6 @@ import { useTasks, updateTaskStatus } from '@/api/tasks'
 import { useTeamMembers, useRemovedMembers } from '@/api/team'
 import { usePermissions } from '@/api/usePermissions'
 import CreateTaskDialog from '@/components/tasks/CreateTaskDialog'
-import EditTaskDialog from '@/components/tasks/EditTaskDialog'
 import { ClientAvatar } from '@/components/tasks/ClientAvatar'
 import TaskCard, { STATUS_CONFIG, PRIORITY_CONFIG, STATUS_DOT } from '@/components/tasks/TaskCard'
 import AssigneeFilterPopover from '@/components/tasks/AssigneeFilterPopover'
@@ -121,9 +88,6 @@ const STATUS_TABS = [
   { key: 'COMPLETED', label: 'Completed' },
   { key: 'ARCHIVED', label: 'Archived' },
 ]
-
-const PRIORITY_DOT = Object.fromEntries(Object.entries(PRIORITY_CONFIG).map(([k, v]) => [k, v.dot]))
-const PRIORITY_LABELS = Object.fromEntries(Object.entries(PRIORITY_CONFIG).map(([k, v]) => [k, v.label]))
 
 const TAB_TRIGGER_CLASS =
   'relative rounded-none bg-transparent px-0 pb-3 pt-0 text-sm font-medium transition-none shadow-none border-b-2 border-transparent text-muted-foreground flex-none w-fit gap-2 data-[state=active]:bg-transparent dark:data-[state=active]:bg-transparent data-[state=active]:text-black dark:data-[state=active]:text-white data-[state=active]:border-black dark:data-[state=active]:border-white data-[state=active]:shadow-none data-[state=active]:border-x-0 data-[state=active]:border-t-0 focus-visible:ring-0'
@@ -153,28 +117,6 @@ function SortableColHeader({ column, label }) {
 }
 
 
-function TasksGroup({ title, tasks, clientMap, campaignMap, memberMap, currentUserId }) {
-  if (tasks.length === 0) return null
-  return (
-    <div className="space-y-3">
-      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-        {title}
-      </p>
-      <div className="grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(min(100%,360px),1fr))]">
-        {tasks.map((task) => (
-          <TaskCard
-            key={task.id}
-            task={task}
-            clientMap={clientMap}
-            campaignMap={campaignMap}
-            memberMap={memberMap}
-            currentUserId={currentUserId}
-          />
-        ))}
-      </div>
-    </div>
-  )
-}
 
 // --- Kanban: Draggable Card Wrapper ---
 

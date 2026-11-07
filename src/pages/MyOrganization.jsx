@@ -26,11 +26,9 @@ import {
 // Icons
 import {
   ArrowRight,
-  Plus,
   Sparkles,
   Loader2,
   CheckCircle2,
-  Building2,
   Zap,
   HardDrive,
   Layout,

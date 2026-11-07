@@ -10,7 +10,6 @@ import {
   Building2,
   Search,
   Edit2,
-  Receipt,
   TrendingUp,
   TrendingDown,
   Scale,
@@ -43,7 +42,6 @@ import {
   EmptyHeader,
   EmptyTitle,
   EmptyDescription,
-  EmptyMedia,
 } from '@/components/ui/empty'
 
 export default function LedgerTab({ clientId, subTabs }) {

@@ -10,18 +10,9 @@ import {
   useDroppable,
 } from '@dnd-kit/core'
 import {
-  Calendar,
   Plus,
   Filter,
-  Users,
-  Clock,
-  Lock,
-  Pencil,
-  Trash2,
   Search,
-  Link as LinkIcon,
-  CheckCircle2,
-  RotateCcw,
   LayoutGrid,
   Columns3,
 } from 'lucide-react'
@@ -29,7 +20,6 @@ import { isPast } from 'date-fns'
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Input } from '@/components/ui/input'
 import {
@@ -39,16 +29,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
 
 import { useHeader } from '@/components/misc/header-context'
 import { useClients } from '@/api/clients'
@@ -72,7 +52,6 @@ import {
   EmptyHeader,
   EmptyTitle,
   EmptyDescription,
-  EmptyMedia,
 } from '@/components/ui/empty'
 
 // ─── Constants ────────────────────────────────────────────────────────────────

@@ -25,12 +25,9 @@ import {
   ArrowDownRight,
   User,
   Image,
-  FileText,
   CalendarDays,
   ListTodo,
   PencilRuler,
-  ChevronLeft,
-  ChevronRight,
   MessageSquare,
 } from 'lucide-react'
 
@@ -53,16 +50,11 @@ import { LinkPostsToCampaignDialog } from '@/components/campaigns/LinkPostsToCam
 import { CampaignDialog } from '@/components/campaigns/CampaignDialog'
 import { CreateInvoiceDialog } from '@/pages/finance/CreateInvoiceDialog'
 import CampaignReportPDF from '@/components/campaigns/CampaignReportPDF'
-import MeetingRow from '@/components/MeetingRow'
 import { CommentThread } from '@/components/comments/CommentThread'
-import TaskCard from '@/components/tasks/TaskCard'
-import CreateMeetingDialog from '@/components/CreateMeetingDialog'
-import CreateTaskDialog from '@/components/tasks/CreateTaskDialog'
 import TasksTab from '@/components/tasks/TasksTab'
 import MeetingsTab from '@/components/meetings/MeetingsTab'
 import StatusBadge from '@/components/StatusBadge'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import {
   Dialog,
@@ -80,11 +72,6 @@ import {
   CardDescription,
 } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import {
-  Carousel,
-  CarouselContent,
-  CarouselItem,
-} from '@/components/ui/carousel'
 import { StatBar, StatCell } from '@/components/ui/stat-bar'
 import WorkflowHealth from '@/components/WorkflowHealth'
 import { cn } from '@/lib/utils'

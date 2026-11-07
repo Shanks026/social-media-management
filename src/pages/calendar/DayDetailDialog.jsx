@@ -6,7 +6,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { format } from 'date-fns'
-import { Search, X, FilterX, CalendarIcon } from 'lucide-react'
+import { Search, X } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { CalendarPostCard } from './CalendarPostCard'
 import {
@@ -24,7 +24,6 @@ import {
   EmptyHeader,
   EmptyTitle,
   EmptyDescription,
-  EmptyMedia,
 } from '@/components/ui/empty'
 import MeetingRow from '@/components/MeetingRow'
 import { useMarkMeetingDone } from '@/hooks/useMarkMeetingDone'

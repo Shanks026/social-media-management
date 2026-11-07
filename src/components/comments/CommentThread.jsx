@@ -28,7 +28,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { splitMentions, detectMention, MENTION_CLASS, MY_MENTION_CLASS, MENTION_TEXT_CLASS, MY_MENTION_TEXT_CLASS } from '@/lib/mentions'
+import { splitMentions, detectMention, MENTION_CLASS, MENTION_TEXT_CLASS, MY_MENTION_TEXT_CLASS } from '@/lib/mentions'
 import { SYSTEM_ROLE_PALETTE } from '@/lib/team-roles'
 import { formatCompactTimeAgo } from '@/lib/helper'
 import {

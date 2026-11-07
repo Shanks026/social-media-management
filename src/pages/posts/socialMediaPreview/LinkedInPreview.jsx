@@ -6,7 +6,6 @@ import {
   Send,
   MoreHorizontal,
   Globe,
-  Plus,
 } from 'lucide-react'
 
 

@@ -10,10 +10,8 @@ import {
   FolderOpen,
   Megaphone,
   Plus,
-  FileText,
   Video,
   PencilRuler,
-  ClipboardList,
 } from 'lucide-react'
 import {
   Tooltip,

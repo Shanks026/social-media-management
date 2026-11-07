@@ -11,7 +11,6 @@ import {
   Trash2,
   MoreVertical,
   Megaphone,
-  Image as ImageIcon,
   Play,
   PencilRuler,
 } from 'lucide-react'

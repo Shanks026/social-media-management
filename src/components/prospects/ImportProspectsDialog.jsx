@@ -172,8 +172,6 @@ function downloadTemplate() {
 
 // ── Steps ─────────────────────────────────────────────────────────────────────
 
-const STEPS = ['upload', 'configure', 'done']
-
 export function ImportProspectsDialog({ open, onOpenChange }) {
   const importProspects = useImportProspects()
 

@@ -8,7 +8,6 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Layout } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 
 // Application Defaults

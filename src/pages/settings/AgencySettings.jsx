@@ -27,7 +27,6 @@ import {
 
 // Icons
 import {
-  Building2,
   Mail,
   CalendarDays,
   Trash2,
@@ -35,8 +34,6 @@ import {
   ArrowRight,
   Sparkles,
   Zap,
-  CheckCircle2,
-  HardDrive,
   Layout,
   Camera,
   ImagePlus,
@@ -956,19 +953,6 @@ function InfoRow({ icon, label, value }) {
   )
 }
 
-function CompactBenefit({ icon, title, desc }) {
-  return (
-    <div className="flex items-center gap-3">
-      <div className="text-primary opacity-70">{icon}</div>
-      <div className="space-y-0.5">
-        <h4 className="text-[12px] font-semibold text-foreground uppercase tracking-wider leading-none">
-          {title}
-        </h4>
-        <p className="text-[11px] text-muted-foreground font-normal">{desc}</p>
-      </div>
-    </div>
-  )
-}
 
 function ActivationDialog({ open, onOpenChange, agencyName, onActivate }) {
   return (

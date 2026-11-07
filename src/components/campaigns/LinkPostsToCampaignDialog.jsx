@@ -18,7 +18,6 @@ import {
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Checkbox } from '@/components/ui/checkbox'
 import { cn } from '@/lib/utils'
@@ -28,17 +27,6 @@ import {
 } from '@/api/campaigns'
 import { toast } from 'sonner'
 import StatusBadge from '@/components/StatusBadge'
-
-const POST_STATUS_STYLES = {
-  DRAFT: 'bg-muted text-muted-foreground',
-  PENDING_APPROVAL:
-    'bg-yellow-100 text-yellow-700 dark:bg-yellow-500/15 dark:text-yellow-400',
-  NEEDS_REVISION:
-    'bg-orange-100 text-orange-700 dark:bg-orange-500/15 dark:text-orange-400',
-  SCHEDULED: 'bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-400',
-  PUBLISHED:
-    'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-400',
-}
 
 const PlatformIcon = ({ name }) => {
   const fileName = name === 'google_business' ? 'google_busines' : name

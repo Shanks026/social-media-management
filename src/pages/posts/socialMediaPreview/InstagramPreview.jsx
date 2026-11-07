@@ -5,7 +5,6 @@ import {
   Send,
   Bookmark,
   MoreHorizontal,
-  BadgeCheck,
   ChevronLeft,
   ChevronRight,
   Music2,

@@ -5,7 +5,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Badge } from '@/components/ui/badge'
-import { Calendar, Clock, User, Layers } from 'lucide-react'
+import { Calendar, Clock, Layers } from 'lucide-react'
 import { format } from 'date-fns'
 
 export function PostDetailDialog({ post, open, onOpenChange }) {

@@ -11,7 +11,6 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from '@/components/ui/carousel'
-import { Eye } from 'lucide-react'
 
 export function MediaPreview({ urls, isOpen, onOpenChange, initialIndex = 0 }) {
   return (
