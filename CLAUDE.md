@@ -53,3 +53,17 @@ VITE_SUPABASE_URL
 VITE_SUPABASE_ANON_KEY
 VITE_APP_URL   # Base URL for invite links
 ```
+
+## Agent skills
+
+### Issue tracker
+
+Issues and specs live in GitHub Issues (Shanks026/social-media-management), managed with the `gh` CLI. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default five-role vocabulary: needs-triage, needs-info, ready-for-agent, ready-for-human, wontfix. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: one root `GLOSSARY.md` + `docs/adr/` (created lazily by /domain-modeling). See `docs/agents/domain.md`.

@@ -1,0 +1,3 @@
+# A workspace is identified by its owner's user ID
+
+There is no `workspaces` table: a Workspace is identified by its Owner's `auth.uid()`, and every workspace-scoped row carries that ID (`user_id`, `agency_user_id`, `workspace_user_id`). Invited Members resolve to it through `agency_members` and the `get_my_agency_user_id()` SECURITY DEFINER function, which RLS policies use everywhere. In the app it surfaces as `workspaceUserId`. This let multi-member workspaces be added to a schema originally built for single users without migrating every table. The trade-off is that ownership can't be transferred without rewriting IDs, and `created_by` must always be the real caller's ID, never `workspaceUserId`.

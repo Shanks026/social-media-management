@@ -1,0 +1,3 @@
+# Notification fan-out happens in the database, not the client
+
+In-app notifications are emitted where the state change happens: table triggers (`tg_notify_*`) and RPCs call `emit_notifications()`, which de-dupes recipients and strips the actor. Realtime is used only to invalidate React Query caches, never to deliver notification content. We chose this over client-side `notify()` calls because a state change made from a public review link, a cron job or another Member's session must notify people just the same, and only the database sees every path. That's why `notify()` in `src/api/notifications.js` is deliberately unused; don't "fix" it by wiring it up.

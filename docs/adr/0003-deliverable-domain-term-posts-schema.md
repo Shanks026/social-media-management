@@ -1,0 +1,3 @@
+# "Deliverable" is the domain term; the schema keeps the `posts` names
+
+The domain term is **Deliverable** (see `GLOSSARY.md`), because the product covers non-social work as well as social posts. The database keeps its original names (`posts`, `post_versions`, the `post_status` enum, `create_post_draft_v3` and friends), because renaming them would mean rewriting RLS policies, triggers, RPCs and edge functions built up over about 240 migrations, for no behavioural gain. New UI copy, components and docs say "Deliverable"; code that talks to the database may still say "post". A rename can be done later as one deliberate migration.
