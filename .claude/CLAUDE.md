@@ -140,9 +140,9 @@ The `data` object includes:
   - `chat` — workspace chat feature (Velocity+; also enabled on Trial). Also DB-enforced, not just UI — see Domain Patterns below.
 - `proposals_limit` — integer | null — 5 for Trial/Ignite; null = unlimited (Velocity/Quantum)
 
-**Canonical feature matrix:** `documentation/subscription-features-phase2.md` is the authoritative source for which features are enabled per plan, tier pricing/limits, and DB seed values — it explicitly supersedes the earlier `subscription-features.md` (now deleted) and Phase 2 draft. `.claude/features/feature-tiers-v5.md` is a secondary reference — when they conflict, trust `subscription-features-phase2.md`.
+**Canonical feature matrix:** `documentation/subscription-features-phase2.md` is the authoritative source for which features are enabled per plan, tier pricing/limits, and DB seed values — it explicitly supersedes the earlier `subscription-features.md` (now deleted) and Phase 2 draft.
 
-**Gating pattern:** Read flags directly from `data` (e.g. `data?.finance_subscriptions`). For locked features (visible but disabled), show with a disabled state + lock icon + tooltip. For hidden features (like nav items), conditionally render them. See `.claude/features/feature-tiers-v5.md` for the full feature matrix.
+**Gating pattern:** Read flags directly from `data` (e.g. `data?.finance_subscriptions`). For locked features (visible but disabled), show with a disabled state + lock icon + tooltip. For hidden features (like nav items), conditionally render them. See `documentation/subscription-features-phase2.md` for the full feature matrix.
 
 **Public review page (`/review/:token`):** This page is unauthenticated. To access branding flags, extend the token query to join through `post_versions → posts → clients → agency_subscriptions`.
 

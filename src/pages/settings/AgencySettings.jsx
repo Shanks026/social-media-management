@@ -99,7 +99,7 @@ export default function AgencySettings() {
   // ── Handlers ──
 
   // Editing agency identity is owner-only — admins are view-only on workspace
-  // settings (.claude/features/03-rbac-team-roles.md), so they never get the
+  // settings (documentation/features/rbac-team-roles.md), so they never get the
   // setup wizard.
   const handleOpenSetup = () => {
     if (!canEditWorkspace) return
