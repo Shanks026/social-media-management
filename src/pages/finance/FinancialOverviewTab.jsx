@@ -49,8 +49,6 @@ import { useTransactions } from '@/api/transactions'
 import { useExpenses } from '@/api/expenses'
 import { useInvoices } from '@/api/invoices'
 import { useSubscription } from '@/api/useSubscription'
-import { useQuery } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
 
 // --- CHART CONFIGURATION ---
 const chartConfig = {
@@ -64,7 +62,7 @@ const chartConfig = {
   },
 }
 
-export default function OverviewPage({ clientId, client, subTabs }) {
+export default function OverviewPage({ subTabs }) {
   const { data: subscription } = useSubscription()
   const isAccrualLocked = subscription && !subscription.finance_accrual
   const navigate = useNavigate()

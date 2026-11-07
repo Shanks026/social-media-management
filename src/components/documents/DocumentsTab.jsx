@@ -3,7 +3,6 @@ import { useSearchParams } from 'react-router-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { FolderOpen, FolderPlus, Search, Upload, X, Lock } from 'lucide-react'
-import { useAuth } from '@/context/AuthContext'
 import { useSubscription } from '@/api/useSubscription'
 import { usePermissions } from '@/api/usePermissions'
 import {
@@ -44,7 +43,6 @@ import CreateCollectionDialog from './CreateCollectionDialog'
  *   clientId — UUID of the client whose documents to show.
  */
 export default function DocumentsTab({ clientId }) {
-  const { user } = useAuth()
   const queryClient = useQueryClient()
   const { data: sub } = useSubscription()
   const collectionsUnlocked = sub?.documents_collections ?? false

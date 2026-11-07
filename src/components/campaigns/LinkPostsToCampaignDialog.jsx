@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import {
   Link2,
   Search,
@@ -23,7 +23,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Checkbox } from '@/components/ui/checkbox'
 import { cn } from '@/lib/utils'
 import {
-  fetchUnlinkedPostsByClient,
+  useUnlinkedPostsByClient,
   useAssignPostsToCampaign,
 } from '@/api/campaigns'
 import { toast } from 'sonner'
@@ -63,23 +63,25 @@ export function LinkPostsToCampaignDialog({
   clientId,
   campaignName,
 }) {
-  const [posts, setPosts] = useState([])
-  const [loading, setLoading] = useState(false)
-  const [selectedIds, setSelectedIds] = useState(new Set())
+  const [selectedIds, setSelectedIds] = useState(() => new Set())
   const [search, setSearch] = useState('')
 
-  const assignMutation = useAssignPostsToCampaign()
+  // Each time the dialog opens (or switches client), start with a clean slate.
+  const [prevKey, setPrevKey] = useState({ open, clientId })
+  if (open !== prevKey.open || clientId !== prevKey.clientId) {
+    setPrevKey({ open, clientId })
+    if (open) {
+      setSelectedIds(new Set())
+      setSearch('')
+    }
+  }
 
-  useEffect(() => {
-    if (!open || !clientId) return
-    setLoading(true)
-    setSelectedIds(new Set())
-    setSearch('')
-    fetchUnlinkedPostsByClient(clientId)
-      .then(setPosts)
-      .catch(() => setPosts([]))
-      .finally(() => setLoading(false))
-  }, [open, clientId])
+  const { data: posts = [], isLoading: loading } = useUnlinkedPostsByClient(
+    clientId,
+    { enabled: open },
+  )
+
+  const assignMutation = useAssignPostsToCampaign()
 
   const filtered = posts.filter((p) =>
     p.title.toLowerCase().includes(search.toLowerCase()),

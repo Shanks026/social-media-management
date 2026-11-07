@@ -10,6 +10,9 @@ export const documentKeys = {
   detail: (id) => ['documents', 'detail', id],
   collections: (clientId) => ['document-collections', clientId],
   allCollections: () => ['document-collections', 'all'],
+  // Outside the 'documents' prefix: broad document invalidations shouldn't
+  // re-sign URLs that are still valid.
+  signedUrl: (storagePath) => ['document-signed-url', storagePath],
 }
 
 // ─── Read Hooks ────────────────────────────────────────────────────────────────
@@ -78,6 +81,20 @@ export async function getDocumentSignedUrl(storagePath) {
   return data.signedUrl
 }
 
+/**
+ * Signed URL for previewing a document. Cached for 50 minutes so a cached
+ * URL is never handed out after its 60-minute expiry.
+ */
+export function useDocumentSignedUrl(storagePath) {
+  return useQuery({
+    queryKey: documentKeys.signedUrl(storagePath),
+    queryFn: () => getDocumentSignedUrl(storagePath),
+    enabled: !!storagePath,
+    staleTime: 50 * 60 * 1000,
+    gcTime: 50 * 60 * 1000,
+  })
+}
+
 // ─── Mutations ─────────────────────────────────────────────────────────────────
 
 /**
@@ -87,7 +104,7 @@ export async function getDocumentSignedUrl(storagePath) {
 function sanitizeFilename(name) {
   // Strip emoji and non-ASCII, collapse spaces/unsafe chars to underscores
   return name
-    .replace(/[^\x00-\x7F]/g, '')   // remove non-ASCII (emoji, accented chars, etc.)
+    .replace(/[\u0080-\uFFFF]/g, '') // remove non-ASCII (emoji, accented chars, etc.)
     .replace(/[^a-zA-Z0-9._-]/g, '_') // replace remaining unsafe chars
     .replace(/_+/g, '_')              // collapse multiple underscores
     .replace(/^_|_$/g, '')            // trim leading/trailing underscores

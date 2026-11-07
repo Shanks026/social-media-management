@@ -38,7 +38,6 @@ import DocumentUploadZone from './DocumentUploadZone'
 import UploadMetaDialog from './UploadMetaDialog'
 import { useMutation as useUploadMutation } from '@tanstack/react-query'
 import { uploadDocument } from '@/api/documents'
-import { useAuth } from '@/context/AuthContext'
 import { Accordion, AccordionItem, AccordionContent } from '@/components/ui/accordion'
 import { Accordion as AccordionPrimitive } from 'radix-ui'
 import { Lock } from 'lucide-react'
@@ -51,7 +50,6 @@ import { Lock } from 'lucide-react'
  *   documents    — array of documents belonging to this collection
  */
 export default function CollectionCard({ collection, documents = [], locked = false, canManage = true }) {
-  const { user } = useAuth()
   const queryClient = useQueryClient()
   const [expanded, setExpanded] = useState(false)
   const [renameOpen, setRenameOpen] = useState(false)

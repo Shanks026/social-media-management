@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react'
 import { Download, X } from 'lucide-react'
 import {
   Dialog,
@@ -8,7 +7,7 @@ import {
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import { getDocumentSignedUrl } from '@/api/documents'
+import { useDocumentSignedUrl } from '@/api/documents'
 import { formatDate, formatFileSize } from '@/lib/helper'
 import DocumentCategoryBadge from './DocumentCategoryBadge'
 
@@ -40,26 +39,12 @@ function isPreviewable(mimeType) {
  */
 export default function DocumentPreviewModal({ doc, onOpenChange }) {
   const open = !!doc
-  const [signedUrl, setSignedUrl] = useState(null)
-  const [urlLoading, setUrlLoading] = useState(false)
-  const [urlError, setUrlError] = useState(null)
-
-  useEffect(() => {
-    if (!doc) {
-      setSignedUrl(null)
-      setUrlError(null)
-      return
-    }
-
-    setUrlLoading(true)
-    setSignedUrl(null)
-    setUrlError(null)
-
-    getDocumentSignedUrl(doc.storage_path)
-      .then((url) => setSignedUrl(url))
-      .catch((err) => setUrlError(err.message || 'Failed to load preview'))
-      .finally(() => setUrlLoading(false))
-  }, [doc])
+  const {
+    data: signedUrl = null,
+    isLoading: urlLoading,
+    error,
+  } = useDocumentSignedUrl(doc?.storage_path)
+  const urlError = error ? error.message || 'Failed to load preview' : null
 
   function handleDownload() {
     if (signedUrl) window.open(signedUrl, '_blank', 'noopener,noreferrer')

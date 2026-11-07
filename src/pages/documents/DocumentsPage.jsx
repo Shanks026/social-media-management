@@ -13,7 +13,6 @@ import {
   Lock,
 } from 'lucide-react'
 import { useHeader } from '@/components/misc/header-context'
-import { useAuth } from '@/context/AuthContext'
 import { usePermissions } from '@/api/usePermissions'
 import { useClients } from '@/api/clients'
 import { useProspects } from '@/api/prospects'
@@ -63,7 +62,6 @@ import CreateCollectionDialog from '@/components/documents/CreateCollectionDialo
 
 export default function DocumentsPage() {
   const { setHeader } = useHeader()
-  const { user } = useAuth()
   const queryClient = useQueryClient()
   const [searchParams, setSearchParams] = useSearchParams()
 

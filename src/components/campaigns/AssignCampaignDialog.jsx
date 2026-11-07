@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { FolderOpen, Check, Megaphone, X } from 'lucide-react'
 import {
   Dialog,
@@ -10,31 +10,26 @@ import {
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { fetchActiveCampaignsByClient } from '@/api/campaigns'
-import { useAssignPostCampaign } from '@/api/campaigns'
+import { useActiveCampaignsByClient, useAssignPostCampaign } from '@/api/campaigns'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 
 export function AssignCampaignDialog({ open, onOpenChange, post }) {
-  const [campaigns, setCampaigns] = useState([])
-  const [selectedCampaignId, setSelectedCampaignId] = useState(null)
-  const [loading, setLoading] = useState(false)
+  const [selectedCampaignId, setSelectedCampaignId] = useState(
+    post?.campaign_id || null,
+  )
+
+  // Each time the dialog opens, start from the post's current campaign.
+  const [prevOpen, setPrevOpen] = useState(open)
+  if (open !== prevOpen) {
+    setPrevOpen(open)
+    if (open) setSelectedCampaignId(post?.campaign_id || null)
+  }
+
+  const { data: campaigns = [], isLoading: loading } =
+    useActiveCampaignsByClient(post?.client_id, { enabled: open })
 
   const assignMutation = useAssignPostCampaign()
-
-  // Fetch campaigns for this post's client
-  useEffect(() => {
-    if (!open || !post?.client_id) return
-    setLoading(true)
-    fetchActiveCampaignsByClient(post.client_id)
-      .then((data) => {
-        setCampaigns(data)
-        // Pre-select current campaign if the post already has one
-        setSelectedCampaignId(post.campaign_id || null)
-      })
-      .catch(() => setCampaigns([]))
-      .finally(() => setLoading(false))
-  }, [open, post?.client_id, post?.campaign_id])
 
   const handleAssign = (campaignId = selectedCampaignId) => {
     if (!post) return

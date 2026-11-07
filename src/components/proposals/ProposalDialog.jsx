@@ -146,7 +146,7 @@ export function ProposalDialog({
     },
   })
 
-  const { watch, setValue, reset, control, register, formState: { errors, isSubmitting } } = form
+  const { watch, setValue, reset, control, register, formState: { errors } } = form
 
   const { fields, append, remove } = useFieldArray({ control, name: 'line_items' })
 

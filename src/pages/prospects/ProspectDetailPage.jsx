@@ -183,10 +183,6 @@ export default function ProspectDetailPage() {
 
   // ── Derived display values ────────────────────────────────────────────────
 
-  const initials = prospect.business_name
-    ? prospect.business_name.trim().split(/\s+/).map((w) => w[0]).join('').toUpperCase().slice(0, 2)
-    : 'PR'
-
   const websiteHref = prospect.website
     ? prospect.website.startsWith('http') ? prospect.website : `https://${prospect.website}`
     : null
@@ -209,13 +205,6 @@ export default function ProspectDetailPage() {
 
         {/* ── Header ───────────────────────────────────────────────────────── */}
         <div className="flex items-start gap-5">
-          {/* Avatar */}
-          {/* <Avatar className="size-16 rounded-2xl">
-            <AvatarFallback className="rounded-2xl text-xl font-bold tracking-tighter">
-              {initials}
-            </AvatarFallback>
-          </Avatar> */}
-
           {/* Name + meta */}
           <div className="flex-1 min-w-0 space-y-1.5">
             {/* Title row with source badge inline */}

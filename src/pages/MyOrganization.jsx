@@ -80,7 +80,7 @@ export default function MyOrganization() {
       queryClient.invalidateQueries({ queryKey: ['clients'] })
       if (refreshAgency) await refreshAgency()
       toast.success('Internal workspace activated.')
-    } catch (err) {
+    } catch {
       toast.error('Activation failed.')
     } finally {
       setIsActivating(false)

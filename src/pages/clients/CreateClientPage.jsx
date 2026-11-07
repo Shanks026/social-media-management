@@ -168,8 +168,6 @@ export default function CreateClientPage({
     formState: { errors },
     reset,
     control, // Destructure control from form
-    setValue,
-    getValues,
     watch,
   } = form
   const selectedPlatforms = form.watch('platforms')

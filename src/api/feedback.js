@@ -75,7 +75,7 @@ export function useSubmitFeedback() {
 
       return data
     },
-    onSuccess: (_, { type }) => {
+    onSuccess: () => {
       // workspaceUserId not available here — invalidate broadly
       queryClient.invalidateQueries({ queryKey: ['feedback', 'list'] })
     },
