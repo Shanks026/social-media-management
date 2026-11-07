@@ -43,9 +43,10 @@ import {
   ChartTooltipContent,
 } from '@/components/ui/chart'
 import { SUPPORTED_PLATFORMS } from '@/lib/platforms'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { fetchAllPostsByClient } from '@/api/posts'
-import { fetchUpcomingMeetings, deleteMeeting } from '@/api/meetings'
+import { fetchUpcomingMeetings } from '@/api/meetings'
+import { useMarkMeetingDone } from '@/hooks/useMarkMeetingDone'
 import { useTransactions } from '@/api/transactions'
 import { usePermissions } from '@/api/usePermissions'
 import { toast } from 'sonner'
@@ -128,7 +129,6 @@ export default function OverviewTab({ client }) {
   const [, setSearchParams] = useSearchParams()
   const navigate = useNavigate()
 
-  const queryClient = useQueryClient()
 
   // Data Fetching
   const { data: posts = [], isLoading: isLoadingPosts } = useQuery({
@@ -262,21 +262,7 @@ export default function OverviewTab({ client }) {
   const submittedCount = postCounts['SUBMITTED'] || 0
 
   // 3. Mutations
-  const { mutate: markMeetingDone, isPending: isCompletingMeeting } =
-    useMutation({
-      mutationFn: (meetingId) => deleteMeeting(meetingId),
-      onSuccess: () => {
-        queryClient.invalidateQueries({
-          queryKey: ['upcomingMeetings', client.id],
-        })
-        queryClient.invalidateQueries({ queryKey: ['meetings'] })
-        queryClient.invalidateQueries({ queryKey: ['todayMeetings'] })
-        toast.success('Meeting marked as done')
-      },
-      onError: (error) => {
-        toast.error('Failed to update meeting: ' + error.message)
-      },
-    })
+  const { markMeetingDone, isCompletingMeeting } = useMarkMeetingDone()
 
   const visibleNotes = notes.filter((n) => n.status !== 'ARCHIVED').slice(0, 2)
   const extraNotes = notes.filter((n) => n.status !== 'ARCHIVED').length - 2

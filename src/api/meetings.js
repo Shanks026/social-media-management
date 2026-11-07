@@ -58,6 +58,7 @@ export async function fetchUpcomingMeetings(clientId, limit = 3) {
     .from('meetings')
     .select('*, clients!inner(name)')
     .eq('client_id', clientId)
+    .is('completed_at', null)
     .gte('datetime', new Date().toISOString())
     .order('datetime', { ascending: true })
     .limit(limit)
@@ -81,6 +82,7 @@ export async function fetchTodayMeetings() {
   const { data, error } = await supabase
     .from('meetings')
     .select('*, clients!inner(name)')
+    .is('completed_at', null)
     .gte('datetime', start)
     .lte('datetime', end)
     .order('datetime', { ascending: true })

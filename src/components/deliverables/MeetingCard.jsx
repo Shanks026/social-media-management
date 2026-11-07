@@ -4,33 +4,18 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { ClientAvatar } from '@/components/tasks/ClientAvatar'
 import CreateMeetingDialog from '@/components/CreateMeetingDialog'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { deleteMeeting } from '@/api/meetings'
-import { toast } from 'sonner'
+import { useMarkMeetingDone } from '@/hooks/useMarkMeetingDone'
 
 /**
  * Card representation of a meeting, styled to match DeliverableCard so both
  * can be mixed in the same grid (e.g. a day's scheduled items).
  */
 export function MeetingCard({ meeting }) {
-  const queryClient = useQueryClient()
-
-  const { mutate: handleDeleteMeeting, isPending: isDeletingMeeting } =
-    useMutation({
-      mutationFn: () => deleteMeeting(meeting.id),
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: ['meetings'] })
-        queryClient.invalidateQueries({ queryKey: ['todayMeetings'] })
-        queryClient.invalidateQueries({ queryKey: ['upcomingMeetings'] })
-        queryClient.invalidateQueries({ queryKey: ['calendar'] })
-        toast.success('Meeting marked as done')
-      },
-      onError: (error) => {
-        toast.error('Failed to update meeting: ' + error.message)
-      },
-    })
+  const { markMeetingDone, isCompletingMeeting } = useMarkMeetingDone()
 
   if (!meeting) return null
+
+  const isDone = !!meeting.completed_at
 
   return (
     <div className="flex flex-col bg-card/50 shadow-sm rounded-2xl px-6 py-8 transition-all duration-200 border border-blue-200/50 dark:border-blue-900/50">
@@ -78,11 +63,11 @@ export function MeetingCard({ meeting }) {
               className="h-7 text-xs px-2"
               onClick={(e) => {
                 e.stopPropagation()
-                handleDeleteMeeting()
+                markMeetingDone(meeting.id)
               }}
-              disabled={isDeletingMeeting}
+              disabled={isDone || isCompletingMeeting}
             >
-              Mark as done
+              {isDone ? 'Done' : 'Mark as done'}
             </Button>
           </div>
 
