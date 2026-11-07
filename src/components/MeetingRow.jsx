@@ -43,7 +43,8 @@ export default function MeetingRow({
     }
   }
 
-  const isOverdue = meetingDate.getTime() < Date.now()
+  const isDone = !!meeting.completed_at
+  const isOverdue = !isDone && meetingDate.getTime() < Date.now()
   const client = clientsMap[meeting.client_id]
   const monthStr = format(meetingDate, 'MMM').toUpperCase()
   const dayStr = format(meetingDate, 'dd')
@@ -152,20 +153,27 @@ export default function MeetingRow({
                   </TooltipContent>
                 </Tooltip>
               )}
-              <Tooltip delayDuration={400}>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="size-7 text-muted-foreground hover:text-emerald-600"
-                    onClick={() => markMeetingDone(meeting.id)}
-                    disabled={isCompletingMeeting}
-                  >
-                    <CheckCircle2 className="size-3.5" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="top" className="text-xs">Mark as done</TooltipContent>
-              </Tooltip>
+              {isDone ? (
+                <span className="flex items-center gap-1 px-2 text-xs font-medium text-emerald-600">
+                  <CheckCircle2 className="size-3.5" />
+                  Done
+                </span>
+              ) : (
+                <Tooltip delayDuration={400}>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="size-7 text-muted-foreground hover:text-emerald-600"
+                      onClick={() => markMeetingDone(meeting.id)}
+                      disabled={isCompletingMeeting}
+                    >
+                      <CheckCircle2 className="size-3.5" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="text-xs">Mark as done</TooltipContent>
+                </Tooltip>
+              )}
             </div>
 
             {variant === 'dashboard-card' && client ? (

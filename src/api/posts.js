@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase'
-import { startOfMonth, endOfMonth, startOfWeek, endOfWeek } from 'date-fns'
+import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, format } from 'date-fns'
 import { resolveWorkspace } from '@/lib/workspace'
 
 /**
@@ -573,6 +573,27 @@ export async function fetchGlobalCalendar({ userId, currentMonth }) {
 
   // The data now includes media_urls (array) and version_number (int)
   return data || []
+}
+
+/**
+ * Deliverables for the calendar grid around `currentMonth`, scoped to the
+ * workspace. Always uses workspaceUserId: get_global_calendar filters
+ * clients by owner uid, so an invited member's own user.id returns nothing.
+ */
+export function useGlobalCalendar({ currentMonth, clientId = null, view } = {}) {
+  const { workspaceUserId } = useAuth()
+  return useQuery({
+    queryKey: [
+      'calendar',
+      workspaceUserId,
+      clientId,
+      view,
+      format(currentMonth, 'yyyy-MM-dd'),
+    ],
+    queryFn: () =>
+      fetchGlobalCalendar({ userId: workspaceUserId, currentMonth }),
+    enabled: !!workspaceUserId,
+  })
 }
 
 export async function regeneratePostShareToken(versionId) {

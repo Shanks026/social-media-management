@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/context/AuthContext'
 import { useNavigate } from 'react-router-dom'
@@ -10,7 +10,6 @@ import {
   ArrowUpRight,
   ClipboardCheck,
 } from 'lucide-react'
-import { toast } from 'sonner'
 
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
@@ -21,7 +20,7 @@ import MeetingRow from '@/components/MeetingRow'
 import CreateMeetingDialog from '@/components/CreateMeetingDialog'
 import CreateTaskDialog from '@/components/tasks/CreateTaskDialog'
 import TaskCard from '@/components/tasks/TaskCard'
-import { deleteMeeting } from '@/api/meetings'
+import { useMarkMeetingDone } from '@/hooks/useMarkMeetingDone'
 import { useMyTasks } from '@/api/tasks'
 import { useCampaigns } from '@/api/campaigns'
 import { useTeamMembers } from '@/api/team'
@@ -59,6 +58,7 @@ export default function DashboardMeetingsNotes() {
       const { data, error } = await supabase
         .from('meetings')
         .select('*')
+        .is('completed_at', null)
         .gte('datetime', new Date().toISOString())
         .order('datetime', { ascending: true })
       if (error) throw error
@@ -68,17 +68,7 @@ export default function DashboardMeetingsNotes() {
     refetchOnWindowFocus: true,
   })
 
-  const { mutate: markMeetingDone, isPending: isCompletingMeeting } =
-    useMutation({
-      mutationFn: (meetingId) => deleteMeeting(meetingId),
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: ['meetings'] })
-        queryClient.invalidateQueries({ queryKey: ['todayMeetings'] })
-        toast.success('Meeting marked as done')
-      },
-      onError: (error) =>
-        toast.error('Failed to update meeting: ' + error.message),
-    })
+  const { markMeetingDone, isCompletingMeeting } = useMarkMeetingDone()
 
   const { data: activeTasks = [], isLoading: loadingTasks } = useMyTasks()
   const { data: teamMembers = [] } = useTeamMembers()
