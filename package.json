@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:prod": "vite --mode production",
+    "env:local": "node scripts/write-local-env.mjs",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",

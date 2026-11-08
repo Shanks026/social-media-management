@@ -5,7 +5,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Commands
 
 ```bash
-npm run dev           # Start Vite dev server with HMR
+npx supabase start    # Local Supabase stack (Docker); first run applies migrations + seed
+npm run env:local     # Write .env.development.local from the running stack (git-ignored)
+npm run dev           # Vite dev server against the LOCAL stack only (refuses a non-local URL)
+npm run dev:prod      # Dev server against PRODUCTION — the only sanctioned way to do that
+npx supabase db reset # Rebuild the local DB from migrations + supabase/seed.sql
 npm run build         # Production build
 npm run lint          # Run ESLint
 npm run preview       # Preview production build locally
