@@ -19,6 +19,7 @@ import { Badge } from '@/components/ui/badge'
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query'
 import { Megaphone } from 'lucide-react'
 import { updateTask, fetchTaskPostIds } from '@/api/tasks'
+import { toDateTimeLocal, fromDateTimeLocal } from '@/lib/helper'
 import { useClients } from '@/api/clients'
 import { fetchActiveCampaignsByClient } from '@/api/campaigns'
 import { fetchAllPostsByClient, fetchAllDeliverables } from '@/api/posts'
@@ -123,10 +124,8 @@ export default function EditTaskDialog({
       setTitle(task.title)
       setDescription(task.description ?? '')
       setPriority(task.priority ?? 'NORMAL')
-      const dateStr = task.due_at
-        ? new Date(task.due_at).toISOString().slice(0, 16)
-        : ''
-      setDueAt(dateStr)
+      // Local wall-clock time, so an untouched field saves back unchanged (B11)
+      setDueAt(toDateTimeLocal(task.due_at))
     }
   }, [open, task])
 
@@ -209,7 +208,7 @@ export default function EditTaskDialog({
       client_id: finalClientId,
       title: title.trim(),
       description: description.trim() || null,
-      due_at: dueAt ? new Date(dueAt).toISOString() : null,
+      due_at: fromDateTimeLocal(dueAt),
       priority,
       assigned_to: assignedTo && assignedTo !== NONE ? assignedTo : null,
       campaign_id:
