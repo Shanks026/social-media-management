@@ -12,6 +12,9 @@ import {
   submitForInternalApproval,
   approveInternally,
   requestInternalChanges,
+  sendPostForClientApproval,
+  resendApprovalLink,
+  ApprovalEmailError,
 } from '@/api/posts'
 import { usePermissions } from '@/api/usePermissions'
 
@@ -45,6 +48,7 @@ export default function PostDetails() {
   const { canSendDeliverables } = usePermissions()
 
   const [isConfirmOpen, setIsConfirmOpen] = useState(false)
+  const [isResendConfirmOpen, setIsResendConfirmOpen] = useState(false)
   const [showHistory, setShowHistory] = useState(false)
   // Auto-open when a notification deep-links to a specific comment (?comment=id)
   const [showComments, setShowComments] = useState(() => searchParams.has('comment'))
@@ -137,27 +141,22 @@ export default function PostDetails() {
     },
   })
 
+  // Status change first, email second (B10) — see sendPostForClientApproval.
   const sendForApprovalMutation = useMutation({
-    mutationFn: async ({ versionId, silent = false }) => {
-      // If post is already PENDING_APPROVAL, skip the RPC
-      if (post.status === 'PENDING_APPROVAL') return { silent }
-
-      const { data, error: rpcError } = await supabase.rpc(
-        'send_post_for_approval',
-        { p_post_version_id: versionId },
-      )
-      if (rpcError) throw rpcError
-      return { data, silent }
+    mutationFn: () => sendPostForClientApproval(post),
+    onSuccess: () => {
+      toast.success(`Sent for approval to ${post.clients.email}`)
     },
-    onSuccess: (res) => {
+    onError: (err) => {
+      toast.error(err.message || 'Failed to send for approval')
+    },
+    onSettled: (_data, err) => {
+      // Once the status has changed (full success, or only the email failed)
+      // the dialog has nothing left to confirm, so close it (B6).
+      if (!err || err instanceof ApprovalEmailError) setIsConfirmOpen(false)
       queryClient.invalidateQueries({ queryKey: ['post-version', postId] })
       invalidatePostRelated()
-      if (!res.silent) {
-        toast.success('Post sent for approval')
-        setIsConfirmOpen(false)
-      }
     },
-    onError: (err) => toast.error(err.message),
   })
 
   // Internal only: directly approve a non-social deliverable (no platform, no date picker)
@@ -318,21 +317,10 @@ export default function PostDetails() {
   })
 
   const resendApprovalLinkMutation = useMutation({
-    mutationFn: async () => {
-      if (!post?.clients?.email) throw new Error('Client email not found')
-      // Deactivate all existing tokens so old email links become invalid
-      await supabase
-        .from('share_tokens')
-        .update({ is_active: false })
-        .eq('post_version_id', post.id)
-      // Edge function calls generate_version_token internally → creates fresh active token
-      const { error } = await supabase.functions.invoke('send-approval-email', {
-        body: { record: { ...post, status: 'PENDING_APPROVAL' } },
-      })
-      if (error) throw error
-    },
+    mutationFn: () => resendApprovalLink(post),
     onSuccess: () => {
       toast.success(`Approval link resent to ${post.clients.email}`)
+      setIsResendConfirmOpen(false)
     },
     onError: (err) => {
       toast.error(err.message || 'Failed to resend approval link')
@@ -440,7 +428,7 @@ export default function PostDetails() {
         onCreateRevision={() => setIsRevisionConfirmOpen(true)}
         onEdit={() => setIsEditOpen(true)}
         onDelete={() => setIsDeleteConfirmOpen(true)}
-        onResendLink={() => resendApprovalLinkMutation.mutate()}
+        onResendLink={() => setIsResendConfirmOpen(true)}
         isResendingLink={resendApprovalLinkMutation.isPending}
         onRefresh={handleRefresh}
         isRevisionPending={createRevisionMutation.isPending}
@@ -500,7 +488,7 @@ export default function PostDetails() {
         setIsConfirmOpen={setIsConfirmOpen}
         isPublishConfirmOpen={isPublishConfirmOpen}
         setIsPublishConfirmOpen={setIsPublishConfirmOpen}
-        onConfirmApproval={(args) => sendForApprovalMutation.mutate({ versionId: post.id, ...args })}
+        onConfirmApproval={() => sendForApprovalMutation.mutate()}
         onConfirmPublish={() => markAsPublishedMutation.mutate(post.id)}
         isApprovalPending={sendForApprovalMutation.isPending}
         isPublishPending={markAsPublishedMutation.isPending}
@@ -520,6 +508,10 @@ export default function PostDetails() {
         setIsDeleteConfirmOpen={setIsDeleteConfirmOpen}
         onConfirmDelete={() => deletePostMutation.mutate(post.actual_post_id)}
         isDeletePending={deletePostMutation.isPending}
+        isResendConfirmOpen={isResendConfirmOpen}
+        setIsResendConfirmOpen={setIsResendConfirmOpen}
+        onConfirmResend={() => resendApprovalLinkMutation.mutate()}
+        isResendPending={resendApprovalLinkMutation.isPending}
       />
 
       {/* Request Changes Dialog (Phase 5) */}
