@@ -55,6 +55,14 @@ export function getPublishState(version) {
 }
 
 /**
+ * Status-filter predicate that agrees with what the calendar cells show:
+ * compares the derived publish state, not the raw DB status (B9).
+ */
+export function matchesPublishStatus(version, statusFilter) {
+  return statusFilter === 'all' || getPublishState(version) === statusFilter
+}
+
+/**
  * Renders a post caption with hashtags highlighted in blue.
  * Returns an array of strings and React elements suitable for rendering.
  */
@@ -107,6 +115,19 @@ export function formatDate(dateInput) {
         month: "short",
         year: "numeric",
     });
+}
+
+/**
+ * Compact currency label for chart axes: whole rupees below 1,000, then a
+ * trimmed "k" (₹0, ₹750, ₹1.5k, ₹120k). Avoids "₹0.001k" on small or empty
+ * data (B8).
+ */
+export function formatAxisCurrency(value, symbol = '₹') {
+  const n = Number(value) || 0
+  const abs = Math.abs(n)
+  if (abs < 1000) return `${n < 0 ? '-' : ''}${symbol}${Math.round(abs)}`
+  const k = Math.round((abs / 1000) * 10) / 10
+  return `${n < 0 ? '-' : ''}${symbol}${k}k`
 }
 
 /**

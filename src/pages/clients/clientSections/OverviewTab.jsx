@@ -2,7 +2,6 @@ import React, { useState, useMemo } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import {
   Plus,
-  FileText,
   Calendar as CalendarIcon,
   AlertCircle,
   CheckCircle2,
@@ -399,10 +398,10 @@ export default function OverviewTab({ client }) {
                 ) : visibleNotes.length === 0 ? (
                   <div className="flex-1 flex flex-col items-center justify-center text-center py-10 gap-2">
                     <div className="h-10 w-10 border border-dashed rounded-full flex items-center justify-center text-muted-foreground">
-                      <FileText className="h-4 w-4 opacity-50" />
+                      <ClipboardCheck className="h-4 w-4" />
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      No pending notes
+                      No open tasks for this client
                     </p>
                   </div>
                 ) : (
