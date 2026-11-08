@@ -203,7 +203,7 @@ export async function updateClientStatus(clientId, status) {
  * Delete a client and all associated data and storage files.
  * DB cascade handles: posts, post_versions, campaigns, meetings, notes,
  *   invoices, recurring_invoices, client_documents, document_collections,
- *   proposals, approvals, schedules, client_users.
+ *   proposals.
  * Transactions/expenses keep their rows but client_id is set to NULL.
  * This function additionally cleans up storage files before deletion.
  */
