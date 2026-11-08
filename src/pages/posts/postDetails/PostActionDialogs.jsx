@@ -11,6 +11,7 @@ import {
   Mail,
   Trash2,
   Loader2,
+  Send,
 } from 'lucide-react'
 import {
   Dialog,
@@ -28,8 +29,6 @@ import {
 import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
 import { format } from 'date-fns'
-import { toast } from 'sonner'
-import { supabase } from '@/lib/supabase'
 
 export default function PostActionDialogs({
   post,
@@ -59,44 +58,13 @@ export default function PostActionDialogs({
   setIsDeleteConfirmOpen,
   onConfirmDelete,
   isDeletePending,
+  // Resend approval link
+  isResendConfirmOpen,
+  setIsResendConfirmOpen,
+  onConfirmResend,
+  isResendPending,
 }) {
   const [calendarOpen, setCalendarOpen] = useState(false)
-  const [sendingEmail, setSendingEmail] = useState(false)
-
-  // Unified handler: Confirm status change + Send Email
-  async function handleConfirmAndSend() {
-    if (!post?.clients?.email) {
-      toast.error('Client email not found')
-      return
-    }
-
-    try {
-      setSendingEmail(true)
-      
-      // 1. Transition status to PENDING_APPROVAL
-      // onConfirmApproval is the mutation.mutate call from PostDetails
-      await onConfirmApproval({ silent: true })
-
-      // 2. Trigger the notification email
-      const { error } = await supabase.functions.invoke('send-approval-email', {
-        body: { 
-          record: { 
-            ...post, 
-            status: 'PENDING_APPROVAL' 
-          } 
-        },
-      })
-      if (error) throw error
-
-      toast.success(`Post sent for approval to ${post.clients.email}`)
-      setIsConfirmOpen(false)
-    } catch (err) {
-      console.error('Approval flow error:', err)
-      toast.error('Failed to complete approval request. Please try again.')
-    } finally {
-      setSendingEmail(false)
-    }
-  }
 
   return (
     <>
@@ -146,15 +114,38 @@ export default function PostActionDialogs({
               Go Back
             </Button>
             <Button
-              onClick={handleConfirmAndSend}
-              disabled={isApprovalPending || sendingEmail || post.status === 'PENDING_APPROVAL'}
+              onClick={onConfirmApproval}
+              disabled={isApprovalPending}
               className="bg-primary hover:bg-primary/90"
             >
-              {isApprovalPending || sendingEmail
-                ? 'Sending Request...'
-                : post.status === 'PENDING_APPROVAL'
-                  ? 'Already Sent'
-                  : 'Confirm & Send'}
+              {isApprovalPending ? 'Sending Request...' : 'Confirm & Send'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Resend approval link confirmation (B5) ── */}
+      <Dialog open={!!isResendConfirmOpen} onOpenChange={setIsResendConfirmOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader className="space-y-4">
+            <DialogTitle className="flex items-center gap-2 text-xl">
+              <Send className="h-5 w-5 text-primary" /> Resend approval link?
+            </DialogTitle>
+            <DialogDescription className="text-base text-foreground/90">
+              <strong>{post?.clients?.email}</strong> will get a new review
+              link for <strong>{post.title || 'Untitled Post'}</strong>. Links
+              sent earlier will stop working.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="mt-4 flex flex-row gap-3">
+            <Button
+              variant="outline"
+              onClick={() => setIsResendConfirmOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button onClick={onConfirmResend} disabled={isResendPending}>
+              {isResendPending ? 'Resending...' : 'Resend Link'}
             </Button>
           </DialogFooter>
         </DialogContent>

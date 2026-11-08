@@ -531,6 +531,69 @@ export async function requestInternalChanges(versionId, notes) {
   if (error) throw error
 }
 
+// ── Client approval ─────────────────────────────────────────────────────────
+
+/**
+ * The approval email failed after any status change succeeded. Carries a
+ * human-readable message instead of supabase-js's "Edge Function returned a
+ * non-2xx status code" (B5).
+ */
+export class ApprovalEmailError extends Error {
+  constructor(message, cause) {
+    super(message)
+    this.name = 'ApprovalEmailError'
+    this.cause = cause
+  }
+}
+
+async function sendApprovalEmail(version, failureMessage) {
+  const { error } = await supabase.functions.invoke('send-approval-email', {
+    body: { record: { ...version, status: 'PENDING_APPROVAL' } },
+  })
+  if (error) throw new ApprovalEmailError(failureMessage, error)
+}
+
+/**
+ * Moves a version to PENDING_APPROVAL, then emails the client. The email goes
+ * out only once the status change has succeeded (B10): a failed RPC throws
+ * before the edge function is ever called. A version that is already pending
+ * skips straight to the email.
+ */
+export async function sendPostForClientApproval(version) {
+  if (!version?.clients?.email) throw new Error('This client has no email address.')
+
+  if (version.status !== 'PENDING_APPROVAL') {
+    const { error } = await supabase.rpc('send_post_for_approval', {
+      p_post_version_id: version.id,
+    })
+    if (error) throw error
+  }
+
+  await sendApprovalEmail(
+    version,
+    "The deliverable is now pending approval, but the email to the client couldn't be sent. Use Resend Link to try again.",
+  )
+}
+
+/**
+ * Invalidates the version's old share links and emails the client a fresh one
+ * (the edge function mints the new token).
+ */
+export async function resendApprovalLink(version) {
+  if (!version?.clients?.email) throw new Error('This client has no email address.')
+
+  const { error } = await supabase
+    .from('share_tokens')
+    .update({ is_active: false })
+    .eq('post_version_id', version.id)
+  if (error) throw error
+
+  await sendApprovalEmail(
+    version,
+    "The approval email couldn't be sent. Please try again in a moment.",
+  )
+}
+
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '@/context/AuthContext'
 
