@@ -46,28 +46,6 @@ export function useDocuments({ clientId, prospectId, category, status } = {}) {
   })
 }
 
-/**
- * Fetch a single document by ID.
- */
-export function useDocument(id) {
-  const { workspaceUserId } = useAuth()
-
-  return useQuery({
-    queryKey: documentKeys.detail(id),
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('client_documents')
-        .select('*, clients(name, is_internal, logo_url)')
-        .eq('id', id)
-        .eq('user_id', workspaceUserId)
-        .single()
-      if (error) throw error
-      return data
-    },
-    enabled: !!id && !!workspaceUserId,
-  })
-}
-
 // ─── Signed URL ────────────────────────────────────────────────────────────────
 
 /**

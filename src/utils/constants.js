@@ -49,19 +49,3 @@ export const INVOICE_CATEGORIES = [
   'Ad Management',
   'Other',
 ]
-
-/**
- * Income categories that REQUIRE a formal invoice.
- * These represent billable client work where a document trail is mandatory.
- * When a user tries to record a direct ledger entry for these, they are
- * redirected to the invoice flow instead.
- *
- * Ledger-only (no invoice required): Ad Budget Reimbursement, Other
- */
-export const INVOICE_REQUIRED_CATEGORIES = new Set([
-  'Monthly Retainer',
-  'Setup / Onboarding',
-  'Performance / Success Fee',
-  'Creative Project',
-  'Consulting / Audit',
-])
