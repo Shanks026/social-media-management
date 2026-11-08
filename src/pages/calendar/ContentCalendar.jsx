@@ -45,6 +45,7 @@ import { useGlobalCalendar } from '@/api/posts'
 import { useAuth } from '@/context/AuthContext'
 import { useHeader } from '@/components/misc/header-context'
 import { cn } from '@/lib/utils'
+import { matchesPublishStatus } from '@/lib/helper'
 import { fetchMeetings } from '@/api/meetings'
 import { useClients } from '@/api/clients'
 import { ClientAvatar } from '@/components/tasks/ClientAvatar'
@@ -170,8 +171,8 @@ export default function ContentCalendar({
       const matchesSearch = post.title
         ?.toLowerCase()
         .includes(searchQuery.toLowerCase())
-      const matchesStatus =
-        statusFilter === 'all' || post.status === statusFilter
+      // Same derived state the cells use, so "Partially Published" matches (B9)
+      const matchesStatus = matchesPublishStatus(post, statusFilter)
 
       // 🔥 FIX: Check for ID match if clientId prop is present
       const matchesClient = clientId

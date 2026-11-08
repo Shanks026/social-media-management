@@ -55,6 +55,14 @@ export function getPublishState(version) {
 }
 
 /**
+ * Status-filter predicate that agrees with what the calendar cells show:
+ * compares the derived publish state, not the raw DB status (B9).
+ */
+export function matchesPublishStatus(version, statusFilter) {
+  return statusFilter === 'all' || getPublishState(version) === statusFilter
+}
+
+/**
  * Renders a post caption with hashtags highlighted in blue.
  * Returns an array of strings and React elements suitable for rendering.
  */
