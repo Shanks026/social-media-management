@@ -1,5 +1,7 @@
 # Feature: Partnership Management
 
+> **Status: Not started.** Nothing in this document is built. The `/ads` and `/partnerships` "Coming soon" placeholder pages were removed in #100 (2026-11-08); this is a design brief only.
+
 ## Purpose
 
 Agencies are often co-owned, externally funded, or built with partners who have equity stakes. Today there is no place in Tercero to track this. Ownership structures live in spreadsheets or legal documents that no one looks at regularly.
