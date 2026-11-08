@@ -10,3 +10,10 @@ build/
 
 # Claude Code personal settings
 .claude/settings.local.json
+
+# Test coverage output
+coverage/
+
+# Supabase CLI state and local function secrets (template: supabase/functions/.env.example)
+supabase/.temp
+supabase/functions/.env
