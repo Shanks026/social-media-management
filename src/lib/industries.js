@@ -28,8 +28,3 @@ export const INDUSTRY_OPTIONS = [
   { label: 'Internal Workspace', value: 'Internal', color: 'slate' },
 ]
 
-// Helper to get color safely
-export const getIndustryColor = (industryValue) => {
-  const found = INDUSTRY_OPTIONS.find((i) => i.value === industryValue)
-  return found ? found.color : 'gray' // Default to gray if not found
-}

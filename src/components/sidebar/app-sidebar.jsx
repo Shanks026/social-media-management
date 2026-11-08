@@ -34,7 +34,6 @@ export function AppSidebar({ user, agencySettings }) {
 
           {/* This is the magic part: flex-1 makes this grow to push settings down */}
           <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-            {/* <NavClients /> */}
           </div>
 
           <div className="flex flex-col gap-0 overflow-hidden">

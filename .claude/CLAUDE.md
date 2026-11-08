@@ -66,7 +66,7 @@ Pages/Components → API functions (src/api/) → Supabase client → PostgreSQL
 - `src/lib/helper.js` — `formatDate(dateInput)` → "2 Jan, 2026"; `formatFileSize(bytes)` → "2.3 MB"; `getPublishState(version)` → derives display status from `platform_schedules` (returns `'PARTIALLY_PUBLISHED'` when some but not all platforms have `published_at`); `effectivePlatformDate(version, platform)` → falls back to `target_date` when `platform_schedules` is absent; `MAX_DOCUMENT_SIZE_BYTES` constant (50 MB)
 - `src/lib/client-helpers.js` — `getUrgencyStatus(nextPostAt)` → urgency color/label for pipeline indicators
 - `src/lib/workspace.js` — `resolveWorkspace()` async helper for plain mutation functions that need `workspaceUserId` without React context (calls `auth.getUser()` then checks `agency_members`)
-- `src/lib/industries.js` — `INDUSTRY_OPTIONS` array (value/label pairs, e.g. `{ value: 'SaaS', label: 'SaaS & Tech' }`). The DB stores the short `value`; always resolve to `label` for display via `.find(i => i.value === x)?.label`. Also exports `getIndustryColor(value)`.
+- `src/lib/industries.js` — `INDUSTRY_OPTIONS` array (value/label pairs, e.g. `{ value: 'SaaS', label: 'SaaS & Tech' }`). The DB stores the short `value`; always resolve to `label` for display via `.find(i => i.value === x)?.label`.
 
 **Shared UI components:**
 - `src/components/ui/stat-bar.jsx` — `<StatBar>` (bordered flex row with dividers) + `<StatCell label value sub icon iconBg>`. Accepts `className` on both; `valueClass`/`labelClass`/`subClass` on `StatCell`. The `sub` prop accepts JSX (renders in a `<div>`). Use for metric rows on Finance, Dashboard, Reports, Campaign, and Prospects pages.

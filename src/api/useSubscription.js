@@ -176,11 +176,9 @@ export function useSubscription() {
         is_pending_deletion: !!sub.scheduled_for_deletion_at,
 
         // Onboarding progress — workspace-level, replaces the old per-device
-        // localStorage flag. `needs_onboarding` gates the wizard in AppShell.
+        // localStorage flag.
         onboarding_completed_at: sub.onboarding_completed_at ?? null,
         onboarding_skipped_steps: sub.onboarding_skipped_steps ?? [],
-        needs_onboarding:
-          !sub.agency_name?.trim() && !sub.onboarding_completed_at,
 
         // Agency contact for invoices — sourced from the agency (internal client) record
         email: internalClient?.email ?? sub.email ?? null,

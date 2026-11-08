@@ -251,8 +251,6 @@ export async function deleteClient(clientId) {
 
       if (storageError) {
         console.error('post-media cleanup failed during client deletion:', storageError)
-      } else {
-        console.log(`Removed ${postMediaPaths.length} post-media files.`)
       }
     }
 
@@ -264,8 +262,6 @@ export async function deleteClient(clientId) {
 
       if (docStorageError) {
         console.error('client-documents cleanup failed during client deletion:', docStorageError)
-      } else {
-        console.log(`Removed ${documentPaths.length} document files.`)
       }
     }
 
@@ -294,8 +290,6 @@ export async function deleteClient(clientId) {
 
       if (propStorageError) {
         console.error('proposal-files cleanup failed during client deletion:', propStorageError)
-      } else {
-        console.log(`Removed ${proposalPaths.length} proposal files.`)
       }
     }
 
