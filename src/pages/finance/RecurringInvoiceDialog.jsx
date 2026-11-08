@@ -1,5 +1,5 @@
-import { useState, useMemo, useEffect } from 'react'
-import { format, addMonths, addQuarters, addYears } from 'date-fns'
+import { useState, useMemo } from 'react'
+import { format } from 'date-fns'
 import { Calendar as CalendarIcon, FileText, Pencil, Lock } from 'lucide-react'
 
 // API
@@ -8,7 +8,6 @@ import {
   useUpdateRecurringInvoice,
 } from '@/api/invoices'
 import { useClients } from '@/api/clients'
-import { useSubscription } from '@/api/useSubscription'
 import { cn } from '@/lib/utils'
 import { INVOICE_CATEGORIES } from '@/utils/constants'
 
@@ -49,7 +48,6 @@ export function RecurringInvoiceDialog({
   recurringInvoice = null, // if passed, we are in Edit mode
 }) {
   const { data: clientData } = useClients()
-  const { data: subscription } = useSubscription()
   const clients = clientData?.realClients || []
 
   const isEditMode = !!recurringInvoice
@@ -72,8 +70,10 @@ export function RecurringInvoiceDialog({
   const [notes, setNotes] = useState('')
   const [isActive, setIsActive] = useState(true)
 
-  // --- Populate form from recurringInvoice data or reset ---
-  useEffect(() => {
+  // --- Populate form from recurringInvoice data, or reset, each time it opens ---
+  const [prevOpen, setPrevOpen] = useState(false)
+  if (open !== prevOpen) {
+    setPrevOpen(open)
     if (open) {
       if (isEditMode && recurringInvoice) {
         setClientId(recurringInvoice.client_id || '')
@@ -101,7 +101,7 @@ export function RecurringInvoiceDialog({
         setIsActive(true)
       }
     }
-  }, [open, isEditMode, recurringInvoice, preselectedClientId])
+  }
 
   // --- Validation ---
   const isValid = useMemo(() => {

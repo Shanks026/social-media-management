@@ -232,7 +232,6 @@ export default function LinkedInPreview({ post, client }) {
   )
 }
 
-// eslint-disable-next-line no-unused-vars
 const ActionButton = ({ icon: Icon, label }) => (
   <button className="flex items-center gap-1.5 px-3 py-3 rounded hover:bg-[#00000014] dark:hover:bg-[#ffffff14] transition-colors text-gray-600 dark:text-gray-300 font-semibold group">
     <Icon size={20} className="group-hover:stroke-2 transition-all" />

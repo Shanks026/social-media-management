@@ -43,6 +43,12 @@ vi.mock('@/api/campaigns', async (importOriginal) => {
     fetchActiveCampaignsByClient: vi.fn().mockResolvedValue([
       { id: 'camp-1', name: 'Q2 Launch' },
     ]),
+    // The invoice dialogs read campaigns through this hook, which calls the
+    // real fetcher internally, so mocking the fetcher alone doesn't reach it.
+    useActiveCampaignsByClient: (clientId, { enabled = true } = {}) => ({
+      data: clientId && enabled ? [{ id: 'camp-1', name: 'Q2 Launch' }] : undefined,
+      isLoading: false,
+    }),
   }
 })
 

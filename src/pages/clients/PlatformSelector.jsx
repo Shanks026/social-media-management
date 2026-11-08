@@ -18,15 +18,13 @@ const getBaseUrl = (id) => {
 }
 
 const PlatformSelector = memo(
-  ({ selected = [], onChange, register, errors, setValue, watch }) => {
+  ({ selected = [], onChange, register, errors, setValue }) => {
     const togglePlatform = (id) => {
       const nextSelected = selected.includes(id)
         ? selected.filter((p) => p !== id)
         : [...selected, id]
       onChange(nextSelected)
     }
-
-    const socialLinks = watch('social_links') || {}
 
     return (
       <div className="space-y-4">
@@ -37,7 +35,6 @@ const PlatformSelector = memo(
           {SUPPORTED_PLATFORMS.map((platform) => {
             const isSelected = selected.includes(platform.id)
             const hasError = errors?.social_links?.[platform.id]
-            const currentHandle = socialLinks[platform.id]?.handle || ''
 
             const handleInputChange = (e) => {
               // 1. Sanitize: No spaces, strip the @ if they type it

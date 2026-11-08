@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/select'
 import { INDUSTRY_OPTIONS } from '@/lib/industries'
 import { cn } from '@/lib/utils'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import IndustryBadge from './IndustryBadge'
 
 /* ----------------------------------------------------

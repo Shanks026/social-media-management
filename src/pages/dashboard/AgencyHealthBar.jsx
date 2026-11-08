@@ -14,12 +14,9 @@ import { useTransactions } from '@/api/transactions'
 import { useExpenses } from '@/api/expenses'
 import { usePermissions } from '@/api/usePermissions'
 import { calculatePeriodMetrics, formatCurrency } from '@/utils/finance'
-import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
-import { useMemo } from 'react'
 
 export default function AgencyHealthBar() {
-  const navigate = useNavigate()
   const now = new Date()
   const monthStart = startOfMonth(now)
   const monthEnd = endOfMonth(now)

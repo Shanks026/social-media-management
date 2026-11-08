@@ -78,15 +78,17 @@ import DocumentPreviewModal from './DocumentPreviewModal'
 import MoveToCollectionDialog from './MoveToCollectionDialog'
 import { useSubscription } from '@/api/useSubscription'
 
-function getFileIcon(mimeType) {
-  if (!mimeType) return File
-  if (mimeType.startsWith('image/')) return Image
-  if (mimeType === 'application/pdf') return FileText
+// A fixed component that branches on mimeType, rather than picking a component
+// during DocumentCard's render (which would remount the icon on each render).
+function FileTypeIcon({ mimeType, ...props }) {
+  if (!mimeType) return <File {...props} />
+  if (mimeType.startsWith('image/')) return <Image {...props} />
+  if (mimeType === 'application/pdf') return <FileText {...props} />
   if (mimeType.includes('spreadsheet') || mimeType.includes('excel') || mimeType.includes('csv'))
-    return FileSpreadsheet
-  if (mimeType.startsWith('video/')) return Video
-  if (mimeType.includes('zip') || mimeType.includes('compressed')) return FileArchive
-  return FileText
+    return <FileSpreadsheet {...props} />
+  if (mimeType.startsWith('video/')) return <Video {...props} />
+  if (mimeType.includes('zip') || mimeType.includes('compressed')) return <FileArchive {...props} />
+  return <FileText {...props} />
 }
 
 const editSchema = z.object({
@@ -102,8 +104,6 @@ export default function DocumentCard({ doc, canManage = true }) {
   const [editOpen, setEditOpen] = useState(false)
   const [previewOpen, setPreviewOpen] = useState(false)
   const [moveDialogOpen, setMoveDialogOpen] = useState(false)
-
-  const Icon = getFileIcon(doc.mime_type)
 
   const form = useForm({
     resolver: zodResolver(editSchema),
@@ -197,7 +197,7 @@ export default function DocumentCard({ doc, canManage = true }) {
       >
         {/* Icon */}
         <div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-muted">
-          <Icon className="size-4 text-muted-foreground" />
+          <FileTypeIcon mimeType={doc.mime_type} className="size-4 text-muted-foreground" />
         </div>
 
         {/* Info */}

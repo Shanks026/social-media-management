@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo } from 'react'
 import { format, isBefore, startOfDay } from 'date-fns'
 import { useNavigate } from 'react-router-dom'
 import { Calendar as CalendarIcon, Plus, Trash2, FileText, Settings2 } from 'lucide-react'
@@ -12,7 +12,7 @@ import {
 } from '@/api/invoices'
 import { useClients } from '@/api/clients'
 import { useSubscription } from '@/api/useSubscription'
-import { fetchActiveCampaignsByClient } from '@/api/campaigns'
+import { useActiveCampaignsByClient } from '@/api/campaigns'
 import { cn } from '@/lib/utils'
 
 // Constants
@@ -82,33 +82,36 @@ export function CreateInvoiceDialog({
   const [notes, setNotes] = useState('')
   const [items, setItems] = useState([{ ...EMPTY_ITEM }])
   const [campaignId, setCampaignId] = useState('')
-  const [availableCampaigns, setAvailableCampaigns] = useState([])
 
-  // --- Fetch campaigns when client changes (Velocity+ only) ---
-  useEffect(() => {
-    if (!clientId || !subscription?.campaigns) {
-      setAvailableCampaigns([])
-      setCampaignId('')
-      return
-    }
-    fetchActiveCampaignsByClient(clientId)
-      .then(setAvailableCampaigns)
-      .catch(() => setAvailableCampaigns([]))
-  }, [clientId, subscription?.campaigns])
+  // --- Campaigns for the selected client (Velocity+ only) ---
+  const campaignsEnabled = !!clientId && !!subscription?.campaigns
+  const { data: clientCampaigns = [] } = useActiveCampaignsByClient(clientId, {
+    enabled: !!subscription?.campaigns,
+  })
+  const availableCampaigns = campaignsEnabled ? clientCampaigns : []
 
-  // --- Auto-clear dueDate if issueDate moves after it ---
-  useEffect(() => {
+  // A campaign belongs to one client, so switching client drops the pick.
+  const handleClientChange = (value) => {
+    setClientId(value)
+    setCampaignId('')
+  }
+
+  // --- Clear dueDate if the new issueDate moves past it ---
+  const handleIssueDateChange = (date) => {
+    setIssueDate(date)
     if (
       dueDate &&
-      issueDate &&
-      isBefore(startOfDay(dueDate), startOfDay(issueDate))
+      date &&
+      isBefore(startOfDay(dueDate), startOfDay(date))
     ) {
       setDueDate(null)
     }
-  }, [issueDate])
+  }
 
-  // --- Reset form when dialog opens (apply prefill if provided) ---
-  useEffect(() => {
+  // --- Reset form each time the dialog opens (apply prefill if provided) ---
+  const [prevOpen, setPrevOpen] = useState(false)
+  if (open !== prevOpen) {
+    setPrevOpen(open)
     if (open) {
       setClientId(preselectedClientId || '')
       setIssueDate(new Date())
@@ -126,7 +129,7 @@ export function CreateInvoiceDialog({
           : { ...EMPTY_ITEM },
       ])
     }
-  }, [open, preselectedClientId, preselectedCampaignId, prefill])
+  }
 
   // --- Line item handlers ---
   const updateItem = (index, field, value) => {
@@ -240,7 +243,7 @@ export function CreateInvoiceDialog({
       category: category || null,
       payment_terms: paymentTerms || null,
       notes: notes || null,
-      campaign_id: campaignId || null,
+      campaign_id: (campaignsEnabled && campaignId) || null,
     }
 
     const itemsPayload = items.map((item) => ({
@@ -334,7 +337,7 @@ export function CreateInvoiceDialog({
                 </Label>
                 <Select
                   value={clientId}
-                  onValueChange={setClientId}
+                  onValueChange={handleClientChange}
                   disabled={!!preselectedClientId}
                 >
                   <SelectTrigger
@@ -394,7 +397,7 @@ export function CreateInvoiceDialog({
                       <Calendar
                         mode="single"
                         selected={issueDate}
-                        onSelect={setIssueDate}
+                        onSelect={handleIssueDateChange}
                         initialFocus
                       />
                     </PopoverContent>

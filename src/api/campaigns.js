@@ -41,7 +41,7 @@ export function useCampaign(campaignId) {
   })
 }
 
-// Plain async — called inside useEffect in DraftPostForm on client change
+// Plain async — also used directly as a queryFn by dialogs that build their own key
 export async function fetchActiveCampaignsByClient(clientId) {
   const { data, error } = await supabase
     .from('campaigns')
@@ -51,6 +51,16 @@ export async function fetchActiveCampaignsByClient(clientId) {
     .order('name')
   if (error) throw error
   return data ?? []
+}
+
+// Active campaigns for one client. Shares its key with the inline useQuery
+// calls in the task and meeting dialogs, so they hit the same cache entry.
+export function useActiveCampaignsByClient(clientId, { enabled = true } = {}) {
+  return useQuery({
+    queryKey: ['campaigns', 'active-by-client', clientId],
+    queryFn: () => fetchActiveCampaignsByClient(clientId),
+    enabled: !!clientId && enabled,
+  })
 }
 
 export function useCampaignAnalytics(campaignId) {
@@ -148,7 +158,7 @@ export function useAssignPostsToCampaign() {
         .in('id', postIds)
       if (error) throw error
     },
-    onSuccess: (_, { campaignId }) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['campaigns'] })
       queryClient.invalidateQueries({ queryKey: ['global-posts'] })
       queryClient.invalidateQueries({ queryKey: ['draft-posts'] })
@@ -309,4 +319,14 @@ export async function fetchUnlinkedPostsByClient(clientId) {
     target_date: post.post_versions?.target_date,
     media_urls: post.post_versions?.media_urls || [],
   }))
+}
+
+// Under the 'campaigns' prefix so the assign mutations' broad invalidation
+// refreshes it after posts are linked.
+export function useUnlinkedPostsByClient(clientId, { enabled = true } = {}) {
+  return useQuery({
+    queryKey: ['campaigns', 'unlinked-posts', clientId],
+    queryFn: () => fetchUnlinkedPostsByClient(clientId),
+    enabled: !!clientId && enabled,
+  })
 }

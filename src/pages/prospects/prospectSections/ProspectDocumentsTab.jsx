@@ -4,7 +4,6 @@ import { toast } from 'sonner'
 import { FolderOpen, Search, Upload, X } from 'lucide-react'
 
 import { useDocuments, uploadDocument } from '@/api/documents'
-import { useAuth } from '@/context/AuthContext'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -28,7 +27,6 @@ import UploadMetaDialog, {
 } from '@/components/documents/UploadMetaDialog'
 
 export default function ProspectDocumentsTab({ prospectId }) {
-  const { user } = useAuth()
   const queryClient = useQueryClient()
 
   const { data: documents, isLoading, error } = useDocuments({ prospectId })

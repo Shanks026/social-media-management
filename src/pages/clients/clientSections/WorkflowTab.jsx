@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Search, Globe, Plus, User } from 'lucide-react'
-import { useAuth } from '@/context/AuthContext'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -34,7 +33,6 @@ const ALL_STATUS_TABS = [
 const INTERNAL_EXCLUDED = ['PENDING_APPROVAL', 'NEEDS_REVISION']
 
 export default function WorkflowTab({ client }) {
-  const { user } = useAuth()
   const [createOpen, setCreateOpen] = useState(false)
   const [statusFilter, setStatusFilter] = useState('ALL')
   const [myWorkOnly, setMyWorkOnly] = useState(false)

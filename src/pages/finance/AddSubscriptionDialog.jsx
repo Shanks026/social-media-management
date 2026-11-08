@@ -8,8 +8,6 @@ import { Calendar as CalendarIcon, Building2, User } from 'lucide-react'
 // API & Libs
 import { useCreateExpense, useUpdateExpense } from '@/api/expenses'
 import { useClients } from '@/api/clients'
-import { supabase } from '@/lib/supabase'
-import { useQuery } from '@tanstack/react-query'
 import { cn } from '@/lib/utils'
 
 // UI Components

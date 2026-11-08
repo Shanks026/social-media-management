@@ -1,4 +1,4 @@
-import { format, isToday, isTomorrow, differenceInDays } from 'date-fns'
+import { format, isToday, isTomorrow, isPast, differenceInDays } from 'date-fns'
 import { CheckCircle2, Clock, Link as LinkIcon, Lock, Pencil } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -44,7 +44,7 @@ export default function MeetingRow({
   }
 
   const isDone = !!meeting.completed_at
-  const isOverdue = !isDone && meetingDate.getTime() < Date.now()
+  const isOverdue = !isDone && isPast(meetingDate)
   const client = clientsMap[meeting.client_id]
   const monthStr = format(meetingDate, 'MMM').toUpperCase()
   const dayStr = format(meetingDate, 'dd')

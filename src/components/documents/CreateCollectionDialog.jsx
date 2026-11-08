@@ -33,7 +33,6 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
 import { createCollection, updateCollection, documentKeys } from '@/api/documents'
-import { useAuth } from '@/context/AuthContext'
 import { useSubscription } from '@/api/useSubscription'
 
 const baseSchema = z.object({
@@ -68,7 +67,6 @@ export default function CreateCollectionDialog({
   defaultClientId,
   onSuccess,
 }) {
-  const { user } = useAuth()
   const queryClient = useQueryClient()
   const { data: sub } = useSubscription()
   const effectiveOpen = open && (sub?.documents_collections ?? false)

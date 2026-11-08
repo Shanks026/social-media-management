@@ -52,14 +52,6 @@ const icons = {
   ),
 }
 
-const PLATFORM_COLORS = {
-  instagram: 'ring-pink-300',
-  linkedin: 'ring-blue-300',
-  facebook: 'ring-blue-300',
-  youtube: 'ring-red-300',
-  google_business: 'ring-gray-200',
-}
-
 function normalise(p) {
   return typeof p === 'string' ? p.toLowerCase().replace(/\s+/g, '_') : ''
 }
@@ -98,8 +90,6 @@ export function PlatformStack({ platforms = [], max = 3, size = 22 }) {
   return (
     <div className="flex items-center">
       {visible.map((p, i) => {
-        const key = normalise(p)
-        const ringColor = PLATFORM_COLORS[key] ?? 'ring-border'
         return (
           <span
             key={p}

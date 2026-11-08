@@ -90,7 +90,11 @@ export function AppShell({ user }) {
         }
       }
 
-      try { sessionStorage.setItem(settingsKey, JSON.stringify(settings)) } catch {}
+      try {
+        sessionStorage.setItem(settingsKey, JSON.stringify(settings))
+      } catch {
+        // Storage blocked or full (e.g. private mode): the cache is optional.
+      }
       setAgencySettings(settings)
     } catch (err) {
       console.error('AppShell: Status check failed', err)
