@@ -44,14 +44,12 @@ import {
 import { Switch } from '@/components/ui/switch'
 import { toast } from 'sonner'
 
-export default function SubscriptionsTab({ clientId, subTabs }) {
+export default function SubscriptionsTab() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingExpense, setEditingExpense] = useState(null)
   const [filterMode, setFilterMode] = useState('ALL')
 
-  const { data: allExpenses = [], isLoading: isLoadingExpenses } = useExpenses({
-    clientId,
-  })
+  const { data: allExpenses = [], isLoading: isLoadingExpenses } = useExpenses()
   const { mutate: deleteExpense } = useDeleteExpense()
   const { mutate: renewSubscription } = useRenewSubscription()
   const { mutate: updateExpense } = useUpdateExpense()
@@ -247,28 +245,22 @@ export default function SubscriptionsTab({ clientId, subTabs }) {
   return (
     <div className="space-y-4 animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        {subTabs ? (
-          subTabs
-        ) : (
-          <h2 className="text-2xl font-normal bricolage">Subscriptions</h2>
-        )}
+        <h2 className="text-2xl font-normal bricolage">Subscriptions</h2>
         <div className="flex items-center gap-3">
-          {!clientId && (
-            <Select value={filterMode} onValueChange={setFilterMode}>
-              <SelectTrigger className="w-[200px] border-dashed">
-                <SelectValue placeholder="Filter View" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL">All Expenses</SelectItem>
-                <SelectItem value="INTERNAL">My Agency</SelectItem>
-                {clients.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
+          <Select value={filterMode} onValueChange={setFilterMode}>
+            <SelectTrigger className="w-[200px] border-dashed">
+              <SelectValue placeholder="Filter View" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">All Expenses</SelectItem>
+              <SelectItem value="INTERNAL">My Agency</SelectItem>
+              {clients.map((c) => (
+                <SelectItem key={c.id} value={c.id}>
+                  {c.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Button
             onClick={() => {
               setEditingExpense(null)
@@ -367,7 +359,6 @@ export default function SubscriptionsTab({ clientId, subTabs }) {
           if (!val) setEditingExpense(null)
         }}
         editingData={editingExpense}
-        defaultClientId={clientId}
       />
     </div>
   )

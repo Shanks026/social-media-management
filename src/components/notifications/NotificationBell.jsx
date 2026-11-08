@@ -68,7 +68,6 @@ const TYPE_CONFIG = {
   // No longer emitted — tg_notify_chat_message stopped notifying on every DM
   // message. Kept so the rows written before that change still render as chat
   // rather than falling through to the generic bell fallback.
-  chat_dm:                { icon: MessageCircle,   color: 'text-sky-500',    bg: 'bg-sky-100 dark:bg-sky-950' },
 }
 
 // Label to show when a notification has no human actor (actor_user_id is null).

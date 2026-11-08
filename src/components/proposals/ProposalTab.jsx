@@ -159,16 +159,6 @@ export function ProposalTab({ clientId, prospectId, prospectName, prospectEmail 
   const proposalsLimit = sub?.proposals_limit ?? null
   const atLimit = proposalsLimit !== null && activeCount >= proposalsLimit
 
-  // eslint-disable-next-line no-unused-vars -- kept for the paused "Build in Tercero" flow, see below
-  function openNewDialog() {
-    if (atLimit) {
-      setUpgradeOpen(true)
-    } else {
-      setEditingProposal(null)
-      setDialogOpen(true)
-    }
-  }
-
   function openUploadDialog() {
     if (atLimit) {
       setUpgradeOpen(true)
@@ -231,29 +221,6 @@ export function ProposalTab({ clientId, prospectId, prospectName, prospectEmail 
               {activeCount} of {proposalsLimit} used
             </span>
           )}
-          {/* "Build in Tercero" is paused pending the upcoming drag-and-drop
-              proposal builder — upload-only for now. Restore this dropdown
-              (and the single button below) once that ships.
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button size="sm" className="gap-2 h-9">
-                <Plus className="size-4" />
-                New Proposal
-                <ChevronDown className="size-3.5 opacity-70" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-52">
-              <DropdownMenuItem onClick={openNewDialog}>
-                <PenLine className="size-4 mr-2" />
-                Build in Tercero
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={openUploadDialog}>
-                <Upload className="size-4 mr-2" />
-                Upload Existing File
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          */}
           <Button size="sm" className="gap-2 h-9" onClick={openUploadDialog}>
             <Plus className="size-4" />
             New Proposal
@@ -323,12 +290,6 @@ export function ProposalTab({ clientId, prospectId, prospectName, prospectEmail 
                   <Upload className="size-4 mr-2" />
                   Upload Existing File
                 </Button>
-                {/* "Build in Tercero" paused — see toolbar comment above.
-                <Button onClick={openNewDialog} variant="outline">
-                  <PenLine className="size-4 mr-2" />
-                  Build in Tercero
-                </Button>
-                */}
               </div>
             )}
           </EmptyContent>

@@ -29,28 +29,6 @@ export async function fetchMeetings({ startDate, endDate, clientId }) {
 }
 
 /**
- * Fetch the nearest future meeting for a specific client.
- */
-export async function fetchUpcomingMeeting(clientId) {
-  const { data, error } = await supabase
-    .from('meetings')
-    .select('*, clients!inner(name)')
-    .eq('client_id', clientId)
-    .gte('datetime', new Date().toISOString())
-    .order('datetime', { ascending: true })
-    .limit(1)
-    .maybeSingle()
-
-  if (error) throw error
-  if (!data) return null
-
-  return {
-    ...data,
-    client_name: data.clients?.name
-  }
-}
-
-/**
  * Fetch the next few future meetings for a specific client.
  */
 export async function fetchUpcomingMeetings(clientId, limit = 3) {

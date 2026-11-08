@@ -22,10 +22,6 @@ export function useNoteShares(noteId) {
   })
 }
 
-export async function shareNote({ noteId, memberUserId, permission = 'read' }) {
-  return shareNoteWithMany({ noteId, memberUserIds: [memberUserId], permission })
-}
-
 /** Share a note with several teammates at once (single insert + visibility update). */
 export async function shareNoteWithMany({ noteId, memberUserIds, permission = 'read' }) {
   const { user } = await resolveWorkspace()

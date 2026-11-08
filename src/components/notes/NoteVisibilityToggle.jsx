@@ -9,7 +9,7 @@ const OPTIONS = [
 
 // Clicking "Shared" always opens ShareNoteDialog (onShareClick) — whether to
 // invite the first collaborator (visibility only flips once someone is
-// actually added, inside shareNote()) or to manage an existing share list.
+// actually added, inside shareNoteWithMany()) or to manage an existing share list.
 // Private/Workspace still flip directly via onChange.
 export default function NoteVisibilityToggle({ visibility, onChange, onShareClick, disabled }) {
   const current = OPTIONS.find((o) => o.value === visibility) ?? OPTIONS[0]
