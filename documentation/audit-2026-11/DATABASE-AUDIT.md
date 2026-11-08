@@ -78,6 +78,8 @@ These are called from neither `src/` nor `supabase/functions/`, and aren't refer
 | `schedule_post`, `send_for_approval`, `send_post_for_approval`, `submit_approval` | `platform_schedules`, `submit_for_internal_approval`, `update_post_status_by_token` |
 | `get_global_calendar_posts` | `get_global_calendar` |
 | `advance_recurring_invoice_date` | nothing calls it. Verify whether recurring invoices should advance (possible missing feature, see 🐞 D4) |
+
+> **Correction (2026-11-08, #101):** `send_post_for_approval` is **not** dead. `PostDetails.jsx` calls it to move a deliverable to `PENDING_APPROVAL`, so it was kept. The others in this table were dropped in #101, except `schedule_post` and `submit_approval`, which go with the legacy tables in #102.
 | `my_system_role` | `usePermissions` / `is_workspace_owner` |
 | **Stale overloads:** 3 of the 4 `create_post_draft_v3` signatures (the app passes the 11-argument version with `p_campaign_id` + `p_deliverable_type`), and the 2-argument `create_revision_version` (the app passes `p_admin_notes`) | the newest signature |
 
@@ -117,12 +119,14 @@ Removing these drops about 15 functions (13%) and removes the ambiguity of which
 **Other triggers:**
 - ✅ Notification fan-out (`tg_notify_*`), `tg_log_task_activity`, `tg_autocomplete_tasks_on_publish`, `trg_set_post_creator`, `enforce_task_assignment`, `check_client_limit` and the comment cascade triggers are all good, DB-side, and match the documented pattern.
 - 🔧 There are 4 copies of the `updated_at` trigger function (`set_updated_at`, `update_app_config_timestamp`, `update_user_feedback_updated_at`, plus storage's own). Keep `set_updated_at` only.
+  > **Done in #101:** the two public duplicates were dropped and their triggers repointed to `set_updated_at`. Storage's `storage.update_updated_at_column` is Supabase-owned and stays.
 - 🔧 Two notification triggers still emit `/clients/:id/posts/:postId` links, which is why the legacy route redirect must stay. Update them to `/deliverables/`.
 - 🔧 The client-welcome email has a DB trigger (`trigger_client_welcome_email_on_insert` migration) **and** an app call. On the live database no such trigger is attached to `clients` anymore (only `enforce_client_limit` is), so the **app call is the only path**. The migration file is historical, and the main report's "two triggers" note can be closed.
 
 ## 6. Views
 - ✅ Used: `view_finance_overview`, `view_monthly_burn_rate`.
 - 🗑 Unused: `subscription_usage_stats` and `client_pipeline_analytics`. Nothing in `src/`, the edge functions, other functions or cron uses them; `get_clients_with_pipeline` replaced the second. Drop both.
+  > **Correction (2026-11-08, #73 / #101):** this was wrong about `client_pipeline_analytics`. `get_client_report` (the Reports page) reads it, so it stays. Only `subscription_usage_stats` was dropped (#101).
 - 🔧 Docs: `view_client_profitability` is described in `.claude/CLAUDE.md`, `.claude/rules/supabase-patterns.md` and `.claude/app-research.md`, but it was **dropped** in migration `20260305153317`. Remove it from the docs.
 
 ## 7. Indexes & performance advisors
