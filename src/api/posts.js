@@ -462,9 +462,20 @@ export async function fetchGlobalCalendar({ userId, currentMonth }) {
   })
 
   if (error) throw error
+  const rows = data || []
+  if (!rows.length) return rows
 
-  // The data now includes media_urls (array) and version_number (int)
-  return data || []
+  // get_global_calendar doesn't return platform_schedules, which
+  // getPublishState needs to show (and filter) partially published
+  // deliverables (B9). Fetch them for the month's versions and merge.
+  const { data: schedules, error: schedError } = await supabase
+    .from('post_versions')
+    .select('id, platform_schedules')
+    .in('id', rows.map((r) => r.version_id))
+  if (schedError) throw schedError
+
+  const byId = new Map((schedules || []).map((s) => [s.id, s.platform_schedules]))
+  return rows.map((r) => ({ ...r, platform_schedules: byId.get(r.version_id) ?? null }))
 }
 
 /**
