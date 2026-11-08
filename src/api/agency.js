@@ -17,7 +17,7 @@ export async function fetchAgencySettings() {
 /**
  * ONBOARDING: single atomic agency setup.
  *
- * Replaces the old completeFullAgencySetup / setupBrandingOnly fork for the
+ * Replaces the old two-path (full setup / branding only) fork for the
  * onboarding path — there is now one flow, and it always provisions the
  * internal agency account (which consumes no client slot). Writes branding,
  * contact details and the invoice signatory to agency_subscriptions, then
@@ -195,113 +195,6 @@ export async function reconcileLegacyOnboardingFlag(userId) {
     /* nothing to clean up */
   }
   return true
-}
-
-/**
- * PATH A: Full Branding + Internal Account
- * This creates the internal 'client' row using the UI Tier (PRO/BASIC/VIP),
- * but strictly avoids modifying the administrative Subscription Plan.
- */
-export async function completeFullAgencySetup(payload) {
-  const { workspaceUserId } = await resolveWorkspace()
-
-  // 1. Update Branding (Explicitly OMIT plan/subscription columns)
-  const { error: subError } = await supabase
-    .from('agency_subscriptions')
-    .upsert(
-      {
-        user_id: workspaceUserId,
-        agency_name: payload.name,
-        logo_url: payload.logo_url,
-        logo_horizontal_url: payload.logo_horizontal_url ?? null,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: 'user_id' },
-    )
-
-  if (subError) throw subError
-
-  // 2. Manage Internal Client Account
-  // Check if it already exists to avoid 42P10 error with partial indexes
-  const { data: existingClient } = await supabase
-    .from('clients')
-    .select('id')
-    .eq('user_id', workspaceUserId)
-    .eq('is_internal', true)
-    .maybeSingle()
-
-  const clientPayload = {
-    user_id: workspaceUserId,
-    name: payload.name,
-    logo_url: payload.logo_url,
-    industry: payload.industry,
-    status: payload.status,
-    platforms: payload.platforms,
-    social_links: payload.social_links,
-    email: payload.email,
-    mobile_number: payload.mobile_number,
-    website: payload.website,
-    location: payload.location,
-    address: payload.address,
-    description: payload.description,
-    tier: payload.tier,
-    is_internal: true,
-  }
-
-  let clientResult
-  if (existingClient) {
-    const { data, error: updateError } = await supabase
-      .from('clients')
-      .update(clientPayload)
-      .eq('id', existingClient.id)
-      .select()
-      .single()
-    if (updateError) throw updateError
-    clientResult = data
-  } else {
-    const { data, error: insertError } = await supabase
-      .from('clients')
-      .insert(clientPayload)
-      .select()
-      .single()
-    if (insertError) throw insertError
-    clientResult = data
-  }
-
-  return clientResult
-}
-
-/**
- * PATH B: Branding Only
- * Strictly updates identity; leaves clients table and plan_name alone.
- */
-export async function setupBrandingOnly(payload) {
-  const { workspaceUserId } = await resolveWorkspace()
-
-  const { data, error } = await supabase
-    .from('agency_subscriptions')
-    .upsert(
-      {
-        user_id: workspaceUserId,
-        agency_name: payload.name,
-        logo_url: payload.logo_url,
-        logo_horizontal_url: payload.logo_horizontal_url ?? null,
-        // Save the extra business/contact data here as well
-        industry: payload.industry,
-        platforms: payload.platforms,
-        social_links: payload.social_links,
-        email: payload.email,
-        mobile_number: payload.mobile_number,
-        description: payload.description,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: 'user_id' },
-    )
-    .select()
-    .single()
-
-  if (error) throw error
-  return data
 }
 
 export async function activateInternalWorkspace(brandingData) {
