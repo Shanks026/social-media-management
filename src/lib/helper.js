@@ -108,3 +108,20 @@ export function formatDate(dateInput) {
         year: "numeric",
     });
 }
+
+/**
+ * ISO timestamp -> value for <input type="datetime-local"> (local wall-clock
+ * "yyyy-MM-ddTHH:mm"). Paired with fromDateTimeLocal so an unchanged field
+ * saves back the same instant (B11).
+ */
+export function toDateTimeLocal(iso) {
+  if (!iso) return ''
+  const d = new Date(iso)
+  const pad = (n) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
+/** <input type="datetime-local"> value (local time) -> ISO timestamp, or null. */
+export function fromDateTimeLocal(value) {
+  return value ? new Date(value).toISOString() : null
+}

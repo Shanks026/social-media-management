@@ -76,11 +76,29 @@ export async function createTask({ post_ids, ...data }) {
 }
 
 export async function updateTask(id, { post_ids, ...updates }) {
+  // When the caller sets the assignee (the edit dialog), read the current one
+  // first so a change emails the new assignee, like reassignTask does (B12).
+  const touchesAssignee = 'assigned_to' in updates
+  let previousAssignee = null
+  if (touchesAssignee) {
+    const { data, error } = await supabase
+      .from('tasks')
+      .select('assigned_to')
+      .eq('id', id)
+      .single()
+    if (error) throw error
+    previousAssignee = data?.assigned_to ?? null
+  }
+
   const { error } = await supabase
     .from('tasks')
     .update({ ...updates, updated_at: new Date().toISOString() })
     .eq('id', id)
   if (error) throw error
+
+  if (touchesAssignee && updates.assigned_to && updates.assigned_to !== previousAssignee) {
+    notifyAssignee(id)
+  }
 
   // Only touch links when the caller actually manages them (the edit dialog),
   // so unrelated updates (inline field edits) never wipe deliverables.
