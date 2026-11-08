@@ -15,6 +15,7 @@ import {
   Search,
   Filter,
   RefreshCw,
+  Lock,
 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -35,6 +36,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { Badge } from '@/components/ui/badge'
 import StatusBadge from '@/components/StatusBadge'
 import { CustomTable } from '@/components/CustomTable'
@@ -91,6 +93,7 @@ export function ClientBillingTab({ clientId, client }) {
   const { mutate: generateInvoice } = useGenerateFromRecurring()
 
   const { data: subscription } = useSubscription()
+  const canUseRecurring = !!subscription?.finance_recurring_invoices
 
   // --- Summary stats ---
   const stats = useMemo(() => {
@@ -427,9 +430,26 @@ export function ClientBillingTab({ clientId, client }) {
             <TabsTrigger value="one-off" className="text-xs">
               One-off Invoices
             </TabsTrigger>
-            <TabsTrigger value="recurring" className="text-xs">
-              Recurring Templates
-            </TabsTrigger>
+            {/* Same plan gate as the Finance page's Recurring tab (B15) */}
+            {canUseRecurring ? (
+              <TabsTrigger value="recurring" className="text-xs">
+                Recurring Templates
+              </TabsTrigger>
+            ) : (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <TabsTrigger
+                    value="recurring-locked"
+                    disabled
+                    className="text-xs opacity-50 cursor-not-allowed gap-1.5 disabled:pointer-events-auto"
+                  >
+                    Recurring Templates
+                    <Lock size={11} />
+                  </TabsTrigger>
+                </TooltipTrigger>
+                <TooltipContent>Available on Velocity & Quantum</TooltipContent>
+              </Tooltip>
+            )}
           </TabsList>
 
           {client && (
@@ -496,7 +516,7 @@ export function ClientBillingTab({ clientId, client }) {
             >
               <Plus className="h-4 w-4 mr-1.5" /> New Invoice
             </Button>
-          ) : (
+          ) : canUseRecurring ? (
             <Button
               size="sm"
               className="h-9"
@@ -504,7 +524,7 @@ export function ClientBillingTab({ clientId, client }) {
             >
               <Plus className="h-4 w-4 mr-1.5" /> New Template
             </Button>
-          )}
+          ) : null}
         </div>
       </div>
 
@@ -584,13 +604,15 @@ export function ClientBillingTab({ clientId, client }) {
         />
       </TabsContent>
 
-      <TabsContent value="recurring" className="space-y-6 mt-0">
-        <CustomTable
-          columns={recurringColumns}
-          data={filteredRecurringData}
-          isLoading={isRecurringLoading}
-        />
-      </TabsContent>
+      {canUseRecurring && (
+        <TabsContent value="recurring" className="space-y-6 mt-0">
+          <CustomTable
+            columns={recurringColumns}
+            data={filteredRecurringData}
+            isLoading={isRecurringLoading}
+          />
+        </TabsContent>
+      )}
 
       {/* --- Dialogs --- */}
       <CreateInvoiceDialog
