@@ -5,7 +5,7 @@ import { ArrowRight, CheckCircle2, Lock, UserPlus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useTeamMembers } from '@/api/team'
 import { useSubscription } from '@/api/useSubscription'
-import { InviteDialog } from '@/pages/settings/TeamSettings'
+import { InviteDialog } from '@/components/team/InviteDialog'
 
 /**
  * Onboarding's team step. It deliberately does NOT implement its own invite

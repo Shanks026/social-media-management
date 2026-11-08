@@ -76,7 +76,9 @@ import {
   teamKeys,
 } from '@/api/team'
 import { useQueryClient } from '@tanstack/react-query'
-import { InviteDialog, EditAccessDialog, DOCS_LEVEL_CONFIG } from './settings/TeamSettings'
+import { InviteDialog } from '@/components/team/InviteDialog'
+import { EditAccessDialog } from '@/components/team/EditAccessDialog'
+import { DOCS_LEVEL_CONFIG } from '@/components/team/teamAccessConfig'
 import { formatDate } from '@/lib/helper'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
