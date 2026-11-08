@@ -380,45 +380,6 @@ export async function createRevision(versionId, userId, adminNotes) {
   }
   return data // This should return the UUID of the new version
 }
-/**
- * Manual revision helper
- * Follows custom instruction: Parent version status -> 'ARCHIVED'
- */
-export const createPostRevision = async (
-  parentPostId,
-  previousVersionId,
-  newVersionData,
-) => {
-  const { data: newVersion, error: insertError } = await supabase
-    .from('post_versions')
-    .insert([
-      {
-        ...newVersionData,
-        post_id: parentPostId,
-        status: 'DRAFT',
-        version_number: (newVersionData.version_number || 1) + 1,
-      },
-    ])
-    .select()
-    .single()
-
-  if (insertError) throw insertError
-
-  // [2026-01-25] Requirement: Move parent version's status to 'ARCHIVED'
-  await supabase
-    .from('post_versions')
-    .update({ status: 'ARCHIVED' })
-    .eq('id', previousVersionId)
-
-  // Update parent using the physical column name
-  await supabase
-    .from('posts')
-    .update({ current_version_id: newVersion.id })
-    .eq('id', parentPostId)
-
-  return newVersion
-}
-
 // api/posts.js
 
 /**

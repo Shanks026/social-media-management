@@ -7,19 +7,6 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-// Capitalize platform names nicely
-function formatPlatform(p: string): string {
-  const map: Record<string, string> = {
-    instagram: 'Instagram',
-    linkedin: 'LinkedIn',
-    twitter: 'Twitter / X',
-    facebook: 'Facebook',
-    youtube: 'YouTube',
-    google_business: 'Google Business',
-  }
-  return map[p.toLowerCase()] ?? p.charAt(0).toUpperCase() + p.slice(1)
-}
-
 // --- BRANDING HELPERS ---
 async function getBranding(supabase: any, userId: string) {
   const { data: sub } = await supabase
@@ -252,76 +239,6 @@ serve(async (req) => {
             <div style="border-top: 1px solid #F3F4F6; padding: 20px 48px; text-align: center;">
               <p style="color: #D1D5DB; font-size: 11px; margin: 0;">Tercero 2026</p>
             </div>
-          </div>
-        `,
-      })
-
-      if (error) return new Response(JSON.stringify(error), { status: 500, headers: corsHeaders })
-      return new Response(JSON.stringify(data), { headers: corsHeaders })
-    }
-
-    // --- SCENARIO 3: NOTIFY CLIENT (Post is PUBLISHED) ---
-    if (record.status === 'PUBLISHED') {
-      const { data: clientInfo } = await supabase
-        .from('clients')
-        .select('email, name')
-        .eq('id', record.client_id)
-        .single()
-
-      if (!clientInfo?.email) {
-        return new Response('Client email not found', { status: 400, headers: corsHeaders })
-      }
-
-      const postTitle = record.title || 'Untitled Post'
-      const platforms: string[] = record.platform || []
-      const platformList = platforms.length > 0
-        ? platforms.map(formatPlatform).join(', ')
-        : 'Not specified'
-      const publishedDate = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
-      const targetDate = record.target_date
-        ? new Date(record.target_date).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
-        : null
-
-      const { data, error } = await sendEmail('send-approval-email', 'post-published', {
-        from: `${branding.name} <notifications@tercerospace.com>`,
-        to: [clientInfo.email],
-        subject: `Your post is live: "${postTitle}"`,
-        html: `
-          <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 560px; margin: auto; background: #ffffff; color: #111827; border: 1px solid #E5E7EB;">
-            <div style="padding: 40px 48px 0;">
-              ${renderEmailHeader(branding)}
-            </div>
-            <div style="padding: 0 48px 40px;">
-              <h1 style="font-size: 26px; font-weight: 700; line-height: 1.2; margin: 0 0 16px; color: #111827;">Your post is now live</h1>
-              <p style="font-size: 15px; color: #6B7280; line-height: 1.6; margin: 0 0 32px;">Hi ${clientInfo.name},<br>The content you approved has been published and is now live across the selected platforms.</p>
-
-              <div style="border-top: 1px solid #E5E7EB; padding: 24px 0;">
-                <p style="font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #9CA3AF; margin: 0 0 6px;">Post</p>
-                <p style="font-size: 17px; font-weight: 600; color: #111827; margin: 0;">${postTitle}</p>
-              </div>
-
-              <div style="border-top: 1px solid #E5E7EB; padding: 24px 0;">
-                <p style="font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #9CA3AF; margin: 0 0 6px;">Published on</p>
-                <p style="font-size: 15px; font-weight: 500; color: #111827; margin: 0;">${platformList}</p>
-              </div>
-
-              <div style="border-top: 1px solid #E5E7EB; padding: 24px 0;">
-                <p style="font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #9CA3AF; margin: 0 0 6px;">Date Published</p>
-                <p style="font-size: 15px; font-weight: 500; color: #111827; margin: 0;">${publishedDate}</p>
-              </div>
-
-              ${targetDate ? `
-              <div style="border-top: 1px solid #E5E7EB; padding: 24px 0;">
-                <p style="font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #9CA3AF; margin: 0 0 6px;">Originally Scheduled For</p>
-                <p style="font-size: 15px; font-weight: 500; color: #111827; margin: 0;">${targetDate}</p>
-              </div>
-              ` : ''}
-
-              <div style="border-top: 1px solid #E5E7EB; padding: 32px 0 0;">
-                <p style="font-size: 14px; color: #6B7280; line-height: 1.6; margin: 0;">If you have any questions or feedback, please don't hesitate to reach out to your account manager.</p>
-              </div>
-            </div>
-            ${renderEmailFooter(branding)}
           </div>
         `,
       })

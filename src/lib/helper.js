@@ -55,14 +55,6 @@ export function getPublishState(version) {
 }
 
 /**
- * Returns the effective scheduled_at for a given platform.
- * Falls back to target_date when platform_schedules is absent.
- */
-export function effectivePlatformDate(version, platform) {
-  return version?.platform_schedules?.[platform]?.scheduled_at ?? version?.target_date
-}
-
-/**
  * Renders a post caption with hashtags highlighted in blue.
  * Returns an array of strings and React elements suitable for rendering.
  */

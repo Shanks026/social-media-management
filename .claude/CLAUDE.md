@@ -63,7 +63,7 @@ Pages/Components → API functions (src/api/) → Supabase client → PostgreSQL
 **Header context (`src/components/misc/header-context.jsx`):** Pages call `useHeader()` to set the dynamic breadcrumb/title in the shell header via `setHeader({ title, breadcrumbs })`.
 
 **Shared utilities:**
-- `src/lib/helper.js` — `formatDate(dateInput)` → "2 Jan, 2026"; `formatFileSize(bytes)` → "2.3 MB"; `getPublishState(version)` → derives display status from `platform_schedules` (returns `'PARTIALLY_PUBLISHED'` when some but not all platforms have `published_at`); `effectivePlatformDate(version, platform)` → falls back to `target_date` when `platform_schedules` is absent; `MAX_DOCUMENT_SIZE_BYTES` constant (50 MB)
+- `src/lib/helper.js` — `formatDate(dateInput)` → "2 Jan, 2026"; `formatFileSize(bytes)` → "2.3 MB"; `getPublishState(version)` → derives display status from `platform_schedules` (returns `'PARTIALLY_PUBLISHED'` when some but not all platforms have `published_at`); `MAX_DOCUMENT_SIZE_BYTES` constant (50 MB)
 - `src/lib/client-helpers.js` — `getUrgencyStatus(nextPostAt)` → urgency color/label for pipeline indicators
 - `src/lib/workspace.js` — `resolveWorkspace()` async helper for plain mutation functions that need `workspaceUserId` without React context (calls `auth.getUser()` then checks `agency_members`)
 - `src/lib/industries.js` — `INDUSTRY_OPTIONS` array (value/label pairs, e.g. `{ value: 'SaaS', label: 'SaaS & Tech' }`). The DB stores the short `value`; always resolve to `label` for display via `.find(i => i.value === x)?.label`. Also exports `getIndustryColor(value)`.
@@ -114,7 +114,7 @@ Posts support two publishing modes: (1) simple — single `target_date`, marked 
 
 All email goes through `sendEmail(fn, template, payload)` in `supabase/functions/_shared/email.ts` — never call Resend directly. It obeys `EMAIL_MODE` (ADR 0005): `live` delivers (production only), `redirect` rewrites to/cc/bcc to `delivered+<name>@resend.dev`, `block` or unset sends nothing. Every send/redirect/block/failure is logged as `[email] ...`. Policy logic lives in `_shared/emailPolicy.ts` (tested in `src/tests/edge/`). Production needs the `EMAIL_MODE=live` function secret set **before** deploying any function that uses it.
 
-- `send-approval-email` — triggered from `PostDetails.jsx` on status change to `PENDING_APPROVAL`, `SCHEDULED`, `NEEDS_REVISION`, or `PUBLISHED`; requires JWT (`verify_jwt: false`, manually verified inside)
+- `send-approval-email` — triggered from `PostDetails.jsx` on status change to `PENDING_APPROVAL`, and from the `update_post_status_by_token` RPC for `SCHEDULED` / `NEEDS_REVISION`; requires JWT (`verify_jwt: false`, manually verified inside)
 - `send-client-welcome` — triggered from `createClient()` in `src/api/clients.js` after INSERT; sends "Your workspace is live" (internal) or "You're in" (external); requires JWT; skips silently (returns 200) when `record.email` is null
 - `send-signup-welcome` — triggered from `signup-form.jsx` after successful `supabase.auth.signUp()`; no JWT required; takes `{ email, name }`
 - `send-platform-published-email` — triggered from `PostDetails.jsx` when a platform is marked published; takes `{ post_version_id, platform, all_published }`; skips internal clients
