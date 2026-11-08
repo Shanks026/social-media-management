@@ -1,13 +1,11 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { Resend } from 'npm:resend'
+import { sendEmail } from '../_shared/email.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
-
-const resend = new Resend(Deno.env.get('RESEND_API_KEY'))
 
 function formatPlatform(p: string | null | undefined): string {
   if (!p) return ''
@@ -118,7 +116,7 @@ serve(async (req) => {
     return new Response('Client email not found', { headers: corsHeaders, status: 400 })
   }
 
-  // Skip internal clients — agency manages their own content, no need to self-notify
+  // Skip internal clients â€” agency manages their own content, no need to self-notify
   if (client.is_internal) {
     console.log('[send-platform-published-email] skipped: internal client')
     return new Response('Skipped: internal client', { headers: corsHeaders })
@@ -139,7 +137,7 @@ serve(async (req) => {
   let bodyHtml: string
 
   if (all_published) {
-    // All platforms are now live — send the "all published" summary email
+    // All platforms are now live â€” send the "all published" summary email
     const allPlatforms = (version.platform as string[]).map(formatPlatform).join(', ')
     subject = `All posts are now live: "${postTitle}"`
     bodyHtml = `
@@ -189,7 +187,7 @@ serve(async (req) => {
     `
   }
 
-  const { data, error } = await resend.emails.send({
+  const { data, error } = await sendEmail('send-platform-published-email', 'platform-published', {
     from: `${branding.name} <notifications@tercerospace.com>`,
     to: [client.email],
     subject,
@@ -207,10 +205,8 @@ serve(async (req) => {
   })
 
   if (error) {
-    console.error('[send-platform-published-email] resend error', error)
     return new Response(JSON.stringify(error), { headers: corsHeaders, status: 500 })
   }
-  console.log('[send-platform-published-email] sent ok', data?.id)
   return new Response(JSON.stringify(data), { headers: corsHeaders })
   } catch (err) {
     console.error('[send-platform-published-email] unhandled error', err)

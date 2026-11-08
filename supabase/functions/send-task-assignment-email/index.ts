@@ -1,8 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { Resend } from 'npm:resend'
-
-const resend = new Resend(Deno.env.get('RESEND_API_KEY'))
+import { sendEmail } from '../_shared/email.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -115,7 +113,7 @@ serve(async (req) => {
         })
       : null
 
-    const { data, error } = await resend.emails.send({
+    const { data, error } = await sendEmail('send-task-assignment-email', 'task-assigned', {
       from: 'Tercero <notifications@tercerospace.com>',
       to: [to],
       subject: `${actorName} assigned you a task`,

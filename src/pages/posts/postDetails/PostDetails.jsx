@@ -248,7 +248,10 @@ export default function PostDetails() {
       const { error: fnError } = await supabase.functions.invoke('send-platform-published-email', {
         body: { post_version_id: versionId, platform, all_published: allPublished },
       })
-      if (fnError) console.error('[send-platform-published-email]', fnError)
+      if (fnError) {
+        console.error('[send-platform-published-email]', fnError)
+        toast.error("Marked as published, but the client's email failed to send")
+      }
     },
     onError: (err) => {
       setPublishingPlatformId(null)
@@ -278,7 +281,10 @@ export default function PostDetails() {
       const { error: fnError } = await supabase.functions.invoke('send-platform-published-email', {
         body: { post_version_id: versionId, platform: null, all_published: true },
       })
-      if (fnError) console.error('[send-platform-published-email]', fnError)
+      if (fnError) {
+        console.error('[send-platform-published-email]', fnError)
+        toast.error("Marked as published, but the client's email failed to send")
+      }
     },
     onError: (err) => toast.error(err.message),
   })

@@ -1,7 +1,5 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { Resend } from 'npm:resend'
-
-const resend = new Resend(Deno.env.get('RESEND_API_KEY'))
+import { sendEmail } from '../_shared/email.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -25,7 +23,7 @@ serve(async (req) => {
 
     const firstName = name?.split(' ')[0] || 'there'
 
-    const { data, error } = await resend.emails.send({
+    const { data, error } = await sendEmail('send-signup-welcome', 'signup-welcome', {
       from: 'Tercero <notifications@tercerospace.com>',
       to: [email],
       subject: 'Welcome to Tercero. Your workspace is ready',
