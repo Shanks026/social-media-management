@@ -5,7 +5,8 @@ import { AppHeader } from './AppHeader'
 import { AppBody } from './AppBody'
 import { Outlet } from 'react-router-dom'
 import { SidebarProvider } from '@/components/ui/sidebar'
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { Suspense, useState, useEffect, useRef, useCallback } from 'react'
+import { RouteFallback } from './RouteFallback'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 
@@ -173,13 +174,17 @@ export function AppShell({ user }) {
             <AppHeader user={user} agencySettings={agencySettings} />
             <DeletionBanner />
             <AppBody>
-              <Outlet
-                context={{
-                  user,
-                  agencySettings,
-                  refreshAgency: checkAgencyStatus,
-                }}
-              />
+              {/* Pages are lazy chunks — catch them here so the sidebar and
+                  header stay put while a page downloads. */}
+              <Suspense fallback={<RouteFallback />}>
+                <Outlet
+                  context={{
+                    user,
+                    agencySettings,
+                    refreshAgency: checkAgencyStatus,
+                  }}
+                />
+              </Suspense>
             </AppBody>
           </div>
 

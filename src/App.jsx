@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { Routes, Route, Navigate, useParams } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
@@ -7,56 +7,62 @@ import { useSubscription } from './api/useSubscription'
 import { usePermissions } from './api/usePermissions'
 import { useMaintenanceMode } from './api/appConfig'
 import MaintenanceScreen from './components/MaintenanceScreen'
-import LoginPage from './components/auth/login'
-import SignupPage from './components/auth/signup'
 import { AppShell } from './components/misc/AppShell'
-import Clients from './pages/clients/Clients'
-import ClientDetails from './pages/clients/ClientDetails'
-import PostDetails from './pages/posts/postDetails/PostDetails'
-import PublicReview from './pages/PublicReview'
-import Settings from './pages/Settings'
-import SocialCalendar from './pages/calendar/ContentCalendar'
-import MyOrganization from './pages/MyOrganization'
-import FinanceLayout from './pages/finance/FinanceLayout'
-import OverviewTab from './pages/finance/FinancialOverviewTab'
-import SubscriptionsTab from './pages/finance/SubscriptionsTab'
-import LedgerTab from './pages/finance/LedgerTab'
-import InvoicesTab from './pages/finance/InvoicesTab'
-import Posts from './pages/Posts'
-import BillingUsage from './pages/billingAndUsage/BillingUsage'
-import CreateClientPage from './pages/clients/CreateClientPage'
-import TasksAndReminders from './pages/TasksAndReminders'
-import TaskDetailPage from './pages/tasks/TaskDetailPage'
-import Notes from './pages/Notes'
-import NoteEditorPage from './pages/NoteEditorPage'
-import MeetingsPage from './pages/MeetingsPage'
-import Dashboard from './pages/dashboard/Dashboard'
-import DocumentsPage from './pages/documents/DocumentsPage'
-import ReportsPage from './pages/reports/ReportsPage'
-import CampaignsPage from './pages/campaigns/CampaignsPage'
-import CampaignDetailPage from './pages/campaigns/CampaignDetailPage'
-import CampaignReview from './pages/campaigns/CampaignReview'
-import JoinTeam from './pages/JoinTeam'
-import ProspectsPage from './pages/prospects/ProspectsPage'
-import ProspectDetailPage from './pages/prospects/ProspectDetailPage'
-import ProposalsPage from './pages/proposals/ProposalsPage'
-import ProposalDetailPage from './pages/proposals/ProposalDetailPage'
-import ProposalReview from './pages/proposals/ProposalReview'
-import TrialExpired from './pages/TrialExpired'
-import SubscriptionExpired from './pages/SubscriptionExpired'
-import NoWorkspaceAccess from './pages/NoWorkspaceAccess'
-import NotFound from './pages/NotFound'
-import PublicNotFound from './pages/PublicNotFound'
-import HelpPage from './pages/help/HelpPage'
-import PoliciesPage from './pages/help/PoliciesPage'
-import TeamPage from './pages/TeamPage'
-import WelcomePage from './pages/welcome/WelcomePage'
-import AdsPage from './pages/ads/AdsPage'
-import PartnershipsPage from './pages/partnerships/PartnershipsPage'
-import ApprovalsPage from './pages/approvals/ApprovalsPage'
-import SubmissionsPage from './pages/submissions/SubmissionsPage'
-import ChatPage from './pages/chat/ChatPage'
+import { RouteFallback } from './components/misc/RouteFallback'
 import { PlanUpgradePrompt } from './components/misc/PlanUpgradePrompt'
+
+// Every page is its own chunk, downloaded the first time its route is visited.
+// The shell (auth, AppShell, route guards) stays in the entry chunk; the
+// Suspense boundaries that catch these live below, in AppShell's outlet, and
+// in FinanceLayout's outlet — all rendering the shared RouteFallback.
+const LoginPage = lazy(() => import('./components/auth/login'))
+const SignupPage = lazy(() => import('./components/auth/signup'))
+const Clients = lazy(() => import('./pages/clients/Clients'))
+const ClientDetails = lazy(() => import('./pages/clients/ClientDetails'))
+const PostDetails = lazy(() => import('./pages/posts/postDetails/PostDetails'))
+const PublicReview = lazy(() => import('./pages/PublicReview'))
+const Settings = lazy(() => import('./pages/Settings'))
+const SocialCalendar = lazy(() => import('./pages/calendar/ContentCalendar'))
+const MyOrganization = lazy(() => import('./pages/MyOrganization'))
+const FinanceLayout = lazy(() => import('./pages/finance/FinanceLayout'))
+const OverviewTab = lazy(() => import('./pages/finance/FinancialOverviewTab'))
+const SubscriptionsTab = lazy(() => import('./pages/finance/SubscriptionsTab'))
+const LedgerTab = lazy(() => import('./pages/finance/LedgerTab'))
+const InvoicesTab = lazy(() => import('./pages/finance/InvoicesTab'))
+const Posts = lazy(() => import('./pages/Posts'))
+const BillingUsage = lazy(() => import('./pages/billingAndUsage/BillingUsage'))
+const CreateClientPage = lazy(() => import('./pages/clients/CreateClientPage'))
+const TasksAndReminders = lazy(() => import('./pages/TasksAndReminders'))
+const TaskDetailPage = lazy(() => import('./pages/tasks/TaskDetailPage'))
+const Notes = lazy(() => import('./pages/Notes'))
+const NoteEditorPage = lazy(() => import('./pages/NoteEditorPage'))
+const MeetingsPage = lazy(() => import('./pages/MeetingsPage'))
+const Dashboard = lazy(() => import('./pages/dashboard/Dashboard'))
+const DocumentsPage = lazy(() => import('./pages/documents/DocumentsPage'))
+const ReportsPage = lazy(() => import('./pages/reports/ReportsPage'))
+const CampaignsPage = lazy(() => import('./pages/campaigns/CampaignsPage'))
+const CampaignDetailPage = lazy(() => import('./pages/campaigns/CampaignDetailPage'))
+const CampaignReview = lazy(() => import('./pages/campaigns/CampaignReview'))
+const JoinTeam = lazy(() => import('./pages/JoinTeam'))
+const ProspectsPage = lazy(() => import('./pages/prospects/ProspectsPage'))
+const ProspectDetailPage = lazy(() => import('./pages/prospects/ProspectDetailPage'))
+const ProposalsPage = lazy(() => import('./pages/proposals/ProposalsPage'))
+const ProposalDetailPage = lazy(() => import('./pages/proposals/ProposalDetailPage'))
+const ProposalReview = lazy(() => import('./pages/proposals/ProposalReview'))
+const TrialExpired = lazy(() => import('./pages/TrialExpired'))
+const SubscriptionExpired = lazy(() => import('./pages/SubscriptionExpired'))
+const NoWorkspaceAccess = lazy(() => import('./pages/NoWorkspaceAccess'))
+const NotFound = lazy(() => import('./pages/NotFound'))
+const PublicNotFound = lazy(() => import('./pages/PublicNotFound'))
+const HelpPage = lazy(() => import('./pages/help/HelpPage'))
+const PoliciesPage = lazy(() => import('./pages/help/PoliciesPage'))
+const TeamPage = lazy(() => import('./pages/TeamPage'))
+const WelcomePage = lazy(() => import('./pages/welcome/WelcomePage'))
+const AdsPage = lazy(() => import('./pages/ads/AdsPage'))
+const PartnershipsPage = lazy(() => import('./pages/partnerships/PartnershipsPage'))
+const ApprovalsPage = lazy(() => import('./pages/approvals/ApprovalsPage'))
+const SubmissionsPage = lazy(() => import('./pages/submissions/SubmissionsPage'))
+const ChatPage = lazy(() => import('./pages/chat/ChatPage'))
 
 function MaintenanceGate({ children }) {
   const queryClient = useQueryClient()
@@ -210,6 +216,7 @@ function AppRoutes() {
   if (loading) return <div className="h-screen w-full bg-background" />
 
   return (
+    <Suspense fallback={<RouteFallback className="h-screen" />}>
     <Routes>
       <Route path="/policies" element={<PoliciesPage />} />
       <Route path="/review/:token" element={<PublicReview />} />
@@ -293,6 +300,7 @@ function AppRoutes() {
         <Route path="*" element={<Navigate to="/login" replace />} />
       )}
     </Routes>
+    </Suspense>
   )
 }
 
