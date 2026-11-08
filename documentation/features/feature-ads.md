@@ -1,5 +1,7 @@
 # Feature: Ads Management
 
+> **Status: Not started.** Nothing in this document is built. The `/ads` and `/partnerships` "Coming soon" placeholder pages were removed in #100 (2026-11-08); this is a design brief only.
+
 ## Purpose
 
 Tercero currently tracks organic work — posts, campaigns, approvals. Most agencies also run paid media for clients, and that work is invisible in the app today. Ad spend gets buried in the general ledger with no context, and the client report shows nothing about paid campaigns running in parallel.

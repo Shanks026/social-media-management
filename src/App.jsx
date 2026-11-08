@@ -58,8 +58,6 @@ const HelpPage = lazy(() => import('./pages/help/HelpPage'))
 const PoliciesPage = lazy(() => import('./pages/help/PoliciesPage'))
 const TeamPage = lazy(() => import('./pages/TeamPage'))
 const WelcomePage = lazy(() => import('./pages/welcome/WelcomePage'))
-const AdsPage = lazy(() => import('./pages/ads/AdsPage'))
-const PartnershipsPage = lazy(() => import('./pages/partnerships/PartnershipsPage'))
 const ApprovalsPage = lazy(() => import('./pages/approvals/ApprovalsPage'))
 const SubmissionsPage = lazy(() => import('./pages/submissions/SubmissionsPage'))
 const ChatPage = lazy(() => import('./pages/chat/ChatPage'))
@@ -244,7 +242,6 @@ function AppRoutes() {
           <Route path="/chat" element={<ChatRoute />} />
           <Route path="/clients" element={<Clients />} />
           <Route path="/myorganization" element={<MyOrganization />} />
-          <Route path="/partnerships" element={<PartnershipsPage />} />
           <Route path="/clients/create" element={<RequirePermission cap="canCreateClients"><CreateClientPage /></RequirePermission>} />
           <Route
             path="/clients/:clientId/edit"
@@ -269,7 +266,6 @@ function AppRoutes() {
           <Route path="/approvals" element={<RequirePermission cap="canSendDeliverables"><ApprovalsPage /></RequirePermission>} />
           <Route path="/campaigns" element={<CampaignsPage />} />
           <Route path="/campaigns/:campaignId" element={<CampaignDetailPage />} />
-          <Route path="/ads" element={<AdsPage />} />
           <Route path="/deliverables" element={<Posts />} />
           <Route path="/posts" element={<Navigate to="/deliverables" replace />} />
           <Route path="/tasks" element={<TasksAndReminders />} />

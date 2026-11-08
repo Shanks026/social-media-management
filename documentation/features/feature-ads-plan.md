@@ -2,7 +2,7 @@
 **Product**: Tercero — Social Media Agency Management SaaS
 **File**: `documentation/features/feature-ads-plan.md`
 **Brief**: `documentation/features/feature-ads.md`
-**Status**: Planned
+**Status**: Not started
 **Last Updated**: June 2026
 
 ---

@@ -76,7 +76,6 @@ const BASE_NAV_ITEMS = [
     items: [
       { title: 'Workspace', url: '/myorganization', icon: Briefcase },
       { title: 'Team', url: '/team', icon: Users },
-      // { title: 'Partnerships', url: '/partnerships', icon: Handshake },
     ],
   },
   {
@@ -105,7 +104,6 @@ const BASE_NAV_ITEMS = [
     icon: Megaphone,
     requiresFlag: 'campaigns',
   },
-  // { title: 'Ads', url: '/ads', icon: BadgeDollarSign },
   { title: 'Tasks & Todos', url: '/tasks', icon: ListTodo, showTodoCount: true },
   {
     title: 'Operations',
