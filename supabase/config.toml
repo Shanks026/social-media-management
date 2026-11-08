@@ -380,8 +380,14 @@ inspector_port = 8083
 # The Deno major version to use.
 deno_version = 2
 
-# [edge_runtime.secrets]
-# secret_key = "env(SECRET_VALUE)"
+# Secrets for the LOCAL edge functions only (production sets its own with
+# `supabase secrets set`). FRONTEND_URL makes review/invite links point at the
+# local app (#91); EMAIL_MODE=redirect sends any email to @resend.dev test
+# inboxes (#92, ADR 0005). Put RESEND_API_KEY in supabase/functions/.env if you
+# want redirected mail delivered at all.
+[edge_runtime.secrets]
+FRONTEND_URL = "http://localhost:5173"
+EMAIL_MODE = "redirect"
 
 [analytics]
 enabled = true
