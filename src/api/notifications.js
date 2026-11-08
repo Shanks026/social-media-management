@@ -15,34 +15,15 @@ export const notificationKeys = {
 /**
  * Unread notification count for the badge.
  * Mirrors the shape of useMyOpenTaskCount() in tasks.js.
+ *
+ * Deliberately has NO realtime subscription of its own: it renders twice while
+ * the bell panel is open, and realtime-js hands back the same channel for a
+ * repeated topic, so the panel's cleanup used to remove the badge's channel and
+ * freeze the badge (B13). useNotificationStream, mounted once by the bell, does
+ * the invalidation instead.
  */
 export function useUnreadNotificationCount() {
   const { user, workspaceUserId } = useAuth()
-  const queryClient = useQueryClient()
-
-  // Realtime invalidation — same pattern as team.js
-  useEffect(() => {
-    if (!user?.id) return
-
-    const channel = supabase
-      .channel(`notifications:${user.id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'notifications',
-          filter: `recipient_user_id=eq.${user.id}`,
-        },
-        () => {
-          queryClient.invalidateQueries({ queryKey: notificationKeys.count(user.id) })
-          queryClient.invalidateQueries({ queryKey: notificationKeys.list(user.id) })
-        },
-      )
-      .subscribe()
-
-    return () => supabase.removeChannel(channel)
-  }, [user?.id, queryClient])
 
   return useQuery({
     queryKey: notificationKeys.count(user?.id),
@@ -60,17 +41,18 @@ export function useUnreadNotificationCount() {
 }
 
 /**
- * Fires `onInsert(row)` for each notification that arrives for the current
- * user while the app is open. Purely a delivery stream — no toasting or
- * routing here, so the data layer stays free of UI concerns.
+ * The one realtime subscription for the current user's notifications. On each
+ * arrival it refreshes the unread count and the list (Realtime is an
+ * invalidator only), then fires `onInsert(row)` — no toasting or routing
+ * here, so the data layer stays free of UI concerns.
  *
- * Mount this ONCE (currently NotificationBell). It deliberately uses its own
- * channel topic rather than piggybacking on useUnreadNotificationCount's,
- * because that hook renders in two places at once when the bell popover is
- * open and would deliver every arrival twice.
+ * Mount this ONCE (currently NotificationBell, which is always mounted while
+ * signed in). A second subscriber on the same topic would share — and on
+ * unmount remove — this channel.
  */
 export function useNotificationStream(onInsert) {
   const { user } = useAuth()
+  const queryClient = useQueryClient()
   // Ref-held so a caller passing an inline arrow doesn't resubscribe each render.
   const handlerRef = useRef(onInsert)
   useEffect(() => {
@@ -90,12 +72,16 @@ export function useNotificationStream(onInsert) {
           table: 'notifications',
           filter: `recipient_user_id=eq.${user.id}`,
         },
-        (payload) => handlerRef.current?.(payload.new),
+        (payload) => {
+          queryClient.invalidateQueries({ queryKey: notificationKeys.count(user.id) })
+          queryClient.invalidateQueries({ queryKey: notificationKeys.list(user.id) })
+          handlerRef.current?.(payload.new)
+        },
       )
       .subscribe()
 
     return () => supabase.removeChannel(channel)
-  }, [user?.id])
+  }, [user?.id, queryClient])
 }
 
 /**

@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { toast } from 'sonner'
 import { useQueryClient } from '@tanstack/react-query'
@@ -42,7 +42,7 @@ import {
   notificationKeys,
   useNotificationStream,
 } from '@/api/notifications'
-import { useTeamMembers } from '@/api/team'
+import { useMemberMap } from '@/api/chat'
 import { STATUS_CONFIG, StatusChip } from '@/components/tasks/TaskCard'
 import { useAuth } from '@/context/AuthContext'
 
@@ -231,13 +231,10 @@ function NotificationPanel() {
   const queryClient = useQueryClient()
   const { data: notifications = [], isLoading } = useNotifications()
   const { data: unreadCount = 0 } = useUnreadNotificationCount()
-  const { data: teamMembers = [] } = useTeamMembers()
-
-  // actor_user_id → member record (full_name, avatar_url, email) for avatar/name display.
-  const memberMap = useMemo(
-    () => Object.fromEntries(teamMembers.map((m) => [m.member_user_id, m])),
-    [teamMembers],
-  )
+  // actor_user_id → { full_name, avatar_url, email }. The merged roster
+  // (teammates + workspace owner + self), because useTeamMembers alone leaves
+  // out the owner, so the owner's actions showed no name or avatar (B14).
+  const memberMap = useMemberMap()
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: notificationKeys.count(user?.id) })
