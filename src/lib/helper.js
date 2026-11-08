@@ -108,3 +108,16 @@ export function formatDate(dateInput) {
         year: "numeric",
     });
 }
+
+/**
+ * Compact currency label for chart axes: whole rupees below 1,000, then a
+ * trimmed "k" (₹0, ₹750, ₹1.5k, ₹120k). Avoids "₹0.001k" on small or empty
+ * data (B8).
+ */
+export function formatAxisCurrency(value, symbol = '₹') {
+  const n = Number(value) || 0
+  const abs = Math.abs(n)
+  if (abs < 1000) return `${n < 0 ? '-' : ''}${symbol}${Math.round(abs)}`
+  const k = Math.round((abs / 1000) * 10) / 10
+  return `${n < 0 ? '-' : ''}${symbol}${k}k`
+}

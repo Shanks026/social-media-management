@@ -25,6 +25,7 @@ import {
   formatCurrency,
 } from '@/utils/finance'
 import { CURRENCY } from '@/utils/constants'
+import { formatAxisCurrency } from '@/lib/helper'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -344,8 +345,12 @@ export default function OverviewPage() {
                   tickMargin={10}
                   fontSize={10}
                   className="text-muted-foreground"
+                  allowDecimals={false}
+                  // With no data the max is 0; give the axis a sensible ceiling
+                  // instead of recharts' 0–4 default.
+                  domain={[0, (dataMax) => (dataMax > 0 ? dataMax : 1000)]}
                   tickFormatter={(value) =>
-                    `${CURRENCY.SYMBOL}${value / 1000}k`
+                    formatAxisCurrency(value, CURRENCY.SYMBOL)
                   }
                 />
                 <ChartTooltip
