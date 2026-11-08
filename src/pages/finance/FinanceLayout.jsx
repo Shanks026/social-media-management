@@ -1,5 +1,6 @@
-import { useEffect } from 'react'
+import { Suspense, useEffect } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
+import { RouteFallback } from '@/components/misc/RouteFallback'
 import { useHeader } from '@/components/misc/header-context'
 
 export default function FinanceLayout() {
@@ -23,7 +24,9 @@ export default function FinanceLayout() {
   // This component now just acts as a container for the child pages
   return (
     <div className="h-full overflow-y-auto p-8 max-w-[1400px] mx-auto animate-in fade-in duration-700">
-      <Outlet />
+      <Suspense fallback={<RouteFallback />}>
+        <Outlet />
+      </Suspense>
     </div>
   )
 }
