@@ -251,9 +251,6 @@ export async function deleteProposalFile(fileUrl) {
 
     const { error } = await supabase.storage.from('proposal-files').remove([storagePath])
     if (error) console.warn('File deletion error:', error)
-
-    // Approximate size decrement is not possible without fetching metadata,
-    // so we skip storage tracking on delete for proposal files.
   } catch (err) {
     console.warn('deleteProposalFile error:', err)
   }

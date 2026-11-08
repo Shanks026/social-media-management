@@ -62,7 +62,7 @@ const chartConfig = {
   },
 }
 
-export default function OverviewPage({ subTabs }) {
+export default function OverviewPage() {
   const { data: subscription } = useSubscription()
   const isAccrualLocked = subscription && !subscription.finance_accrual
   const navigate = useNavigate()
@@ -195,11 +195,7 @@ export default function OverviewPage({ subTabs }) {
       {/* --- HEADER ACTIONS --- */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center gap-2">
-          {subTabs ? (
-            subTabs
-          ) : (
-            <span className="text-2xl font-normal bricolage">Performance Metrics</span>
-          )}
+          <span className="text-2xl font-normal bricolage">Performance Metrics</span>
         </div>
 
         <div className="flex flex-col sm:flex-row gap-3">

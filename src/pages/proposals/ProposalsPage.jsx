@@ -206,16 +206,6 @@ export default function ProposalsPage() {
     return true
   })
 
-  // eslint-disable-next-line no-unused-vars -- kept for the paused "Build in Tercero" flow, see below
-  function openNewDialog() {
-    if (atLimit) {
-      setUpgradeOpen(true)
-    } else {
-      setEditingProposal(null)
-      setDialogOpen(true)
-    }
-  }
-
   function openUploadDialog() {
     if (atLimit) {
       setUpgradeOpen(true)
@@ -277,29 +267,6 @@ export default function ProposalsPage() {
                 {activeCount} of {proposalsLimit} used
               </span>
             )}
-            {/* "Build in Tercero" is paused pending the upcoming drag-and-drop
-                proposal builder — upload-only for now. Restore this dropdown
-                (and the single button below) once that ships.
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button className="gap-2 h-9">
-                  <Plus size={16} />
-                  New Proposal
-                  <ChevronDown size={14} className="opacity-70" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-52">
-                <DropdownMenuItem onClick={openNewDialog}>
-                  <PenLine className="size-4 mr-2" />
-                  Build in Tercero
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={openUploadDialog}>
-                  <Upload className="size-4 mr-2" />
-                  Upload Existing File
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            */}
             <Button className="gap-2 h-9" onClick={openUploadDialog}>
               <Plus size={16} />
               New Proposal
