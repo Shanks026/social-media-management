@@ -88,6 +88,28 @@ SET current_version_id = v.id
 FROM versions_in v
 WHERE p.id = v.post_id;
 
+-- ── A revised deliverable with a superseded version still open (#111) ───────
+-- Legacy shape: the old create_new_version RPC (dropped in #101) moved
+-- posts.current_version_id to a new version without archiving the APPROVED
+-- one, so production can hold superseded versions in an open status. v1 is due
+-- in 12 hours; the current v2 is a draft due in 9 days. The Clients page must
+-- base Acme's next date on v2, not v1.
+INSERT INTO public.posts (id, client_id, created_by)
+VALUES ('d1000000-0000-4000-8000-000000000008', 'c1111111-1111-4111-8111-111111111111', '22222222-2222-4222-8222-222222222222');
+
+INSERT INTO public.post_versions (id, post_id, client_id, version_number, status, title, content, platform, created_by, target_date)
+VALUES
+  ('e1000000-0000-4000-8000-000000000008', 'd1000000-0000-4000-8000-000000000008', 'c1111111-1111-4111-8111-111111111111', 1, 'APPROVED',
+   'Holiday menu promo', 'Seed copy for "Holiday menu promo" (v1, superseded).', '{instagram}', '22222222-2222-4222-8222-222222222222',
+   date_trunc('hour', now()) + interval '12 hours'),
+  ('e1000000-0000-4000-8000-000000000009', 'd1000000-0000-4000-8000-000000000008', 'c1111111-1111-4111-8111-111111111111', 2, 'DRAFT',
+   'Holiday menu promo', 'Seed copy for "Holiday menu promo" (v2).', '{instagram}', '22222222-2222-4222-8222-222222222222',
+   date_trunc('hour', now()) + interval '9 days');
+
+UPDATE public.posts
+SET current_version_id = 'e1000000-0000-4000-8000-000000000009'
+WHERE id = 'd1000000-0000-4000-8000-000000000008';
+
 -- ── Vault: where database code finds the functions (#89) ────────────────────
 -- pg_net runs inside the db container, so the API is reached by its container
 -- name on the stack's Docker network (project_id = "tercero" in config.toml).
