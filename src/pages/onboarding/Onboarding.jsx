@@ -63,6 +63,10 @@ const ACTIVATION_STEPS = [
 
 const AGENCY_STEP_COUNT = AGENCY_STEPS.length
 
+// One id for every wizard error toast, so a later error replaces an earlier one
+// and a successful save or step change can dismiss it (B4).
+const ERROR_TOAST_ID = 'onboarding-error'
+
 // Fields validated when leaving each agency step — so an untouched signatory can
 // never block the user on step 1.
 const STEP_FIELDS = [
@@ -208,6 +212,8 @@ export default function OnboardingPage({
   const mutation = useMutation({
     mutationFn: (values) => completeAgencyOnboarding(values),
     onSuccess: async () => {
+      // A failed attempt's error toast must not outlive the save that fixed it.
+      toast.dismiss(ERROR_TOAST_ID)
       await queryClient.invalidateQueries({ queryKey: ['internal-client'] })
       queryClient.invalidateQueries({ queryKey: ['clients'] })
       queryClient.invalidateQueries({ queryKey: ['subscription'] })
@@ -221,7 +227,9 @@ export default function OnboardingPage({
     },
     onError: (error) => {
       console.error('Onboarding failed:', error)
-      toast.error(error?.message || 'Setup failed. Please try again.')
+      toast.error(error?.message || 'Setup failed. Please try again.', {
+        id: ERROR_TOAST_ID,
+      })
     },
   })
 
@@ -240,12 +248,16 @@ export default function OnboardingPage({
   const handleNext = async () => {
     const valid = await form.trigger(STEP_FIELDS[step])
     if (!valid) return
+    toast.dismiss(ERROR_TOAST_ID)
     setStep((s) => s + 1)
   }
 
   const submitAgency = form.handleSubmit(
     (values) => mutation.mutate(values),
-    () => toast.error('Please fix the highlighted fields to continue.'),
+    () =>
+      toast.error('Please fix the highlighted fields to continue.', {
+        id: ERROR_TOAST_ID,
+      }),
   )
 
   const primaryLabel = (() => {
