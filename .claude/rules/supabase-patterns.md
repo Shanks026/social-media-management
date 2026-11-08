@@ -94,23 +94,41 @@ supabase.from('view_client_profitability').select('*').eq('client_id', id).singl
 
 ## Migrations
 
-`supabase/migrations/` must mirror the remote history table exactly — it is the
-only way the schema can be rebuilt, and the CLI pairs the two by the numeric
-version prefix in the filename, not by name.
+`supabase/migrations/` rebuilds the whole schema from nothing (ADR 0005, #90). It
+starts with a squashed baseline taken from production on 2026-11-08:
 
-Applying a migration through the Supabase MCP (or the dashboard SQL editor)
-writes it to the remote and records it in `supabase_migrations.schema_migrations`,
-but **does not create a local file**. Hand-writing one afterwards does not fix
-it either: an invented timestamp does not match the version the remote
-recorded, so the CLI reads it as a pending migration and would re-apply it on
-the next `db push`.
+- `20261108120000_baseline.sql` — `supabase db dump` of the `public` schema
+  (tables, functions, policies, grants, Realtime publication membership);
+- `20261108120001_baseline_platform_objects.sql` — what that dump cannot see:
+  triggers on `auth.users` / `storage.objects`, `storage.objects` policies,
+  pg_cron jobs, and the EXECUTE revokes production applied (pg_dump records
+  grants, not their absence).
 
-After applying anything remotely, sync the directory instead of writing files
-by hand:
+Storage buckets are declared in `config.toml` (`[storage.buckets.*]`). Vault
+secrets (`service_role_key`, `project_url`) are per environment and never live
+in a migration. The 244 pre-baseline migrations are in git history only.
+
+The folder must mirror the remote history table exactly; the CLI pairs the two
+by the numeric version prefix, not by name.
+
+**Write and test locally, then push:**
 
 ```bash
-npx supabase migration fetch --linked   # writes local files from the history table
-npx supabase migration list --linked    # every row should have both columns filled
+npx supabase migration new <name>      # write the SQL
+npx supabase db reset                  # rebuild locally from the folder; must pass
+npx supabase db diff --remote --schema public   # optional: compare with production
+npx supabase db push                   # apply to production
+npx supabase migration list --remote   # every row should have both columns filled
 ```
 
-Any row with an empty Local or Remote column means the two have diverged.
+Applying SQL through the Supabase MCP or the dashboard SQL editor records it
+remotely but **creates no local file**. Hand-writing one afterwards with an
+invented timestamp does not match the recorded version, so the CLI would treat
+it as pending and re-apply it. If you do apply remotely, sync with
+`npx supabase migration fetch --remote`. On Windows, that rewrites every file
+with LF line endings, so restore the unchanged ones
+(`git checkout -- supabase/migrations`) and keep only the new file.
+
+Never pass `-f` to `db diff` just to see output: `-f` writes a new migration
+file. Repairs and pushes to production need `--yes` in agent runs, and the
+CLI asks the user first. `--linked` is deprecated; use `--remote`.
