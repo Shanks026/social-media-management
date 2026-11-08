@@ -1,8 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { Resend } from 'npm:resend'
-
-const resend = new Resend(Deno.env.get('RESEND_API_KEY'))
+import { sendEmail } from '../_shared/email.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -136,7 +134,7 @@ serve(async (req) => {
       const magicLink = `${Deno.env.get('FRONTEND_URL')}/review/${tokenData}`
       const postTitle = record.title || 'Untitled Post'
 
-      const { data, error } = await resend.emails.send({
+      const { data, error } = await sendEmail('send-approval-email', 'approval-request', {
         from: `${branding.name} <notifications@tercerospace.com>`,
         to: [clientInfo.email],
         subject: `Action Required: Review "${postTitle}"`,
@@ -239,7 +237,7 @@ serve(async (req) => {
         `
       }
 
-      const { data, error } = await resend.emails.send({
+      const { data, error } = await sendEmail('send-approval-email', 'client-decision', {
         from: `Tercero <notifications@tercerospace.com>`,
         to: [creatorEmail],
         subject,
@@ -284,7 +282,7 @@ serve(async (req) => {
         ? new Date(record.target_date).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
         : null
 
-      const { data, error } = await resend.emails.send({
+      const { data, error } = await sendEmail('send-approval-email', 'post-published', {
         from: `${branding.name} <notifications@tercerospace.com>`,
         to: [clientInfo.email],
         subject: `Your post is live: "${postTitle}"`,
