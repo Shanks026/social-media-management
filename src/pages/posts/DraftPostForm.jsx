@@ -201,20 +201,6 @@ const PLATFORM_CONFIG = {
   },
 }
 
-// Helper to check if a file/preview is a video
-// eslint-disable-next-line no-unused-vars
-const isVideoContent = (fileOrPreview) => {
-  if (!fileOrPreview) return false
-  // Check if it's our preview object
-  if (fileOrPreview.type === 'video') return true
-  // Check if it's a File object
-  if (fileOrPreview instanceof File && fileOrPreview.type.startsWith('video/'))
-    return true
-  // Check if it's a remote URL string (fallback)
-  if (typeof fileOrPreview === 'string') return isRemoteVideo(fileOrPreview)
-  return false
-}
-
 const formSchema = z.object({
   title: z.string().min(1, 'Title is required'),
   content: z.string().min(1, 'Content is required'),

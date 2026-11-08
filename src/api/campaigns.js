@@ -168,24 +168,6 @@ export function useAssignPostsToCampaign() {
   })
 }
 
-export function useUnlinkPostFromCampaign() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: async (postId) => {
-      const { error } = await supabase
-        .from('posts')
-        .update({ campaign_id: null })
-        .eq('id', postId)
-      if (error) throw error
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['campaigns'] })
-      queryClient.invalidateQueries({ queryKey: ['global-posts'] })
-      queryClient.invalidateQueries({ queryKey: ['draft-posts'] })
-    },
-  })
-}
-
 export function useAssignPostCampaign() {
   const queryClient = useQueryClient()
   return useMutation({

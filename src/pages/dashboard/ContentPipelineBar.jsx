@@ -61,9 +61,7 @@ export default function ContentPipelineBar() {
     }))
 
     const nextTotalPosts = posts.filter((post) => {
-      let status = getPublishState(post)?.replace(/_/g, ' ') || 'DRAFT'
-      if (status === 'PENDING') status = 'PENDING APPROVAL'
-      if (status === 'REVISIONS') status = 'NEEDS REVISION'
+      const status = getPublishState(post)?.replace(/_/g, ' ') || 'DRAFT'
       return ALLOWED_STATUSES.includes(status)
     }).length
 
