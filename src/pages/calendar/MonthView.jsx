@@ -9,17 +9,10 @@ import {
   isToday,
 } from 'date-fns'
 import { cn } from '@/lib/utils'
-import { Instagram, Linkedin, Youtube, Globe, Plus, Clock } from 'lucide-react'
+import { Plus, Clock } from 'lucide-react'
 import { useState } from 'react'
 import { DayDetailDialog } from './DayDetailDialog'
 import { getPublishState } from '@/lib/helper'
-
-const PLATFORM_ICONS = {
-  instagram: <Instagram className="size-3.5 text-muted-foreground" />,
-  linkedin: <Linkedin className="size-3.5 text-muted-foreground" />,
-  youtube: <Youtube className="size-3.5 text-muted-foreground" />,
-  google_business: <Globe className="size-3.5 text-muted-foreground" />,
-}
 
 const STATUS_STYLES = {
   DRAFT:               'border-l-blue-600',

@@ -1,5 +1,6 @@
 import js from '@eslint/js'
 import globals from 'globals'
+import react from 'eslint-plugin-react'
 import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
 import prettier from 'eslint-config-prettier'
@@ -19,6 +20,7 @@ export default [
       },
     },
     plugins: {
+      react,
       'react-hooks': reactHooks,
       'react-refresh': reactRefresh,
     },
@@ -28,14 +30,17 @@ export default [
         'warn',
         { allowConstantExport: true },
       ],
+      // Core no-unused-vars can't see JSX: without this, <Icon /> doesn't
+      // count as a use of Icon. It marks JSX identifiers as used, so the
+      // rule below needs no capital-letter exemption.
+      'react/jsx-uses-vars': 'error',
+      // The other half: a component used in JSX but never imported.
+      'react/jsx-no-undef': 'error',
       'no-unused-vars': [
         'error',
         {
-          varsIgnorePattern: '^[A-Z_]',
-          // Core no-unused-vars doesn't count <Icon /> as a use of Icon, so a
-          // component prop renamed for JSX ({ icon: Icon }) reads as unused.
-          // Temporary: #93 adds JSX-aware checking and removes this.
-          argsIgnorePattern: '^[A-Z]',
+          varsIgnorePattern: '^_',
+          argsIgnorePattern: '^_',
           // `const { id, ...rest } = values` is the idiom for omitting keys.
           ignoreRestSiblings: true,
         },

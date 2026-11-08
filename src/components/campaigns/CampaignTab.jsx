@@ -41,7 +41,6 @@ import {
   EmptyTitle,
   EmptyDescription,
   EmptyContent,
-  EmptyMedia,
 } from '@/components/ui/empty'
 
 function CampaignSkeleton() {

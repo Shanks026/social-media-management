@@ -6,7 +6,7 @@ import {
   useOutletContext,
 } from 'react-router-dom'
 import { toast } from 'sonner'
-import { UserStar, Lock, Plus, Search, FilterX } from 'lucide-react'
+import { Lock, Plus, FilterX } from 'lucide-react'
 
 import { fetchClients, deleteClient } from '@/api/clients'
 import { getUrgencyStatus } from '@/lib/client-helpers'
@@ -22,7 +22,6 @@ import {
   EmptyContent,
   EmptyDescription,
   EmptyHeader,
-  EmptyMedia,
   EmptyTitle,
 } from '@/components/ui/empty'
 

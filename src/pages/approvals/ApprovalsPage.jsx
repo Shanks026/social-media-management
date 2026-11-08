@@ -11,9 +11,6 @@ import {
 import { format, formatDistanceToNow } from 'date-fns'
 import { toast } from 'sonner'
 import {
-  ShieldCheck,
-  MessageSquareWarning,
-  Clock,
   Loader2,
   Video,
   ArrowUpDown,
@@ -21,7 +18,6 @@ import {
   ArrowDown,
   Search,
   CheckCircle2,
-  ExternalLink,
   ChevronLeft,
   ChevronRight,
   Trash2,
@@ -29,7 +25,6 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import {
@@ -40,13 +35,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -80,15 +68,6 @@ import { NavLink, useNavigate, useSearchParams } from 'react-router-dom'
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const PAGE_SIZE = 25
-
-const PLATFORM_LABELS = {
-  instagram: 'Instagram',
-  linkedin: 'LinkedIn',
-  facebook: 'Facebook',
-  google_business: 'Google Business',
-  youtube: 'YouTube',
-  twitter: 'Twitter/X',
-}
 
 const TAB_TRIGGER_CLASS =
   'relative rounded-none bg-transparent px-0 pb-3 pt-0 text-sm font-medium transition-none shadow-none border-b-2 border-transparent text-muted-foreground flex-none w-fit gap-2 data-[state=active]:bg-transparent dark:data-[state=active]:bg-transparent data-[state=active]:text-black dark:data-[state=active]:text-white data-[state=active]:border-black dark:data-[state=active]:border-white data-[state=active]:shadow-none data-[state=active]:border-x-0 data-[state=active]:border-t-0 focus-visible:ring-0'

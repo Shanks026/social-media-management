@@ -1,10 +1,6 @@
 import { useRef, useState, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import {
-  Zap,
-  Rocket,
-  Atom,
-  Sparkles,
   Check,
   X,
   ArrowRight,

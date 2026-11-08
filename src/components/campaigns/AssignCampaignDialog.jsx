@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { FolderOpen, Check, Megaphone, X } from 'lucide-react'
+import { Check, Megaphone, X } from 'lucide-react'
 import {
   Dialog,
   DialogContent,

@@ -3,7 +3,6 @@ import {
   Instagram,
   Linkedin,
   Twitter,
-  Globe,
   Facebook,
   Youtube,
 } from 'lucide-react'

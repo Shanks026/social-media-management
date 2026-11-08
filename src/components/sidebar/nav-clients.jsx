@@ -18,7 +18,6 @@ import {
   PopoverContent,
 } from '@/components/ui/popover'
 import { Skeleton } from '../ui/skeleton'
-import TierBadge from '@/components/TierBadge'
 
 export function NavClients() {
   const { state } = useSidebar()

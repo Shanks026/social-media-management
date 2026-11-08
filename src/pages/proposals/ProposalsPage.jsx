@@ -3,14 +3,11 @@ import { useNavigate } from 'react-router-dom'
 import {
   Plus,
   Search,
-  FileText,
   Pencil,
   Trash2,
   Archive,
   MoreHorizontal,
   Upload,
-  ChevronDown,
-  PenLine,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -65,7 +62,6 @@ import {
   EmptyHeader,
   EmptyTitle,
   EmptyDescription,
-  EmptyMedia,
 } from '@/components/ui/empty'
 import { formatCurrency } from '@/utils/finance'
 import { formatDate } from '@/lib/helper'

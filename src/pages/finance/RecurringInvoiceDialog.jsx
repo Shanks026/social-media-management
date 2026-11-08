@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import { format } from 'date-fns'
-import { Calendar as CalendarIcon, FileText, Pencil, Lock } from 'lucide-react'
+import { Calendar as CalendarIcon, FileText, Pencil } from 'lucide-react'
 
 // API
 import {

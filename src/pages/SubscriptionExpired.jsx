@@ -3,7 +3,7 @@ import { useNavigate, Navigate } from 'react-router-dom'
 import { useSubscription } from '@/api/useSubscription'
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
-import { ChevronDown, LogOut, RefreshCw, ArrowRight } from 'lucide-react'
+import { ChevronDown, LogOut, RefreshCw } from 'lucide-react'
 import { plans } from '@/pages/billingAndUsage/planMeta'
 import {
   PlanCard,

@@ -1,4 +1,4 @@
-import { Download, X } from 'lucide-react'
+import { Download } from 'lucide-react'
 import {
   Dialog,
   DialogContent,

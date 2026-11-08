@@ -4,7 +4,6 @@ import {
   TrendingDown,
   Activity,
   Users,
-  ArrowUpRight,
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -14,7 +13,6 @@ import { useTransactions } from '@/api/transactions'
 import { useExpenses } from '@/api/expenses'
 import { usePermissions } from '@/api/usePermissions'
 import { calculatePeriodMetrics, formatCurrency } from '@/utils/finance'
-import { Button } from '@/components/ui/button'
 
 export default function AgencyHealthBar() {
   const now = new Date()

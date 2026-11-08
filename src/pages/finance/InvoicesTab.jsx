@@ -17,7 +17,6 @@ import {
   RefreshCw,
   Lock,
   Megaphone,
-  Receipt,
   Mail,
 } from 'lucide-react'
 
@@ -74,7 +73,6 @@ import {
   EmptyHeader,
   EmptyTitle,
   EmptyDescription,
-  EmptyMedia,
 } from '@/components/ui/empty'
 
 const STATUS_OPTIONS = [

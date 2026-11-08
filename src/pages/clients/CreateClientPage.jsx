@@ -16,10 +16,8 @@ import {
   SelectContent,
   SelectItem,
 } from '@/components/ui/select'
-import { Separator } from '@/components/ui/separator'
 import {
   Loader2,
-  ChevronLeft,
   Camera,
   ImagePlus,
   AlertTriangle,

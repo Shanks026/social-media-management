@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { FolderOpen, FolderPlus, Search, Upload, X, Lock } from 'lucide-react'
+import { FolderPlus, Search, Upload, X, Lock } from 'lucide-react'
 import { useSubscription } from '@/api/useSubscription'
 import { usePermissions } from '@/api/usePermissions'
 import {
@@ -25,7 +25,6 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import {
   Empty,
   EmptyHeader,
-  EmptyMedia,
   EmptyTitle,
   EmptyDescription,
   EmptyContent,

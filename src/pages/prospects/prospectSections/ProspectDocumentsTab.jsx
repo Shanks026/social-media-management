@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { FolderOpen, Search, Upload, X } from 'lucide-react'
+import { Search, Upload, X } from 'lucide-react'
 
 import { useDocuments, uploadDocument } from '@/api/documents'
 import { Button } from '@/components/ui/button'
@@ -17,7 +17,6 @@ import { Skeleton } from '@/components/ui/skeleton'
 import {
   Empty,
   EmptyHeader,
-  EmptyMedia,
   EmptyTitle,
   EmptyDescription,
 } from '@/components/ui/empty'

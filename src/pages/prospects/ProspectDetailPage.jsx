@@ -18,9 +18,8 @@ import { cn } from '@/lib/utils'
 
 import { useProspect, useDeleteProspect, useUpdateProspect, PROSPECT_STATUSES } from '@/api/prospects'
 import { useHeader } from '@/components/misc/header-context'
-import { ProspectStatusBadge, PROSPECT_STATUS_CONFIG } from '@/components/prospects/ProspectStatusBadge'
+import { PROSPECT_STATUS_CONFIG } from '@/components/prospects/ProspectStatusBadge'
 import { ProspectSourceBadge } from '@/components/prospects/ProspectSourceBadge'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import {

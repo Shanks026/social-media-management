@@ -8,8 +8,6 @@ import {
   MessageSquareText,
   CalendarDays,
   Clock,
-  Copy,
-  RefreshCw,
   Mail,
   Trash2,
   Loader2,
@@ -30,7 +28,6 @@ import {
 import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
 import { format } from 'date-fns'
-import { Input } from '@/components/ui/input'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
 

@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
 import { format, addMonths, addQuarters, addYears } from 'date-fns'
-import { Calendar as CalendarIcon, Building2, User } from 'lucide-react'
+import { Calendar as CalendarIcon, Building2 } from 'lucide-react'
 
 // API & Libs
 import { useCreateExpense, useUpdateExpense } from '@/api/expenses'

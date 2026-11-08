@@ -1,7 +1,6 @@
 import { useEffect } from 'react'
 import { AppSidebarHeader } from './nav-header'
 import { NavMain } from './nav-main'
-import { NavClients } from './nav-clients'
 import { NavUser } from './nav-user'
 import {
   Sidebar,

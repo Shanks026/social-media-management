@@ -15,7 +15,6 @@ import {
   FilterX,
   Calendar as CalendarIcon,
   Building2,
-  Newspaper,
   User,
 } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
@@ -33,7 +32,6 @@ import {
   EmptyHeader,
   EmptyTitle,
   EmptyDescription,
-  EmptyMedia,
 } from '@/components/ui/empty'
 import {
   Select,

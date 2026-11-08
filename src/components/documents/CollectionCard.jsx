@@ -2,14 +2,12 @@ import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import {
-  ChevronDown,
   ChevronRight,
   FolderOpen,
   Folder,
   MoreHorizontal,
   Pencil,
   Trash2,
-  Upload,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
