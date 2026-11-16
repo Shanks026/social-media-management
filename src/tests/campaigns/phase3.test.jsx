@@ -423,7 +423,7 @@ const baseCampaignRow = {
   client_id: 'client-1',
   name: 'Q2 Launch',
   goal: 'Drive sign-ups',
-  status: 'Active',
+  status: 'ACTIVE',
   start_date: null,
   end_date: null,
   budget: null,

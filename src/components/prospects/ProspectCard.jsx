@@ -18,13 +18,13 @@ import { formatDate } from '@/lib/helper'
 
 // Solid dot color per status — matches badge palette
 const STATUS_DOT = {
-  new:            'bg-gray-400',
-  contacted:      'bg-blue-500',
-  follow_up:      'bg-amber-500',
-  demo_scheduled: 'bg-violet-500',
-  proposal_sent:  'bg-indigo-500',
-  won:            'bg-green-500',
-  lost:           'bg-red-500',
+  NEW:            'bg-gray-400',
+  CONTACTED:      'bg-blue-500',
+  FOLLOW_UP:      'bg-amber-500',
+  DISCOVERY_CALL: 'bg-violet-500',
+  PROPOSAL_SENT:  'bg-indigo-500',
+  WON:            'bg-green-500',
+  LOST:           'bg-red-500',
 }
 
 

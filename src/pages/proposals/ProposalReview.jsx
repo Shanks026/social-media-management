@@ -136,13 +136,13 @@ export default function ProposalReview() {
         setProposal(data)
 
         const status = data.status
-        if (status === 'expired') {
+        if (status === 'EXPIRED') {
           setPageState('expired')
-        } else if (status === 'accepted') {
+        } else if (status === 'ACCEPTED') {
           setPageState('accepted')
-        } else if (status === 'declined') {
+        } else if (status === 'DECLINED') {
           setPageState('declined')
-        } else if (status === 'changes_requested') {
+        } else if (status === 'CHANGES_REQUESTED') {
           setPageState('changes_requested')
         } else {
           setPageState('active')
@@ -159,7 +159,7 @@ export default function ProposalReview() {
 
   // ── Mark viewed once when status is 'sent' ──
   useEffect(() => {
-    if (pageState === 'active' && proposal?.status === 'sent' && !viewedRef.current) {
+    if (pageState === 'active' && proposal?.status === 'SENT' && !viewedRef.current) {
       viewedRef.current = true
       markProposalViewed(token).catch(() => {
         // Non-fatal — don't show error to user

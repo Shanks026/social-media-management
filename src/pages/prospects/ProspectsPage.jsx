@@ -262,19 +262,19 @@ export default function ProspectsPage() {
           />
           <StatCell
             label="Contacted"
-            value={prospects.filter((p) => p.status === 'contacted').length}
+            value={prospects.filter((p) => p.status === 'CONTACTED').length}
             icon={<TrendingUp className="h-3 w-3 text-amber-500" />}
             iconBg="bg-amber-100 dark:bg-amber-950"
           />
           <StatCell
             label="Discovery Call"
-            value={prospects.filter((p) => p.status === 'demo_scheduled').length}
+            value={prospects.filter((p) => p.status === 'DISCOVERY_CALL').length}
             icon={<CalendarClock className="h-3 w-3 text-violet-500" />}
             iconBg="bg-violet-100 dark:bg-violet-950"
           />
           <StatCell
             label="Won"
-            value={prospects.filter((p) => p.status === 'won').length}
+            value={prospects.filter((p) => p.status === 'WON').length}
             valueClass="text-emerald-600 dark:text-emerald-400"
             icon={<Trophy className="h-3 w-3 text-emerald-500" />}
             iconBg="bg-emerald-100 dark:bg-emerald-950"

@@ -25,7 +25,7 @@ const schema = z.object({
 /**
  * Dialog to send a proposal link via email.
  * Pre-fills the recipient email from the proposal context.
- * On success, advances status to 'sent'.
+ * On success, advances status to SENT.
  */
 export function SendProposalEmailDialog({
   open,
@@ -66,8 +66,8 @@ export function SendProposalEmailDialog({
         agencyUserId: workspaceUserId,
       })
 
-      // 3. Advance to 'sent' only if still a draft
-      if (proposal.status === 'draft') {
+      // 3. Advance to SENT only if still a draft
+      if (proposal.status === 'DRAFT') {
         await markSent.mutateAsync(proposal.id)
       }
 

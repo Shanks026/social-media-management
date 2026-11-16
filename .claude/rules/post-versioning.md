@@ -16,7 +16,7 @@ posts (parent record)
     ├── title
     ├── content
     ├── platform[]
-    ├── status: DRAFT | PENDING | REVISIONS | SCHEDULED | ARCHIVED
+    ├── status: text + CHECK, 11 values (see Status Flow)
     ├── media_urls[]
     ├── target_date
     └── admin_notes
@@ -26,16 +26,27 @@ posts (parent record)
 
 ## Status Flow
 
+The stored list lives in `src/lib/domain/deliverableStatus.js` (`STATUSES`), which a drift test keeps equal to the `post_versions_status_check` constraint (ADR 0006). Allowed transitions are enforced by the `enforce_post_status_transition` trigger:
+
 ```
-DRAFT → PENDING → REVISIONS → SCHEDULED → ARCHIVED
-                ↑___________|
+DRAFT ──► SUBMITTED ──► READY ──► PENDING_APPROVAL ──► SCHEDULED ──► PUBLISHED
+  │          │   ▲         │            │                  (social)
+  │          ▼   │         │            ▼
+  │   CHANGES_REQUESTED    │      NEEDS_REVISION  (revise → new Version)
+  │                        │
+  └────────────────────────┴──► APPROVED ──► DELIVERED   (non-social)
+Any status except DELIVERED / PUBLISHED / ARCHIVED ──► ARCHIVED
 ```
 
-- **DRAFT**: Work in progress, not submitted
-- **PENDING**: Submitted for client/admin review
-- **REVISIONS**: Client requested changes; a new version is created
-- **SCHEDULED**: Approved and ready to publish
-- **ARCHIVED**: No longer active
+- **DRAFT**: work in progress
+- **SUBMITTED** / **CHANGES_REQUESTED** / **READY**: internal review of a Member's work by an Owner or Admin
+- **PENDING_APPROVAL**: waiting for Client approval through a review link
+- **NEEDS_REVISION**: the Client asked for changes; revising creates a new Version
+- **APPROVED** → **DELIVERED**: non-social Deliverables; **SCHEDULED** → **PUBLISHED**: Social deliverables
+- **ARCHIVED**: no longer active
+- **PARTIALLY_PUBLISHED** is a display state, never stored: `displayStatus(version)` derives it from `platform_schedules`.
+
+DRAFT and READY may also skip ahead to PENDING_APPROVAL, SCHEDULED or APPROVED.
 
 ## Creating a Post
 

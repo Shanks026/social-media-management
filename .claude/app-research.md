@@ -815,7 +815,7 @@ Agency (user_id / workspaceUserId)
 ├── Internal Account (is_internal = true) — agency's own workspace
 └── Real Clients (is_internal = false)
     ├── Posts
-    │   └── Post Versions (DRAFT → PENDING → REVISIONS → SCHEDULED → ARCHIVED)
+    │   └── Post Versions (11 statuses, see .claude/rules/post-versioning.md)
     │       └── share_tokens (per-version public review tokens)
     ├── Campaigns (Velocity+)
     │   ├── Posts (campaign_id FK on posts — nullable)

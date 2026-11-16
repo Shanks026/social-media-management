@@ -42,6 +42,7 @@ import { Calendar } from '@/components/ui/calendar'
 import { cn } from '@/lib/utils'
 import { useCreateCampaign, useUpdateCampaign } from '@/api/campaigns'
 import { useClients } from '@/api/clients'
+import { STATUSES as CAMPAIGN_STATUSES } from '@/lib/domain/campaignStatus'
 
 function ClientAvatar({ client }) {
   if (client?.logo_url) {
@@ -68,7 +69,7 @@ const schema = z
     budget: z.coerce.number().positive('Must be a positive number').optional().nullable(),
     start_date: z.date().optional().nullable(),
     end_date: z.date().optional().nullable(),
-    status: z.enum(['Active', 'Completed', 'Archived']).default('Active'),
+    status: z.enum(CAMPAIGN_STATUSES).default('ACTIVE'),
     client_id: z.string().optional(),
   })
   .refine(
@@ -93,7 +94,7 @@ export function CampaignDialog({ open, onOpenChange, clientId, initialData }) {
       budget: null,
       start_date: null,
       end_date: null,
-      status: 'Active',
+      status: 'ACTIVE',
       client_id: '',
     },
   })
@@ -112,7 +113,7 @@ export function CampaignDialog({ open, onOpenChange, clientId, initialData }) {
           end_date: initialData.end_date
             ? new Date(initialData.end_date)
             : null,
-          status: initialData.status ?? 'Active',
+          status: initialData.status ?? 'ACTIVE',
         })
       } else {
         form.reset({
@@ -122,7 +123,7 @@ export function CampaignDialog({ open, onOpenChange, clientId, initialData }) {
           budget: null,
           start_date: null,
           end_date: null,
-          status: 'Active',
+          status: 'ACTIVE',
           client_id: '',
         })
       }
@@ -408,9 +409,9 @@ export function CampaignDialog({ open, onOpenChange, clientId, initialData }) {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="Active">Active</SelectItem>
-                        <SelectItem value="Completed">Completed</SelectItem>
-                        <SelectItem value="Archived">Archived</SelectItem>
+                        <SelectItem value="ACTIVE">Active</SelectItem>
+                        <SelectItem value="COMPLETED">Completed</SelectItem>
+                        <SelectItem value="ARCHIVED">Archived</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />

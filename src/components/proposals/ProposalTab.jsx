@@ -56,62 +56,53 @@ import {
 import { formatCurrency } from '@/utils/finance'
 import { formatDate } from '@/lib/helper'
 import { cn } from '@/lib/utils'
+import { DISPLAY_STATUSES } from '@/lib/domain/proposalStatus'
 
 // ── Status config ─────────────────────────────────────────────────────────────
 
 const STATUS_CONFIG = {
-  draft: {
+  DRAFT: {
     label: 'Draft',
     className: 'bg-muted text-muted-foreground border-transparent',
   },
-  sent: {
+  SENT: {
     label: 'Sent',
     className:
       'bg-blue-100 text-blue-700 border-transparent dark:bg-blue-950 dark:text-blue-300',
   },
-  viewed: {
+  VIEWED: {
     label: 'Viewed',
     className:
       'bg-violet-100 text-violet-700 border-transparent dark:bg-violet-950 dark:text-violet-300',
   },
-  accepted: {
+  ACCEPTED: {
     label: 'Accepted',
     className:
       'bg-green-100 text-green-700 border-transparent dark:bg-green-950 dark:text-green-300',
   },
-  declined: {
+  DECLINED: {
     label: 'Declined',
     className:
       'bg-red-100 text-red-700 border-transparent dark:bg-red-950 dark:text-red-300',
   },
-  changes_requested: {
+  CHANGES_REQUESTED: {
     label: 'Changes Requested',
     className:
       'bg-orange-100 text-orange-700 border-transparent dark:bg-orange-950 dark:text-orange-300',
   },
-  expired: {
+  EXPIRED: {
     label: 'Expired',
     className:
       'bg-amber-100 text-amber-700 border-transparent dark:bg-amber-950 dark:text-amber-300',
   },
-  archived: {
+  ARCHIVED: {
     label: 'Archived',
     className:
       'bg-slate-100 text-slate-500 border-transparent dark:bg-slate-800 dark:text-slate-400',
   },
 }
 
-const STATUS_TABS = [
-  'all',
-  'draft',
-  'sent',
-  'viewed',
-  'accepted',
-  'declined',
-  'changes_requested',
-  'expired',
-  'archived',
-]
+const STATUS_TABS = ['all', ...DISPLAY_STATUSES]
 
 function StatusBadge({ status }) {
   const config = STATUS_CONFIG[status] ?? {
@@ -155,7 +146,7 @@ export function ProposalTab({ clientId, prospectId, prospectName, prospectEmail 
   const [upgradeOpen, setUpgradeOpen] = useState(false)
 
   // Limit check is workspace-wide, not scoped to this client
-  const activeCount = allProposals.filter((p) => p.status !== 'archived').length
+  const activeCount = allProposals.filter((p) => p.status !== 'ARCHIVED').length
   const proposalsLimit = sub?.proposals_limit ?? null
   const atLimit = proposalsLimit !== null && activeCount >= proposalsLimit
 
@@ -169,7 +160,7 @@ export function ProposalTab({ clientId, prospectId, prospectName, prospectEmail 
 
   // Filter
   const filtered = proposals.filter((p) => {
-    if (activeTab === 'all' && p.status === 'archived') return false
+    if (activeTab === 'all' && p.status === 'ARCHIVED') return false
     if (activeTab !== 'all' && p.status !== activeTab) return false
     if (search) {
       const q = search.toLowerCase()
@@ -191,7 +182,7 @@ export function ProposalTab({ clientId, prospectId, prospectName, prospectEmail 
         file_url: deletingProposal.file_url,
       })
       toast.success(
-        deletingProposal.status === 'draft'
+        deletingProposal.status === 'DRAFT'
           ? 'Proposal deleted'
           : 'Proposal archived',
       )
@@ -233,7 +224,7 @@ export function ProposalTab({ clientId, prospectId, prospectName, prospectEmail 
         {STATUS_TABS.map((tab) => {
           const count =
             tab === 'all'
-              ? proposals.filter((p) => p.status !== 'archived').length
+              ? proposals.filter((p) => p.status !== 'ARCHIVED').length
               : proposals.filter((p) => p.status === tab).length
           return (
             <button
@@ -370,7 +361,7 @@ export function ProposalTab({ clientId, prospectId, prospectName, prospectEmail 
                           <ChevronRight className="size-4 mr-2" />
                           View Details
                         </DropdownMenuItem>
-                        {proposal.status !== 'archived' &&
+                        {proposal.status !== 'ARCHIVED' &&
                           proposal.proposal_type !== 'uploaded' && (
                             <DropdownMenuItem
                               onClick={() => {
@@ -387,7 +378,7 @@ export function ProposalTab({ clientId, prospectId, prospectName, prospectEmail 
                           onClick={() => setDeletingProposal(proposal)}
                           className="text-destructive focus:text-destructive"
                         >
-                          {proposal.status === 'draft' ? (
+                          {proposal.status === 'DRAFT' ? (
                             <>
                               <Trash2 className="size-4 mr-2" />
                               Delete
@@ -451,12 +442,12 @@ export function ProposalTab({ clientId, prospectId, prospectName, prospectEmail 
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {deletingProposal?.status === 'draft'
+              {deletingProposal?.status === 'DRAFT'
                 ? 'Delete Proposal?'
                 : 'Archive Proposal?'}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              {deletingProposal?.status === 'draft' ? (
+              {deletingProposal?.status === 'DRAFT' ? (
                 <>
                   This will permanently delete{' '}
                   <strong>{deletingProposal?.title}</strong>. This action cannot
@@ -476,7 +467,7 @@ export function ProposalTab({ clientId, prospectId, prospectName, prospectEmail 
               onClick={handleDelete}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {deletingProposal?.status === 'draft' ? 'Delete' : 'Archive'}
+              {deletingProposal?.status === 'DRAFT' ? 'Delete' : 'Archive'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

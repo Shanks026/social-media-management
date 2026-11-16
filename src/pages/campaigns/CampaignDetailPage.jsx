@@ -78,6 +78,7 @@ import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { SUPPORTED_PLATFORMS } from '@/lib/platforms'
 import { getUrgencyStatus } from '@/lib/client-helpers'
+import { statusLabel as campaignStatusLabel } from '@/lib/domain/campaignStatus'
 import {
   ChartContainer,
   ChartTooltip,
@@ -124,9 +125,9 @@ const platformChartConfig = {
 }
 
 const STATUS_STYLES = {
-  Active: 'bg-emerald-500/15 text-emerald-700',
-  Completed: 'bg-blue-500/15 text-blue-700',
-  Archived: 'bg-muted text-muted-foreground',
+  ACTIVE: 'bg-emerald-500/15 text-emerald-700',
+  COMPLETED: 'bg-blue-500/15 text-blue-700',
+  ARCHIVED: 'bg-muted text-muted-foreground',
 }
 
 function formatDateRange(start, end) {
@@ -359,10 +360,10 @@ export default function CampaignDetailPage() {
                     STATUS_STYLES[campaign.status]
                       ? 'border-transparent'
                       : 'border-border',
-                    STATUS_STYLES[campaign.status] ?? STATUS_STYLES.Archived,
+                    STATUS_STYLES[campaign.status] ?? STATUS_STYLES.ARCHIVED,
                   )}
                 >
-                  {campaign.status}
+                  {campaignStatusLabel(campaign.status)}
                 </span>
               </div>
               <div className="flex items-center gap-4 mt-3 text-sm text-muted-foreground font-normal flex-wrap">
@@ -507,7 +508,7 @@ export default function CampaignDetailPage() {
                       Manage and track campaign deliverables
                     </CardDescription>
                   </div>
-                  {campaign?.status === 'Active' && (
+                  {campaign?.status === 'ACTIVE' && (
                     <div className="flex items-center gap-1.5">
                       <Button
                         variant="outline"

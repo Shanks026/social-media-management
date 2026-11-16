@@ -183,7 +183,7 @@ export default function DocumentCard({ doc, canManage = true }) {
     setEditOpen(true)
   }
 
-  const isArchived = doc.status === 'Archived'
+  const isArchived = doc.status === 'ARCHIVED'
 
   return (
     <>

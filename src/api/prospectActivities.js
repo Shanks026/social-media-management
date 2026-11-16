@@ -2,7 +2,7 @@ import { supabase } from '@/lib/supabase'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/context/AuthContext'
 import { resolveWorkspace } from '@/lib/workspace'
-import { PROSPECT_STATUSES } from '@/api/prospects'
+import { statusLabel as prospectStatusLabel } from '@/lib/domain/prospectStatus'
 
 // ─── Constants ─────────────────────────────────────────────────────────────────
 
@@ -95,8 +95,8 @@ export function useDeleteActivity() {
  * Called directly from the useUpdateProspect mutation — not via a hook.
  */
 export async function logStatusChange({ prospect_id, from_status, to_status, workspaceUserId }) {
-  const fromLabel = PROSPECT_STATUSES.find((s) => s.value === from_status)?.label ?? from_status
-  const toLabel   = PROSPECT_STATUSES.find((s) => s.value === to_status)?.label ?? to_status
+  const fromLabel = prospectStatusLabel(from_status)
+  const toLabel   = prospectStatusLabel(to_status)
 
   const { error } = await supabase.from('prospect_activities').insert({
     prospect_id,

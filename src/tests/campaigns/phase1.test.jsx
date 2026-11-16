@@ -141,7 +141,7 @@ describe('Group A — API Layer', () => {
   })
 
   describe('fetchActiveCampaignsByClient', () => {
-    it('filters by client_id and status = Active', async () => {
+    it('filters by client_id and status = ACTIVE', async () => {
       const mockChain = {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
@@ -156,7 +156,7 @@ describe('Group A — API Layer', () => {
 
       expect(supabase.from).toHaveBeenCalledWith('campaigns')
       expect(mockChain.eq).toHaveBeenCalledWith('client_id', 'client-abc')
-      expect(mockChain.eq).toHaveBeenCalledWith('status', 'Active')
+      expect(mockChain.eq).toHaveBeenCalledWith('status', 'ACTIVE')
       expect(result).toEqual([{ id: 'c1', name: 'Launch' }])
     })
 
@@ -216,7 +216,7 @@ describe('Group C — CampaignDialog', () => {
       name: 'Summer Launch',
       goal: 'Drive 500 sign-ups',
       description: '',
-      status: 'Active',
+      status: 'ACTIVE',
       start_date: null,
       end_date: null,
     }
@@ -250,7 +250,7 @@ const baseCampaign = {
   id: 'c1',
   name: 'Q2 Launch',
   goal: 'Drive 500 sign-ups',
-  status: 'Active',
+  status: 'ACTIVE',
   start_date: '2026-03-01',
   end_date: '2026-03-31',
   total_posts: 10,

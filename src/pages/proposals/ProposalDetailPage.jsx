@@ -72,6 +72,7 @@ import {
 import { formatCurrency } from '@/utils/finance'
 import { formatDate } from '@/lib/helper'
 import { cn } from '@/lib/utils'
+import { displayStatus as displayProposalStatus } from '@/lib/domain/proposalStatus'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -79,36 +80,36 @@ const PAYMENT_TERMS = ['Due on Receipt', 'Net 15', 'Net 30', 'Net 60']
 const EMPTY_LINE_ITEM = { description: '', amount: '' }
 
 const STATUS_CONFIG = {
-  draft: { label: 'Draft', className: 'bg-muted text-muted-foreground border-transparent' },
-  sent: {
+  DRAFT: { label: 'Draft', className: 'bg-muted text-muted-foreground border-transparent' },
+  SENT: {
     label: 'Sent',
     className: 'bg-blue-100 text-blue-700 border-transparent dark:bg-blue-950 dark:text-blue-300',
   },
-  viewed: {
+  VIEWED: {
     label: 'Viewed',
     className:
       'bg-violet-100 text-violet-700 border-transparent dark:bg-violet-950 dark:text-violet-300',
   },
-  accepted: {
+  ACCEPTED: {
     label: 'Accepted',
     className:
       'bg-green-100 text-green-700 border-transparent dark:bg-green-950 dark:text-green-300',
   },
-  declined: {
+  DECLINED: {
     label: 'Declined',
     className: 'bg-red-100 text-red-700 border-transparent dark:bg-red-950 dark:text-red-300',
   },
-  changes_requested: {
+  CHANGES_REQUESTED: {
     label: 'Changes Requested',
     className:
       'bg-orange-100 text-orange-700 border-transparent dark:bg-orange-950 dark:text-orange-300',
   },
-  expired: {
+  EXPIRED: {
     label: 'Expired',
     className:
       'bg-amber-100 text-amber-700 border-transparent dark:bg-amber-950 dark:text-amber-300',
   },
-  archived: {
+  ARCHIVED: {
     label: 'Archived',
     className:
       'bg-slate-100 text-slate-500 border-transparent dark:bg-slate-800 dark:text-slate-400',
@@ -134,7 +135,7 @@ function StatusTimeline({ proposal }) {
       icon: Eye,
       done: !!proposal.first_viewed_at,
     },
-    ...(proposal.status === 'accepted'
+    ...(proposal.status === 'ACCEPTED'
       ? [
           {
             key: 'accepted',
@@ -146,7 +147,7 @@ function StatusTimeline({ proposal }) {
           },
         ]
       : []),
-    ...(proposal.status === 'declined'
+    ...(proposal.status === 'DECLINED'
       ? [
           {
             key: 'declined',
@@ -158,7 +159,7 @@ function StatusTimeline({ proposal }) {
           },
         ]
       : []),
-    ...(proposal.status === 'changes_requested'
+    ...(proposal.status === 'CHANGES_REQUESTED'
       ? [
           {
             key: 'changes_requested',
@@ -231,8 +232,8 @@ export default function ProposalDetailPage() {
   const clients = useMemo(() => clientsData?.realClients ?? [], [clientsData])
 
   // Proposals accepted/declined are read-only; archived can still be edited if needed
-  const isReadOnly = proposal && ['accepted', 'declined'].includes(proposal.status)
-  const isEditable = proposal && !['accepted', 'declined'].includes(proposal.status)
+  const isReadOnly = proposal && ['ACCEPTED', 'DECLINED'].includes(proposal.status)
+  const isEditable = proposal && !['ACCEPTED', 'DECLINED'].includes(proposal.status)
 
   // ── Set page header ──
   useEffect(() => {
@@ -446,7 +447,7 @@ export default function ProposalDetailPage() {
   // ── Delete ──
   async function handleDelete() {
     try {
-      await deleteProposal.mutateAsync({ id: proposalId, status: 'draft', file_url: proposal.file_url })
+      await deleteProposal.mutateAsync({ id: proposalId, status: 'DRAFT', file_url: proposal.file_url })
       toast.success('Proposal deleted')
       navigate('/proposals')
     } catch (err) {
@@ -487,7 +488,10 @@ export default function ProposalDetailPage() {
   }
 
   const status = proposal.status
-  const statusConfig = STATUS_CONFIG[status] ?? { label: status, className: '' }
+  // The badge shows the display state (EXPIRED once valid_until has passed);
+  // actions below still key off the stored status.
+  const badgeStatus = displayProposalStatus(proposal)
+  const statusConfig = STATUS_CONFIG[badgeStatus] ?? { label: badgeStatus, className: '' }
   const displayName =
     clients.find((c) => c.id === proposal.client_id)?.name ||
     proposal.prospect_name ||
@@ -570,7 +574,7 @@ export default function ProposalDetailPage() {
               {isCopyingLink ? 'Generating…' : 'Copy Link'}
             </Button>
 
-            {status !== 'archived' && (
+            {status !== 'ARCHIVED' && (
               <Button
                 variant="outline"
                 size="sm"
@@ -582,7 +586,7 @@ export default function ProposalDetailPage() {
               </Button>
             )}
 
-            {(status === 'draft' || status === 'changes_requested') && (
+            {(status === 'DRAFT' || status === 'CHANGES_REQUESTED') && (
               <Button
                 variant="outline"
                 size="sm"
@@ -623,7 +627,7 @@ export default function ProposalDetailPage() {
               </Button>
             )}
 
-            {status !== 'archived' && (
+            {status !== 'ARCHIVED' && (
               <Button
                 variant="outline"
                 size="sm"
@@ -635,7 +639,7 @@ export default function ProposalDetailPage() {
               </Button>
             )}
 
-            {status === 'draft' && (
+            {status === 'DRAFT' && (
               <Button
                 variant="ghost"
                 size="sm"
@@ -653,7 +657,7 @@ export default function ProposalDetailPage() {
         <StatusTimeline proposal={proposal} />
 
         {/* Decline reason */}
-        {status === 'declined' && proposal.decline_reason && (
+        {status === 'DECLINED' && proposal.decline_reason && (
           <div className="mt-3 flex items-start gap-2 text-sm bg-destructive/5 border border-destructive/20 rounded-lg px-4 py-3">
             <AlertCircle className="size-4 text-destructive shrink-0 mt-0.5" />
             <div>
@@ -664,7 +668,7 @@ export default function ProposalDetailPage() {
         )}
 
         {/* Changes requested notes */}
-        {status === 'changes_requested' && proposal.changes_requested_notes && (
+        {status === 'CHANGES_REQUESTED' && proposal.changes_requested_notes && (
           <div className="mt-3 flex items-start gap-2 text-sm bg-orange-500/5 border border-orange-500/20 rounded-lg px-4 py-3">
             <RefreshCw className="size-4 text-orange-600 dark:text-orange-400 shrink-0 mt-0.5" />
             <div>

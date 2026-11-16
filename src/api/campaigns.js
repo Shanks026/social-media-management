@@ -47,7 +47,7 @@ export async function fetchActiveCampaignsByClient(clientId) {
     .from('campaigns')
     .select('id, name')
     .eq('client_id', clientId)
-    .eq('status', 'Active')
+    .eq('status', 'ACTIVE')
     .order('name')
   if (error) throw error
   return data ?? []

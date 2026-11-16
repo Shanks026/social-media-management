@@ -117,7 +117,7 @@ export default function ProspectDocumentsTab({ prospectId }) {
   const allDocs = documents ?? []
 
   const filteredDocs = allDocs.filter((doc) => {
-    if (doc.status === 'Archived') return false
+    if (doc.status === 'ARCHIVED') return false
     if (selectedCategory !== 'all' && doc.category !== selectedCategory) return false
     if (search && !doc.display_name.toLowerCase().includes(search.toLowerCase())) return false
     return true

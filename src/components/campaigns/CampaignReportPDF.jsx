@@ -8,6 +8,7 @@ import {
   Font,
 } from '@react-pdf/renderer'
 import { format, parseISO } from 'date-fns'
+import { statusLabel as campaignStatusLabel } from '@/lib/domain/campaignStatus'
 
 Font.register({
   family: 'Inter',
@@ -267,7 +268,7 @@ export default function CampaignReportPDF({
           </View>
           <View>
             <Text style={s.metaLabel}>Status</Text>
-            <Text style={s.metaValue}>{campaign.status}</Text>
+            <Text style={s.metaValue}>{campaignStatusLabel(campaign.status)}</Text>
           </View>
           {campaign.goal ? (
             <View style={{ flex: 1 }}>

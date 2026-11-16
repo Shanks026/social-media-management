@@ -1,4 +1,5 @@
 import { createElement } from 'react'
+import { displayStatus } from '@/lib/domain/deliverableStatus'
 
 /**
  * Maximum file size allowed for document uploads (50 MB).
@@ -40,26 +41,17 @@ export function formatFileSize(bytes) {
 }
 
 /**
- * Derives a display-level publish state from a post version.
- * Returns the DB status for single-date posts.
- * Returns 'PARTIALLY_PUBLISHED' (UI-only) when some but not all platforms are published.
+ * @deprecated Use displayStatus from @/lib/domain/deliverableStatus (#142).
+ * Kept as a re-export until the E4 contract ticket removes helper.js.
  */
-export function getPublishState(version) {
-  if (!version?.platform_schedules) return version?.status
-  const entries = Object.values(version.platform_schedules)
-  if (!entries.length) return version.status
-  const publishedCount = entries.filter((e) => e.published_at).length
-  if (publishedCount === 0) return version.status
-  if (publishedCount === entries.length) return 'PUBLISHED'
-  return 'PARTIALLY_PUBLISHED'
-}
+export { displayStatus as getPublishState } from '@/lib/domain/deliverableStatus'
 
 /**
  * Status-filter predicate that agrees with what the calendar cells show:
  * compares the derived publish state, not the raw DB status (B9).
  */
 export function matchesPublishStatus(version, statusFilter) {
-  return statusFilter === 'all' || getPublishState(version) === statusFilter
+  return statusFilter === 'all' || displayStatus(version) === statusFilter
 }
 
 /**
