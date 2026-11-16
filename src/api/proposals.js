@@ -85,7 +85,7 @@ export function useCreateProposal() {
           .from('proposals')
           .select('*', { count: 'exact', head: true })
           .eq('agency_user_id', workspaceUserId)
-          .neq('status', 'archived')
+          .neq('status', 'ARCHIVED')
         if (countError) throw countError
 
         if (count >= sub.proposals_limit) {
@@ -192,7 +192,7 @@ export function useDeleteProposal() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async ({ id, status, file_url }) => {
-      if (status === 'draft') {
+      if (status === 'DRAFT') {
         // Hard delete for drafts — also clean up uploaded file if present
         if (file_url) {
           await deleteProposalFile(file_url)
@@ -203,7 +203,7 @@ export function useDeleteProposal() {
         // Soft archive for any other status
         const { error } = await supabase
           .from('proposals')
-          .update({ status: 'archived', updated_at: new Date().toISOString() })
+          .update({ status: 'ARCHIVED', updated_at: new Date().toISOString() })
           .eq('id', id)
         if (error) throw error
       }
@@ -283,9 +283,9 @@ export function useGenerateProposalToken() {
 export async function markProposalSent(proposalId) {
   const { data, error } = await supabase
     .from('proposals')
-    .update({ status: 'sent', sent_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+    .update({ status: 'SENT', sent_at: new Date().toISOString(), updated_at: new Date().toISOString() })
     .eq('id', proposalId)
-    .in('status', ['draft', 'changes_requested']) // resend after a rework, too
+    .in('status', ['DRAFT', 'CHANGES_REQUESTED']) // resend after a rework, too
     .select('prospect_id')
     .maybeSingle()
   if (error) throw error

@@ -192,11 +192,11 @@ export function useDeleteProspect() {
         .select('id, status, file_url')
         .eq('prospect_id', id)
 
-      const draftIds = (proposals ?? []).filter((p) => p.status === 'draft').map((p) => p.id)
-      const otherIds = (proposals ?? []).filter((p) => p.status !== 'draft').map((p) => p.id)
+      const draftIds = (proposals ?? []).filter((p) => p.status === 'DRAFT').map((p) => p.id)
+      const otherIds = (proposals ?? []).filter((p) => p.status !== 'DRAFT').map((p) => p.id)
 
       for (const p of proposals ?? []) {
-        if (p.status === 'draft' && p.file_url) await removeProposalFileByUrl(p.file_url)
+        if (p.status === 'DRAFT' && p.file_url) await removeProposalFileByUrl(p.file_url)
       }
       if (draftIds.length) {
         const { error: draftError } = await supabase.from('proposals').delete().in('id', draftIds)
@@ -205,7 +205,7 @@ export function useDeleteProspect() {
       if (otherIds.length) {
         const { error: archiveError } = await supabase
           .from('proposals')
-          .update({ status: 'archived', updated_at: new Date().toISOString() })
+          .update({ status: 'ARCHIVED', updated_at: new Date().toISOString() })
           .in('id', otherIds)
         if (archiveError) throw archiveError
       }

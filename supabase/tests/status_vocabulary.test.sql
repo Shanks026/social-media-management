@@ -13,7 +13,7 @@ BEGIN
   FOREACH c IN ARRAY ARRAY[
     'post_versions_status_check', 'transactions_status_check', 'tasks_status_check',
     'tasks_priority_check', 'invoices_status_check', 'clients_status_check',
-    'prospects_status_check'
+    'prospects_status_check', 'proposals_status_check'
   ] LOOP
     ASSERT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = c AND contype = 'c'), 'missing CHECK ' || c;
   END LOOP;
@@ -82,12 +82,12 @@ BEGIN
 
   UPDATE prospects SET status = 'PROPOSAL_SENT' WHERE id = v_id;
   INSERT INTO proposals (agency_user_id, title, status, prospect_id, share_token)
-  VALUES ('11111111-1111-4111-8111-111111111111', 'Test proposal', 'sent', v_id, 'test-ptok');
+  VALUES ('11111111-1111-4111-8111-111111111111', 'Test proposal', 'SENT', v_id, 'test-ptok');
 
   -- The Client asks for changes, then accepts: the Prospect follows, and each move is logged.
   PERFORM request_proposal_changes('test-ptok', 'smaller scope');
   ASSERT (SELECT status FROM prospects WHERE id = v_id) = 'CHANGES_REQUESTED', 'changes did not move prospect';
-  UPDATE proposals SET status = 'sent' WHERE share_token = 'test-ptok';
+  UPDATE proposals SET status = 'SENT' WHERE share_token = 'test-ptok';
   PERFORM accept_proposal('test-ptok');
   ASSERT (SELECT status FROM prospects WHERE id = v_id) = 'PROPOSAL_ACCEPTED', 'accept did not move prospect';
   ASSERT EXISTS (SELECT 1 FROM prospect_activities
@@ -96,6 +96,44 @@ BEGIN
     'stage change not logged with the new values';
   ASSERT prospect_status_label('DISCOVERY_CALL') = 'Discovery Call', 'label function';
   RAISE NOTICE 'PASS: Prospect stages';
+END $$;
+
+-- ── Proposals (#144) ─────────────────────────────────────────────────────
+DO $$
+DECLARE
+  ws constant uuid := '11111111-1111-4111-8111-111111111111';
+  v_id uuid;
+BEGIN
+  INSERT INTO proposals (agency_user_id, title) VALUES (ws, 'Default check') RETURNING id INTO v_id;
+  ASSERT (SELECT status FROM proposals WHERE id = v_id) = 'DRAFT', 'default is not DRAFT';
+
+  BEGIN
+    UPDATE proposals SET status = 'sent' WHERE id = v_id;
+    RAISE EXCEPTION 'lowercase Proposal status accepted';
+  EXCEPTION WHEN check_violation THEN NULL; END;
+  BEGIN
+    UPDATE proposals SET status = 'EXPIRED' WHERE id = v_id;
+    RAISE EXCEPTION 'EXPIRED stored';
+  EXCEPTION WHEN check_violation THEN NULL; END;
+
+  -- The public review flow: viewed, then declined.
+  INSERT INTO proposals (agency_user_id, title, status, share_token)
+  VALUES (ws, 'Review flow', 'SENT', 'test-flow') RETURNING id INTO v_id;
+  PERFORM mark_proposal_viewed('test-flow');
+  ASSERT (SELECT status FROM proposals WHERE id = v_id) = 'VIEWED', 'viewed not recorded';
+  ASSERT (SELECT status FROM get_proposal_by_token('test-flow')) = 'VIEWED', 'by-token status';
+  PERFORM decline_proposal('test-flow', 'too pricey');
+  ASSERT (SELECT status FROM proposals WHERE id = v_id) = 'DECLINED', 'decline not recorded';
+  PERFORM accept_proposal('test-flow');
+  ASSERT (SELECT status FROM proposals WHERE id = v_id) = 'DECLINED', 'a decided Proposal was re-decided';
+
+  -- Expired is computed for an outstanding Proposal past valid_until, never for a draft.
+  INSERT INTO proposals (agency_user_id, title, status, valid_until) VALUES
+    (ws, 'Lapsed', 'SENT', CURRENT_DATE - 1),
+    (ws, 'Old draft', 'DRAFT', CURRENT_DATE - 1);
+  ASSERT (SELECT status FROM get_proposals_with_totals(ws) WHERE title = 'Lapsed') = 'EXPIRED', 'lapsed not EXPIRED';
+  ASSERT (SELECT status FROM get_proposals_with_totals(ws) WHERE title = 'Old draft') = 'DRAFT', 'draft expired';
+  RAISE NOTICE 'PASS: Proposal statuses';
 END $$;
 
 ROLLBACK;
