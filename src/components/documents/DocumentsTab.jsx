@@ -183,7 +183,7 @@ export default function DocumentsTab({ clientId }) {
     ),
   )
   const filteredCollections = collections ?? []
-  const archivedCount = allDocs.filter((d) => d.status === 'Archived').length
+  const archivedCount = allDocs.filter((d) => d.status === 'ARCHIVED').length
 
   return (
     <>
@@ -205,8 +205,8 @@ export default function DocumentsTab({ clientId }) {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="Active">Active</SelectItem>
-              <SelectItem value="Archived">Archived</SelectItem>
+              <SelectItem value="ACTIVE">Active</SelectItem>
+              <SelectItem value="ARCHIVED">Archived</SelectItem>
               <SelectItem value="all">All statuses</SelectItem>
             </SelectContent>
           </Select>
@@ -293,20 +293,20 @@ export default function DocumentsTab({ clientId }) {
                 <Empty className="py-20 border border-dashed rounded-2xl bg-muted/5">
                   <EmptyHeader>
                     <div className="text-4xl leading-none select-none mb-2">
-                      {selectedStatus === 'Archived' ? '📁' : '🔍'}
+                      {selectedStatus === 'ARCHIVED' ? '📁' : '🔍'}
                     </div>
                     <EmptyTitle className="font-bold text-xl">
-                      {selectedStatus === 'Archived'
+                      {selectedStatus === 'ARCHIVED'
                         ? 'No archived documents'
                         : 'No documents match your search'}
                     </EmptyTitle>
                     <EmptyDescription className="font-normal">
-                      {selectedStatus === 'Archived'
+                      {selectedStatus === 'ARCHIVED'
                         ? 'No documents have been archived yet.'
                         : 'Try adjusting your filters or search terms.'}
                     </EmptyDescription>
                   </EmptyHeader>
-                  {selectedStatus !== 'Archived' && (
+                  {selectedStatus !== 'ARCHIVED' && (
                     <EmptyContent className="mt-4">
                       <Button
                         variant="link"
@@ -336,7 +336,7 @@ export default function DocumentsTab({ clientId }) {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => setSelectedStatus('Archived')}
+                        onClick={() => setSelectedStatus('ARCHIVED')}
                       >
                         View archived ({archivedCount})
                       </Button>

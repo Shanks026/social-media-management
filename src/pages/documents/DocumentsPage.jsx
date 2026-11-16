@@ -180,7 +180,7 @@ export default function DocumentsPage() {
   })
 
   const archivedCount = (documents ?? []).filter(
-    (d) => d.status === 'Archived',
+    (d) => d.status === 'ARCHIVED',
   ).length
 
   const ungroupedDocs = filteredDocs.filter((d) => !d.collection_id)
@@ -449,8 +449,8 @@ export default function DocumentsPage() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="Active">Active</SelectItem>
-                <SelectItem value="Archived">Archived</SelectItem>
+                <SelectItem value="ACTIVE">Active</SelectItem>
+                <SelectItem value="ARCHIVED">Archived</SelectItem>
                 <SelectItem value="all">All statuses</SelectItem>
               </SelectContent>
             </Select>
@@ -509,7 +509,7 @@ export default function DocumentsPage() {
                         <EmptyHeader>
                           <EmptyTitle className="font-bold text-xl">
                             {isFilterActive
-                              ? selectedStatus === 'Active' ||
+                              ? selectedStatus === 'ACTIVE' ||
                                 selectedStatus === 'all'
                                 ? 'No documents match your filters'
                                 : 'No archived documents'
@@ -517,7 +517,7 @@ export default function DocumentsPage() {
                           </EmptyTitle>
                           <EmptyDescription className="font-normal">
                             {isFilterActive
-                              ? selectedStatus === 'Archived'
+                              ? selectedStatus === 'ARCHIVED'
                                 ? 'No documents have been archived yet.'
                                 : "Adjust your filters to find what you're looking for."
                               : archivedCount > 0
@@ -525,7 +525,7 @@ export default function DocumentsPage() {
                                 : 'Upload a contract, brief, or brand asset to keep everything in one place.'}
                           </EmptyDescription>
                         </EmptyHeader>
-                        {isFilterActive && selectedStatus !== 'Archived' && (
+                        {isFilterActive && selectedStatus !== 'ARCHIVED' && (
                           <Button
                             variant="link"
                             onClick={clearFilters}
@@ -538,7 +538,7 @@ export default function DocumentsPage() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => setSelectedStatus('Archived')}
+                            onClick={() => setSelectedStatus('ARCHIVED')}
                             className="mt-2"
                           >
                             View archived ({archivedCount})

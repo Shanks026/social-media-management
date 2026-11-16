@@ -13,7 +13,8 @@ BEGIN
   FOREACH c IN ARRAY ARRAY[
     'post_versions_status_check', 'transactions_status_check', 'tasks_status_check',
     'tasks_priority_check', 'invoices_status_check', 'clients_status_check',
-    'prospects_status_check', 'proposals_status_check'
+    'prospects_status_check', 'proposals_status_check', 'campaigns_status_check',
+    'client_documents_status_check'
   ] LOOP
     ASSERT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = c AND contype = 'c'), 'missing CHECK ' || c;
   END LOOP;
@@ -134,6 +135,35 @@ BEGIN
   ASSERT (SELECT status FROM get_proposals_with_totals(ws) WHERE title = 'Lapsed') = 'EXPIRED', 'lapsed not EXPIRED';
   ASSERT (SELECT status FROM get_proposals_with_totals(ws) WHERE title = 'Old draft') = 'DRAFT', 'draft expired';
   RAISE NOTICE 'PASS: Proposal statuses';
+END $$;
+
+-- ── Campaigns and client documents (#145) ────────────────────────────────
+DO $$
+DECLARE
+  ws constant uuid := '11111111-1111-4111-8111-111111111111';
+  acme constant uuid := 'c1111111-1111-4111-8111-111111111111';
+  v_id uuid;
+BEGIN
+  INSERT INTO campaigns (user_id, client_id, name) VALUES (ws, acme, 'Test campaign') RETURNING id INTO v_id;
+  ASSERT (SELECT status FROM campaigns WHERE id = v_id) = 'ACTIVE', 'campaign default is not ACTIVE';
+  ASSERT (SELECT (e->>'active_campaigns')::int FROM jsonb_array_elements(get_clients_with_pipeline(ws)->'clients') e
+          WHERE (e->>'id')::uuid = acme) >= 1,
+    'pipeline does not count the active Campaign';
+  UPDATE campaigns SET status = 'COMPLETED' WHERE id = v_id;
+  BEGIN
+    UPDATE campaigns SET status = 'Active' WHERE id = v_id;
+    RAISE EXCEPTION 'Title-case Campaign status accepted';
+  EXCEPTION WHEN check_violation THEN NULL; END;
+
+  INSERT INTO client_documents (user_id, client_id, display_name, original_filename, storage_path, file_size_bytes, mime_type)
+  VALUES (ws, acme, 'Brief', 'brief.pdf', 'test/brief.pdf', 10, 'application/pdf') RETURNING id INTO v_id;
+  ASSERT (SELECT status FROM client_documents WHERE id = v_id) = 'ACTIVE', 'document default is not ACTIVE';
+  UPDATE client_documents SET status = 'ARCHIVED' WHERE id = v_id;
+  BEGIN
+    UPDATE client_documents SET status = 'Archived' WHERE id = v_id;
+    RAISE EXCEPTION 'Title-case document status accepted';
+  EXCEPTION WHEN check_violation THEN NULL; END;
+  RAISE NOTICE 'PASS: Campaign and document statuses';
 END $$;
 
 ROLLBACK;

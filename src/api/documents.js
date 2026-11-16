@@ -158,12 +158,12 @@ export async function updateDocument(id, { displayName, category, collectionId, 
 }
 
 /**
- * Archive a document (set status = 'Archived').
+ * Archive a document (set status = ARCHIVED).
  */
 export async function archiveDocument(id) {
   const { data, error } = await supabase
     .from('client_documents')
-    .update({ status: 'Archived', updated_at: new Date().toISOString() })
+    .update({ status: 'ARCHIVED', updated_at: new Date().toISOString() })
     .eq('id', id)
     .select()
     .single()
@@ -177,7 +177,7 @@ export async function archiveDocument(id) {
 export async function unarchiveDocument(id) {
   const { data, error } = await supabase
     .from('client_documents')
-    .update({ status: 'Active', updated_at: new Date().toISOString() })
+    .update({ status: 'ACTIVE', updated_at: new Date().toISOString() })
     .eq('id', id)
     .select()
     .single()

@@ -5,11 +5,12 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import { cn } from '@/lib/utils'
 import { format, parseISO } from 'date-fns'
+import { statusLabel as campaignStatusLabel } from '@/lib/domain/campaignStatus'
 
 const STATUS_STYLES = {
-  Active: 'bg-emerald-100 text-emerald-600 border-none hover:bg-emerald-100',
-  Completed: 'bg-blue-100 text-blue-600 border-none hover:bg-blue-100',
-  Archived: 'bg-muted text-muted-foreground border-none hover:bg-muted',
+  ACTIVE: 'bg-emerald-100 text-emerald-600 border-none hover:bg-emerald-100',
+  COMPLETED: 'bg-blue-100 text-blue-600 border-none hover:bg-blue-100',
+  ARCHIVED: 'bg-muted text-muted-foreground border-none hover:bg-muted',
 }
 
 const PIPELINE_COLORS = {
@@ -137,9 +138,9 @@ export function CampaignCard({
         onClick={(e) => e.stopPropagation()}
       >
         <Badge
-          className={cn(STATUS_STYLES[status] ?? STATUS_STYLES.Archived)}
+          className={cn(STATUS_STYLES[status] ?? STATUS_STYLES.ARCHIVED)}
         >
-          {status}
+          {campaignStatusLabel(status)}
         </Badge>
         {total_posts > 0 && (
           <CircularProgress progress={progress} size={22} strokeWidth={2.5} />
@@ -165,21 +166,21 @@ export function CampaignCard({
             >
               Edit
             </DropdownMenuItem>
-            {status === 'Active' && (
+            {status === 'ACTIVE' && (
               <DropdownMenuItem
                 onClick={(e) => {
                   e.stopPropagation()
-                  onStatusChange(campaign, 'Completed')
+                  onStatusChange(campaign, 'COMPLETED')
                 }}
               >
                 Mark Complete
               </DropdownMenuItem>
             )}
-            {(status === 'Active' || status === 'Completed') && (
+            {(status === 'ACTIVE' || status === 'COMPLETED') && (
               <DropdownMenuItem
                 onClick={(e) => {
                   e.stopPropagation()
-                  onStatusChange(campaign, 'Archived')
+                  onStatusChange(campaign, 'ARCHIVED')
                 }}
               >
                 Archive
