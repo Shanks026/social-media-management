@@ -4,6 +4,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 // PROPOSAL_SENT and logs the stage change, and leaves later stages alone.
 
 let prospectStatus
+let prospectUpdateError = null
 const writes = []
 
 // Minimal chainable stand-in for the supabase-js query builder: records each
@@ -22,6 +23,7 @@ function query(table) {
       if (q.op !== 'select') writes.push({ table, op: q.op, payload: q.payload })
       if (table === 'proposals') return resolve({ data: { prospect_id: 'p1' }, error: null })
       if (table === 'prospects' && q.op === 'select') return resolve({ data: { status: prospectStatus }, error: null })
+      if (table === 'prospects' && q.op === 'update') return resolve({ data: null, error: prospectUpdateError })
       return resolve({ data: null, error: null })
     },
   }
@@ -41,6 +43,15 @@ const activityWrites = () => writes.filter((w) => w.table === 'prospect_activiti
 describe('markProposalSent', () => {
   beforeEach(() => {
     writes.length = 0
+    prospectUpdateError = null
+  })
+
+  it('throws, and logs no stage change, when the Prospect update fails', async () => {
+    prospectStatus = 'CONTACTED'
+    prospectUpdateError = new Error('permission denied')
+
+    await expect(markProposalSent('prop1')).rejects.toThrow('permission denied')
+    expect(activityWrites()).toEqual([])
   })
 
   it('advances a Prospect in Discovery call to Proposal sent and logs it', async () => {

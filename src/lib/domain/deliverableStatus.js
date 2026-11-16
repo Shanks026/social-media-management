@@ -3,6 +3,7 @@
 //
 // STATUSES mirrors the post_versions_status_check constraint; the drift test
 // in src/tests/domain/statusDrift.test.js fails if the two disagree.
+import { labeler } from './labeler'
 
 /** The stored statuses, in lifecycle order. */
 export const STATUSES = [
@@ -55,16 +56,10 @@ const CLIENT_LABELS = {
 }
 
 /** Internal label for a stored or display status. */
-export function statusLabel(status) {
-  if (!status) return ''
-  return LABELS[status] ?? status
-}
+export const statusLabel = labeler(LABELS)
 
 /** Client-facing label for a stored or display status. */
-export function clientStatusLabel(status) {
-  if (!status) return ''
-  return CLIENT_LABELS[status] ?? status
-}
+export const clientStatusLabel = labeler(CLIENT_LABELS)
 
 /**
  * The status to show for a Version: its stored status, unless per-platform

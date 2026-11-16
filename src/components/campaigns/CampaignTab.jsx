@@ -166,7 +166,6 @@ function CampaignTabContent({ clientId, isCreateOpen, setIsCreateOpen, campaigns
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="All">All Statuses</SelectItem>
-              <SelectItem value="Draft">Draft</SelectItem>
               <SelectItem value="ACTIVE">Active</SelectItem>
               <SelectItem value="COMPLETED">Completed</SelectItem>
             </SelectContent>

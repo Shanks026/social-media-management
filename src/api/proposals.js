@@ -294,20 +294,22 @@ export async function markProposalSent(proposalId) {
   if (!prospectId) return { prospectId, advanced: false }
 
   const { workspaceUserId } = await resolveWorkspace()
-  const { data: prospect } = await supabase
+  const { data: prospect, error: prospectError } = await supabase
     .from('prospects')
     .select('status')
     .eq('id', prospectId)
     .single()
+  if (prospectError) throw prospectError
 
-  if (!prospect || !STAGES_BEFORE_PROPOSAL_SENT.includes(prospect.status)) {
+  if (!STAGES_BEFORE_PROPOSAL_SENT.includes(prospect.status)) {
     return { prospectId, advanced: false }
   }
 
-  await supabase
+  const { error: advanceError } = await supabase
     .from('prospects')
     .update({ status: 'PROPOSAL_SENT', updated_at: new Date().toISOString() })
     .eq('id', prospectId)
+  if (advanceError) throw advanceError
 
   await logStatusChange({
     prospect_id: prospectId,

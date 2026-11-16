@@ -32,6 +32,10 @@ ALTER TABLE public.post_versions
         'PUBLISHED', 'DELIVERED', 'ARCHIVED'
     ]::text[]));
 
+-- The column was nullable; a NULL meant the default, PAID. Fill any before
+-- adding NOT NULL so the push can't fail on an old row.
+UPDATE public.transactions SET status = 'PAID' WHERE status IS NULL;
+
 ALTER TABLE public.transactions
     ALTER COLUMN status DROP DEFAULT,
     ALTER COLUMN status TYPE text USING status::text,

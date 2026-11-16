@@ -72,6 +72,7 @@ import {
 import { formatCurrency } from '@/utils/finance'
 import { formatDate } from '@/lib/helper'
 import { cn } from '@/lib/utils'
+import { displayStatus as displayProposalStatus } from '@/lib/domain/proposalStatus'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -487,7 +488,10 @@ export default function ProposalDetailPage() {
   }
 
   const status = proposal.status
-  const statusConfig = STATUS_CONFIG[status] ?? { label: status, className: '' }
+  // The badge shows the display state (EXPIRED once valid_until has passed);
+  // actions below still key off the stored status.
+  const badgeStatus = displayProposalStatus(proposal)
+  const statusConfig = STATUS_CONFIG[badgeStatus] ?? { label: badgeStatus, className: '' }
   const displayName =
     clients.find((c) => c.id === proposal.client_id)?.name ||
     proposal.prospect_name ||

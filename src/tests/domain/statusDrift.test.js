@@ -42,8 +42,9 @@ function balancedParens(sql, start) {
  * thing that happened to it was a DROP.
  */
 export function latestCheckValues(sql, name) {
-  const define = new RegExp(`"?${name}"?\\s+CHECK\\s*\\(`, 'g')
-  const drop = new RegExp(`DROP\\s+CONSTRAINT\\s+(IF\\s+EXISTS\\s+)?"?${name}"?`, 'gi')
+  // (?<![\w"]) so `x_campaigns_status_check` never matches `campaigns_status_check`.
+  const define = new RegExp(`(?<![\\w"])"?${name}"?\\s+CHECK\\s*\\(`, 'g')
+  const drop = new RegExp(`DROP\\s+CONSTRAINT\\s+(IF\\s+EXISTS\\s+)?"?${name}"?(?![\\w"])`, 'gi')
   let lastDefine = null
   for (const m of sql.matchAll(define)) lastDefine = m
   let lastDrop = -1
@@ -82,5 +83,13 @@ describe('latestCheckValues', () => {
     `
     expect(latestCheckValues(sql, 'x_status_check')).toEqual(['A', 'B', 'C'])
     expect(latestCheckValues(sql + 'ALTER TABLE x DROP CONSTRAINT x_status_check;', 'x_status_check')).toBeNull()
+  })
+
+  it('ignores a constraint whose name only ends the same way', () => {
+    const sql = `
+      ADD CONSTRAINT x_status_check CHECK (status = ANY (ARRAY['A']::text[]));
+      ADD CONSTRAINT other_x_status_check CHECK (status = ANY (ARRAY['Z']::text[]));
+    `
+    expect(latestCheckValues(sql, 'x_status_check')).toEqual(['A'])
   })
 })
