@@ -2,43 +2,43 @@ import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 
 const STATUS_CONFIG = {
-  new: {
+  NEW: {
     label: 'New',
     className: 'bg-gray-100 text-gray-600 border-transparent dark:bg-gray-800 dark:text-gray-300',
   },
-  contacted: {
+  CONTACTED: {
     label: 'Contacted',
     className: 'bg-blue-100 text-blue-700 border-transparent dark:bg-blue-950 dark:text-blue-300',
   },
-  follow_up: {
+  FOLLOW_UP: {
     label: 'Follow-Up',
     className: 'bg-amber-100 text-amber-700 border-transparent dark:bg-amber-950 dark:text-amber-300',
   },
-  demo_scheduled: {
+  DISCOVERY_CALL: {
     label: 'Discovery Call',
     className: 'bg-violet-100 text-violet-700 border-transparent dark:bg-violet-950 dark:text-violet-300',
   },
-  proposal_sent: {
+  PROPOSAL_SENT: {
     label: 'Proposal Sent',
     className: 'bg-indigo-100 text-indigo-700 border-transparent dark:bg-indigo-950 dark:text-indigo-300',
   },
-  changes_requested: {
+  CHANGES_REQUESTED: {
     label: 'Changes Requested',
     className: 'bg-orange-100 text-orange-700 border-transparent dark:bg-orange-950 dark:text-orange-300',
   },
-  proposal_accepted: {
+  PROPOSAL_ACCEPTED: {
     label: 'Proposal Accepted',
     className: 'bg-teal-100 text-teal-700 border-transparent dark:bg-teal-950 dark:text-teal-300',
   },
-  contract_sent: {
+  CONTRACT_SENT: {
     label: 'Contract Sent',
     className: 'bg-pink-100 text-pink-700 border-transparent dark:bg-pink-950 dark:text-pink-300',
   },
-  won: {
+  WON: {
     label: 'Won',
     className: 'bg-green-100 text-green-700 border-transparent dark:bg-green-950 dark:text-green-300',
   },
-  lost: {
+  LOST: {
     label: 'Lost',
     className: 'bg-red-100 text-red-600 border-transparent dark:bg-red-950 dark:text-red-300',
   },

@@ -82,7 +82,7 @@ export default function EditProspectDialog({ prospect, open, onOpenChange }) {
       linkedin:          '',
       industry:          '',
       source:            'manual',
-      status:            'new',
+      status:            'NEW',
       last_contacted_at: '',
       next_followup_at:  '',
       notes:             '',
@@ -103,7 +103,7 @@ export default function EditProspectDialog({ prospect, open, onOpenChange }) {
         linkedin:          prospect.linkedin ?? '',
         industry:          prospect.industry ?? '',
         source:            prospect.source ?? 'manual',
-        status:            prospect.status ?? 'new',
+        status:            prospect.status ?? 'NEW',
         last_contacted_at: toDateInputValue(prospect.last_contacted_at),
         next_followup_at:  toDateInputValue(prospect.next_followup_at),
         notes:             prospect.notes ?? '',
@@ -118,7 +118,7 @@ export default function EditProspectDialog({ prospect, open, onOpenChange }) {
       )
       cleaned.business_name     = values.business_name
       cleaned.source            = values.source || 'manual'
-      cleaned.status            = values.status || 'new'
+      cleaned.status            = values.status || 'NEW'
       cleaned.last_contacted_at = toIso(values.last_contacted_at)
       cleaned.next_followup_at  = toIso(values.next_followup_at)
 

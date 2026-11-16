@@ -3,21 +3,12 @@ import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query'
 import { useAuth } from '@/context/AuthContext'
 import { resolveWorkspace } from '@/lib/workspace'
 import { logStatusChange } from '@/api/prospectActivities'
+import { STATUSES, statusLabel } from '@/lib/domain/prospectStatus'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-export const PROSPECT_STATUSES = [
-  { value: 'new',              label: 'New' },
-  { value: 'contacted',        label: 'Contacted' },
-  { value: 'follow_up',        label: 'Follow-Up' },
-  { value: 'demo_scheduled',   label: 'Discovery Call' },
-  { value: 'proposal_sent',      label: 'Proposal Sent' },
-  { value: 'changes_requested',  label: 'Changes Requested' },
-  { value: 'proposal_accepted',  label: 'Proposal Accepted' },
-  { value: 'contract_sent',      label: 'Contract Sent' },
-  { value: 'won',                label: 'Won' },
-  { value: 'lost',               label: 'Lost' },
-]
+// Select/tab options for Prospect stages, from the domain module (ADR 0006).
+export const PROSPECT_STATUSES = STATUSES.map((value) => ({ value, label: statusLabel(value) }))
 
 export const PROSPECT_SOURCES = [
   { value: 'manual',         label: 'Manual Entry' },
@@ -121,7 +112,7 @@ export function useImportProspects() {
         instagram: row.instagram || null,
         linkedin: row.linkedin || null,
         source: source || 'manual',
-        status: 'new',
+        status: 'NEW',
       }))
       const { data, error } = await supabase
         .from('prospects')

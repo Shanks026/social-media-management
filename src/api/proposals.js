@@ -3,14 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/context/AuthContext'
 import { resolveWorkspace } from '@/lib/workspace'
 import { logStatusChange } from '@/api/prospectActivities'
-
-// Prospect pipeline stages a "mark as sent" should advance from — either
-// genuinely earlier stages, or 'changes_requested' when this is a resend
-// after a revision (moves the prospect back to proposal_sent, awaiting a
-// response again). A prospect already at proposal_accepted/contract_sent/
-// won/lost is left alone so this never regresses a pipeline the agency has
-// already moved forward manually.
-const PRE_PROPOSAL_SENT_STAGES = ['new', 'contacted', 'follow_up', 'demo_scheduled', 'changes_requested']
+import { STAGES_BEFORE_PROPOSAL_SENT } from '@/lib/domain/prospectStatus'
 
 // Typed error thrown when the workspace has hit its proposal limit
 export class ProposalLimitError extends Error {
@@ -277,53 +270,67 @@ export function useGenerateProposalToken() {
 
 // ─── Advance to SENT when share link is first generated ───────────────────────
 
+/**
+ * Marks a Proposal sent (first share, or a resend after changes were
+ * requested) and advances its linked Prospect to PROPOSAL_SENT when the
+ * Prospect is still at an earlier stage (STAGES_BEFORE_PROPOSAL_SENT). A
+ * Prospect the agency already moved further along is left alone. This is a
+ * plain authenticated table write, so the sync happens here rather than in a
+ * SQL RPC like accept/decline.
+ *
+ * @returns {{ prospectId: string|null, advanced: boolean }}
+ */
+export async function markProposalSent(proposalId) {
+  const { data, error } = await supabase
+    .from('proposals')
+    .update({ status: 'sent', sent_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+    .eq('id', proposalId)
+    .in('status', ['draft', 'changes_requested']) // resend after a rework, too
+    .select('prospect_id')
+    .maybeSingle()
+  if (error) throw error
+
+  const prospectId = data?.prospect_id ?? null
+  if (!prospectId) return { prospectId, advanced: false }
+
+  const { workspaceUserId } = await resolveWorkspace()
+  const { data: prospect } = await supabase
+    .from('prospects')
+    .select('status')
+    .eq('id', prospectId)
+    .single()
+
+  if (!prospect || !STAGES_BEFORE_PROPOSAL_SENT.includes(prospect.status)) {
+    return { prospectId, advanced: false }
+  }
+
+  await supabase
+    .from('prospects')
+    .update({ status: 'PROPOSAL_SENT', updated_at: new Date().toISOString() })
+    .eq('id', prospectId)
+
+  await logStatusChange({
+    prospect_id: prospectId,
+    from_status: prospect.status,
+    to_status: 'PROPOSAL_SENT',
+    workspaceUserId,
+  })
+
+  return { prospectId, advanced: true }
+}
+
 export function useMarkProposalSent() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async (proposalId) => {
-      const { data, error } = await supabase
-        .from('proposals')
-        .update({ status: 'sent', sent_at: new Date().toISOString(), updated_at: new Date().toISOString() })
-        .eq('id', proposalId)
-        .in('status', ['draft', 'changes_requested']) // resend after a rework, too
-        .select('prospect_id')
-        .maybeSingle()
-      if (error) throw error
-
-      // Advance the linked prospect's pipeline stage too, same manual-vs-auto
-      // pattern as accept/decline — this is a plain authenticated table write,
-      // so the sync happens client-side rather than in a SQL RPC.
-      const prospectId = data?.prospect_id
-      if (prospectId) {
-        const { workspaceUserId } = await resolveWorkspace()
-        const { data: prospect } = await supabase
-          .from('prospects')
-          .select('status')
-          .eq('id', prospectId)
-          .single()
-
-        if (prospect && PRE_PROPOSAL_SENT_STAGES.includes(prospect.status)) {
-          await supabase
-            .from('prospects')
-            .update({ status: 'proposal_sent', updated_at: new Date().toISOString() })
-            .eq('id', prospectId)
-
-          await logStatusChange({
-            prospect_id: prospectId,
-            from_status: prospect.status,
-            to_status: 'proposal_sent',
-            workspaceUserId,
-          })
-
-          queryClient.invalidateQueries({ queryKey: ['prospects', 'list'] })
-          queryClient.invalidateQueries({ queryKey: ['prospects', 'detail', prospectId] })
-          queryClient.invalidateQueries({ queryKey: ['prospect-activities', prospectId] })
-        }
-      }
-    },
-    onSuccess: (_, proposalId) => {
+    mutationFn: markProposalSent,
+    onSuccess: ({ prospectId, advanced }, proposalId) => {
       queryClient.invalidateQueries({ queryKey: ['proposals', 'detail', proposalId] })
       queryClient.invalidateQueries({ queryKey: ['proposals', 'list'] })
+      if (advanced) {
+        queryClient.invalidateQueries({ queryKey: ['prospects', 'list'] })
+        queryClient.invalidateQueries({ queryKey: ['prospects', 'detail', prospectId] })
+        queryClient.invalidateQueries({ queryKey: ['prospect-activities', prospectId] })
+      }
     },
   })
 }

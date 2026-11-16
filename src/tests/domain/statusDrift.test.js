@@ -13,6 +13,7 @@ import * as task from '@/lib/domain/taskStatus'
 import * as invoice from '@/lib/domain/invoiceStatus'
 import * as client from '@/lib/domain/clientStatus'
 import * as transaction from '@/lib/domain/transactionStatus'
+import * as prospect from '@/lib/domain/prospectStatus'
 
 // Vitest runs from the project root (jsdom's import.meta.url isn't a file URL).
 const MIGRATIONS_DIR = resolve('supabase/migrations')
@@ -56,6 +57,7 @@ const MIRRORS = [
   ['tasks_priority_check', task.PRIORITIES],
   ['invoices_status_check', invoice.STATUSES],
   ['clients_status_check', client.STATUSES],
+  ['prospects_status_check', prospect.STATUSES],
 ]
 
 describe('status lists match the database CHECKs (ADR 0006)', () => {
