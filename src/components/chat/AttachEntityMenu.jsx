@@ -6,7 +6,7 @@ import { useTasks } from '@/api/tasks'
 import { useClients } from '@/api/clients'
 import { PlatformStack } from '@/components/PlatformIcon'
 import StatusBadge from '@/components/StatusBadge'
-import { STATUS_CONFIG, STATUS_DOT } from '@/components/tasks/TaskCard'
+import { taskStatusCfg } from '@/components/tasks/taskPresentation'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -217,7 +217,7 @@ export function AttachEntityMenu({ onSelect, initialCategory = null }) {
               })
             : tasks.map((task) => {
                 const client = task.client_id ? clientMap[task.client_id] : null
-                const statusCfg = STATUS_CONFIG[task.status] ?? STATUS_CONFIG.TODO
+                const statusCfg = taskStatusCfg(task.status)
                 const isSelected = selectedIds.has(task.id)
                 return (
                   <CommandItem
@@ -252,7 +252,7 @@ export function AttachEntityMenu({ onSelect, initialCategory = null }) {
 
                     <div className="shrink-0">
                       <Badge variant="outline" className={cn('scale-90 origin-right gap-1.5 select-none', statusCfg.className)}>
-                        <span className={cn('size-2 shrink-0 rounded-full', STATUS_DOT[task.status] ?? 'bg-zinc-400')} />
+                        <span className={cn('size-2 shrink-0 rounded-full', statusCfg.dot)} />
                         {statusCfg.label}
                       </Badge>
                     </div>

@@ -18,7 +18,9 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import CreateTaskDialog from '@/components/tasks/CreateTaskDialog'
-import TaskCard, { PRIORITY_CONFIG } from '@/components/tasks/TaskCard'
+import TaskCard from '@/components/tasks/TaskCard'
+import { taskPriorityCfg } from '@/components/tasks/taskPresentation'
+import { PRIORITIES } from '@/lib/domain/taskStatus'
 import AssigneeFilterPopover from '@/components/tasks/AssigneeFilterPopover'
 
 const STATUS_FILTERS = [
@@ -207,7 +209,7 @@ export default function TasksTab({ clientId, campaignId, campaignName }) {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All priorities</SelectItem>
-              {Object.entries(PRIORITY_CONFIG).map(([key, cfg]) => (
+              {PRIORITIES.map((key) => ({ key, cfg: taskPriorityCfg(key) })).map(({ key, cfg }) => (
                 <SelectItem key={key} value={key}>
                   <span className="flex items-center gap-2">
                     <span className={cn('size-2 rounded-full shrink-0', cfg.dot)} />

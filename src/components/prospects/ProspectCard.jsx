@@ -11,21 +11,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { ProspectStatusBadge, PROSPECT_STATUS_CONFIG } from './ProspectStatusBadge'
+import StatusBadge from '@/components/StatusBadge'
+import { statusTone } from '@/lib/statusTone'
+import { statusLabel as prospectStatusLabel } from '@/lib/domain/prospectStatus'
 import { ProspectSourceBadge } from './ProspectSourceBadge'
 import { useUpdateProspect, PROSPECT_STATUSES } from '@/api/prospects'
 import { formatDate } from '@/lib/helper'
-
-// Solid dot color per status — matches badge palette
-const STATUS_DOT = {
-  NEW:            'bg-gray-400',
-  CONTACTED:      'bg-blue-500',
-  FOLLOW_UP:      'bg-amber-500',
-  DISCOVERY_CALL: 'bg-violet-500',
-  PROPOSAL_SENT:  'bg-indigo-500',
-  WON:            'bg-green-500',
-  LOST:           'bg-red-500',
-}
 
 
 export function ProspectCard({ prospect, onClick, onEdit, onDelete }) {
@@ -40,7 +31,7 @@ export function ProspectCard({ prospect, onClick, onEdit, onDelete }) {
         status: newStatus,
         _prevStatus: prospect.status,
       })
-      toast.success(`Status updated to ${PROSPECT_STATUS_CONFIG[newStatus]?.label ?? newStatus}`)
+      toast.success(`Status updated to ${prospectStatusLabel(newStatus)}`)
     } catch (err) {
       toast.error(err.message || 'Failed to update status')
     }
@@ -55,7 +46,7 @@ export function ProspectCard({ prospect, onClick, onEdit, onDelete }) {
 
         {/* Top: status badge + source badge + actions menu */}
         <div className="flex items-center gap-2">
-          <ProspectStatusBadge status={prospect.status} />
+          <StatusBadge entity="prospect" status={prospect.status} />
           <ProspectSourceBadge source={prospect.source} />
 
           {/* Actions menu — pushed to far right */}
@@ -92,7 +83,7 @@ export function ProspectCard({ prospect, onClick, onEdit, onDelete }) {
                     <span
                       className={cn(
                         'size-3 rounded-[3px] shrink-0',
-                        STATUS_DOT[s.value] ?? 'bg-muted-foreground'
+                        statusTone('prospect', s.value).dot
                       )}
                     />
                     <span className="flex-1">{s.label}</span>

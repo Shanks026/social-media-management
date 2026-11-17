@@ -13,20 +13,7 @@ import { Plus, Clock } from 'lucide-react'
 import { useState } from 'react'
 import { DayDetailDialog } from './DayDetailDialog'
 import { getPublishState } from '@/lib/helper'
-
-const STATUS_STYLES = {
-  DRAFT:               'border-l-blue-600',
-  SUBMITTED:           'border-l-amber-600',
-  CHANGES_REQUESTED:   'border-l-rose-600 animate-pulse',
-  READY:               'border-l-violet-600',
-  PENDING_APPROVAL:    'border-l-orange-600',
-  APPROVED:            'border-l-green-600',
-  NEEDS_REVISION:      'border-l-pink-600 animate-pulse',
-  SCHEDULED:           'border-l-purple-600',
-  DELIVERED:           'border-l-teal-600',
-  PUBLISHED:           'border-l-emerald-600',
-  PARTIALLY_PUBLISHED: 'border-l-lime-600',
-}
+import { deliverableEdge } from '@/lib/statusTone'
 
 export default function MonthView({
   currentMonth,
@@ -99,7 +86,7 @@ export default function MonthView({
                     key={post.version_id}
                     className={cn(
                       'w-full flex flex-col justify-center p-2 rounded-md border border-l-4 shadow-sm transition-all hover:bg-accent/50 text-left',
-                      STATUS_STYLES[getPublishState(post)] || 'border-l-muted',
+                      deliverableEdge(getPublishState(post)),
                       // 🔥 Apply purple bg fill ONLY for meetings
                       post.isMeeting
                         ? 'bg-purple-50 dark:bg-purple-950/40 border-purple-200 dark:border-purple-800'

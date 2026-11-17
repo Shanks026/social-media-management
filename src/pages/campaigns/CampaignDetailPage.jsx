@@ -78,7 +78,6 @@ import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { SUPPORTED_PLATFORMS } from '@/lib/platforms'
 import { getUrgencyStatus } from '@/lib/client-helpers'
-import { statusLabel as campaignStatusLabel } from '@/lib/domain/campaignStatus'
 import {
   ChartContainer,
   ChartTooltip,
@@ -122,12 +121,6 @@ const platformChartConfig = {
         : { label: p.label, color: p.color }
     return acc
   }, {}),
-}
-
-const STATUS_STYLES = {
-  ACTIVE: 'bg-emerald-500/15 text-emerald-700',
-  COMPLETED: 'bg-blue-500/15 text-blue-700',
-  ARCHIVED: 'bg-muted text-muted-foreground',
 }
 
 function formatDateRange(start, end) {
@@ -354,17 +347,7 @@ export default function CampaignDetailPage() {
                 <h1 className="text-2xl font-medium tracking-tight text-foreground truncate bricolage">
                   {campaign.name}
                 </h1>
-                <span
-                  className={cn(
-                    'text-[10px] uppercase tracking-wider font-semibold px-2 py-0.5 rounded-full border',
-                    STATUS_STYLES[campaign.status]
-                      ? 'border-transparent'
-                      : 'border-border',
-                    STATUS_STYLES[campaign.status] ?? STATUS_STYLES.ARCHIVED,
-                  )}
-                >
-                  {campaignStatusLabel(campaign.status)}
-                </span>
+                <StatusBadge entity="campaign" status={campaign.status} />
               </div>
               <div className="flex items-center gap-4 mt-3 text-sm text-muted-foreground font-normal flex-wrap">
                 {campaign.clients?.name && (

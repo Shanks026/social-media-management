@@ -32,36 +32,10 @@ import { SYSTEM_ROLE_PALETTE } from '@/lib/team-roles'
 import { ClientAvatar } from '@/components/tasks/ClientAvatar'
 import { DeliverablePickerSection } from '@/components/tasks/DeliverablePickerSection'
 
+import { TASK_PRIORITY_OPTIONS } from '@/components/tasks/taskPresentation'
+
 const NONE = '__none__'
 
-const PRIORITY_CONFIG = [
-  {
-    value: 'LOW',
-    label: 'Low',
-    dot: 'bg-emerald-400',
-    active:
-      'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
-  },
-  {
-    value: 'NORMAL',
-    label: 'Normal',
-    dot: 'bg-zinc-400',
-    active: 'bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300',
-  },
-  {
-    value: 'HIGH',
-    label: 'High',
-    dot: 'bg-amber-400',
-    active:
-      'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-  },
-  {
-    value: 'URGENT',
-    label: 'Urgent',
-    dot: 'bg-red-500',
-    active: 'bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-400',
-  },
-]
 
 function MetaRow({ label, children }) {
   return (
@@ -369,7 +343,7 @@ export default function CreateTaskDialog({
             {/* Priority */}
             <MetaRow label="Priority">
               <div className="flex items-center gap-1">
-                {PRIORITY_CONFIG.map((p) => (
+                {TASK_PRIORITY_OPTIONS.map((p) => (
                   <button
                     key={p.value}
                     type="button"

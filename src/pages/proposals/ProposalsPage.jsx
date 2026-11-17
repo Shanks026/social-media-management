@@ -65,65 +65,15 @@ import {
 } from '@/components/ui/empty'
 import { formatCurrency } from '@/utils/finance'
 import { formatDate } from '@/lib/helper'
-import { DISPLAY_STATUSES } from '@/lib/domain/proposalStatus'
+import StatusBadge from '@/components/StatusBadge'
+import {
+  DISPLAY_STATUSES,
+  statusLabel as proposalStatusLabel,
+} from '@/lib/domain/proposalStatus'
 
 // ── Status config ─────────────────────────────────────────────────────────────
 
-const STATUS_CONFIG = {
-  DRAFT: {
-    label: 'Draft',
-    className: 'bg-muted text-muted-foreground border-transparent',
-  },
-  SENT: {
-    label: 'Sent',
-    className:
-      'bg-blue-100 text-blue-700 border-transparent dark:bg-blue-950 dark:text-blue-300',
-  },
-  VIEWED: {
-    label: 'Viewed',
-    className:
-      'bg-violet-100 text-violet-700 border-transparent dark:bg-violet-950 dark:text-violet-300',
-  },
-  ACCEPTED: {
-    label: 'Accepted',
-    className:
-      'bg-green-100 text-green-700 border-transparent dark:bg-green-950 dark:text-green-300',
-  },
-  DECLINED: {
-    label: 'Declined',
-    className:
-      'bg-red-100 text-red-700 border-transparent dark:bg-red-950 dark:text-red-300',
-  },
-  CHANGES_REQUESTED: {
-    label: 'Changes Requested',
-    className:
-      'bg-orange-100 text-orange-700 border-transparent dark:bg-orange-950 dark:text-orange-300',
-  },
-  EXPIRED: {
-    label: 'Expired',
-    className:
-      'bg-amber-100 text-amber-700 border-transparent dark:bg-amber-950 dark:text-amber-300',
-  },
-  ARCHIVED: {
-    label: 'Archived',
-    className:
-      'bg-slate-100 text-slate-500 border-transparent dark:bg-slate-800 dark:text-slate-400',
-  },
-}
-
 const STATUS_TABS = ['all', ...DISPLAY_STATUSES]
-
-function StatusBadge({ status }) {
-  const config = STATUS_CONFIG[status] ?? {
-    label: status,
-    className: 'bg-muted text-muted-foreground',
-  }
-  return (
-    <Badge variant="outline" className={config.className}>
-      {config.label}
-    </Badge>
-  )
-}
 
 // ── Skeleton ──────────────────────────────────────────────────────────────────
 
@@ -293,7 +243,7 @@ export default function ProposalsPage() {
                     focus-visible:ring-0
                   "
                 >
-                  {tab === 'all' ? 'All' : (STATUS_CONFIG[tab]?.label ?? tab)}
+                  {tab === 'all' ? 'All' : proposalStatusLabel(tab)}
                   {count > 0 && (
                     <Badge
                       variant="secondary"
@@ -447,7 +397,7 @@ export default function ProposalsPage() {
 
                       {/* Status */}
                       <TableCell className="px-4 py-3">
-                        <StatusBadge status={proposal.status} />
+                        <StatusBadge entity="proposal" status={proposal.status} />
                       </TableCell>
 
                       {/* Valid Until */}

@@ -74,3 +74,18 @@ export function displayStatus(version) {
   if (publishedCount === entries.length) return 'PUBLISHED'
   return PARTIALLY_PUBLISHED
 }
+
+/**
+ * Client-facing breakdown of a { status: count } object: counts that share a
+ * client label (internal review stages all read "In Progress") are summed.
+ * Returns [label, count] pairs in first-seen order, zeros dropped.
+ */
+export function clientStatusCounts(byStatus = {}) {
+  const totals = new Map()
+  for (const [status, count] of Object.entries(byStatus)) {
+    if (!count) continue
+    const label = clientStatusLabel(status)
+    totals.set(label, (totals.get(label) ?? 0) + count)
+  }
+  return [...totals.entries()]
+}

@@ -4,20 +4,9 @@ import { X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge' // Import Badge
 import { getPublishState } from '@/lib/helper'
+import { statusTone } from '@/lib/statusTone'
 
-const getStatusDotColor = (status) => {
-  const config = {
-    DRAFT: 'bg-blue-500',
-    PENDING_APPROVAL: 'bg-orange-500',
-    SCHEDULED: 'bg-violet-500',
-    NEEDS_REVISION: 'bg-pink-500',
-    ACTIVE: 'bg-green-500',
-    PUBLISHED: 'bg-emerald-500',
-    PARTIALLY_PUBLISHED: 'bg-lime-500',
-    ARCHIVED: 'bg-slate-500',
-  }
-  return config[status] ?? 'bg-slate-400'
-}
+const getStatusDotColor = (status) => statusTone('deliverable', status).dot
 
 export default function VersionSidebar({
   versions,

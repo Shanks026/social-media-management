@@ -8,6 +8,7 @@ import {
   Font,
 } from '@react-pdf/renderer'
 import { format } from 'date-fns'
+import { clientStatusCounts, clientStatusLabel } from '@/lib/domain/deliverableStatus'
 
 Font.register({
   family: 'Inter',
@@ -38,15 +39,6 @@ const C = {
   border: '#E5E7EB',
   tableHeader: '#F9FAFB',
   accent: '#6366F1',
-}
-
-const STATUS_LABELS = {
-  DRAFT: 'Draft',
-  PENDING_APPROVAL: 'Pending',
-  NEEDS_REVISION: 'Revision',
-  SCHEDULED: 'Scheduled',
-  PUBLISHED: 'Published',
-  ARCHIVED: 'Archived',
 }
 
 const s = StyleSheet.create({
@@ -215,8 +207,8 @@ export default function CalendarReportPDF({
 }) {
   const { days, summary } = reportData
 
-  const statusBreakdown = Object.entries(summary.byStatus)
-    .map(([k, v]) => `${STATUS_LABELS[k] || k}: ${v}`)
+  const statusBreakdown = clientStatusCounts(summary.byStatus)
+    .map(([label, v]) => `${label}: ${v}`)
     .join('  ·  ')
 
   const platformBreakdown = Object.entries(summary.byPlatform)
@@ -305,7 +297,7 @@ export default function CalendarReportPDF({
                     {(post.platforms || []).join(', ') || '—'}
                   </Text>
                   <Text style={s.postStatus}>
-                    {STATUS_LABELS[post.status] || post.status || '—'}
+                    {clientStatusLabel(post.status) || '—'}
                   </Text>
                 </View>
               ))}

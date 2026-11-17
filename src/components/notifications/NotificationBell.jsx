@@ -44,7 +44,8 @@ import {
   useNotificationStream,
 } from '@/api/notifications'
 import { useMemberMap } from '@/api/chat'
-import { STATUS_CONFIG, StatusChip } from '@/components/tasks/TaskCard'
+import { StatusChip } from '@/components/tasks/TaskCard'
+import { STATUSES as TASK_STATUSES } from '@/lib/domain/taskStatus'
 import { useAuth } from '@/context/AuthContext'
 
 // ─── Type config ───────────────────────────────────────────────────────────────
@@ -88,13 +89,13 @@ const SYSTEM_ACTOR_LABEL = {
 // Rather than migrate every trigger and the emit_notifications signature to
 // carry the status separately, the known prefix is matched here and the enum
 // rendered as the same pill the task page uses. Anything that doesn't match a
-// real STATUS_CONFIG key falls through to the title verbatim, so an unknown
+// real task status falls through to the title verbatim, so an unknown
 // or reworded title degrades to what it does today rather than breaking.
 const STATUS_TITLE_RE = /^(Task status updated to )([A-Z_]+)$/
 
 function NotificationTitle({ title }) {
   const match = title?.match(STATUS_TITLE_RE)
-  if (!match || !STATUS_CONFIG[match[2]]) return title
+  if (!match || !TASK_STATUSES.includes(match[2])) return title
   return (
     <>
       {match[1]}

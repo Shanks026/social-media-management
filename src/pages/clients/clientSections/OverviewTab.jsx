@@ -75,10 +75,10 @@ const platformChartConfig = {
 }
 
 import {
-  POST_CHART_CONFIG as chartConfig,
+  DELIVERABLE_CHART_CONFIG as chartConfig,
   ALLOWED_CHART_STATUSES as ALLOWED_STATUSES,
   STATUS_DISPLAY_MAP,
-} from '@/lib/post-statuses'
+} from '@/lib/statusTone'
 
 function normalizeStatus(raw) {
   if (!raw) return 'DRAFT'

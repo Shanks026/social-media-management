@@ -59,6 +59,7 @@ import { CalendarPostCard } from '@/pages/calendar/CalendarPostCard'
 import DraftPostForm from '@/pages/posts/DraftPostForm'
 import StatusBadge from '@/components/StatusBadge'
 import { getPublishState } from '@/lib/helper'
+import { statusLabel } from '@/lib/domain/deliverableStatus'
 import { useHeader } from '@/components/misc/header-context'
 import { useGlobalPosts, usePostCounts } from '@/api/useGlobalPosts'
 import { useClients } from '@/api/clients'
@@ -111,19 +112,8 @@ const PLATFORMS = [
 ]
 
 const STATUS_TABS = [
-  { key: 'ALL',                 label: 'All' },
-  { key: 'DRAFT',               label: 'Drafts' },
-  { key: 'SUBMITTED',           label: 'Submitted' },
-  { key: 'CHANGES_REQUESTED',   label: 'Changes Requested' },
-  { key: 'READY',               label: 'Ready' },
-  { key: 'PENDING_APPROVAL',    label: 'Pending Approval' },
-  { key: 'APPROVED',            label: 'Approved' },
-  { key: 'SCHEDULED',           label: 'Scheduled' },
-  { key: 'NEEDS_REVISION',      label: 'Needs Revision' },
-  { key: 'PARTIALLY_PUBLISHED', label: 'Partially Published' },
-  { key: 'DELIVERED',           label: 'Delivered' },
-  { key: 'PUBLISHED',           label: 'Published' },
-  { key: 'ARCHIVED',            label: 'Archived' },
+  { key: 'ALL', label: 'All' },
+  ...['DRAFT', 'SUBMITTED', 'CHANGES_REQUESTED', 'READY', 'PENDING_APPROVAL', 'APPROVED', 'SCHEDULED', 'NEEDS_REVISION', 'PARTIALLY_PUBLISHED', 'DELIVERED', 'PUBLISHED', 'ARCHIVED'].map((key) => ({ key, label: statusLabel(key) })),
 ]
 
 const PlatformIcon = ({ name, size = 14 }) => {

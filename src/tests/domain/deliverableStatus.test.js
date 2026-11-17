@@ -87,3 +87,21 @@ describe('displayStatus', () => {
     expect(displayStatus({ status: 'SCHEDULED', platform_schedules: { x: { published_at: null } } })).toBe('SCHEDULED')
   })
 })
+
+describe('clientStatusCounts', () => {
+  it('sums counts that share a client-facing label, in first-seen order', async () => {
+    const { clientStatusCounts } = await import('@/lib/domain/deliverableStatus')
+    expect(
+      clientStatusCounts({ DRAFT: 2, READY: 1, PUBLISHED: 4, NEEDS_REVISION: 1 }),
+    ).toEqual([
+      ['In Progress', 3],
+      ['Published', 4],
+      ['In Revision', 1],
+    ])
+  })
+
+  it('skips zero counts', async () => {
+    const { clientStatusCounts } = await import('@/lib/domain/deliverableStatus')
+    expect(clientStatusCounts({ DRAFT: 0, SCHEDULED: 2 })).toEqual([['Scheduled', 2]])
+  })
+})
