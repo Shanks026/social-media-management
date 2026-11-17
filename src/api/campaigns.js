@@ -1,14 +1,41 @@
+// Campaigns API (ADR 0007): the key factory, a plain async function per
+// mutation (the unit-test surface, callable outside React), and a hook that
+// wraps each one and owns the cache invalidation. Components never call
+// useQuery/useMutation/invalidateQueries or import supabase for campaigns.
 import { supabase } from '@/lib/supabase'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/context/AuthContext'
 import { resolveWorkspace } from '@/lib/workspace'
 
-// ─── Read ─────────────────────────────────────────────────────────────────────
+// ─── Query keys ───────────────────────────────────────────────────────────────
+
+export const campaignKeys = {
+  all: ['campaigns'],
+  list: (workspaceId, filters = {}) => [
+    'campaigns',
+    'list',
+    workspaceId,
+    { clientId: filters.clientId ?? null },
+  ],
+  detail: (id) => ['campaigns', 'detail', id],
+  analytics: (id) => ['campaigns', 'analytics', id],
+  invoices: (id) => ['campaigns', 'invoices', id],
+  review: (token) => ['campaigns', 'review', token],
+  activeByClient: (clientId) => ['campaigns', 'active-by-client', clientId],
+  unlinkedPosts: (clientId) => ['campaigns', 'unlinked-posts', clientId],
+}
+
+// Everything a change to a campaign's linked posts can touch outside this
+// module. Keys for other domains are spelled here until those modules ship
+// their own factories (#154–#157).
+const POST_RELATED_KEYS = [['global-posts'], ['draft-posts'], ['calendar'], ['global-calendar']]
+
+// ─── Reads ────────────────────────────────────────────────────────────────────
 
 export function useCampaigns({ clientId } = {}) {
   const { workspaceUserId } = useAuth()
   return useQuery({
-    queryKey: ['campaigns', 'list', { clientId: clientId ?? null }],
+    queryKey: campaignKeys.list(workspaceUserId, { clientId }),
     queryFn: async () => {
       const { data, error } = await supabase.rpc(
         'get_campaigns_with_post_summary',
@@ -25,7 +52,7 @@ export function useCampaigns({ clientId } = {}) {
 
 export function useCampaign(campaignId) {
   return useQuery({
-    queryKey: ['campaigns', 'detail', campaignId],
+    queryKey: campaignKeys.detail(campaignId),
     queryFn: async () => {
       const { data, error } = await supabase
         .from('campaigns')
@@ -41,7 +68,6 @@ export function useCampaign(campaignId) {
   })
 }
 
-// Plain async — also used directly as a queryFn by dialogs that build their own key
 export async function fetchActiveCampaignsByClient(clientId) {
   const { data, error } = await supabase
     .from('campaigns')
@@ -53,11 +79,10 @@ export async function fetchActiveCampaignsByClient(clientId) {
   return data ?? []
 }
 
-// Active campaigns for one client. Shares its key with the inline useQuery
-// calls in the task and meeting dialogs, so they hit the same cache entry.
+// Active campaigns for one client (the task, meeting and deliverable dialogs).
 export function useActiveCampaignsByClient(clientId, { enabled = true } = {}) {
   return useQuery({
-    queryKey: ['campaigns', 'active-by-client', clientId],
+    queryKey: campaignKeys.activeByClient(clientId),
     queryFn: () => fetchActiveCampaignsByClient(clientId),
     enabled: !!clientId && enabled,
   })
@@ -65,7 +90,7 @@ export function useActiveCampaignsByClient(clientId, { enabled = true } = {}) {
 
 export function useCampaignAnalytics(campaignId) {
   return useQuery({
-    queryKey: ['campaigns', 'analytics', campaignId],
+    queryKey: campaignKeys.analytics(campaignId),
     queryFn: async () => {
       const { data, error } = await supabase.rpc('get_campaign_analytics', {
         p_campaign_id: campaignId,
@@ -89,110 +114,9 @@ export function useCampaignAnalytics(campaignId) {
   })
 }
 
-// ─── Mutations ────────────────────────────────────────────────────────────────
-
-export function useCreateCampaign() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: async (payload) => {
-      const { workspaceUserId } = await resolveWorkspace()
-      const { data, error } = await supabase
-        .from('campaigns')
-        .insert({ ...payload, user_id: workspaceUserId })
-        .select()
-        .single()
-      if (error) throw error
-      return data
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['campaigns', 'list'] })
-    },
-  })
-}
-
-export function useUpdateCampaign() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: async ({ id, ...payload }) => {
-      const { data, error } = await supabase
-        .from('campaigns')
-        .update({ ...payload, updated_at: new Date().toISOString() })
-        .eq('id', id)
-        .select()
-        .single()
-      if (error) throw error
-      return data
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['campaigns', 'list'] })
-      queryClient.invalidateQueries({
-        queryKey: ['campaigns', 'detail', data.id],
-      })
-    },
-  })
-}
-
-export function useDeleteCampaign() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: async (id) => {
-      // ON DELETE SET NULL — posts are safely orphaned, never deleted
-      const { error } = await supabase.from('campaigns').delete().eq('id', id)
-      if (error) throw error
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['campaigns', 'list'] })
-    },
-  })
-}
-
-// ─── Post-Campaign Linking ────────────────────────────────────────────────────
-
-export function useAssignPostsToCampaign() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: async ({ postIds, campaignId }) => {
-      const { error } = await supabase
-        .from('posts')
-        .update({ campaign_id: campaignId })
-        .in('id', postIds)
-      if (error) throw error
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['campaigns'] })
-      queryClient.invalidateQueries({ queryKey: ['global-posts'] })
-      queryClient.invalidateQueries({ queryKey: ['draft-posts'] })
-      queryClient.invalidateQueries({ queryKey: ['calendar'] })
-      queryClient.invalidateQueries({ queryKey: ['global-calendar'] })
-    },
-  })
-}
-
-export function useAssignPostCampaign() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: async ({ postId, campaignId }) => {
-      const { error } = await supabase
-        .from('posts')
-        .update({ campaign_id: campaignId || null })
-        .eq('id', postId)
-      if (error) throw error
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['campaigns'] })
-      queryClient.invalidateQueries({ queryKey: ['global-posts'] })
-      queryClient.invalidateQueries({ queryKey: ['draft-posts'] })
-      queryClient.invalidateQueries({ queryKey: ['calendar'] })
-      queryClient.invalidateQueries({ queryKey: ['global-calendar'] })
-    },
-  })
-}
-
-// ─── Campaign Invoices ────────────────────────────────────────────────────────
-
 export function useCampaignInvoices(campaignId) {
   return useQuery({
-    queryKey: ['campaigns', 'invoices', campaignId],
+    queryKey: campaignKeys.invoices(campaignId),
     queryFn: async () => {
       const { data, error } = await supabase
         .from('invoices')
@@ -207,50 +131,10 @@ export function useCampaignInvoices(campaignId) {
   })
 }
 
-export function useRegenerateCampaignReviewToken() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: async (campaignId) => {
-      const { data, error } = await supabase
-        .from('campaigns')
-        .update({ 
-          review_token: crypto.randomUUID(),
-          review_token_active: true 
-        })
-        .eq('id', campaignId)
-        .select('review_token')
-        .single()
-      if (error) throw error
-      return data
-    },
-    onSuccess: (_, campaignId) => {
-      queryClient.invalidateQueries({ queryKey: ['campaigns', 'detail', campaignId] })
-    },
-  })
-}
-
-export function useMarkReviewSent() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: async (campaignId) => {
-      const { error } = await supabase
-        .from('campaigns')
-        .update({ last_review_sent_at: new Date().toISOString() })
-        .eq('id', campaignId)
-      if (error) throw error
-    },
-    onSuccess: (_, campaignId) => {
-      queryClient.invalidateQueries({ queryKey: ['campaigns', 'detail', campaignId] })
-    },
-  })
-}
-
-// ─── Campaign Review (Phase 3) ────────────────────────────────────────────────
-
 // Unauthenticated — token from URL param; SECURITY DEFINER RPC
 export function useCampaignReview(token) {
   return useQuery({
-    queryKey: ['campaigns', 'review', token],
+    queryKey: campaignKeys.review(token),
     queryFn: async () => {
       const { data, error } = await supabase.rpc('get_campaign_by_review_token', {
         p_token: token,
@@ -264,20 +148,7 @@ export function useCampaignReview(token) {
   })
 }
 
-// Called per post in CampaignReview action handlers
-// postReviewToken = share_tokens.token for that post version
-export async function submitCampaignPostReview(postReviewToken, status, feedback) {
-  const { error } = await supabase.rpc('update_post_status_by_token', {
-    p_token: postReviewToken,
-    p_status: status,
-    p_feedback: feedback,
-  })
-  if (error) throw error
-}
-
-// ─── Unlinked Posts ───────────────────────────────────────────────────────────
-
-// Fetch unlinked posts for a client (posts without a campaign_id)
+// Posts without a campaign, for one client.
 export async function fetchUnlinkedPostsByClient(clientId) {
   const { data, error } = await supabase
     .from('posts')
@@ -303,12 +174,155 @@ export async function fetchUnlinkedPostsByClient(clientId) {
   }))
 }
 
-// Under the 'campaigns' prefix so the assign mutations' broad invalidation
-// refreshes it after posts are linked.
+// Under the 'campaigns' prefix so linking posts refreshes it.
 export function useUnlinkedPostsByClient(clientId, { enabled = true } = {}) {
   return useQuery({
-    queryKey: ['campaigns', 'unlinked-posts', clientId],
+    queryKey: campaignKeys.unlinkedPosts(clientId),
     queryFn: () => fetchUnlinkedPostsByClient(clientId),
     enabled: !!clientId && enabled,
+  })
+}
+
+// ─── Mutations: plain functions ───────────────────────────────────────────────
+
+export async function createCampaign(payload) {
+  const { workspaceUserId } = await resolveWorkspace()
+  const { data, error } = await supabase
+    .from('campaigns')
+    .insert({ ...payload, user_id: workspaceUserId })
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
+export async function updateCampaign({ id, ...payload }) {
+  const { data, error } = await supabase
+    .from('campaigns')
+    .update({ ...payload, updated_at: new Date().toISOString() })
+    .eq('id', id)
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
+// ON DELETE SET NULL — posts are safely orphaned, never deleted
+export async function deleteCampaign(id) {
+  const { error } = await supabase.from('campaigns').delete().eq('id', id)
+  if (error) throw error
+}
+
+export async function assignPostsToCampaign({ postIds, campaignId }) {
+  const { error } = await supabase
+    .from('posts')
+    .update({ campaign_id: campaignId })
+    .in('id', postIds)
+  if (error) throw error
+}
+
+export async function assignPostCampaign({ postId, campaignId }) {
+  const { error } = await supabase
+    .from('posts')
+    .update({ campaign_id: campaignId || null })
+    .eq('id', postId)
+  if (error) throw error
+}
+
+export async function regenerateCampaignReviewToken(campaignId) {
+  const { data, error } = await supabase
+    .from('campaigns')
+    .update({
+      review_token: crypto.randomUUID(),
+      review_token_active: true,
+    })
+    .eq('id', campaignId)
+    .select('review_token')
+    .single()
+  if (error) throw error
+  return data
+}
+
+export async function markReviewSent(campaignId) {
+  const { error } = await supabase
+    .from('campaigns')
+    .update({ last_review_sent_at: new Date().toISOString() })
+    .eq('id', campaignId)
+  if (error) throw error
+}
+
+// Per post, from the public review page. postReviewToken is share_tokens.token
+// for that post version.
+export async function submitCampaignPostReview(postReviewToken, status, feedback) {
+  const { error } = await supabase.rpc('update_post_status_by_token', {
+    p_token: postReviewToken,
+    p_status: status,
+    p_feedback: feedback,
+  })
+  if (error) throw error
+}
+
+// ─── Mutations: hooks that own invalidation ───────────────────────────────────
+
+export function useCreateCampaign() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: createCampaign,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: campaignKeys.all }),
+  })
+}
+
+export function useUpdateCampaign() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: updateCampaign,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: campaignKeys.all }),
+  })
+}
+
+export function useDeleteCampaign() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: deleteCampaign,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: campaignKeys.all }),
+  })
+}
+
+function invalidateCampaignPostLinks(queryClient) {
+  queryClient.invalidateQueries({ queryKey: campaignKeys.all })
+  POST_RELATED_KEYS.forEach((queryKey) => queryClient.invalidateQueries({ queryKey }))
+}
+
+export function useAssignPostsToCampaign() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: assignPostsToCampaign,
+    onSuccess: () => invalidateCampaignPostLinks(queryClient),
+  })
+}
+
+export function useAssignPostCampaign() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: assignPostCampaign,
+    onSuccess: () => invalidateCampaignPostLinks(queryClient),
+  })
+}
+
+export function useRegenerateCampaignReviewToken() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: regenerateCampaignReviewToken,
+    onSuccess: (_, campaignId) =>
+      queryClient.invalidateQueries({ queryKey: campaignKeys.detail(campaignId) }),
+  })
+}
+
+export function useMarkReviewSent() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: markReviewSent,
+    onSuccess: (_, campaignId) =>
+      queryClient.invalidateQueries({ queryKey: campaignKeys.detail(campaignId) }),
   })
 }

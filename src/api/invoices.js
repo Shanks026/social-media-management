@@ -1,3 +1,4 @@
+import { campaignKeys } from '@/api/campaigns'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/context/AuthContext'
@@ -215,8 +216,8 @@ export function useCreateInvoice() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: invoiceKeys.all })
-      queryClient.invalidateQueries({ queryKey: ['campaigns', 'invoices'] })
-      queryClient.invalidateQueries({ queryKey: ['campaigns', 'analytics'] })
+      queryClient.invalidateQueries({ queryKey: [...campaignKeys.all, 'invoices'] })
+      queryClient.invalidateQueries({ queryKey: [...campaignKeys.all, 'analytics'] })
     },
   })
 }
@@ -328,8 +329,8 @@ export function useUpdateInvoice() {
     onSuccess: (updatedInvoice) => {
       queryClient.invalidateQueries({ queryKey: invoiceKeys.all })
       queryClient.invalidateQueries({ queryKey: transactionKeys.all })
-      queryClient.invalidateQueries({ queryKey: ['campaigns', 'invoices'] })
-      queryClient.invalidateQueries({ queryKey: ['campaigns', 'analytics'] })
+      queryClient.invalidateQueries({ queryKey: [...campaignKeys.all, 'invoices'] })
+      queryClient.invalidateQueries({ queryKey: [...campaignKeys.all, 'analytics'] })
       queryClient.invalidateQueries({ queryKey: ['clients-list', workspaceUserId] })
       if (updatedInvoice?.client_id) {
         queryClient.invalidateQueries({ queryKey: ['client', updatedInvoice.client_id] })
@@ -354,8 +355,8 @@ export function useDeleteInvoice() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: invoiceKeys.all })
       queryClient.invalidateQueries({ queryKey: transactionKeys.all })
-      queryClient.invalidateQueries({ queryKey: ['campaigns', 'invoices'] })
-      queryClient.invalidateQueries({ queryKey: ['campaigns', 'analytics'] })
+      queryClient.invalidateQueries({ queryKey: [...campaignKeys.all, 'invoices'] })
+      queryClient.invalidateQueries({ queryKey: [...campaignKeys.all, 'analytics'] })
     },
   })
 }

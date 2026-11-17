@@ -1,3 +1,4 @@
+import { campaignKeys } from '@/api/campaigns'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
@@ -71,7 +72,7 @@ export default function PostDetails() {
 
   // Invalidate all caches that depend on post status/counts
   const invalidatePostRelated = () => {
-    queryClient.invalidateQueries({ queryKey: ['campaigns'] })
+    queryClient.invalidateQueries({ queryKey: campaignKeys.all })
     queryClient.invalidateQueries({ queryKey: ['clients'] })
     queryClient.invalidateQueries({ queryKey: ['clients-list'] })
     queryClient.invalidateQueries({ queryKey: ['postCounts', clientId] })
