@@ -209,6 +209,7 @@ export default function TaskCard({ task, clientMap, campaignMap = {}, memberMap 
   const client = clientMap[String(task.client_id)]
   const campaign = task.campaign_id ? campaignMap[String(task.campaign_id)] : null
   const statusCfg = taskStatusCfg(task.status)
+  const priorityCfg = taskPriorityCfg(task.priority)
   const assignee = task.assigned_to ? memberMap[task.assigned_to] : null
   const creatorMember = memberMap[task.created_by]
   const displayDate =
@@ -249,10 +250,10 @@ export default function TaskCard({ task, clientMap, campaignMap = {}, memberMap 
             {statusCfg.label}
           </Badge>
 
-          {taskPriorityCfg(task.priority) && (
+          {priorityCfg && (
             <Badge variant="outline" className="gap-1.5">
-              <span className={cn('size-2 rounded-full shrink-0', taskPriorityCfg(task.priority).dot)} />
-              {taskPriorityCfg(task.priority).label}
+              <span className={cn('size-2 rounded-full shrink-0', priorityCfg.dot)} />
+              {priorityCfg.label}
             </Badge>
           )}
 

@@ -61,8 +61,6 @@ import {
   statusLabel as proposalStatusLabel,
 } from '@/lib/domain/proposalStatus'
 
-// ── Status config ─────────────────────────────────────────────────────────────
-
 const STATUS_TABS = ['all', ...DISPLAY_STATUSES]
 
 function ProposalRowSkeleton() {

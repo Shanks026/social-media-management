@@ -160,3 +160,9 @@ export const DELIVERABLE_CHART_CONFIG = Object.fromEntries(
     { label: deliverable.statusLabel(k), color: statusTone('deliverable', k).hex },
   ]),
 )
+
+/** Calendar cell edge classes for a Deliverable status (pulses while it needs action). */
+export function deliverableEdge(status) {
+  const tone = statusTone('deliverable', status)
+  return `${tone.border}${tone.pulse ? ' animate-pulse' : ''}`
+}
