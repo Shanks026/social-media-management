@@ -19,7 +19,6 @@ import { UploadProposalDialog } from '@/components/proposals/UploadProposalDialo
 import { ProposalsUpgradePrompt } from '@/components/proposals/ProposalsUpgradePrompt'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
   DropdownMenu,
@@ -56,65 +55,15 @@ import {
 import { formatCurrency } from '@/utils/finance'
 import { formatDate } from '@/lib/helper'
 import { cn } from '@/lib/utils'
-import { DISPLAY_STATUSES } from '@/lib/domain/proposalStatus'
+import StatusBadge from '@/components/StatusBadge'
+import {
+  DISPLAY_STATUSES,
+  statusLabel as proposalStatusLabel,
+} from '@/lib/domain/proposalStatus'
 
 // ── Status config ─────────────────────────────────────────────────────────────
 
-const STATUS_CONFIG = {
-  DRAFT: {
-    label: 'Draft',
-    className: 'bg-muted text-muted-foreground border-transparent',
-  },
-  SENT: {
-    label: 'Sent',
-    className:
-      'bg-blue-100 text-blue-700 border-transparent dark:bg-blue-950 dark:text-blue-300',
-  },
-  VIEWED: {
-    label: 'Viewed',
-    className:
-      'bg-violet-100 text-violet-700 border-transparent dark:bg-violet-950 dark:text-violet-300',
-  },
-  ACCEPTED: {
-    label: 'Accepted',
-    className:
-      'bg-green-100 text-green-700 border-transparent dark:bg-green-950 dark:text-green-300',
-  },
-  DECLINED: {
-    label: 'Declined',
-    className:
-      'bg-red-100 text-red-700 border-transparent dark:bg-red-950 dark:text-red-300',
-  },
-  CHANGES_REQUESTED: {
-    label: 'Changes Requested',
-    className:
-      'bg-orange-100 text-orange-700 border-transparent dark:bg-orange-950 dark:text-orange-300',
-  },
-  EXPIRED: {
-    label: 'Expired',
-    className:
-      'bg-amber-100 text-amber-700 border-transparent dark:bg-amber-950 dark:text-amber-300',
-  },
-  ARCHIVED: {
-    label: 'Archived',
-    className:
-      'bg-slate-100 text-slate-500 border-transparent dark:bg-slate-800 dark:text-slate-400',
-  },
-}
-
 const STATUS_TABS = ['all', ...DISPLAY_STATUSES]
-
-function StatusBadge({ status }) {
-  const config = STATUS_CONFIG[status] ?? {
-    label: status,
-    className: 'bg-muted text-muted-foreground',
-  }
-  return (
-    <Badge variant="outline" className={config.className}>
-      {config.label}
-    </Badge>
-  )
-}
 
 function ProposalRowSkeleton() {
   return (
@@ -237,7 +186,7 @@ export function ProposalTab({ clientId, prospectId, prospectName, prospectEmail 
                   : 'border-transparent text-muted-foreground hover:text-foreground',
               )}
             >
-              {tab === 'all' ? 'All' : (STATUS_CONFIG[tab]?.label ?? tab)}
+              {tab === 'all' ? 'All' : proposalStatusLabel(tab)}
               {count > 0 && (
                 <span className="ml-1.5 text-[10px] opacity-60 tabular-nums">
                   {count}
@@ -333,7 +282,7 @@ export function ProposalTab({ clientId, prospectId, prospectName, prospectEmail 
                   {/* Status */}
                   <TableCell className="px-4 py-3">
                     <div className="flex justify-center">
-                      <StatusBadge status={proposal.status} />
+                      <StatusBadge entity="proposal" status={proposal.status} />
                     </div>
                   </TableCell>
 

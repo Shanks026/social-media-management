@@ -5,6 +5,10 @@ import * as deliverable from '@/lib/domain/deliverableStatus'
 import * as client from '@/lib/domain/clientStatus'
 import * as invoice from '@/lib/domain/invoiceStatus'
 import * as transaction from '@/lib/domain/transactionStatus'
+import * as proposal from '@/lib/domain/proposalStatus'
+import * as prospect from '@/lib/domain/prospectStatus'
+import * as campaign from '@/lib/domain/campaignStatus'
+import * as task from '@/lib/domain/taskStatus'
 
 const titleCase = (v) => (v ? v[0] + v.slice(1).toLowerCase() : '')
 
@@ -15,6 +19,11 @@ const LABEL_FOR = {
   invoice: invoice.statusLabel,
   transaction: transaction.statusLabel,
   cadence: titleCase,
+  proposal: proposal.statusLabel,
+  prospect: prospect.statusLabel,
+  campaign: campaign.statusLabel,
+  task: task.statusLabel,
+  taskPriority: task.priorityLabel,
 }
 
 /**

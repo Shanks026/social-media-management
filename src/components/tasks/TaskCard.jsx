@@ -61,44 +61,9 @@ import {
 } from '@/components/ui/alert-dialog'
 import { ClientAvatar } from '@/components/tasks/ClientAvatar'
 import EditTaskDialog from '@/components/tasks/EditTaskDialog'
+import { taskStatusCfg, taskPriorityCfg } from '@/components/tasks/taskPresentation'
 
 // ─── Shared constants ─────────────────────────────────────────────────────────
-
-export const STATUS_CONFIG = {
-  TODO: {
-    label: 'To Do',
-    className:
-      'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border-none',
-  },
-  IN_PROGRESS: {
-    label: 'In Progress',
-    className:
-      'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border-none',
-  },
-  COMPLETED: {
-    label: 'Completed',
-    className:
-      'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border-none',
-  },
-  ARCHIVED: {
-    label: 'Archived',
-    className: 'bg-muted text-muted-foreground border-none',
-  },
-}
-
-export const PRIORITY_CONFIG = {
-  URGENT: { label: 'Urgent', dot: 'bg-red-500' },
-  HIGH:   { label: 'High',   dot: 'bg-amber-500' },
-  NORMAL: { label: 'Normal', dot: 'bg-zinc-400' },
-  LOW:    { label: 'Low',    dot: 'bg-emerald-400' },
-}
-
-export const STATUS_DOT = {
-  TODO:        'bg-blue-500',
-  IN_PROGRESS: 'bg-amber-500',
-  COMPLETED:   'bg-emerald-500',
-  ARCHIVED:    'bg-zinc-400',
-}
 
 /**
  * A status rendered inline inside a sentence — the activity feed's "moved this
@@ -107,16 +72,16 @@ export const STATUS_DOT = {
  * reads straight off the two maps above.
  */
 export function StatusChip({ status }) {
-  const cfg = STATUS_CONFIG[status]
+  const cfg = taskStatusCfg(status)
   return (
     <span
       className={cn(
         'inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 align-middle text-xs font-medium',
-        cfg?.className ?? 'bg-muted text-muted-foreground',
+        cfg.className,
       )}
     >
-      <span className={cn('size-1.5 shrink-0 rounded-full', STATUS_DOT[status] ?? 'bg-zinc-400')} />
-      {cfg?.label ?? status ?? 'Unknown'}
+      <span className={cn('size-1.5 shrink-0 rounded-full', cfg.dot)} />
+      {cfg.label || 'Unknown'}
     </span>
   )
 }
@@ -243,7 +208,7 @@ export default function TaskCard({ task, clientMap, campaignMap = {}, memberMap 
     (task.status === 'TODO' || task.status === 'IN_PROGRESS')
   const client = clientMap[String(task.client_id)]
   const campaign = task.campaign_id ? campaignMap[String(task.campaign_id)] : null
-  const statusCfg = STATUS_CONFIG[task.status] ?? STATUS_CONFIG.TODO
+  const statusCfg = taskStatusCfg(task.status)
   const assignee = task.assigned_to ? memberMap[task.assigned_to] : null
   const creatorMember = memberMap[task.created_by]
   const displayDate =
@@ -280,14 +245,14 @@ export default function TaskCard({ task, clientMap, campaignMap = {}, memberMap 
                 : 'cursor-default',
             )}
           >
-            <span className={cn('size-2 rounded-full shrink-0', STATUS_DOT[task.status] ?? 'bg-zinc-400')} />
+            <span className={cn('size-2 rounded-full shrink-0', statusCfg.dot)} />
             {statusCfg.label}
           </Badge>
 
-          {PRIORITY_CONFIG[task.priority] && (
+          {taskPriorityCfg(task.priority) && (
             <Badge variant="outline" className="gap-1.5">
-              <span className={cn('size-2 rounded-full shrink-0', PRIORITY_CONFIG[task.priority].dot)} />
-              {PRIORITY_CONFIG[task.priority].label}
+              <span className={cn('size-2 rounded-full shrink-0', taskPriorityCfg(task.priority).dot)} />
+              {taskPriorityCfg(task.priority).label}
             </Badge>
           )}
 

@@ -47,7 +47,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
-import { Badge } from '@/components/ui/badge'
+import StatusBadge from '@/components/StatusBadge'
 import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
@@ -78,43 +78,6 @@ import { displayStatus as displayProposalStatus } from '@/lib/domain/proposalSta
 
 const PAYMENT_TERMS = ['Due on Receipt', 'Net 15', 'Net 30', 'Net 60']
 const EMPTY_LINE_ITEM = { description: '', amount: '' }
-
-const STATUS_CONFIG = {
-  DRAFT: { label: 'Draft', className: 'bg-muted text-muted-foreground border-transparent' },
-  SENT: {
-    label: 'Sent',
-    className: 'bg-blue-100 text-blue-700 border-transparent dark:bg-blue-950 dark:text-blue-300',
-  },
-  VIEWED: {
-    label: 'Viewed',
-    className:
-      'bg-violet-100 text-violet-700 border-transparent dark:bg-violet-950 dark:text-violet-300',
-  },
-  ACCEPTED: {
-    label: 'Accepted',
-    className:
-      'bg-green-100 text-green-700 border-transparent dark:bg-green-950 dark:text-green-300',
-  },
-  DECLINED: {
-    label: 'Declined',
-    className: 'bg-red-100 text-red-700 border-transparent dark:bg-red-950 dark:text-red-300',
-  },
-  CHANGES_REQUESTED: {
-    label: 'Changes Requested',
-    className:
-      'bg-orange-100 text-orange-700 border-transparent dark:bg-orange-950 dark:text-orange-300',
-  },
-  EXPIRED: {
-    label: 'Expired',
-    className:
-      'bg-amber-100 text-amber-700 border-transparent dark:bg-amber-950 dark:text-amber-300',
-  },
-  ARCHIVED: {
-    label: 'Archived',
-    className:
-      'bg-slate-100 text-slate-500 border-transparent dark:bg-slate-800 dark:text-slate-400',
-  },
-}
 
 // ── Status Timeline ────────────────────────────────────────────────────────────
 
@@ -491,7 +454,6 @@ export default function ProposalDetailPage() {
   // The badge shows the display state (EXPIRED once valid_until has passed);
   // actions below still key off the stored status.
   const badgeStatus = displayProposalStatus(proposal)
-  const statusConfig = STATUS_CONFIG[badgeStatus] ?? { label: badgeStatus, className: '' }
   const displayName =
     clients.find((c) => c.id === proposal.client_id)?.name ||
     proposal.prospect_name ||
@@ -528,9 +490,7 @@ export default function ProposalDetailPage() {
               <h1 className="text-2xl font-medium tracking-tight text-foreground truncate bricolage">
                 {proposal.title}
               </h1>
-              <Badge variant="outline" className={statusConfig.className}>
-                {statusConfig.label}
-              </Badge>
+              <StatusBadge entity="proposal" status={badgeStatus} />
               {displayName && (
                 <span className="text-sm text-muted-foreground shrink-0">· {displayName}</span>
               )}

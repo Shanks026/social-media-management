@@ -68,7 +68,9 @@ import { useTeamMembers, useRemovedMembers } from '@/api/team'
 import { usePermissions } from '@/api/usePermissions'
 import CreateTaskDialog from '@/components/tasks/CreateTaskDialog'
 import { ClientAvatar } from '@/components/tasks/ClientAvatar'
-import TaskCard, { STATUS_CONFIG, PRIORITY_CONFIG, STATUS_DOT } from '@/components/tasks/TaskCard'
+import TaskCard from '@/components/tasks/TaskCard'
+import { taskStatusCfg, taskPriorityCfg } from '@/components/tasks/taskPresentation'
+import { PRIORITIES } from '@/lib/domain/taskStatus'
 import AssigneeFilterPopover from '@/components/tasks/AssigneeFilterPopover'
 import { cn } from '@/lib/utils'
 import {
@@ -237,7 +239,7 @@ function KanbanTasksView({ tasks, clientMap, campaignMap, memberMap, currentUser
     updateTaskStatus(active.id, newStatus)
       .then(() =>
         toast.success(
-          `Moved to ${STATUS_CONFIG[newStatus]?.label ?? newStatus}`,
+          `Moved to ${taskStatusCfg(newStatus).label}`,
         ),
       )
       .catch((err) => {
@@ -358,10 +360,10 @@ function TasksTableView({ tasks, isLoading, clientMap, campaignMap, memberMap, c
       header: ({ column }) => <SortableColHeader column={column} label="Status" />,
       cell: ({ getValue }) => {
         const status = getValue()
-        const cfg = STATUS_CONFIG[status] ?? STATUS_CONFIG.TODO
+        const cfg = taskStatusCfg(status)
         return (
           <Badge variant="outline" className={cn('gap-1.5', cfg.className)}>
-            <span className={cn('size-2 rounded-full shrink-0', STATUS_DOT[status] ?? 'bg-zinc-400')} />
+            <span className={cn('size-2 rounded-full shrink-0', cfg.dot)} />
             {cfg.label}
           </Badge>
         )
@@ -372,7 +374,7 @@ function TasksTableView({ tasks, isLoading, clientMap, campaignMap, memberMap, c
       header: ({ column }) => <SortableColHeader column={column} label="Priority" />,
       cell: ({ getValue }) => {
         const priority = getValue()
-        const cfg = PRIORITY_CONFIG[priority]
+        const cfg = taskPriorityCfg(priority)
         if (!cfg) return null
         return (
           <Badge variant="outline" className="gap-1.5">
@@ -835,7 +837,7 @@ export default function TasksAndReminders() {
               <SelectContent>
                 <SelectItem value="all">All Priorities</SelectItem>
                 <SelectSeparator />
-                {Object.entries(PRIORITY_CONFIG).map(([key, cfg]) => (
+                {PRIORITIES.map((key) => ({ key, cfg: taskPriorityCfg(key) })).map(({ key, cfg }) => (
                   <SelectItem key={key} value={key}>
                     <div className="flex items-center gap-2">
                       <span className={cn('size-2 rounded-full shrink-0', cfg.dot)} />

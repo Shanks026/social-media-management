@@ -8,6 +8,10 @@ import { STATUSES, PARTIALLY_PUBLISHED } from '@/lib/domain/deliverableStatus'
 import * as client from '@/lib/domain/clientStatus'
 import * as invoice from '@/lib/domain/invoiceStatus'
 import * as transaction from '@/lib/domain/transactionStatus'
+import * as proposal from '@/lib/domain/proposalStatus'
+import * as prospect from '@/lib/domain/prospectStatus'
+import * as campaign from '@/lib/domain/campaignStatus'
+import * as task from '@/lib/domain/taskStatus'
 
 const ALL_DELIVERABLE = [...STATUSES, PARTIALLY_PUBLISHED]
 
@@ -53,5 +57,34 @@ describe('statusTone', () => {
   it('labels charts from the domain module', () => {
     expect(DELIVERABLE_CHART_CONFIG['PENDING APPROVAL'].label).toBe('Awaiting Approval')
     expect(CHART_STATUSES).not.toContain('ARCHIVED')
+  })
+})
+
+describe('statusTone for proposals, prospects, campaigns and tasks', () => {
+  const cases = [
+    ['proposal', proposal.DISPLAY_STATUSES],
+    ['prospect', prospect.STATUSES],
+    ['campaign', campaign.STATUSES],
+    ['task', task.STATUSES],
+    ['taskPriority', task.PRIORITIES],
+  ]
+  for (const [entity, list] of cases) {
+    it(`${entity}: every status has a tone of its own (no fallback)`, () => {
+      for (const s of list) {
+        const tone = statusTone(entity, s)
+        expect(tone.badge, `${entity} ${s}`).toBeTruthy()
+        expect(tone).not.toBe(statusTone('nope', s))
+      }
+    })
+  }
+
+  it('task priority HIGH is one amber, everywhere', () => {
+    const t = statusTone('taskPriority', 'HIGH')
+    expect(t.tone).toBe('amber')
+    expect(t.dot).toBe('bg-amber-500')
+  })
+
+  it('exposes a hover class for button-style triggers', () => {
+    expect(statusTone('prospect', 'WON').hover).toContain('hover:')
   })
 })

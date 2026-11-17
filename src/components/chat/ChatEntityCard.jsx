@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/badge'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { ClientAvatar } from '@/components/tasks/ClientAvatar'
 import { MemberAvatar } from '@/components/chat/MemberAvatar'
-import { STATUS_CONFIG, PRIORITY_CONFIG, STATUS_DOT } from '@/components/tasks/TaskCard'
+import { taskStatusCfg, taskPriorityCfg } from '@/components/tasks/taskPresentation'
 
 // Compact, read-only attachment cards — deliberately not the real
 // DeliverableCard/TaskCard (those carry list-page chrome: edit/delete menus,
@@ -124,7 +124,7 @@ export function ChatTaskCard({ reference }) {
   if (isLoading || (!task && isCheckingExists)) return <CardSkeleton />
   if (!task) return <UnavailableCard label="task" reason={existsElsewhere ? 'access' : 'deleted'} />
 
-  const statusCfg = STATUS_CONFIG[task.status] ?? STATUS_CONFIG.TODO
+  const statusCfg = taskStatusCfg(task.status)
   const overdue =
     task.due_at &&
     new Date(task.due_at).getTime() < new Date().getTime() &&
@@ -141,13 +141,13 @@ export function ChatTaskCard({ reference }) {
     >
       <div className="flex items-center gap-2">
         <Badge variant="outline" className={cn('gap-1.5 select-none', statusCfg.className)}>
-          <span className={cn('size-2 rounded-full shrink-0', STATUS_DOT[task.status] ?? 'bg-zinc-400')} />
+          <span className={cn('size-2 rounded-full shrink-0', statusCfg.dot)} />
           {statusCfg.label}
         </Badge>
-        {PRIORITY_CONFIG[task.priority] && (
+        {taskPriorityCfg(task.priority) && (
           <Badge variant="outline" className="gap-1.5">
-            <span className={cn('size-2 rounded-full shrink-0', PRIORITY_CONFIG[task.priority].dot)} />
-            {PRIORITY_CONFIG[task.priority].label}
+            <span className={cn('size-2 rounded-full shrink-0', taskPriorityCfg(task.priority).dot)} />
+            {taskPriorityCfg(task.priority).label}
           </Badge>
         )}
       </div>

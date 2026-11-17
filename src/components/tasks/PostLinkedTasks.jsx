@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom'
 import { format } from 'date-fns'
 import { ClipboardList, ChevronRight } from 'lucide-react'
 import { useTasksForPost } from '@/api/tasks'
-import { STATUS_CONFIG, STATUS_DOT, PRIORITY_CONFIG } from '@/components/tasks/TaskCard'
+import { taskStatusCfg, taskPriorityCfg } from '@/components/tasks/taskPresentation'
 import { cn } from '@/lib/utils'
 
 /**
@@ -34,8 +34,8 @@ export default function PostLinkedTasks({ postId }) {
 
       <div className="flex flex-col gap-1.5">
         {tasks.map((task) => {
-          const statusCfg = STATUS_CONFIG[task.status] ?? STATUS_CONFIG.TODO
-          const priorityCfg = PRIORITY_CONFIG[task.priority]
+          const statusCfg = taskStatusCfg(task.status)
+          const priorityCfg = taskPriorityCfg(task.priority)
           return (
             <Link
               key={task.id}
@@ -67,7 +67,7 @@ export default function PostLinkedTasks({ postId }) {
                   statusCfg.className,
                 )}
               >
-                <span className={cn('size-1.5 rounded-full shrink-0', STATUS_DOT[task.status])} />
+                <span className={cn('size-1.5 rounded-full shrink-0', statusCfg.dot)} />
                 {statusCfg.label}
               </span>
               <ChevronRight className="size-4 text-muted-foreground/40 shrink-0 group-hover:text-muted-foreground transition-colors" />

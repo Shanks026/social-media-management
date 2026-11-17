@@ -24,8 +24,7 @@ import {
   useDeleteActivity,
   ACTIVITY_TYPES,
 } from '@/api/prospectActivities'
-import { PROSPECT_STATUS_CONFIG } from '@/components/prospects/ProspectStatusBadge'
-import { Badge } from '@/components/ui/badge'
+import StatusBadge from '@/components/StatusBadge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -299,8 +298,6 @@ function OutreachEntry({ activity, onDelete }) {
 function StatusEntry({ activity }) {
   const fromStatus = activity.metadata?.from_status
   const toStatus = activity.metadata?.to_status
-  const fromConfig = fromStatus ? PROSPECT_STATUS_CONFIG[fromStatus] : null
-  const toConfig = toStatus ? PROSPECT_STATUS_CONFIG[toStatus] : null
 
   const d = new Date(activity.occurred_at)
   const dateStr = format(d, 'MMM d, yyyy · h:mm a')
@@ -313,17 +310,9 @@ function StatusEntry({ activity }) {
       <div className="flex-1 min-w-0 rounded-xl border border-border/70 bg-card p-3.5 mb-3">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-1.5 flex-wrap">
-            {fromConfig && (
-              <Badge variant="outline" className={fromConfig.className}>
-                {fromConfig.label}
-              </Badge>
-            )}
+            {fromStatus && <StatusBadge entity="prospect" status={fromStatus} />}
             <ArrowRight className="size-3 text-muted-foreground shrink-0" />
-            {toConfig && (
-              <Badge variant="outline" className={toConfig.className}>
-                {toConfig.label}
-              </Badge>
-            )}
+            {toStatus && <StatusBadge entity="prospect" status={toStatus} />}
           </div>
           <span className="text-[11px] text-muted-foreground shrink-0">{timeAgo}</span>
         </div>
