@@ -1,3 +1,4 @@
+import { formatCurrency } from '@/lib/format'
 import React, { useState, useMemo } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import {
@@ -49,7 +50,6 @@ import { useMarkMeetingDone } from '@/hooks/useMarkMeetingDone'
 import { useTransactions } from '@/api/transactions'
 import { usePermissions } from '@/api/usePermissions'
 import { toast } from 'sonner'
-import { formatCurrency } from '@/utils/finance'
 import { format } from 'date-fns'
 import { getPublishState } from '@/lib/helper'
 import MeetingRow from '@/components/MeetingRow'

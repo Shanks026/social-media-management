@@ -1,3 +1,4 @@
+import { formatDate } from '@/lib/format'
 import { useEffect, useState, useMemo, useCallback } from 'react'
 import {
   useReactTable,
@@ -79,7 +80,6 @@ import { useQueryClient } from '@tanstack/react-query'
 import { InviteDialog } from '@/components/team/InviteDialog'
 import { EditAccessDialog } from '@/components/team/EditAccessDialog'
 import { DOCS_LEVEL_CONFIG } from '@/components/team/teamAccessConfig'
-import { formatDate } from '@/lib/helper'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import {

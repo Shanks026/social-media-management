@@ -1,3 +1,4 @@
+import { formatDate } from '@/lib/format'
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
@@ -29,7 +30,6 @@ import {
 } from '@/components/ui/alert-dialog'
 import { cn } from '@/lib/utils'
 import { deleteCollection, documentKeys } from '@/api/documents'
-import { formatDate } from '@/lib/helper'
 import DocumentCard from './DocumentCard'
 import CreateCollectionDialog from './CreateCollectionDialog'
 import DocumentUploadZone from './DocumentUploadZone'

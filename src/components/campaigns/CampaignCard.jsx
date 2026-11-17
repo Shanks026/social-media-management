@@ -1,10 +1,10 @@
+import { formatDate } from '@/lib/format'
 import { Target, CalendarDays } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import { cn } from '@/lib/utils'
-import { format, parseISO } from 'date-fns'
 import { statusLabel as campaignStatusLabel } from '@/lib/domain/campaignStatus'
 
 const STATUS_STYLES = {
@@ -77,14 +77,6 @@ const CircularProgress = ({ progress, size = 32, strokeWidth = 3 }) => {
       </svg>
     </div>
   )
-}
-
-function formatDateRange(start, end) {
-  if (!start && !end) return 'No dates set'
-  const fmt = (d) => format(parseISO(d), 'MMM d, yyyy')
-  if (start && end) return `${fmt(start)} – ${fmt(end)}`
-  if (start) return `From ${fmt(start)}`
-  return `Until ${fmt(end)}`
 }
 
 // onEdit/onDelete/onStatusChange are still passed by callers but unused here
@@ -265,7 +257,7 @@ export function CampaignCard({
         {/* Date Range */}
         <div className="flex items-center shrink-0 text-xs gap-1.5 font-medium text-muted-foreground/80">
           <CalendarDays className="size-3.5 opacity-70" />
-          <span>{formatDateRange(start_date, end_date)}</span>
+          <span>{formatDate({ start: start_date, end: end_date }, 'range')}</span>
         </div>
       </div>
     </CardContent>

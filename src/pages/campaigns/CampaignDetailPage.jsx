@@ -1,3 +1,4 @@
+import { formatDate, formatCurrency } from '@/lib/format'
 import { useState, useMemo, useEffect } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { pdf } from '@react-pdf/renderer'
@@ -130,15 +131,6 @@ const STATUS_STYLES = {
   ARCHIVED: 'bg-muted text-muted-foreground',
 }
 
-function formatDateRange(start, end) {
-  if (!start && !end) return 'No dates set'
-  const fmt = (d) => format(parseISO(d), 'MMM d, yyyy')
-  if (start && end) return `${fmt(start)} – ${fmt(end)}`
-  if (start) return `From ${fmt(start)}`
-  return `Until ${fmt(end)}`
-}
-
-
 export default function CampaignDetailPage() {
   const { campaignId } = useParams()
   const [searchParams] = useSearchParams()
@@ -226,14 +218,6 @@ export default function CampaignDetailPage() {
 
   const remainingBudget =
     analytics?.budget != null ? analytics.budget - totalSpent : null
-
-  const formatCurrency = (val) =>
-    new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 2,
-    }).format(val ?? 0)
 
   if (!sub && !isLoading) return null
 
@@ -387,7 +371,7 @@ export default function CampaignDetailPage() {
                 )}
                 <span className="flex items-center gap-1.5">
                   <Calendar className="size-3.5 opacity-60" />
-                  {formatDateRange(campaign.start_date, campaign.end_date)}
+                  {formatDate({ start: campaign.start_date, end: campaign.end_date }, 'range')}
                 </span>
                 {campaign.goal && (
                   <span className="flex items-center gap-1.5">

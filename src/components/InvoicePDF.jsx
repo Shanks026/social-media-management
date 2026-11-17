@@ -1,3 +1,4 @@
+import { formatCurrency, formatDate } from '@/lib/format'
 import {
   Document,
   Page,
@@ -7,8 +8,6 @@ import {
   Image,
   Font,
 } from '@react-pdf/renderer'
-import { format } from 'date-fns'
-import { CURRENCY } from '@/utils/constants'
 
 /* ── Register Inter (full glyph set, incl. ₹ U+20B9) ──
    NOTE: The Google Fonts gstatic "latin" subset omits the Indian Rupee glyph,
@@ -206,27 +205,6 @@ const s = StyleSheet.create({
 })
 
 /* ── Helpers ── */
-function fmtCurrency(val) {
-  // Render the ISO code ("INR 1,234") rather than the ₹ symbol — the rupee
-  // glyph renders blank in the PDF when the embedded font's glyph set / CDN
-  // fetch is unavailable, so use the always-safe currency code instead.
-  return new Intl.NumberFormat(CURRENCY.LOCALE, {
-    style: 'currency',
-    currency: CURRENCY.CODE,
-    currencyDisplay: 'code',
-    maximumFractionDigits: 0,
-  }).format(val || 0)
-}
-
-function fmtDate(d) {
-  if (!d) return '—'
-  try {
-    return format(new Date(d), 'd MMMM, yyyy')
-  } catch {
-    return '—'
-  }
-}
-
 function addressLines(addr) {
   if (!addr) return []
   return String(addr).split('\n').map((l) => l.trim()).filter(Boolean)
@@ -287,11 +265,11 @@ export default function InvoicePDF({ invoice, agency = {}, terceroLogoDataUrl = 
           <View style={s.metaDates}>
             <View>
               <Text style={s.metaLabel}>Created On</Text>
-              <Text style={s.metaValue}>{fmtDate(invoice.issue_date)}</Text>
+              <Text style={s.metaValue}>{formatDate(invoice.issue_date, 'long')}</Text>
             </View>
             <View>
               <Text style={s.metaLabel}>Due On</Text>
-              <Text style={s.metaValue}>{fmtDate(invoice.due_date)}</Text>
+              <Text style={s.metaValue}>{formatDate(invoice.due_date, 'long')}</Text>
             </View>
           </View>
         </View>
@@ -310,9 +288,9 @@ export default function InvoicePDF({ invoice, agency = {}, terceroLogoDataUrl = 
               {item.description || 'Line item'}
             </Text>
             <Text style={[s.numCell, s.colUnit]}>{item.quantity || 1}</Text>
-            <Text style={[s.numCell, s.colPrice]}>{fmtCurrency(item.unit_price)}</Text>
+            <Text style={[s.numCell, s.colPrice]}>{formatCurrency(item.unit_price, { display: 'code' })}</Text>
             <Text style={[s.numCell, s.colAmount]}>
-              {fmtCurrency((item.quantity || 1) * (item.unit_price || 0))}
+              {formatCurrency((item.quantity || 1) * (item.unit_price || 0), { display: 'code' })}
             </Text>
           </View>
         ))}
@@ -320,7 +298,7 @@ export default function InvoicePDF({ invoice, agency = {}, terceroLogoDataUrl = 
         {/* ─── Total ─── */}
         <View style={s.totalRow}>
           <Text style={s.totalLabel}>Total Amount</Text>
-          <Text style={s.totalValue}>{fmtCurrency(total)}</Text>
+          <Text style={s.totalValue}>{formatCurrency(total, { display: 'code' })}</Text>
         </View>
 
         {/* ─── Notes ─── */}

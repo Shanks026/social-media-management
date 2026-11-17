@@ -1,3 +1,4 @@
+import { formatDate } from '@/lib/format'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -18,7 +19,6 @@ import {
   CHAT_REACTION_EMOJIS,
   chatKeys,
 } from '@/api/chat'
-import { formatCompactTimeAgo } from '@/lib/helper'
 import {
   splitMentions,
   detectMention,
@@ -340,7 +340,7 @@ function ChatMessageRow({ message, author, isOwn, canModify, canDelete, showRole
             <Users className="size-3 shrink-0 text-indigo-500" aria-label="Everyone mentioned" />
           )}
           <span className="whitespace-nowrap">
-            {formatCompactTimeAgo(message.created_at)}
+            {formatDate(message.created_at, 'relative')}
             {message.updated_at && ' · edited'}
           </span>
           {!editing && (

@@ -1,3 +1,4 @@
+import { formatDate } from '@/lib/format'
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -12,7 +13,6 @@ import { SidebarTrigger } from '@/components/ui/sidebar'
 import { useSubscription } from '@/api/useSubscription'
 import { useNavigate, Link } from 'react-router-dom'
 import { cn } from '@/lib/utils'
-import { formatDate } from '@/lib/helper'
 import { useUrgentClients } from '@/api/clients'
 import { NotificationBell } from '@/components/notifications/NotificationBell'
 

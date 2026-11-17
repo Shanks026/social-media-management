@@ -1,3 +1,4 @@
+import { formatDate, formatCurrency } from '@/lib/format'
 import { useState, useMemo, useEffect } from 'react'
 import { Download, Loader2, Activity, Receipt, TrendingUp, AlertCircle } from 'lucide-react'
 import { toast } from 'sonner'
@@ -7,8 +8,6 @@ import { useSubscription } from '@/api/useSubscription'
 import { useClients } from '@/api/clients'
 import { useClientReportData } from '@/api/reports'
 import { downloadClientReportPDF } from '@/utils/downloadClientReportPDF'
-import { CURRENCY } from '@/utils/constants'
-import { formatDate } from '@/lib/helper'
 
 import { Button } from '@/components/ui/button'
 import {
@@ -40,14 +39,6 @@ const STATUS_LABELS = {
   PUBLISHED: 'Delivered',
   DELIVERED: 'Delivered',
   ARCHIVED: 'Archived',
-}
-
-function fmtCurrency(val) {
-  return new Intl.NumberFormat(CURRENCY.LOCALE, {
-    style: 'currency',
-    currency: CURRENCY.CODE,
-    maximumFractionDigits: 0,
-  }).format(val || 0)
 }
 
 export default function ReportsPage() {
@@ -110,19 +101,19 @@ export default function ReportsPage() {
     },
     {
       label: 'Billed',
-      value: fmtCurrency(report?.finance?.billed),
+      value: formatCurrency(report?.finance?.billed),
       icon: <Receipt className="h-3 w-3 text-blue-500" />,
       iconBg: 'bg-blue-100 dark:bg-blue-950',
     },
     {
       label: 'Collected',
-      value: fmtCurrency(report?.finance?.collected),
+      value: formatCurrency(report?.finance?.collected),
       icon: <TrendingUp className="h-3 w-3 text-emerald-500" />,
       iconBg: 'bg-emerald-100 dark:bg-emerald-950',
     },
     {
       label: 'Outstanding',
-      value: fmtCurrency(report?.finance?.outstanding),
+      value: formatCurrency(report?.finance?.outstanding),
       icon: <AlertCircle className="h-3 w-3 text-amber-500" />,
       iconBg: 'bg-amber-100 dark:bg-amber-950',
     },
@@ -287,14 +278,14 @@ export default function ReportsPage() {
                     { label: 'Campaigns', value: report?.campaigns?.total ?? 0 },
                     {
                       label: 'Campaign budget',
-                      value: fmtCurrency(report?.campaigns?.budget_allocated),
+                      value: formatCurrency(report?.campaigns?.budget_allocated),
                     },
                     { label: 'Proposals sent', value: report?.proposals?.sent ?? 0 },
                     {
                       label: 'Proposals accepted',
                       value: report?.proposals?.accepted ?? 0,
                     },
-                    { label: 'Overdue', value: fmtCurrency(report?.finance?.overdue) },
+                    { label: 'Overdue', value: formatCurrency(report?.finance?.overdue) },
                     { label: 'Documents', value: report?.documents?.count ?? 0 },
                   ].map((row) => (
                     <div

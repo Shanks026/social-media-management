@@ -1,3 +1,4 @@
+import { formatCurrency } from '@/lib/format'
 import { startOfMonth, endOfMonth } from 'date-fns'
 import {
   TrendingUp,
@@ -12,7 +13,7 @@ import { useInvoices } from '@/api/invoices'
 import { useTransactions } from '@/api/transactions'
 import { useExpenses } from '@/api/expenses'
 import { usePermissions } from '@/api/usePermissions'
-import { calculatePeriodMetrics, formatCurrency } from '@/utils/finance'
+import { calculatePeriodMetrics } from '@/utils/finance'
 
 export default function AgencyHealthBar() {
   const now = new Date()

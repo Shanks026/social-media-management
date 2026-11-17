@@ -1,3 +1,4 @@
+import { formatCurrency } from '@/lib/format'
 import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { format } from 'date-fns'
@@ -31,7 +32,6 @@ import StatusBadge from '@/components/StatusBadge'
 
 import { useTransactions, useDeleteTransaction } from '@/api/transactions'
 import { useClients } from '@/api/clients'
-import { formatCurrency } from '@/utils/finance'
 import { cn } from '@/lib/utils'
 import { AddTransactionDialog } from './AddTransactionDialog'
 import { CreateInvoiceDialog } from './CreateInvoiceDialog'

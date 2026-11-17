@@ -1,13 +1,4 @@
-import { CURRENCY } from './constants'
 import { isWithinInterval } from 'date-fns'
-
-export function formatCurrency(amount) {
-  return new Intl.NumberFormat(CURRENCY.LOCALE, {
-    style: 'currency',
-    currency: CURRENCY.CODE,
-    maximumFractionDigits: 0,
-  }).format(amount)
-}
 
 /**
  * Calculates financial metrics for a specific time period.

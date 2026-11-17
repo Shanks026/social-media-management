@@ -1,3 +1,4 @@
+import { formatDate, formatCurrency } from '@/lib/format'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
@@ -53,8 +54,6 @@ import {
   EmptyTitle,
   EmptyDescription,
 } from '@/components/ui/empty'
-import { formatCurrency } from '@/utils/finance'
-import { formatDate } from '@/lib/helper'
 import { cn } from '@/lib/utils'
 import { DISPLAY_STATUSES } from '@/lib/domain/proposalStatus'
 

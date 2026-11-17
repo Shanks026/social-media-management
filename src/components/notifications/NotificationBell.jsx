@@ -1,3 +1,4 @@
+import { formatDate } from '@/lib/format'
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -33,7 +34,6 @@ import {
 } from '@/components/ui/empty'
 import { cn } from '@/lib/utils'
 import { resolveNotificationRoute } from '@/components/notifications/routes'
-import { formatCompactTimeAgo } from '@/lib/helper'
 import {
   useUnreadNotificationCount,
   useNotifications,
@@ -212,7 +212,7 @@ function NotificationRow({ notification, memberMap, onRead, onDeleted }) {
         <p className="mt-1 text-[11px] text-muted-foreground/70">
           {actorName && <span className="font-medium text-muted-foreground">{actorName}</span>}
           {actorName && ' · '}
-          {formatCompactTimeAgo(notification.created_at)}
+          {formatDate(notification.created_at, 'relative')}
         </p>
       </div>
 

@@ -1,21 +1,3 @@
-import { format } from 'date-fns'
-
-function fmtCurrency(val) {
-  return new Intl.NumberFormat('en-IN', {
-    style: 'currency',
-    currency: 'INR',
-    maximumFractionDigits: 0,
-  }).format(val || 0)
-}
-
-function fmtDate(d) {
-  if (!d) return '—'
-  try {
-    return format(new Date(d), 'MMM d, yyyy')
-  } catch {
-    return '—'
-  }
-}
 
 /**
  * Pure HTML/JSX live preview for a proposal.
@@ -92,7 +74,7 @@ export default function ProposalPreview({ proposal = {}, agency = {} }) {
             <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wider mb-1">
               Valid until
             </p>
-            <p className="text-sm text-[#374151]">{fmtDate(proposal.valid_until)}</p>
+            <p className="text-sm text-[#374151]">{formatDate(proposal.valid_until)}</p>
           </div>
         )}
       </div>
@@ -139,13 +121,13 @@ export default function ProposalPreview({ proposal = {}, agency = {} }) {
                 <tr key={i} className="border-b border-gray-100">
                   <td className="py-2.5 text-[#374151]">{item.description || '—'}</td>
                   <td className="py-2.5 text-right font-medium text-[#111827]">
-                    {fmtCurrency(item.amount)}
+                    {formatCurrency(item.amount)}
                   </td>
                 </tr>
               ))}
               <tr className="bg-gray-50">
                 <td className="py-3 px-0 font-bold text-[#111827]">Total</td>
-                <td className="py-3 text-right font-bold text-[#111827]">{fmtCurrency(total)}</td>
+                <td className="py-3 text-right font-bold text-[#111827]">{formatCurrency(total)}</td>
               </tr>
             </tbody>
           </table>
@@ -187,4 +169,5 @@ export default function ProposalPreview({ proposal = {}, agency = {} }) {
       )}
     </div>
   )
-}
+}import { formatCurrency, formatDate } from '@/lib/format'
+

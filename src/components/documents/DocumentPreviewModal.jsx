@@ -1,3 +1,4 @@
+import { formatDate, formatFileSize } from '@/lib/format'
 import { Download } from 'lucide-react'
 import {
   Dialog,
@@ -8,7 +9,6 @@ import {
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useDocumentSignedUrl } from '@/api/documents'
-import { formatDate, formatFileSize } from '@/lib/helper'
 import DocumentCategoryBadge from './DocumentCategoryBadge'
 
 const OFFICE_MIME_TYPES = [

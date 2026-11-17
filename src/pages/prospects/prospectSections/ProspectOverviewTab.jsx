@@ -1,3 +1,4 @@
+import { formatDate } from '@/lib/format'
 import {
   Mail,
   Phone,
@@ -15,7 +16,6 @@ import {
 
 import { PROSPECT_STATUSES, PROSPECT_SOURCES } from '@/api/prospects'
 import { INDUSTRY_OPTIONS } from '@/lib/industries'
-import { formatDate } from '@/lib/helper'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 

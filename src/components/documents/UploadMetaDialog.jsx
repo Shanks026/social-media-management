@@ -1,3 +1,4 @@
+import { formatFileSize } from '@/lib/format'
 import { useEffect, useMemo } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -54,7 +55,6 @@ import {
   AttachmentAction,
 } from '@/components/ui/attachment'
 import { cn } from '@/lib/utils'
-import { formatFileSize } from '@/lib/helper'
 import { useClients } from '@/api/clients'
 import { useProspects } from '@/api/prospects'
 import DocumentUploadZone from './DocumentUploadZone'

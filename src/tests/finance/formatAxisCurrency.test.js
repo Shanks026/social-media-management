@@ -1,5 +1,5 @@
+import { formatAxisCurrency } from '@/lib/format'
 import { describe, it, expect } from 'vitest'
-import { formatAxisCurrency } from '@/lib/helper'
 
 // B8: the finance chart's y-axis read "₹0.001k" on empty data.
 describe('formatAxisCurrency', () => {

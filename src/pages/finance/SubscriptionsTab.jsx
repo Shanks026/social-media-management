@@ -1,3 +1,4 @@
+import { formatCurrency } from '@/lib/format'
 import { useState, useMemo } from 'react'
 import { format, isBefore, startOfToday, differenceInDays } from 'date-fns'
 import {
@@ -16,7 +17,6 @@ import {
   useRenewSubscription,
   useUpdateExpense,
 } from '@/api/expenses'
-import { formatCurrency } from '@/utils/finance'
 import { supabase } from '@/lib/supabase'
 import { useQuery } from '@tanstack/react-query'
 

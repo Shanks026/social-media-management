@@ -1,3 +1,4 @@
+import { formatCurrency, formatDate } from '@/lib/format'
 import {
   Document,
   Page,
@@ -203,24 +204,6 @@ const s = StyleSheet.create({
   },
 })
 
-function formatDateRange(campaign) {
-  const { start_date, end_date } = campaign
-  if (!start_date && !end_date) return 'No dates set'
-  const fmt = (d) => format(parseISO(d), 'MMM d, yyyy')
-  if (start_date && end_date) return `${fmt(start_date)} – ${fmt(end_date)}`
-  if (start_date) return `From ${fmt(start_date)}`
-  return `Until ${fmt(end_date)}`
-}
-
-function formatCurrency(val) {
-  return new Intl.NumberFormat('en-IN', {
-    style: 'currency',
-    currency: 'INR',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  }).format(val ?? 0)
-}
-
 export default function CampaignReportPDF({
   campaign,
   analytics,
@@ -264,7 +247,7 @@ export default function CampaignReportPDF({
         <View style={s.metaRow}>
           <View>
             <Text style={s.metaLabel}>Dates</Text>
-            <Text style={s.metaValue}>{formatDateRange(campaign)}</Text>
+            <Text style={s.metaValue}>{formatDate({ start: campaign.start_date, end: campaign.end_date }, 'range')}</Text>
           </View>
           <View>
             <Text style={s.metaLabel}>Status</Text>

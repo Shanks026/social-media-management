@@ -1,3 +1,4 @@
+import { formatFileSize } from '@/lib/format'
 import { useState, useRef, useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
@@ -18,7 +19,6 @@ import { createDraftPost, updatePost, cleanupRemovedMedia } from '@/api/posts'
 import { uploadPostImage } from '@/api/storage'
 import { fetchClientById } from '@/api/clients'
 import { fetchActiveCampaignsByClient } from '@/api/campaigns'
-import { formatFileSize } from '@/lib/helper'
 
 import {
   Dialog,

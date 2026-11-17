@@ -1,3 +1,4 @@
+import { formatDate } from '@/lib/format'
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
@@ -55,7 +56,6 @@ import {
   EmptyDescription,
 } from '@/components/ui/empty'
 import { StatBar, StatCell } from '@/components/ui/stat-bar'
-import { formatDate } from '@/lib/helper'
 import { cn } from '@/lib/utils'
 
 const VIEW_KEY = 'prospects_view'

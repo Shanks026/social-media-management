@@ -1,3 +1,4 @@
+import { formatCurrency } from '@/lib/format'
 import { useState, useMemo } from 'react'
 import { format, isBefore, startOfDay } from 'date-fns'
 import { useNavigate } from 'react-router-dom'
@@ -272,15 +273,6 @@ export function CreateInvoiceDialog({
         },
       },
     )
-  }
-
-  const formatCurrencyValue = (val) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 2,
-    }).format(val)
   }
 
   return (
@@ -593,7 +585,7 @@ export function CreateInvoiceDialog({
                 <div className="flex items-center justify-between w-52 text-sm font-semibold">
                   <span>Total</span>
                   <span className="tabular-nums">
-                    {formatCurrencyValue(subtotal)}
+                    {formatCurrency(subtotal, { decimals: 2 })}
                   </span>
                 </div>
               </div>

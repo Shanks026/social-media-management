@@ -1,3 +1,4 @@
+import { formatCurrency } from '@/lib/format'
 import { useState, useMemo } from 'react'
 import { format } from 'date-fns'
 import {
@@ -51,7 +52,6 @@ import {
   useGenerateFromRecurring,
 } from '@/api/invoices'
 import { useSubscription } from '@/api/useSubscription'
-import { formatCurrency } from '@/utils/finance'
 import { CreateInvoiceDialog } from '@/pages/finance/CreateInvoiceDialog'
 import { EditInvoiceDialog } from '@/pages/finance/EditInvoiceDialog'
 import { RecurringInvoiceDialog } from '@/pages/finance/RecurringInvoiceDialog'

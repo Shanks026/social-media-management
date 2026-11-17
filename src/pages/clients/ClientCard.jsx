@@ -1,3 +1,4 @@
+import { formatDate } from '@/lib/format'
 import { useState } from 'react'
 import { cn } from '@/lib/utils'
 
@@ -110,14 +111,6 @@ function ClientCard({ client, onOpen, onDelete }) {
   }
 
   const health = getUrgencyStatus(pipeline.next_post_at)
-
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('en-GB', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-    })
-  }
 
   const nextPostFormatted = pipeline.next_post_at
     ? formatDate(pipeline.next_post_at)

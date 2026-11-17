@@ -1,3 +1,4 @@
+import { CURRENCY } from '@/lib/format'
 import { useState, useMemo } from 'react'
 import {
   format,
@@ -20,7 +21,6 @@ import {
 import { ArrowUpRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useNavigate } from 'react-router-dom'
-import { CURRENCY } from '@/utils/constants'
 import { useTransactions } from '@/api/transactions'
 import { useExpenses } from '@/api/expenses'
 import { calculateRecurringBurn } from '@/utils/finance'

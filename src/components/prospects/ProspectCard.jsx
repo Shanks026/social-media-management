@@ -1,3 +1,4 @@
+import { formatDate } from '@/lib/format'
 import { useState } from 'react'
 import { MapPin, MoreHorizontal, Pencil, Trash2, Check, ArrowRight } from 'lucide-react'
 import { toast } from 'sonner'
@@ -14,7 +15,6 @@ import {
 import { ProspectStatusBadge, PROSPECT_STATUS_CONFIG } from './ProspectStatusBadge'
 import { ProspectSourceBadge } from './ProspectSourceBadge'
 import { useUpdateProspect, PROSPECT_STATUSES } from '@/api/prospects'
-import { formatDate } from '@/lib/helper'
 
 // Solid dot color per status — matches badge palette
 const STATUS_DOT = {
