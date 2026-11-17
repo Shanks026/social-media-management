@@ -1,3 +1,5 @@
+import { PlatformIcon } from '@/components/PlatformIcon'
+import { ENABLED_PLATFORMS } from '@/lib/domain/platforms'
 import { useState, useMemo, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
@@ -15,11 +17,6 @@ import {
   ChevronRight,
   Search,
   X,
-  Instagram,
-  Linkedin,
-  Youtube,
-  Twitter,
-  Facebook,
   Plus,
   FileDown,
   Lock,
@@ -79,14 +76,6 @@ const STATUS_LEGEND = CHART_STATUSES.map((id) => ({
   label: statusLabel(id),
   color: statusTone('deliverable', id).swatch,
 }))
-
-const PLATFORMS = [
-  { id: 'instagram', label: 'Instagram', icon: Instagram },
-  { id: 'linkedin', label: 'LinkedIn', icon: Linkedin },
-  { id: 'facebook', label: 'Facebook', icon: Facebook },
-  { id: 'twitter', label: 'Twitter', icon: Twitter },
-  { id: 'youtube', label: 'YouTube', icon: Youtube },
-]
 
 export default function ContentCalendar({
   clientId = null,
@@ -397,10 +386,10 @@ export default function ContentCalendar({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Platforms</SelectItem>
-              {PLATFORMS.map((p) => (
+              {ENABLED_PLATFORMS.map((p) => (
                 <SelectItem key={p.id} value={p.id}>
                   <div className="flex items-center gap-2">
-                    <p.icon size={12} />
+                    <PlatformIcon platform={p.id} size={16} />
                     {p.label}
                   </div>
                 </SelectItem>

@@ -1,3 +1,4 @@
+import { formatCurrency } from '@/lib/format'
 import { useEffect, useMemo } from 'react'
 import { useForm, useFieldArray, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -588,11 +589,7 @@ export function ProposalDialog({
                   <div className="flex justify-between items-center pt-2 border-t border-border/40">
                     <span className="text-sm font-medium text-muted-foreground">Total</span>
                     <span className="text-base font-bold text-foreground">
-                      {new Intl.NumberFormat('en-IN', {
-                        style: 'currency',
-                        currency: 'INR',
-                        maximumFractionDigits: 0,
-                      }).format(grandTotal)}
+                      {formatCurrency(grandTotal)}
                     </span>
                   </div>
                 </div>

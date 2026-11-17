@@ -1,3 +1,4 @@
+import { formatDate, formatCurrency } from '@/lib/format'
 import { useState, useMemo, useEffect } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { pdf } from '@react-pdf/renderer'
@@ -76,61 +77,16 @@ import { StatBar, StatCell } from '@/components/ui/stat-bar'
 import WorkflowHealth from '@/components/WorkflowHealth'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
-import { SUPPORTED_PLATFORMS } from '@/lib/platforms'
+import { ENABLED_PLATFORMS, platformChartConfig } from '@/lib/domain/platforms'
+import { PlatformIcon, PlatformChartTick } from '@/components/PlatformIcon'
+
+const PLATFORM_CHART_CONFIG = platformChartConfig('Deliverables')
 import { getUrgencyStatus } from '@/lib/client-helpers'
 import {
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
 } from '@/components/ui/chart'
-
-const PlatformIcon = ({ name }) => {
-  const fileName = name === 'google_business' ? 'google_busines' : name
-  const imgSrc = `/platformIcons/${fileName}.png`
-
-  return (
-    <div className="flex size-5 items-center justify-center rounded-full border border-border bg-background shadow-sm overflow-hidden shrink-0">
-      <img
-        src={imgSrc}
-        alt={name}
-        className="size-4 object-contain"
-        onError={(e) => (e.target.style.display = 'none')}
-      />
-    </div>
-  )
-}
-
-const CustomPlatformTick = ({ x, y, payload }) => {
-  return (
-    <g transform={`translate(${x - 30},${y - 12})`}>
-      <image
-        href={`/platformIcons/${payload.value}.png`}
-        height="24"
-        width="24"
-      />
-    </g>
-  )
-}
-
-const platformChartConfig = {
-  posts: { label: 'Deliverables' },
-  ...SUPPORTED_PLATFORMS.reduce((acc, p) => {
-    acc[p.id] =
-      p.id === 'twitter'
-        ? { label: p.label, theme: { light: '#000000', dark: '#cbd5e1' } }
-        : { label: p.label, color: p.color }
-    return acc
-  }, {}),
-}
-
-function formatDateRange(start, end) {
-  if (!start && !end) return 'No dates set'
-  const fmt = (d) => format(parseISO(d), 'MMM d, yyyy')
-  if (start && end) return `${fmt(start)} – ${fmt(end)}`
-  if (start) return `From ${fmt(start)}`
-  return `Until ${fmt(end)}`
-}
-
 
 export default function CampaignDetailPage() {
   const { campaignId } = useParams()
@@ -198,7 +154,7 @@ export default function CampaignDetailPage() {
       },
     )
 
-    return SUPPORTED_PLATFORMS
+    return ENABLED_PLATFORMS
       .map((sp) => ({
         platform: sp.id,
         label: sp.label,
@@ -219,14 +175,6 @@ export default function CampaignDetailPage() {
 
   const remainingBudget =
     analytics?.budget != null ? analytics.budget - totalSpent : null
-
-  const formatCurrency = (val) =>
-    new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 2,
-    }).format(val ?? 0)
 
   if (!sub && !isLoading) return null
 
@@ -370,7 +318,7 @@ export default function CampaignDetailPage() {
                 )}
                 <span className="flex items-center gap-1.5">
                   <Calendar className="size-3.5 opacity-60" />
-                  {formatDateRange(campaign.start_date, campaign.end_date)}
+                  {formatDate({ start: campaign.start_date, end: campaign.end_date }, 'range')}
                 </span>
                 {campaign.goal && (
                   <span className="flex items-center gap-1.5">
@@ -443,7 +391,7 @@ export default function CampaignDetailPage() {
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="pt-2">
           <div className="mb-4">
-            <TabsList className="bg-transparent h-auto w-full justify-start rounded-none p-0 gap-12 border-b border-border/40">
+            <TabsList variant="underline">
               {[
                 { value: 'posts',      label: 'Deliverables', icon: PencilRuler },
                 { value: 'discussion', label: 'Discussion',   icon: MessageSquare },
@@ -454,21 +402,6 @@ export default function CampaignDetailPage() {
                 <TabsTrigger
                   key={tab.value}
                   value={tab.value}
-                  className="
-                    relative rounded-none bg-transparent px-0 pb-3 pt-0 text-sm font-medium transition-none
-                    shadow-none border-b-2 border-transparent text-muted-foreground
-                    flex-none w-fit gap-2
-                    data-[state=active]:bg-transparent
-                    dark:data-[state=active]:bg-transparent
-                    data-[state=active]:text-black
-                    dark:data-[state=active]:text-white
-                    data-[state=active]:border-black
-                    dark:data-[state=active]:border-white
-                    data-[state=active]:shadow-none
-                    data-[state=active]:border-x-0
-                    data-[state=active]:border-t-0
-                    focus-visible:ring-0
-                  "
                 >
                   <tab.icon className="size-4" />
                   {tab.label}
@@ -631,7 +564,7 @@ export default function CampaignDetailPage() {
                                 {pv?.platforms?.length > 0 && (
                                   <div className="flex items-center -space-x-1">
                                     {pv.platforms.map((p) => (
-                                      <PlatformIcon key={p} name={p} />
+                                      <PlatformIcon key={p} platform={p} size={20} />
                                     ))}
                                   </div>
                                 )}
@@ -676,7 +609,7 @@ export default function CampaignDetailPage() {
                     </div>
                   ) : (
                     <ChartContainer
-                      config={platformChartConfig}
+                      config={PLATFORM_CHART_CONFIG}
                       className="h-[260px] w-full"
                     >
                       <BarChart
@@ -690,7 +623,7 @@ export default function CampaignDetailPage() {
                           tickLine={false}
                           axisLine={false}
                           width={40}
-                          tick={<CustomPlatformTick />}
+                          tick={<PlatformChartTick />}
                         />
                         <XAxis dataKey="posts" type="number" hide />
                         <ChartTooltip

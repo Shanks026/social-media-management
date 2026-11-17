@@ -1,3 +1,4 @@
+import { formatDate, initials } from '@/lib/format'
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -33,7 +34,6 @@ import {
 } from '@/components/ui/empty'
 import { cn } from '@/lib/utils'
 import { resolveNotificationRoute } from '@/components/notifications/routes'
-import { formatCompactTimeAgo } from '@/lib/helper'
 import {
   useUnreadNotificationCount,
   useNotifications,
@@ -43,7 +43,7 @@ import {
   notificationKeys,
   useNotificationStream,
 } from '@/api/notifications'
-import { useMemberMap } from '@/api/chat'
+import { useMemberMap } from '@/api/team'
 import { StatusChip } from '@/components/tasks/TaskCard'
 import { STATUSES as TASK_STATUSES } from '@/lib/domain/taskStatus'
 import { useAuth } from '@/context/AuthContext'
@@ -102,12 +102,6 @@ function NotificationTitle({ title }) {
       <StatusChip status={match[2]} />
     </>
   )
-}
-
-function getInitials(name) {
-  if (!name) return '?'
-  const [first = '', second = ''] = name.trim().split(/\s+/)
-  return ((first[0] ?? '') + (second[0] ?? '')).toUpperCase() || '?'
 }
 
 // Route resolution lives in ./routes.js so the panel rows and the arrival
@@ -178,7 +172,7 @@ function NotificationRow({ notification, memberMap, onRead, onDeleted }) {
             <img src={actor.avatar_url} alt="" className="size-8 rounded-full object-cover" />
           ) : (
             <span className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-[11px] font-semibold text-primary">
-              {getInitials(actorName)}
+              {initials(actorName)}
             </span>
           )
         ) : (
@@ -213,7 +207,7 @@ function NotificationRow({ notification, memberMap, onRead, onDeleted }) {
         <p className="mt-1 text-[11px] text-muted-foreground/70">
           {actorName && <span className="font-medium text-muted-foreground">{actorName}</span>}
           {actorName && ' · '}
-          {formatCompactTimeAgo(notification.created_at)}
+          {formatDate(notification.created_at, 'relative')}
         </p>
       </div>
 

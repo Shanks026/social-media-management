@@ -1,4 +1,5 @@
 ﻿import { useState, useMemo, useEffect } from 'react'
+import { initials } from '@/lib/format'
 import { useQueryClient } from '@tanstack/react-query'
 import {
   useReactTable,
@@ -87,9 +88,6 @@ const STATUS_TABS = [
   { key: 'ALL', label: 'All' },
   ...TASK_STATUSES.map((key) => ({ key, label: taskStatusCfg(key).label })),
 ]
-
-const TAB_TRIGGER_CLASS =
-  'relative rounded-none bg-transparent px-0 pb-3 pt-0 text-sm font-medium transition-none shadow-none border-b-2 border-transparent text-muted-foreground flex-none w-fit gap-2 data-[state=active]:bg-transparent dark:data-[state=active]:bg-transparent data-[state=active]:text-black dark:data-[state=active]:text-white data-[state=active]:border-black dark:data-[state=active]:border-white data-[state=active]:shadow-none data-[state=active]:border-x-0 data-[state=active]:border-t-0 focus-visible:ring-0'
 
 // The canonical key for the global tasks list — used for optimistic updates in kanban
 const GLOBAL_TASKS_QK = ['tasks', 'list', { clientId: null, campaignId: null }]
@@ -404,7 +402,7 @@ function TasksTableView({ tasks, isLoading, clientMap, campaignMap, memberMap, c
                   assignee._removed ? 'bg-muted text-muted-foreground' : 'bg-primary/10 text-primary',
                 )}
               >
-                {(assignee.full_name || assignee.email || '?')[0].toUpperCase()}
+                {initials(assignee.full_name, { email: assignee.email, max: 1 })}
               </div>
             )}
             <span className="text-sm truncate">
@@ -739,9 +737,9 @@ export default function TasksAndReminders() {
 
       <Tabs value={statusTab} onValueChange={(v) => setParam('tab', v, 'ALL')}>
         {/* â"€â"€ Status Tabs â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€ */}
-        <TabsList className="bg-transparent h-auto w-full justify-start rounded-none p-0 gap-8 border-b border-border/40">
+        <TabsList variant="underline">
           {STATUS_TABS.map((tab) => (
-            <TabsTrigger key={tab.key} value={tab.key} className={TAB_TRIGGER_CLASS}>
+            <TabsTrigger key={tab.key} value={tab.key}>
               {tab.label}
               {counts[tab.key] > 0 && (
                 <span className="tabular-nums text-xs text-muted-foreground">{counts[tab.key]}</span>

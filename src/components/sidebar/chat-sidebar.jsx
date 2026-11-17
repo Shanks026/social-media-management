@@ -5,8 +5,10 @@ import { ArrowLeft } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/context/AuthContext'
 import { useSubscription } from '@/api/useSubscription'
-import { useMyChannels, useMemberMap, markChannelRead, getOrCreateDmChannel } from '@/api/chat'
-import { MemberAvatar, TeamChatAvatar } from '@/components/chat/MemberAvatar'
+import { useMyChannels, markChannelRead, getOrCreateDmChannel } from '@/api/chat'
+import { useMemberMap } from '@/api/team'
+import { MemberAvatar } from '@/components/MemberAvatar'
+import { TeamChatAvatar } from '@/components/chat/TeamChatAvatar'
 import {
   Sidebar,
   SidebarHeader,

@@ -1,3 +1,4 @@
+import { formatFileSize } from '@/lib/format'
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useForm, Controller } from 'react-hook-form'
@@ -16,7 +17,6 @@ import {
   ProposalLimitError,
 } from '@/api/proposals'
 import { resolveWorkspace } from '@/lib/workspace'
-import { formatFileSize } from '@/lib/helper'
 import { cn } from '@/lib/utils'
 
 import { Button } from '@/components/ui/button'

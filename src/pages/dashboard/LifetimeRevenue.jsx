@@ -1,3 +1,4 @@
+import { formatCurrency, formatCompactCurrency } from '@/lib/format'
 import { useMemo } from 'react'
 import { TrendingUp, TrendingDown, ArrowUpRight } from 'lucide-react'
 import { Label, Pie, PieChart } from 'recharts'
@@ -17,7 +18,6 @@ import {
 import { Skeleton } from '@/components/ui/skeleton'
 import { useFinanceOverview } from '@/api/transactions'
 import { useBurnRate } from '@/api/expenses'
-import { formatCurrency } from '@/utils/finance'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 
@@ -32,13 +32,6 @@ const chartConfig = {
   profit: { label: 'Profit', color: COLORS.profit },
   expenses: { label: 'Expenses', color: COLORS.expenses },
   empty: { label: 'No data', color: COLORS.empty },
-}
-
-function formatCompact(amount) {
-  if (amount >= 10000000) return `₹${(amount / 10000000).toFixed(1)}Cr`
-  if (amount >= 100000) return `₹${(amount / 100000).toFixed(1)}L`
-  if (amount >= 1000) return `₹${(amount / 1000).toFixed(0)}K`
-  return `₹${amount.toFixed(0)}`
 }
 
 export default function LifetimeRevenue() {
@@ -146,7 +139,7 @@ export default function LifetimeRevenue() {
                             y={(viewBox.cy || 0) - 8}
                             className="fill-foreground text-2xl font-bold"
                           >
-                            {formatCompact(totalRevenue)}
+                            {formatCompactCurrency(totalRevenue)}
                           </tspan>
                           <tspan
                             x={viewBox.cx}

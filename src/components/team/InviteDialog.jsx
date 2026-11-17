@@ -1,3 +1,4 @@
+import { formatDate } from '@/lib/format'
 import { useState, useLayoutEffect } from 'react'
 import {
   useGenerateInvite,
@@ -6,7 +7,6 @@ import {
   inviteExpiryInDays,
   endOfDay,
 } from '@/api/team'
-import { formatDate } from '@/lib/helper'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'

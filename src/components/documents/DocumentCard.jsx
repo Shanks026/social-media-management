@@ -1,3 +1,4 @@
+import { formatDate, formatFileSize } from '@/lib/format'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -70,7 +71,6 @@ import {
   unarchiveDocument,
   getDocumentSignedUrl,
 } from '@/api/documents'
-import { formatDate, formatFileSize } from '@/lib/helper'
 import DocumentCategoryBadge from './DocumentCategoryBadge'
 import { DOCUMENT_CATEGORIES } from './UploadMetaDialog'
 import { Building2, Lock, ShieldAlert } from 'lucide-react'

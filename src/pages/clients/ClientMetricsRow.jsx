@@ -1,3 +1,4 @@
+import { formatCurrency } from '@/lib/format'
 import { PencilRuler, Megaphone, ListTodo, CircleDollarSign, Percent } from 'lucide-react'
 
 // A zero is dimmed rather than hidden: the row is a fixed set of three, so
@@ -13,13 +14,6 @@ const TotalStatItem = ({ icon: Icon, count, label, valueClassName = 'text-foregr
     </div>
   )
 }
-
-const formatMRR = (val) =>
-  new Intl.NumberFormat('en-IN', {
-    style: 'currency',
-    currency: 'INR',
-    maximumFractionDigits: 0,
-  }).format(val)
 
 /**
  * Deliverables/Campaigns/Tasks totals + MRR/Margin (external clients only,
@@ -48,7 +42,7 @@ export default function ClientMetricsRow({ client, section = 'all', className = 
         {client.avg_monthly_retainer > 0 && (
           <TotalStatItem
             icon={CircleDollarSign}
-            count={formatMRR(client.avg_monthly_retainer)}
+            count={formatCurrency(client.avg_monthly_retainer)}
             label="MRR"
           />
         )}

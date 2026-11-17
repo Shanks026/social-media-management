@@ -14,33 +14,13 @@ import {
 } from '@/components/ui/chart'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useGlobalPosts } from '@/api/useGlobalPosts'
-import { SUPPORTED_PLATFORMS } from '@/lib/platforms'
+import { ENABLED_PLATFORMS, platformChartConfig } from '@/lib/domain/platforms'
+import { PlatformChartTick } from '@/components/PlatformIcon'
+
+const PLATFORM_CHART_CONFIG = platformChartConfig('Posts')
 import { useNavigate } from 'react-router-dom'
 import { ArrowUpRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-
-const platformChartConfig = {
-  posts: { label: 'Posts' },
-  ...SUPPORTED_PLATFORMS.reduce((acc, p) => {
-    acc[p.id] =
-      p.id === 'twitter'
-        ? { label: p.label, theme: { light: '#000000', dark: '#cbd5e1' } }
-        : { label: p.label, color: p.color }
-    return acc
-  }, {}),
-}
-
-const CustomPlatformTick = ({ x, y, payload }) => {
-  return (
-    <g transform={`translate(${x - 30},${y - 12})`}>
-      <image
-        href={`/platformIcons/${payload.value}.png`}
-        height="24"
-        width="24"
-      />
-    </g>
-  )
-}
 
 export default function DashboardSocialMediaUsage() {
   const navigate = useNavigate()
@@ -50,7 +30,7 @@ export default function DashboardSocialMediaUsage() {
     const counts = {}
 
     // Always initialize all supported platforms to 0
-    SUPPORTED_PLATFORMS.forEach((p) => {
+    ENABLED_PLATFORMS.forEach((p) => {
       counts[p.id] = 0
     })
 
@@ -70,7 +50,7 @@ export default function DashboardSocialMediaUsage() {
       })
     }
 
-    return SUPPORTED_PLATFORMS.map((sp) => ({
+    return ENABLED_PLATFORMS.map((sp) => ({
       platform: sp.id,
       label: sp.label,
       posts: counts[sp.id],
@@ -122,7 +102,7 @@ export default function DashboardSocialMediaUsage() {
           </div>
         ) : (
           <ChartContainer
-            config={platformChartConfig}
+            config={PLATFORM_CHART_CONFIG}
             className="h-[250px] w-full"
           >
             <BarChart
@@ -136,7 +116,7 @@ export default function DashboardSocialMediaUsage() {
                 tickLine={false}
                 axisLine={false}
                 width={40}
-                tick={<CustomPlatformTick />}
+                tick={<PlatformChartTick />}
               />
               <XAxis dataKey="posts" type="number" hide />
               <ChartTooltip

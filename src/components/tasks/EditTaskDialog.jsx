@@ -1,4 +1,6 @@
 /* eslint-disable react-hooks/set-state-in-effect */
+import { MemberAvatar } from '@/components/MemberAvatar'
+import { toDateTimeLocal, fromDateTimeLocal } from '@/lib/format'
 import { useState, useEffect, useMemo, useRef } from 'react'
 import {
   Dialog,
@@ -19,7 +21,6 @@ import { Badge } from '@/components/ui/badge'
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query'
 import { Megaphone } from 'lucide-react'
 import { updateTask, fetchTaskPostIds } from '@/api/tasks'
-import { toDateTimeLocal, fromDateTimeLocal } from '@/lib/helper'
 import { useClients } from '@/api/clients'
 import { fetchActiveCampaignsByClient } from '@/api/campaigns'
 import { fetchAllPostsByClient, fetchAllDeliverables } from '@/api/posts'
@@ -299,19 +300,7 @@ export default function EditTaskDialog({
                         value={m.member_user_id}
                       >
                         <div className="flex items-center gap-2 w-full min-w-0 pr-1">
-                          {m.avatar_url ? (
-                            <img
-                              src={m.avatar_url}
-                              alt=""
-                              className="size-5 rounded-full object-cover shrink-0"
-                            />
-                          ) : (
-                            <div className="size-5 rounded-full bg-primary/10 flex items-center justify-center text-[9px] font-semibold text-primary shrink-0">
-                              {(m.full_name ||
-                                m.email ||
-                                '?')[0].toUpperCase()}
-                            </div>
-                          )}
+                          <MemberAvatar member={m} size="size-5" className={cn('text-[9px]', m._removed && 'grayscale')} />
                           <span className="flex-1 truncate">
                             {m.full_name || m.email}
                             {m.member_user_id === user?.id && (

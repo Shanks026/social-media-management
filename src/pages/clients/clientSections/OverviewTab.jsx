@@ -1,3 +1,4 @@
+import { formatCurrency } from '@/lib/format'
 import React, { useState, useMemo } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import {
@@ -41,7 +42,10 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from '@/components/ui/chart'
-import { SUPPORTED_PLATFORMS } from '@/lib/platforms'
+import { ENABLED_PLATFORMS, platformChartConfig } from '@/lib/domain/platforms'
+import { PlatformChartTick } from '@/components/PlatformIcon'
+
+const PLATFORM_CHART_CONFIG = platformChartConfig('Posts')
 import { useQuery } from '@tanstack/react-query'
 import { fetchAllPostsByClient } from '@/api/posts'
 import { fetchUpcomingMeetings } from '@/api/meetings'
@@ -49,7 +53,6 @@ import { useMarkMeetingDone } from '@/hooks/useMarkMeetingDone'
 import { useTransactions } from '@/api/transactions'
 import { usePermissions } from '@/api/usePermissions'
 import { toast } from 'sonner'
-import { formatCurrency } from '@/utils/finance'
 import { format } from 'date-fns'
 import { getPublishState } from '@/lib/helper'
 import MeetingRow from '@/components/MeetingRow'
@@ -63,17 +66,6 @@ import CreateTaskDialog from '@/components/tasks/CreateTaskDialog'
 import TaskCard from '@/components/tasks/TaskCard'
 import ClientWeekTimeline from './ClientWeekTimeline'
 
-const platformChartConfig = {
-  posts: { label: 'Posts' },
-  ...SUPPORTED_PLATFORMS.reduce((acc, p) => {
-    acc[p.id] =
-      p.id === 'twitter'
-        ? { label: p.label, theme: { light: '#000000', dark: '#cbd5e1' } }
-        : { label: p.label, color: p.color }
-    return acc
-  }, {}),
-}
-
 import {
   DELIVERABLE_CHART_CONFIG as chartConfig,
   ALLOWED_CHART_STATUSES as ALLOWED_STATUSES,
@@ -86,18 +78,6 @@ function normalizeStatus(raw) {
 }
 
 // Custom Y-Axis tick to render platform icons instead of text
-const CustomPlatformTick = ({ x, y, payload }) => {
-  return (
-    <g transform={`translate(${x - 30},${y - 12})`}>
-      <image
-        href={`/platformIcons/${payload.value}.png`}
-        height="24"
-        width="24"
-      />
-    </g>
-  )
-}
-
 export default function OverviewTab({ client }) {
   const [activeEngagementTab, setActiveEngagementTab] = useState('notes')
   const { finance } = usePermissions()
@@ -140,7 +120,7 @@ export default function OverviewTab({ client }) {
     const counts = {}
 
     // Always initialize all supported platforms to 0
-    SUPPORTED_PLATFORMS.forEach((p) => {
+    ENABLED_PLATFORMS.forEach((p) => {
       counts[p.id] = 0
     })
 
@@ -160,7 +140,7 @@ export default function OverviewTab({ client }) {
       })
     }
 
-    return SUPPORTED_PLATFORMS.map((sp) => ({
+    return ENABLED_PLATFORMS.map((sp) => ({
       platform: sp.id, // We use this for the image payload
       label: sp.label,
       posts: counts[sp.id],
@@ -721,7 +701,7 @@ export default function OverviewTab({ client }) {
                 </div>
               ) : (
                 <ChartContainer
-                  config={platformChartConfig}
+                  config={PLATFORM_CHART_CONFIG}
                   className="h-[250px] w-full"
                 >
                   <BarChart
@@ -735,7 +715,7 @@ export default function OverviewTab({ client }) {
                       tickLine={false}
                       axisLine={false}
                       width={40}
-                      tick={<CustomPlatformTick />}
+                      tick={<PlatformChartTick />}
                     />
                     <XAxis dataKey="posts" type="number" hide />
                     <ChartTooltip
@@ -871,7 +851,7 @@ export default function OverviewTab({ client }) {
               </div>
             ) : (
               <ChartContainer
-                config={platformChartConfig}
+                config={PLATFORM_CHART_CONFIG}
                 className="h-[250px] w-full"
               >
                 <BarChart
@@ -885,7 +865,7 @@ export default function OverviewTab({ client }) {
                     tickLine={false}
                     axisLine={false}
                     width={40}
-                    tick={<CustomPlatformTick />}
+                    tick={<PlatformChartTick />}
                   />
                   <XAxis dataKey="posts" type="number" hide />
                   <ChartTooltip

@@ -1,3 +1,4 @@
+import { initials } from '@/lib/format'
 import { format } from 'date-fns'
 import { UserRoundCog, UserRoundPlus, CircleDot, Bot } from 'lucide-react'
 import { StatusChip } from '@/components/tasks/TaskCard'
@@ -19,7 +20,7 @@ function NameTag({ member, children }) {
         <img src={member.avatar_url} alt="" className="size-4 shrink-0 rounded-full object-cover" />
       ) : member ? (
         <span className="flex size-4 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[8px] font-semibold text-primary">
-          {(member.full_name || member.email || '?')[0].toUpperCase()}
+          {initials(member.full_name, { email: member.email, max: 1 })}
         </span>
       ) : (
         <span className="flex size-4 shrink-0 items-center justify-center rounded-full border border-border bg-background text-muted-foreground">

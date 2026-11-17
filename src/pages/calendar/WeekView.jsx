@@ -1,3 +1,4 @@
+import { PlatformIcon } from '@/components/PlatformIcon'
 import {
   format,
   startOfWeek,
@@ -8,18 +9,13 @@ import {
   isSameDay,
 } from 'date-fns'
 import { cn } from '@/lib/utils'
-import { Instagram, Linkedin, Youtube, Globe, Clock } from 'lucide-react'
+import {
+  Clock,
+} from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { DayDetailDialog } from './DayDetailDialog' // Import the dialog
 import { getPublishState } from '@/lib/helper'
 import { deliverableEdge } from '@/lib/statusTone'
-
-const PLATFORM_ICONS = {
-  instagram: <Instagram className="size-3.5 text-muted-foreground" />,
-  linkedin: <Linkedin className="size-3.5 text-muted-foreground" />,
-  youtube: <Youtube className="size-3.5 text-muted-foreground" />,
-  google_business: <Globe className="size-3.5 text-muted-foreground" />,
-}
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i)
 const ROW_HEIGHT = 80
@@ -172,7 +168,7 @@ export default function WeekView({ currentMonth, postsByDate, clientId }) {
                             {post.isMeeting ? (
                               <Clock className="size-3 text-purple-600 dark:text-purple-400" />
                             ) : (
-                              PLATFORM_ICONS[post.platforms?.[0]?.toLowerCase()]
+                              (post.platforms?.[0] && <PlatformIcon platform={post.platforms[0]} size={14} />)
                             )}
                           </div>
                           <div className="min-w-0 flex-1">

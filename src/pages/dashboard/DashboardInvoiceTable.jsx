@@ -1,10 +1,10 @@
+import { formatCurrency } from '@/lib/format'
 import { useNavigate } from 'react-router-dom'
 import { format } from 'date-fns'
 import { Building2, FileText, ArrowUpRight } from 'lucide-react'
 import { useInvoices } from '@/api/invoices'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
-import { formatCurrency } from '@/utils/finance'
 
 // UI Components
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'

@@ -1,3 +1,4 @@
+import { MemberAvatar } from '@/components/MemberAvatar'
 import { Eye } from 'lucide-react'
 import { HoverCard, HoverCardTrigger, HoverCardContent } from '@/components/ui/hover-card'
 import JobRoleBadges from '@/components/team/JobRoleBadges'
@@ -36,22 +37,7 @@ export default function TaskWatchers({ watcherIds = [], memberMap = {} }) {
         <div className="flex flex-col py-1">
           {watchers.map((m) => (
               <div key={m.member_user_id} className={cn('flex items-center gap-2.5 px-3 py-1.5', m._removed && 'opacity-60')}>
-                {m.avatar_url ? (
-                  <img
-                    src={m.avatar_url}
-                    alt=""
-                    className={cn('size-6 shrink-0 rounded-full object-cover', m._removed && 'grayscale')}
-                  />
-                ) : (
-                  <div
-                    className={cn(
-                      'flex size-6 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold',
-                      m._removed ? 'bg-muted text-muted-foreground' : 'bg-primary/10 text-primary',
-                    )}
-                  >
-                    {(m.full_name || m.email || '?')[0].toUpperCase()}
-                  </div>
-                )}
+                <MemberAvatar member={m} size="size-6" className={cn('text-[10px]', m._removed && 'grayscale')} />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm leading-tight">
                     {m.full_name || m.email}

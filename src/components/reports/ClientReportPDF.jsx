@@ -1,3 +1,4 @@
+import { formatCurrency, formatDate } from '@/lib/format'
 import {
   Document,
   Page,
@@ -7,9 +8,7 @@ import {
   Image,
   Font,
 } from '@react-pdf/renderer'
-import { format } from 'date-fns'
 import { clientStatusCounts } from '@/lib/domain/deliverableStatus'
-import { CURRENCY } from '@/utils/constants'
 
 /* ── Register Inter (full glyph set, incl. ₹ U+20B9) — same fix as InvoicePDF ── */
 Font.register({
@@ -114,23 +113,6 @@ const s = StyleSheet.create({
   footerText: { fontSize: 8, color: C.muted },
 })
 
-function fmtCurrency(val) {
-  return new Intl.NumberFormat(CURRENCY.LOCALE, {
-    style: 'currency',
-    currency: CURRENCY.CODE,
-    maximumFractionDigits: 0,
-  }).format(val || 0)
-}
-
-function fmtDate(d) {
-  if (!d) return null
-  try {
-    return format(new Date(d), 'd MMM yyyy')
-  } catch {
-    return null
-  }
-}
-
 export default function ClientReportPDF({
   report,
   agencyName,
@@ -148,11 +130,11 @@ export default function ClientReportPDF({
   const pipeline = report?.pipeline || {}
 
   const statusEntries = clientStatusCounts(deliverables.by_status)
-  const nextDeliverable = fmtDate(pipeline.next_deliverable_at)
+  const nextDeliverable = formatDate(pipeline.next_deliverable_at)
 
   const metaParts = [
     client.industry || null,
-    `Generated ${fmtDate(generatedOn) || ''}`.trim(),
+    `Generated ${formatDate(generatedOn) || ''}`.trim(),
     nextDeliverable ? `Next deliverable ${nextDeliverable}` : null,
   ].filter(Boolean)
 
@@ -191,15 +173,15 @@ export default function ClientReportPDF({
             <Text style={s.kpiLabel}>Deliverables</Text>
           </View>
           <View style={s.kpiCell}>
-            <Text style={s.kpiValue}>{fmtCurrency(finance.billed)}</Text>
+            <Text style={s.kpiValue}>{formatCurrency(finance.billed)}</Text>
             <Text style={s.kpiLabel}>Billed</Text>
           </View>
           <View style={s.kpiCell}>
-            <Text style={s.kpiValue}>{fmtCurrency(finance.collected)}</Text>
+            <Text style={s.kpiValue}>{formatCurrency(finance.collected)}</Text>
             <Text style={s.kpiLabel}>Collected</Text>
           </View>
           <View style={s.kpiCell}>
-            <Text style={s.kpiValue}>{fmtCurrency(finance.outstanding)}</Text>
+            <Text style={s.kpiValue}>{formatCurrency(finance.outstanding)}</Text>
             <Text style={s.kpiLabel}>Outstanding</Text>
           </View>
         </View>
@@ -230,7 +212,7 @@ export default function ClientReportPDF({
             </View>
             <View style={s.kv}>
               <Text style={s.kvLabel}>Campaign budget</Text>
-              <Text style={s.kvValue}>{fmtCurrency(campaigns.budget_allocated)}</Text>
+              <Text style={s.kvValue}>{formatCurrency(campaigns.budget_allocated)}</Text>
             </View>
             <View style={s.kv}>
               <Text style={s.kvLabel}>Proposals sent</Text>
@@ -242,7 +224,7 @@ export default function ClientReportPDF({
             </View>
             <View style={s.kv}>
               <Text style={s.kvLabel}>Overdue</Text>
-              <Text style={s.kvValue}>{fmtCurrency(finance.overdue)}</Text>
+              <Text style={s.kvValue}>{formatCurrency(finance.overdue)}</Text>
             </View>
             <View style={s.kv}>
               <Text style={s.kvLabel}>Documents</Text>

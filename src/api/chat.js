@@ -1,7 +1,6 @@
 import { supabase } from '@/lib/supabase'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/context/AuthContext'
-import { useTeamMembers } from '@/api/team'
 import { useEffect, useId, useMemo } from 'react'
 import { resolveWorkspace } from '@/lib/workspace'
 
@@ -18,65 +17,6 @@ export const chatKeys = {
 export const CHAT_REACTION_EMOJIS = ['👍', '👎', '❤️', '😂', '😮', '😢', '🎉', '🙌', '🔥', '👀', '✅', '🤔', '➕', '➖']
 
 // ─── Read Hooks ────────────────────────────────────────────────────────────────
-
-/**
- * The workspace owner's profile, for the DM list. Isolated from
- * useTeamMembers() (get_team_members only returns agency_members rows, never
- * the owner) — a dedicated fetch instead of extending that shared RPC, so
- * this stays scoped to chat with no risk to its other consumers.
- */
-export function useWorkspaceOwner() {
-  const { workspaceUserId } = useAuth()
-
-  return useQuery({
-    queryKey: ['chat', 'workspace-owner', workspaceUserId],
-    queryFn: async () => {
-      const { data, error } = await supabase.rpc('get_my_workspace_owner')
-      if (error) throw error
-      return data?.[0] ?? null
-    },
-    enabled: !!workspaceUserId,
-    staleTime: 5 * 60 * 1000,
-    retry: 1,
-  })
-}
-
-/**
- * Every person the caller can see in chat, keyed by user id — teammates
- * (useTeamMembers), the workspace owner (useWorkspaceOwner, de-duplicated
- * against teamMembers since some workspaces already return the owner's own
- * agency_members row), and the caller themselves as a fallback. Single source
- * of truth for author lookups (ChatThread) and the DM roster (ChatSidebar) —
- * kept in one place after a real duplicate-owner bug surfaced from having
- * this merge logic written out twice.
- */
-export function useMemberMap() {
-  const { user } = useAuth()
-  const { data: teamMembers = [] } = useTeamMembers()
-  const { data: owner } = useWorkspaceOwner()
-
-  return useMemo(() => {
-    const map = {}
-    teamMembers.forEach((m) => {
-      map[m.member_user_id] = { id: m.member_user_id, full_name: m.full_name, avatar_url: m.avatar_url, email: m.email, system_role: m.system_role }
-    })
-    if (owner && !map[owner.user_id]) {
-      // Reached only when the owner has no agency_members row of their own,
-      // so there is no system_role to carry over — but this branch is the
-      // workspace owner by definition.
-      map[owner.user_id] = { id: owner.user_id, full_name: owner.full_name, avatar_url: owner.avatar_url, email: owner.email, system_role: 'owner' }
-    }
-    if (user && !map[user.id]) {
-      map[user.id] = {
-        id: user.id,
-        full_name: user.user_metadata?.full_name || user.user_metadata?.name || null,
-        email: user.email,
-        avatar_url: user.user_metadata?.avatar_url || null,
-      }
-    }
-    return map
-  }, [teamMembers, owner, user])
-}
 
 /**
  * The caller's channel list — the single workspace channel plus any DMs —

@@ -1,7 +1,7 @@
+import { formatCurrency } from '@/lib/format'
 import { pdf } from '@react-pdf/renderer'
 import InvoicePDF from '@/components/InvoicePDF'
 import { supabase } from '@/lib/supabase'
-import { CURRENCY } from '@/utils/constants'
 
 const TERCERO_SVG_URL = '/TerceroLand.svg'
 
@@ -169,12 +169,7 @@ export async function emailInvoicePDF(invoice, agency = {}, opts = {}) {
   const blob = await generateInvoicePDFBlob(invoice, agency)
   const pdf_base64 = await blobToBase64(blob)
 
-  const totalFormatted = new Intl.NumberFormat(CURRENCY.LOCALE, {
-    style: 'currency',
-    currency: CURRENCY.CODE,
-    currencyDisplay: 'code',
-    maximumFractionDigits: 0,
-  }).format(invoice.total || 0)
+  const totalFormatted = formatCurrency(invoice.total, { display: 'code' })
 
   const { data, error } = await supabase.functions.invoke('send-invoice-email', {
     body: {

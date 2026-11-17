@@ -2,7 +2,7 @@ import { memo } from 'react'
 import { Check, AtSign, Link2, AlertCircle } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { SUPPORTED_PLATFORMS } from '@/lib/platforms'
+import { ENABLED_PLATFORMS, platformLogo } from '@/lib/domain/platforms'
 import { cn } from '@/lib/utils'
 
 const getBaseUrl = (id) => {
@@ -32,7 +32,7 @@ const PlatformSelector = memo(
           Active Platforms & Handles
         </Label>
         <div className="grid grid-cols-1 gap-4">
-          {SUPPORTED_PLATFORMS.map((platform) => {
+          {ENABLED_PLATFORMS.map((platform) => {
             const isSelected = selected.includes(platform.id)
             const hasError = errors?.social_links?.[platform.id]
 
@@ -82,7 +82,7 @@ const PlatformSelector = memo(
                       )}
                     </div>
                     <img
-                      src={`/platformIcons/${platform.id === 'google_business' ? 'google_busines' : platform.id}.png`}
+                      src={platformLogo(platform.id)}
                       alt={platform.label}
                       className={cn(
                         'size-5 object-contain',

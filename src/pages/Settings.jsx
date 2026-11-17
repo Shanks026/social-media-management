@@ -61,7 +61,7 @@ export default function Settings() {
             onValueChange={handleTabChange}
             className="space-y-6"
           >
-            <TabsList className="bg-transparent border-b border-border/40 rounded-none p-0 h-auto gap-8 w-full justify-start">
+            <TabsList variant="underline">
               {[
                 { value: 'profile', icon: User, label: 'Profile' },
                 ...(isAdmin ? [{ value: 'agency', icon: Building2, label: 'Agency' }] : []),
@@ -73,21 +73,6 @@ export default function Settings() {
                 <TabsTrigger
                   key={tab.value}
                   value={tab.value}
-                  className="
-                    relative rounded-none bg-transparent px-0 pb-3 pt-0 text-sm font-medium transition-none
-                    shadow-none border-b-2 border-transparent text-muted-foreground
-                    flex-none w-fit
-                    data-[state=active]:bg-transparent
-                    dark:data-[state=active]:bg-transparent
-                    data-[state=active]:text-black
-                    dark:data-[state=active]:text-white
-                    data-[state=active]:border-black
-                    dark:data-[state=active]:border-white
-                    data-[state=active]:shadow-none
-                    data-[state=active]:border-x-0
-                    data-[state=active]:border-t-0
-                    focus-visible:ring-0
-                  "
                 >
                   <tab.icon className="size-4" />
                   {tab.label}

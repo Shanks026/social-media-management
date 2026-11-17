@@ -1,3 +1,4 @@
+import { formatDate } from '@/lib/format'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -6,7 +7,6 @@ import { AlertTriangle, Loader2 } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { useSubscription } from '@/api/useSubscription'
 import { cancelWorkspaceDeletion } from '@/api/team'
-import { formatDate } from '@/lib/helper'
 import { Button } from '@/components/ui/button'
 
 /**

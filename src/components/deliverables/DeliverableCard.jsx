@@ -1,3 +1,5 @@
+import { PlatformIcon } from '@/components/PlatformIcon'
+import { initials } from '@/lib/format'
 import { useState, useEffect } from 'react'
 import { format } from 'date-fns'
 import {
@@ -148,22 +150,6 @@ const MediaItem = ({ url, className, isPreview = false }) => {
       alt="Media"
       className={cn('h-full w-full', isPreview ? 'object-contain' : 'object-cover', className)}
     />
-  )
-}
-
-const PlatformIcon = ({ name }) => {
-  const fileName = name === 'google_business' ? 'google_busines' : name
-  const imgSrc = `/platformIcons/${fileName}.png`
-
-  return (
-    <div className="flex h-6 w-6 items-center justify-center rounded-full border-2 border-card bg-white dark:bg-zinc-900 shadow-sm transition-transform hover:scale-110 overflow-hidden relative z-10">
-      <img
-        src={imgSrc}
-        alt={name}
-        className="size-5 object-contain"
-        onError={(e) => (e.target.style.display = 'none')}
-      />
-    </div>
   )
 }
 
@@ -502,13 +488,13 @@ export function DeliverableCard({ post, client }) {
                 return r ? { ...r, _removed: true } : null
               })()
             if (!creator) return null
-            const initials = creator.full_name?.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2) ?? '?'
+            const creatorInitials = initials(creator.full_name)
             return (
               <div className={cn('flex items-center gap-1.5 mb-3', creator._removed && 'opacity-60')}>
                 <span className="text-xs text-muted-foreground">Created by</span>
                 <Avatar className={cn('size-4 shrink-0', creator._removed && 'grayscale')}>
                   <AvatarImage src={creator.avatar_url} />
-                  <AvatarFallback className="text-[9px]">{initials}</AvatarFallback>
+                  <AvatarFallback className="text-[9px]">{creatorInitials}</AvatarFallback>
                 </Avatar>
                 <span className="text-xs font-medium text-foreground/70 truncate">
                   {creator.full_name}

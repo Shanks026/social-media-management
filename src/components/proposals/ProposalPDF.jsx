@@ -1,3 +1,4 @@
+import { formatCurrency, formatDate } from '@/lib/format'
 import {
   Document,
   Page,
@@ -7,8 +8,6 @@ import {
   Image,
   Font,
 } from '@react-pdf/renderer'
-import { format } from 'date-fns'
-import { CURRENCY } from '@/utils/constants'
 
 /* ── Register Inter ── */
 Font.register({
@@ -226,23 +225,6 @@ const s = StyleSheet.create({
 })
 
 /* ── Helpers ── */
-function fmtCurrency(val) {
-  return new Intl.NumberFormat(CURRENCY.LOCALE, {
-    style: 'currency',
-    currency: CURRENCY.CODE,
-    maximumFractionDigits: 0,
-  }).format(val || 0)
-}
-
-function fmtDate(d) {
-  if (!d) return '—'
-  try {
-    return format(new Date(d), 'MMM d, yyyy')
-  } catch {
-    return '—'
-  }
-}
-
 /* ── Document ── */
 export default function ProposalPDF({ proposal = {}, agency = {}, terceroLogoDataUrl = null }) {
   const lineItems = proposal.line_items || []
@@ -296,7 +278,7 @@ export default function ProposalPDF({ proposal = {}, agency = {}, terceroLogoDat
             <View style={{ alignItems: 'flex-end' }}>
               <Text style={[s.sectionLabel, { textAlign: 'right' }]}>Valid Until</Text>
               <Text style={[s.metaValue, { textAlign: 'right' }]}>
-                {fmtDate(proposal.valid_until)}
+                {formatDate(proposal.valid_until)}
               </Text>
             </View>
           )}
@@ -334,14 +316,14 @@ export default function ProposalPDF({ proposal = {}, agency = {}, terceroLogoDat
               <View key={i} style={s.tableRow}>
                 <Text style={[s.tableCell, s.colDesc]}>{item.description || '—'}</Text>
                 <Text style={[s.tableCellBold, s.colAmount]}>
-                  {fmtCurrency(item.amount)}
+                  {formatCurrency(item.amount)}
                 </Text>
               </View>
             ))}
 
             <View style={s.totalRow}>
               <Text style={s.totalLabel}>Total</Text>
-              <Text style={s.totalValue}>{fmtCurrency(total)}</Text>
+              <Text style={s.totalValue}>{formatCurrency(total)}</Text>
             </View>
           </View>
         )}

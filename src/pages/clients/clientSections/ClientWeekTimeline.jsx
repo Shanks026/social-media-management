@@ -17,14 +17,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
-import { SUPPORTED_PLATFORMS } from '@/lib/platforms'
+import { platformLabel, platformLogo } from '@/lib/domain/platforms'
 
 function PlatformImg({ platformId }) {
   const label =
-    SUPPORTED_PLATFORMS.find((p) => p.id === platformId)?.label || platformId
+    platformLabel(platformId)
   return (
     <img
-      src={`/platformIcons/${platformId}.png`}
+      src={platformLogo(platformId)}
       alt={label}
       title={label}
       className="size-5 rounded-sm object-contain"

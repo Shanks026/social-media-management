@@ -1,3 +1,4 @@
+import { formatDate, formatCurrency } from '@/lib/format'
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { format } from 'date-fns'
@@ -69,8 +70,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { formatCurrency } from '@/utils/finance'
-import { formatDate } from '@/lib/helper'
 import { cn } from '@/lib/utils'
 import { displayStatus as displayProposalStatus } from '@/lib/domain/proposalStatus'
 

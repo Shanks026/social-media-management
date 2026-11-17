@@ -1,27 +1,6 @@
-import { format } from 'date-fns'
-import { CURRENCY } from '@/utils/constants'
+import { formatCurrency, formatDate } from '@/lib/format'
 
 /* ── Helpers ── */
-function fmtCurrency(val) {
-  // Mirror InvoicePDF: render the ISO code ("INR 1,234") not the ₹ symbol, so
-  // the on-screen preview matches the generated PDF exactly.
-  return new Intl.NumberFormat(CURRENCY.LOCALE, {
-    style: 'currency',
-    currency: CURRENCY.CODE,
-    currencyDisplay: 'code',
-    maximumFractionDigits: 0,
-  }).format(val || 0)
-}
-
-function fmtDate(d) {
-  if (!d) return '—'
-  try {
-    return format(new Date(d), 'd MMMM, yyyy')
-  } catch {
-    return '—'
-  }
-}
-
 function addressLines(addr) {
   if (!addr) return []
   return String(addr).split('\n').map((l) => l.trim()).filter(Boolean)
@@ -80,11 +59,11 @@ export default function HTMLInvoicePreview({ invoice, agency = {} }) {
         <div className="flex gap-11">
           <div>
             <p className="text-[11px] text-gray-500 mb-1.5">Created On</p>
-            <p className="text-[13px] font-bold">{fmtDate(invoice.issue_date)}</p>
+            <p className="text-[13px] font-bold">{formatDate(invoice.issue_date, 'long')}</p>
           </div>
           <div>
             <p className="text-[11px] text-gray-500 mb-1.5">Due On</p>
-            <p className="text-[13px] font-bold">{fmtDate(invoice.due_date)}</p>
+            <p className="text-[13px] font-bold">{formatDate(invoice.due_date, 'long')}</p>
           </div>
         </div>
       </div>
@@ -104,9 +83,9 @@ export default function HTMLInvoicePreview({ invoice, agency = {} }) {
             {item.description || 'Line item'}
           </div>
           <div className="w-14 text-center text-[12px] text-[#111827]">{item.quantity || 1}</div>
-          <div className="w-24 text-right text-[12px] text-[#111827]">{fmtCurrency(item.unit_price)}</div>
+          <div className="w-24 text-right text-[12px] text-[#111827]">{formatCurrency(item.unit_price, { display: 'code' })}</div>
           <div className="w-28 text-right text-[12px] text-[#111827]">
-            {fmtCurrency((item.quantity || 1) * (item.unit_price || 0))}
+            {formatCurrency((item.quantity || 1) * (item.unit_price || 0), { display: 'code' })}
           </div>
         </div>
       ))}
@@ -114,7 +93,7 @@ export default function HTMLInvoicePreview({ invoice, agency = {} }) {
       {/* Total */}
       <div className="flex justify-between items-center pt-5">
         <p className="text-[13px] font-semibold text-[#111827]">Total Amount</p>
-        <p className="text-[22px] font-bold tracking-tight text-[#111827]">{fmtCurrency(invoice.total)}</p>
+        <p className="text-[22px] font-bold tracking-tight text-[#111827]">{formatCurrency(invoice.total, { display: 'code' })}</p>
       </div>
 
       {/* Notes */}

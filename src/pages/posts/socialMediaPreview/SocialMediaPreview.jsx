@@ -1,3 +1,4 @@
+import { platformLabel } from '@/lib/domain/platforms'
 import { useState, useEffect } from 'react'
 import { Sheet, SheetContent } from '@/components/ui/sheet'
 import {
@@ -61,14 +62,14 @@ export default function SocialMediaPreview({
               <SelectContent>
                 {availablePlatforms.map((p) => (
                   <SelectItem key={p} value={p} className="capitalize">
-                    {p === 'twitter' ? 'X / Twitter' : p}
+                    {platformLabel(p)}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           ) : (
             <div className="px-3 py-1.5 rounded-md bg-muted text-sm font-medium text-muted-foreground capitalize w-fit">
-              {activePlatform === 'twitter' ? 'X / Twitter' : activePlatform}
+              {platformLabel(activePlatform)}
             </div>
           )}
         </div>

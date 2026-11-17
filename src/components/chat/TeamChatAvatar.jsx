@@ -1,22 +1,9 @@
 import { MessagesSquare } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
+import { initials } from '@/lib/format'
 
-// Shared across ChatSidebar, ChatThread, and ChatPage's header — one place
-// for "member profile → avatar" so the three don't drift into slightly
-// different custom avatar divs.
-export function MemberAvatar({ member, className }) {
-  return (
-    <Avatar className={cn('size-7', className)}>
-      <AvatarImage src={member?.avatar_url} alt="" />
-      <AvatarFallback className="bg-primary/10 text-[11px] font-semibold text-primary">
-        {(member?.full_name || member?.email || '?')[0].toUpperCase()}
-      </AvatarFallback>
-    </Avatar>
-  )
-}
-
-// Same visual footprint as MemberAvatar, for the workspace-wide channel
+// Same visual footprint as the shared MemberAvatar, for the workspace-wide channel
 // (which has no single "member" to show). Shows the agency logo when one's
 // configured, falling back to a plain icon — same logo/initials-vs-icon
 // tradeoff MemberAvatar makes for people.
@@ -26,7 +13,7 @@ export function TeamChatAvatar({ logoUrl, name, className }) {
       <Avatar className={cn('size-7', className)}>
         <AvatarImage src={logoUrl} alt="" />
         <AvatarFallback className="bg-primary/10 text-[11px] font-semibold text-primary">
-          {(name || 'T')[0].toUpperCase()}
+          {initials(name || 'T', { max: 1 })}
         </AvatarFallback>
       </Avatar>
     )

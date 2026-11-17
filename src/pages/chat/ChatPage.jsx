@@ -2,8 +2,10 @@ import { useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useHeader } from '@/components/misc/header-context'
 import { useSubscription } from '@/api/useSubscription'
-import { useMyChannels, useMemberMap } from '@/api/chat'
-import { MemberAvatar, TeamChatAvatar } from '@/components/chat/MemberAvatar'
+import { useMyChannels } from '@/api/chat'
+import { useMemberMap } from '@/api/team'
+import { MemberAvatar } from '@/components/MemberAvatar'
+import { TeamChatAvatar } from '@/components/chat/TeamChatAvatar'
 import { ChatThread } from '@/components/chat/ChatThread'
 
 // Reflects the URL's selected channel (?channel=<id>), which ChatSidebar also

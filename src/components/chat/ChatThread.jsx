@@ -1,3 +1,4 @@
+import { formatDate } from '@/lib/format'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -5,11 +6,11 @@ import { useQueryClient } from '@tanstack/react-query'
 import { ArrowUp, AtSign, ListChecks, Lock, Pencil, Plus, SmilePlus, Trash2, TriangleAlert, Users, X, Check, PencilRuler } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/context/AuthContext'
+import { useMemberMap } from '@/api/team'
 import { usePermissions } from '@/api/usePermissions'
 import { useTasks } from '@/api/tasks'
 import {
   useChannelMessages,
-  useMemberMap,
   sendMessage,
   editMessage,
   softDeleteMessage,
@@ -18,7 +19,6 @@ import {
   CHAT_REACTION_EMOJIS,
   chatKeys,
 } from '@/api/chat'
-import { formatCompactTimeAgo } from '@/lib/helper'
 import {
   splitMentions,
   detectMention,
@@ -30,7 +30,7 @@ import {
 } from '@/lib/mentions'
 import { SYSTEM_ROLE_PALETTE } from '@/lib/team-roles'
 import { detectSlashCommand, splitReferences } from '@/lib/references'
-import { MemberAvatar } from '@/components/chat/MemberAvatar'
+import { MemberAvatar } from '@/components/MemberAvatar'
 import { AttachEntityMenu } from '@/components/chat/AttachEntityMenu'
 import { ChatEntityCard } from '@/components/chat/ChatEntityCard'
 import { Message, MessageAvatar as MessageAvatarSlot, MessageContent, MessageHeader } from '@/components/ui/message'
@@ -340,7 +340,7 @@ function ChatMessageRow({ message, author, isOwn, canModify, canDelete, showRole
             <Users className="size-3 shrink-0 text-indigo-500" aria-label="Everyone mentioned" />
           )}
           <span className="whitespace-nowrap">
-            {formatCompactTimeAgo(message.created_at)}
+            {formatDate(message.created_at, 'relative')}
             {message.updated_at && ' · edited'}
           </span>
           {!editing && (

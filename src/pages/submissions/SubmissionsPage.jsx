@@ -1,3 +1,5 @@
+import { initials } from '@/lib/format'
+import { MemberAvatar } from '@/components/MemberAvatar'
 import { useState, useMemo, useEffect } from 'react'
 import { NavLink, useNavigate, useSearchParams } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
@@ -31,40 +33,12 @@ import { PlatformStack } from '@/components/PlatformIcon'
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
-function initials(name, email) {
-  const src = name || email || '?'
-  return src
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((w) => w[0]?.toUpperCase() ?? '')
-    .join('')
-}
-
 function timeAgo(iso) {
   if (!iso) return '—'
   return formatDistanceToNow(new Date(iso), { addSuffix: true })
 }
 
 // ─── shared avatar components ────────────────────────────────────────────────
-
-function UserAvatar({ name, email, avatarUrl }) {
-  const [imgError, setImgError] = useState(false)
-  if (avatarUrl && !imgError) {
-    return (
-      <img
-        src={avatarUrl}
-        alt={name || email}
-        onError={() => setImgError(true)}
-        className="size-7 rounded-full object-cover shrink-0 ring-1 ring-border"
-      />
-    )
-  }
-  return (
-    <span className="size-7 text-[10px] rounded-full bg-muted flex items-center justify-center font-semibold text-muted-foreground shrink-0 ring-1 ring-border">
-      {initials(name, email)}
-    </span>
-  )
-}
 
 function ClientAvatar({ name, logoUrl }) {
   const [imgError, setImgError] = useState(false)
@@ -80,7 +54,7 @@ function ClientAvatar({ name, logoUrl }) {
   }
   return (
     <span className="size-7 text-[10px] rounded-full bg-muted flex items-center justify-center font-semibold text-muted-foreground shrink-0 ring-1 ring-border">
-      {initials(name, null)}
+      {initials(name)}
     </span>
   )
 }
@@ -124,9 +98,6 @@ function ColHeader({ label }) {
 }
 
 // ─── tab style ────────────────────────────────────────────────────────────────
-
-const TAB_CLASS =
-  'relative rounded-none bg-transparent px-0 pb-3 pt-0 text-sm font-medium transition-none shadow-none border-b-2 border-transparent text-muted-foreground flex-none w-fit gap-2 data-[state=active]:bg-transparent dark:data-[state=active]:bg-transparent data-[state=active]:text-black dark:data-[state=active]:text-white data-[state=active]:border-black dark:data-[state=active]:border-white data-[state=active]:shadow-none data-[state=active]:border-x-0 data-[state=active]:border-t-0 focus-visible:ring-0'
 
 // ─── status → DB filter ───────────────────────────────────────────────────────
 
@@ -230,10 +201,8 @@ function SubmissionsTab({ tab }) {
             }
             return (
               <div className="flex items-center gap-2 min-w-0">
-                <UserAvatar
-                  name={item.actor_name}
-                  email={item.actor_email}
-                  avatarUrl={item.actor_avatar_url}
+                <MemberAvatar
+                  member={{ full_name: item.actor_name, email: item.actor_email, avatar_url: item.actor_avatar_url }}
                 />
                 <span className="text-sm truncate">
                   {item.actor_name || item.actor_email}
@@ -474,8 +443,8 @@ export default function SubmissionsPage() {
         {/* tabs */}
         <Tabs value={activeTab} onValueChange={setTab} className="w-full">
           <div className="border-b border-border">
-            <TabsList className="h-auto bg-transparent p-0 gap-6 rounded-none">
-              <TabsTrigger value="pending" className={TAB_CLASS}>
+            <TabsList variant="underline">
+              <TabsTrigger value="pending">
                 Pending
                 {pendingCount > 0 && (
                   <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-muted px-1 text-[10px] font-bold text-muted-foreground">
@@ -483,7 +452,7 @@ export default function SubmissionsPage() {
                   </span>
                 )}
               </TabsTrigger>
-              <TabsTrigger value="approved" className={TAB_CLASS}>
+              <TabsTrigger value="approved">
                 Approved
                 {approvedCount > 0 && (
                   <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-muted px-1 text-[10px] font-bold text-muted-foreground">
@@ -491,7 +460,7 @@ export default function SubmissionsPage() {
                   </span>
                 )}
               </TabsTrigger>
-              <TabsTrigger value="changes" className={TAB_CLASS}>
+              <TabsTrigger value="changes">
                 Changes Requested
                 {changesCount > 0 && (
                   <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-pink-500/15 px-1 text-[10px] font-bold text-pink-600">

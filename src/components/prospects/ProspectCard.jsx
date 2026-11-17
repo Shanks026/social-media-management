@@ -1,3 +1,4 @@
+import { formatDate } from '@/lib/format'
 import { useState } from 'react'
 import { MapPin, MoreHorizontal, Pencil, Trash2, Check, ArrowRight } from 'lucide-react'
 import { toast } from 'sonner'
@@ -16,7 +17,6 @@ import { statusTone } from '@/lib/statusTone'
 import { statusLabel as prospectStatusLabel } from '@/lib/domain/prospectStatus'
 import { ProspectSourceBadge } from './ProspectSourceBadge'
 import { useUpdateProspect, PROSPECT_STATUSES } from '@/api/prospects'
-import { formatDate } from '@/lib/helper'
 
 
 export function ProspectCard({ prospect, onClick, onEdit, onDelete }) {

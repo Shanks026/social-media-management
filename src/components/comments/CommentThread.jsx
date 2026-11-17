@@ -1,3 +1,5 @@
+import { MemberAvatar } from '@/components/MemberAvatar'
+import { formatDate } from '@/lib/format'
 import { useMemo, useState, useRef, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -30,7 +32,6 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { splitMentions, detectMention, MENTION_CLASS, MENTION_TEXT_CLASS, MY_MENTION_TEXT_CLASS } from '@/lib/mentions'
 import { SYSTEM_ROLE_PALETTE } from '@/lib/team-roles'
-import { formatCompactTimeAgo } from '@/lib/helper'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -41,26 +42,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-
-// ─── Avatar ────────────────────────────────────────────────────────────────────
-
-function MemberAvatar({ member, size = 'size-7' }) {
-  if (member?.avatar_url) {
-    return (
-      <img
-        src={member.avatar_url}
-        alt=""
-        className={cn(size, 'rounded-full object-cover shrink-0 ring-1 ring-border')}
-      />
-    )
-  }
-  return (
-    <div className={cn(size, 'rounded-full bg-primary/10 flex items-center justify-center text-[11px] font-semibold text-primary shrink-0')}>
-      {(member?.full_name || member?.name || member?.email || '?')[0].toUpperCase()}
-    </div>
-  )
-}
-
 
 // ─── Reactions ─────────────────────────────────────────────────────────────────
 
@@ -248,7 +229,7 @@ function CommentRow({ comment, author, mentionNames, myMentionName, memberMap, c
             </span>
           )}
           <span className="text-[11px] text-muted-foreground/80 shrink-0 whitespace-nowrap">
-            {formatCompactTimeAgo(comment.created_at)}
+            {formatDate(comment.created_at, 'relative')}
             {comment.updated_at && ' · edited'}
           </span>
 

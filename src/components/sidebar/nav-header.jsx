@@ -1,3 +1,4 @@
+import { initials } from '@/lib/format'
 import { useSubscription } from '@/api/useSubscription'
 import {
   SidebarHeader,
@@ -50,16 +51,6 @@ export function AppSidebarHeader({ agencySettings }) {
   // Show Tercero default when: Ignite (flag off) OR Velocity/Quantum with no logo uploaded yet
   const showTerceroDefault = !showAgencyBranding || !hasAgencyLogo
   const isBrandingComplete = !!(showAgencyBranding && name && (logo || horizontalLogo) && plan && name !== APP_NAME)
-
-  const getInitials = (name) => {
-    const finalName = name || APP_NAME
-    return finalName
-      .split(' ')
-      .map((n) => n[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2)
-  }
 
   return (
     <SidebarHeader className="px-2">
@@ -129,7 +120,7 @@ export function AppSidebarHeader({ agencySettings }) {
                 ) : (
                   <div className="flex size-full items-center justify-center bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 rounded-lg">
                     <span className="text-[10px] font-black uppercase tracking-tighter">
-                      {getInitials(name)}
+                      {initials(name || APP_NAME)}
                     </span>
                   </div>
                 )

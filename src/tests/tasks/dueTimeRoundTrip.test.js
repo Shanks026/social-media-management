@@ -1,8 +1,8 @@
 // Must run in a non-UTC zone: the bug is invisible at UTC+0.
 globalThis.process.env.TZ = 'Asia/Kolkata'
 
+import { toDateTimeLocal, fromDateTimeLocal } from '@/lib/format'
 import { describe, it, expect } from 'vitest'
-import { toDateTimeLocal, fromDateTimeLocal } from '@/lib/helper'
 
 // Regression test for audit bug B11: EditTaskDialog seeded its
 // <input type="datetime-local"> with the UTC wall time

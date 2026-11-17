@@ -1,3 +1,4 @@
+import { PlatformIcon } from '@/components/PlatformIcon'
 import { useState } from 'react'
 import {
   Link2,
@@ -27,22 +28,6 @@ import {
 } from '@/api/campaigns'
 import { toast } from 'sonner'
 import StatusBadge from '@/components/StatusBadge'
-
-const PlatformIcon = ({ name }) => {
-  const fileName = name === 'google_business' ? 'google_busines' : name
-  const imgSrc = `/platformIcons/${fileName}.png`
-
-  return (
-    <div className="flex size-5 items-center justify-center rounded-full border border-white dark:border-[#1c1c1f] bg-white dark:bg-zinc-900 shadow-sm overflow-hidden shrink-0">
-      <img
-        src={imgSrc}
-        alt={name}
-        className="size-4 object-contain"
-        onError={(e) => (e.target.style.display = 'none')}
-      />
-    </div>
-  )
-}
 
 export function LinkPostsToCampaignDialog({
   open,
@@ -243,7 +228,7 @@ export function LinkPostsToCampaignDialog({
                       <div className="flex items-center -space-x-1.5">
                         {post.platforms?.length > 0 ? (
                           post.platforms.map((p) => (
-                            <PlatformIcon key={p} name={p} />
+                            <PlatformIcon key={p} platform={p} size={20} />
                           ))
                         ) : (
                           <span className="text-[10px] text-muted-foreground/50 ml-1">

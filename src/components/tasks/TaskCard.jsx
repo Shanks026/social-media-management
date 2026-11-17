@@ -1,3 +1,5 @@
+import { PlatformIcon } from '@/components/PlatformIcon'
+import { MemberAvatar } from '@/components/MemberAvatar'
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query'
@@ -25,21 +27,6 @@ import StatusBadge from '@/components/StatusBadge'
 // Matches the icon treatment used in the campaign's Deliverables table
 // (CampaignDetailPage) — a distinct, PNG-based icon set from the shared
 // SVG PlatformIcon in @/components/PlatformIcon, kept local for visual parity.
-const PlatformIcon = ({ name }) => {
-  const fileName = name === 'google_business' ? 'google_busines' : name
-  const imgSrc = `/platformIcons/${fileName}.png`
-
-  return (
-    <div className="flex size-5 items-center justify-center rounded-full border border-white dark:border-[#1c1c1f] bg-white dark:bg-zinc-900 shadow-sm overflow-hidden shrink-0">
-      <img
-        src={imgSrc}
-        alt={name}
-        className="size-4 object-contain"
-        onError={(e) => (e.target.style.display = 'none')}
-      />
-    </div>
-  )
-}
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -149,7 +136,7 @@ export function DeliverablePreviewRow({ post, client }) {
         {post.platforms?.length > 0 && (
           <div className="flex items-center -space-x-1">
             {post.platforms.map((p) => (
-              <PlatformIcon key={p} name={p} />
+              <PlatformIcon key={p} platform={p} size={20} />
             ))}
           </div>
         )}
@@ -353,22 +340,7 @@ export default function TaskCard({ task, clientMap, campaignMap = {}, memberMap 
             canAssignTasks ? (
               <div className={cn('flex items-center gap-1.5 mt-auto pt-3', assignee._removed && 'opacity-60')}>
                 <span className="text-xs text-muted-foreground shrink-0">Assigned to</span>
-                {assignee.avatar_url ? (
-                  <img
-                    src={assignee.avatar_url}
-                    alt=""
-                    className={cn('size-4 rounded-full object-cover shrink-0', assignee._removed && 'grayscale')}
-                  />
-                ) : (
-                  <div
-                    className={cn(
-                      'size-4 rounded-full flex items-center justify-center text-[8px] font-semibold shrink-0',
-                      assignee._removed ? 'bg-muted text-muted-foreground' : 'bg-primary/10 text-primary',
-                    )}
-                  >
-                    {(assignee.full_name || assignee.email || '?')[0].toUpperCase()}
-                  </div>
-                )}
+                <MemberAvatar member={assignee} size="size-4" className={cn('text-[8px]', assignee._removed && 'grayscale')} />
                 <span className="text-xs text-foreground truncate">
                   {assignee.full_name || assignee.email}
                   {assignee._removed && <span className="text-muted-foreground ml-1">(Removed)</span>}
@@ -380,22 +352,7 @@ export default function TaskCard({ task, clientMap, campaignMap = {}, memberMap 
             ) : (
               <div className={cn('flex items-center gap-1.5 mt-auto pt-3', creatorMember?._removed && 'opacity-60')}>
                 <span className="text-xs text-muted-foreground shrink-0">Assigned by</span>
-                {creatorMember?.avatar_url ? (
-                  <img
-                    src={creatorMember.avatar_url}
-                    alt=""
-                    className={cn('size-4 rounded-full object-cover shrink-0', creatorMember?._removed && 'grayscale')}
-                  />
-                ) : (
-                  <div
-                    className={cn(
-                      'size-4 rounded-full flex items-center justify-center text-[8px] font-semibold shrink-0',
-                      creatorMember?._removed ? 'bg-muted text-muted-foreground' : 'bg-primary/10 text-primary',
-                    )}
-                  >
-                    {(creatorMember?.full_name || creatorMember?.email || '?')[0].toUpperCase()}
-                  </div>
-                )}
+                <MemberAvatar member={creatorMember} size="size-4" className={cn('text-[8px]', creatorMember?._removed && 'grayscale')} />
                 <span className="text-xs text-foreground truncate">
                   {creatorMember?.full_name || creatorMember?.email || 'Team member'}
                   {creatorMember?._removed && <span className="text-muted-foreground ml-1">(Removed)</span>}

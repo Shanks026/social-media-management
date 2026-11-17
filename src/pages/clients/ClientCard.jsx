@@ -1,3 +1,4 @@
+import { formatDate, initials } from '@/lib/format'
 import { useState } from 'react'
 import { cn } from '@/lib/utils'
 
@@ -111,28 +112,10 @@ function ClientCard({ client, onOpen, onDelete }) {
 
   const health = getUrgencyStatus(pipeline.next_post_at)
 
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('en-GB', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-    })
-  }
-
   const nextPostFormatted = pipeline.next_post_at
     ? formatDate(pipeline.next_post_at)
     : null
   const joinedDateFormatted = formatDate(client.created_at)
-
-  const initials = client.name
-    ? client.name
-        .split(' ')
-        .map((n) => n[0])
-        .join('')
-        .toUpperCase()
-        .slice(0, 2)
-    : 'CL'
-
 
   return (
     <>
@@ -153,7 +136,7 @@ function ClientCard({ client, onOpen, onDelete }) {
                 <img src={client.logo_url} alt="" className="h-full w-full object-cover" />
               ) : (
                 <div className="h-full w-full flex items-center justify-center text-muted-foreground font-semibold text-sm">
-                  {initials}
+                  {initials(client.name || 'CL')}
                 </div>
               )}
             </div>

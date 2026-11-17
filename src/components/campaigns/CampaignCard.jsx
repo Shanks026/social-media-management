@@ -1,8 +1,8 @@
+import { formatDate, initials } from '@/lib/format'
 import { Target, CalendarDays } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { Card, CardContent } from '@/components/ui/card'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
-import { format, parseISO } from 'date-fns'
 import StatusBadge from '@/components/StatusBadge'
 
 const PIPELINE_COLORS = {
@@ -69,14 +69,6 @@ const CircularProgress = ({ progress, size = 32, strokeWidth = 3 }) => {
       </svg>
     </div>
   )
-}
-
-function formatDateRange(start, end) {
-  if (!start && !end) return 'No dates set'
-  const fmt = (d) => format(parseISO(d), 'MMM d, yyyy')
-  if (start && end) return `${fmt(start)} – ${fmt(end)}`
-  if (start) return `From ${fmt(start)}`
-  return `Until ${fmt(end)}`
 }
 
 // onEdit/onDelete/onStatusChange are still passed by callers but unused here
@@ -240,7 +232,7 @@ export function CampaignCard({
               <Avatar className="size-6">
                 <AvatarImage src={client_avatar} alt={client_name} />
                 <AvatarFallback className="text-[9px] font-bold">
-                  {client_name.split(' ').filter(w => /[a-zA-Z]/.test(w)).map(w => w[0]).join('').toUpperCase().slice(0, 2)}
+                  {initials(client_name)}
                 </AvatarFallback>
               </Avatar>
               <span className="text-xs font-medium truncate max-w-[120px]">
@@ -253,7 +245,7 @@ export function CampaignCard({
         {/* Date Range */}
         <div className="flex items-center shrink-0 text-xs gap-1.5 font-medium text-muted-foreground/80">
           <CalendarDays className="size-3.5 opacity-70" />
-          <span>{formatDateRange(start_date, end_date)}</span>
+          <span>{formatDate({ start: start_date, end: end_date }, 'range')}</span>
         </div>
       </div>
     </CardContent>

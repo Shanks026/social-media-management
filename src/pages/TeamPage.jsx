@@ -1,3 +1,5 @@
+import { MemberAvatar } from '@/components/MemberAvatar'
+import { formatDate } from '@/lib/format'
 import { useEffect, useState, useMemo, useCallback } from 'react'
 import {
   useReactTable,
@@ -79,7 +81,6 @@ import { useQueryClient } from '@tanstack/react-query'
 import { InviteDialog } from '@/components/team/InviteDialog'
 import { EditAccessDialog } from '@/components/team/EditAccessDialog'
 import { DOCS_LEVEL_CONFIG } from '@/components/team/teamAccessConfig'
-import { formatDate } from '@/lib/helper'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import {
@@ -98,26 +99,6 @@ import JobRoleBadges from '@/components/team/JobRoleBadges'
 import { getJobRoleColor } from '@/lib/job-roles'
 
 // ─── Sub-components ─────────────────────────────────────────────────────────
-
-function MemberAvatar({ name, email, avatarUrl }) {
-  if (avatarUrl) {
-    return (
-      <img
-        src={avatarUrl}
-        alt={name || email}
-        className="size-8 rounded-lg object-cover shrink-0"
-      />
-    )
-  }
-  const initials = name
-    ? name.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase()
-    : (email?.[0] ?? '?').toUpperCase()
-  return (
-    <div className="size-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary text-xs font-semibold shrink-0">
-      {initials}
-    </div>
-  )
-}
 
 function SortableHeader({ column, label }) {
   const dir = column.getIsSorted()
@@ -289,7 +270,7 @@ export default function TeamPage() {
         const isSelf = m.member_user_id === user?.id
         return (
           <div className="flex items-center gap-3 py-1">
-            <MemberAvatar name={m.full_name} email={m.email} avatarUrl={m.avatar_url} />
+            <MemberAvatar member={m} size="size-8" shape="square" className="text-xs" />
             <div className="min-w-0">
               <div className="flex items-center gap-1.5 flex-wrap">
                 <span className="text-sm font-medium leading-tight">
@@ -697,7 +678,7 @@ export default function TeamPage() {
               onValueChange={(v) => { setActiveTab(v); setRoleFilter('all') }}
               className="w-full"
             >
-              <TabsList className="bg-transparent h-auto w-full justify-start rounded-none p-0 gap-8 border-b border-border/40">
+              <TabsList variant="underline">
                 {[
                   { key: 'active', label: 'Active Members', count: members.length },
                   { key: 'removed', label: 'Removed', count: removedMembers.length },
@@ -705,21 +686,6 @@ export default function TeamPage() {
                   <TabsTrigger
                     key={tab.key}
                     value={tab.key}
-                    className="
-                      relative rounded-none bg-transparent px-0 pb-3 pt-0 text-[13px] font-medium transition-none
-                      shadow-none border-b-2 border-transparent text-muted-foreground
-                      flex-none w-fit gap-2
-                      data-[state=active]:bg-transparent
-                      dark:data-[state=active]:bg-transparent
-                      data-[state=active]:text-black
-                      dark:data-[state=active]:text-white
-                      data-[state=active]:border-black
-                      dark:data-[state=active]:border-white
-                      data-[state=active]:shadow-none
-                      data-[state=active]:border-x-0
-                      data-[state=active]:border-t-0
-                      focus-visible:ring-0
-                    "
                   >
                     {tab.label}
                     {tab.count > 0 && (

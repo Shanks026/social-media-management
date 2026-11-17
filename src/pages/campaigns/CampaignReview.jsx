@@ -1,3 +1,4 @@
+import { PlatformIcon } from '@/components/PlatformIcon'
 import { useState, useMemo, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import { format, parseISO } from 'date-fns'
@@ -25,20 +26,6 @@ import { isDocumentUrl, getDocumentExtension, getDocumentPreviewUrl } from '@/li
 
 function isVideo(url = '') {
   return /\.(mp4|webm|mov|ogg|avi)(\?.*)?$/i.test(url)
-}
-
-function PlatformIcon({ name }) {
-  const fileName = name === 'google_business' ? 'google_busines' : name
-  return (
-    <div className="flex h-6 w-6 items-center justify-center rounded-full border border-border bg-background shadow-sm overflow-hidden">
-      <img
-        src={`/platformIcons/${fileName}.png`}
-        alt={name}
-        className="size-4 object-contain"
-        onError={(e) => (e.target.style.display = 'none')}
-      />
-    </div>
-  )
 }
 
 // ── Branding header ────────────────────────────────────────────────────────────
@@ -271,7 +258,7 @@ function MainPanel({ post, onApprove, onRevise, isSubmitting, feedback, setFeedb
       {/* Platforms */}
       <div className="flex items-center gap-2 flex-wrap">
         {platforms.length > 0 ? (
-          platforms.map((p) => <PlatformIcon key={p} name={p} />)
+          platforms.map((p) => <PlatformIcon key={p} platform={p} size={24} />)
         ) : (
           <span className="text-xs text-muted-foreground">No platforms specified</span>
         )}
