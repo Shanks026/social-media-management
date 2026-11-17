@@ -22,6 +22,7 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import { getUrgencyStatus } from '@/lib/client-helpers'
+import { isNeedsAttention } from '@/lib/domain/clientStatus'
 import { getPublishState, renderCaption, isDocumentUrl, getDocumentExtension, getDocumentPreviewUrl } from '@/lib/helper'
 import StatusBadge from '@/components/StatusBadge'
 import {
@@ -546,7 +547,7 @@ export function DeliverableCard({ post, client }) {
                     ? format(new Date(post.target_date), "d MMM yyyy '·' h:mm a")
                     : 'No Date Set'}
               </span>
-              {health?.label && ['Overdue', 'Urgent'].includes(health.label) && (
+              {health && isNeedsAttention(health.key) && (
                 <span className={cn('text-xs font-semibold', health.color.replace('bg-', 'text-'))}>
                   {health.label}
                 </span>

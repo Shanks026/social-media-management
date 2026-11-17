@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '@/context/AuthContext'
 import { resolveWorkspace } from '@/lib/workspace'
 import { getUrgencyStatus } from '@/lib/client-helpers'
+import { isNeedsAttention } from '@/lib/domain/clientStatus'
 
 export function useClients() {
   const { workspaceUserId } = useAuth()
@@ -51,7 +52,7 @@ export function useUrgentClients() {
         .filter((c) => !c.is_internal)
         .filter((c) => {
           const urgency = getUrgencyStatus(c.pipeline?.next_post_at)
-          return urgency?.label === 'Overdue' || urgency?.label === 'Urgent'
+          return isNeedsAttention(urgency?.key)
         })
         .map((c) => ({ id: c.id, name: c.name, logo_url: c.logo_url, next_post_at: c.pipeline.next_post_at })),
   })
