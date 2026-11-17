@@ -678,7 +678,7 @@ export default function TeamPage() {
               onValueChange={(v) => { setActiveTab(v); setRoleFilter('all') }}
               className="w-full"
             >
-              <TabsList className="bg-transparent h-auto w-full justify-start rounded-none p-0 gap-8 border-b border-border/40">
+              <TabsList variant="underline">
                 {[
                   { key: 'active', label: 'Active Members', count: members.length },
                   { key: 'removed', label: 'Removed', count: removedMembers.length },
@@ -686,21 +686,6 @@ export default function TeamPage() {
                   <TabsTrigger
                     key={tab.key}
                     value={tab.key}
-                    className="
-                      relative rounded-none bg-transparent px-0 pb-3 pt-0 text-[13px] font-medium transition-none
-                      shadow-none border-b-2 border-transparent text-muted-foreground
-                      flex-none w-fit gap-2
-                      data-[state=active]:bg-transparent
-                      dark:data-[state=active]:bg-transparent
-                      data-[state=active]:text-black
-                      dark:data-[state=active]:text-white
-                      data-[state=active]:border-black
-                      dark:data-[state=active]:border-white
-                      data-[state=active]:shadow-none
-                      data-[state=active]:border-x-0
-                      data-[state=active]:border-t-0
-                      focus-visible:ring-0
-                    "
                   >
                     {tab.label}
                     {tab.count > 0 && (

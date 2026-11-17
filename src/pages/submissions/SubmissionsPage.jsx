@@ -99,9 +99,6 @@ function ColHeader({ label }) {
 
 // ─── tab style ────────────────────────────────────────────────────────────────
 
-const TAB_CLASS =
-  'relative rounded-none bg-transparent px-0 pb-3 pt-0 text-sm font-medium transition-none shadow-none border-b-2 border-transparent text-muted-foreground flex-none w-fit gap-2 data-[state=active]:bg-transparent dark:data-[state=active]:bg-transparent data-[state=active]:text-black dark:data-[state=active]:text-white data-[state=active]:border-black dark:data-[state=active]:border-white data-[state=active]:shadow-none data-[state=active]:border-x-0 data-[state=active]:border-t-0 focus-visible:ring-0'
-
 // ─── status → DB filter ───────────────────────────────────────────────────────
 
 const TAB_STATUS = {
@@ -446,8 +443,8 @@ export default function SubmissionsPage() {
         {/* tabs */}
         <Tabs value={activeTab} onValueChange={setTab} className="w-full">
           <div className="border-b border-border">
-            <TabsList className="h-auto bg-transparent p-0 gap-6 rounded-none">
-              <TabsTrigger value="pending" className={TAB_CLASS}>
+            <TabsList variant="underline">
+              <TabsTrigger value="pending">
                 Pending
                 {pendingCount > 0 && (
                   <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-muted px-1 text-[10px] font-bold text-muted-foreground">
@@ -455,7 +452,7 @@ export default function SubmissionsPage() {
                   </span>
                 )}
               </TabsTrigger>
-              <TabsTrigger value="approved" className={TAB_CLASS}>
+              <TabsTrigger value="approved">
                 Approved
                 {approvedCount > 0 && (
                   <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-muted px-1 text-[10px] font-bold text-muted-foreground">
@@ -463,7 +460,7 @@ export default function SubmissionsPage() {
                   </span>
                 )}
               </TabsTrigger>
-              <TabsTrigger value="changes" className={TAB_CLASS}>
+              <TabsTrigger value="changes">
                 Changes Requested
                 {changesCount > 0 && (
                   <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-pink-500/15 px-1 text-[10px] font-bold text-pink-600">

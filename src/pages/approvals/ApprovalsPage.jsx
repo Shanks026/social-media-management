@@ -71,9 +71,6 @@ import { NavLink, useNavigate, useSearchParams } from 'react-router-dom'
 
 const PAGE_SIZE = 25
 
-const TAB_TRIGGER_CLASS =
-  'relative rounded-none bg-transparent px-0 pb-3 pt-0 text-sm font-medium transition-none shadow-none border-b-2 border-transparent text-muted-foreground flex-none w-fit gap-2 data-[state=active]:bg-transparent dark:data-[state=active]:bg-transparent data-[state=active]:text-black dark:data-[state=active]:text-white data-[state=active]:border-black dark:data-[state=active]:border-white data-[state=active]:shadow-none data-[state=active]:border-x-0 data-[state=active]:border-t-0 focus-visible:ring-0'
-
 // ── Small helpers ─────────────────────────────────────────────────────────────
 
 function isVideoUrl(url) {
@@ -626,20 +623,20 @@ export default function ApprovalsPage() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setTab}>
-        <TabsList className="bg-transparent h-auto w-full justify-start rounded-none p-0 gap-8 border-b border-border/40">
-          <TabsTrigger value="pending" className={TAB_TRIGGER_CLASS}>
+        <TabsList variant="underline">
+          <TabsTrigger value="pending">
             Pending
             {pendingCount > 0 && (
               <span className="tabular-nums text-xs text-muted-foreground">{pendingCount}</span>
             )}
           </TabsTrigger>
-          <TabsTrigger value="approved" className={TAB_TRIGGER_CLASS}>
+          <TabsTrigger value="approved">
             Approved
             {approvedCount > 0 && (
               <span className="tabular-nums text-xs text-muted-foreground">{approvedCount}</span>
             )}
           </TabsTrigger>
-          <TabsTrigger value="changes" className={TAB_TRIGGER_CLASS}>
+          <TabsTrigger value="changes">
             Changes Requested
             {changesCount > 0 && (
               <span className="tabular-nums text-xs text-muted-foreground">{changesCount}</span>
