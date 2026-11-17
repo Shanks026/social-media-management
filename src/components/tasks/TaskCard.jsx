@@ -1,3 +1,4 @@
+import { PlatformIcon } from '@/components/PlatformIcon'
 import { MemberAvatar } from '@/components/MemberAvatar'
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
@@ -26,21 +27,6 @@ import StatusBadge from '@/components/StatusBadge'
 // Matches the icon treatment used in the campaign's Deliverables table
 // (CampaignDetailPage) — a distinct, PNG-based icon set from the shared
 // SVG PlatformIcon in @/components/PlatformIcon, kept local for visual parity.
-const PlatformIcon = ({ name }) => {
-  const fileName = name === 'google_business' ? 'google_busines' : name
-  const imgSrc = `/platformIcons/${fileName}.png`
-
-  return (
-    <div className="flex size-5 items-center justify-center rounded-full border border-white dark:border-[#1c1c1f] bg-white dark:bg-zinc-900 shadow-sm overflow-hidden shrink-0">
-      <img
-        src={imgSrc}
-        alt={name}
-        className="size-4 object-contain"
-        onError={(e) => (e.target.style.display = 'none')}
-      />
-    </div>
-  )
-}
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -185,7 +171,7 @@ export function DeliverablePreviewRow({ post, client }) {
         {post.platforms?.length > 0 && (
           <div className="flex items-center -space-x-1">
             {post.platforms.map((p) => (
-              <PlatformIcon key={p} name={p} />
+              <PlatformIcon key={p} platform={p} size={20} />
             ))}
           </div>
         )}

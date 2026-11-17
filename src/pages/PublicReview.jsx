@@ -1,3 +1,4 @@
+import { PlatformIcon } from '@/components/PlatformIcon'
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
@@ -49,20 +50,6 @@ import TwitterPreview from '@/pages/posts/socialMediaPreview/TwitterPreview'
 import LinkedInPreview from '@/pages/posts/socialMediaPreview/LinkedInPreview'
 import FacebookPreview from '@/pages/posts/socialMediaPreview/FacebookPreview'
 import YouTubePreview from '@/pages/posts/socialMediaPreview/YouTubePreview'
-
-const PlatformIcon = ({ name }) => {
-  const fileName = name === 'google_business' ? 'google_busines' : name
-  return (
-    <div className="flex h-6 w-6 items-center justify-center rounded-full overflow-hidden p-0.5">
-      <img
-        src={`/platformIcons/${fileName}.png`}
-        alt={name}
-        className="w-full h-full object-contain"
-        onError={(e) => (e.target.style.display = 'none')}
-      />
-    </div>
-  )
-}
 
 // Detect if a URL is a video — matches extensions, path segments, and blob URLs
 function isVideo(url = '') {
@@ -299,7 +286,7 @@ export default function PublicReview() {
                   key={p}
                   className="flex items-center gap-1 px-1.5 py-1 rounded-full border text-xs font-medium text-muted-foreground"
                 >
-                  <PlatformIcon name={p} />
+                  <PlatformIcon platform={p} size={24} />
                   <span className="capitalize">{p.replace('_', ' ')}</span>
                 </div>
               ))}
@@ -324,7 +311,7 @@ export default function PublicReview() {
               <div className="flex flex-wrap gap-x-4 gap-y-1.5">
                 {Object.entries(post.platform_schedules).map(([platform, { scheduled_at }]) => (
                   <div key={platform} className="flex items-center gap-1.5 font-medium text-foreground">
-                    <PlatformIcon name={platform} />
+                    <PlatformIcon platform={platform} size={24} />
                     <span>{format(new Date(scheduled_at), 'MMM dd @ p')}</span>
                   </div>
                 ))}
@@ -549,7 +536,7 @@ export default function PublicReview() {
                       {post.platform?.map((p) => (
                         <SelectItem key={p} value={p} className="text-xs">
                           <div className="flex items-center gap-2">
-                            <PlatformIcon name={p} />
+                            <PlatformIcon platform={p} size={24} />
                             <span className="capitalize">{p.replace('_', ' ')}</span>
                           </div>
                         </SelectItem>
@@ -615,7 +602,7 @@ export default function PublicReview() {
                 {post.platform?.map((p) => (
                   <SelectItem key={p} value={p} className="text-xs">
                     <div className="flex items-center gap-2">
-                      <PlatformIcon name={p} />
+                      <PlatformIcon platform={p} size={24} />
                       <span className="capitalize">{p.replace('_', ' ')}</span>
                     </div>
                   </SelectItem>

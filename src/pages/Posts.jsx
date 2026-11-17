@@ -1,3 +1,5 @@
+import { PlatformIcon } from '@/components/PlatformIcon'
+import { ENABLED_PLATFORMS } from '@/lib/domain/platforms'
 import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { format } from 'date-fns'
@@ -6,12 +8,6 @@ import {
   Plus,
   LayoutGrid,
   TableProperties,
-  Instagram,
-  Linkedin,
-  Twitter,
-  Facebook,
-  Youtube,
-  Globe,
   FilterX,
   Calendar as CalendarIcon,
   Building2,
@@ -102,14 +98,6 @@ function getPostHealth(post) {
 }
 
 // ─── Constants ──────────────────────────────────────────
-const PLATFORMS = [
-  { id: 'instagram', label: 'Instagram', icon: Instagram, color: '#E4405F' },
-  { id: 'linkedin', label: 'LinkedIn', icon: Linkedin, color: '#0077B5' },
-  { id: 'twitter', label: 'Twitter', icon: Twitter, color: '#000000' },
-  { id: 'facebook', label: 'Facebook', icon: Facebook, color: '#1877F2' },
-  { id: 'youtube', label: 'YouTube', icon: Youtube, color: '#FF0000' },
-]
-
 const STATUS_TABS = [
   { key: 'ALL',                 label: 'All' },
   { key: 'DRAFT',               label: 'Drafts' },
@@ -125,34 +113,6 @@ const STATUS_TABS = [
   { key: 'PUBLISHED',           label: 'Published' },
   { key: 'ARCHIVED',            label: 'Archived' },
 ]
-
-const PlatformIcon = ({ name, size = 14 }) => {
-  const icons = {
-    instagram: { icon: Instagram, bg: 'bg-[#E4405F]' },
-    linkedin: { icon: Linkedin, bg: 'bg-[#0077B5]' },
-    twitter: { icon: Twitter, bg: 'bg-black dark:bg-white' },
-    facebook: { icon: Facebook, bg: 'bg-[#1877F2]' },
-    youtube: { icon: Youtube, bg: 'bg-[#FF0000]' },
-    google_business: { icon: Globe, bg: 'bg-[#4285F4]' },
-  }
-  const p = icons[name?.toLowerCase()]
-  if (!p) return null
-  const Icon = p.icon
-  return (
-    <div
-      className={cn(
-        'flex items-center justify-center rounded-full shrink-0',
-        p.bg,
-        name?.toLowerCase() === 'twitter'
-          ? 'text-white dark:text-black'
-          : 'text-white',
-      )}
-      style={{ width: size + 10, height: size + 10 }}
-    >
-      <Icon style={{ width: size, height: size }} />
-    </div>
-  )
-}
 
 // ─── Main Page ──────────────────────────────────────────
 export default function Posts() {
@@ -315,7 +275,7 @@ export default function Posts() {
       render: (item) => (
         <div className="flex items-center -space-x-1.5">
           {(item.platforms || []).map((p) => (
-            <PlatformIcon key={p} name={p} size={12} />
+            <PlatformIcon key={p} platform={p} size={22} variant="chip" />
           ))}
           {(!item.platforms || item.platforms.length === 0) && (
             <span className="text-xs text-muted-foreground">—</span>
@@ -489,10 +449,10 @@ export default function Posts() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Platforms</SelectItem>
-              {PLATFORMS.map((p) => (
+              {ENABLED_PLATFORMS.map((p) => (
                 <SelectItem key={p.id} value={p.id}>
                   <div className="flex items-center gap-2">
-                    <p.icon size={12} />
+                    <PlatformIcon platform={p.id} size={16} />
                     {p.label}
                   </div>
                 </SelectItem>

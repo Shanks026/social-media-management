@@ -46,7 +46,7 @@ import {
   Pencil,
 } from 'lucide-react'
 
-import { SUPPORTED_PLATFORMS } from '@/lib/platforms'
+import { platformById, platformLogo } from '@/lib/domain/platforms'
 import HorizontalLogoCropDialog from '@/components/HorizontalLogoCropDialog'
 
 function extractStoragePath(publicUrl) {
@@ -572,7 +572,7 @@ export default function AgencySettings() {
           {platforms.length > 0 ? (
             <div className="flex flex-wrap gap-3">
               {platforms.map((pId) => {
-                const platform = SUPPORTED_PLATFORMS.find((p) => p.id === pId)
+                const platform = platformById(pId)
                 if (!platform) return null
                 return (
                   <div
@@ -580,7 +580,7 @@ export default function AgencySettings() {
                     className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border bg-card/50"
                   >
                     <img
-                      src={`/platformIcons/${platform.id === 'google_business' ? 'google_busines' : platform.id}.png`}
+                      src={platformLogo(platform.id)}
                       alt={platform.label}
                       className="size-4 object-contain"
                     />
@@ -869,7 +869,7 @@ export default function AgencySettings() {
             {bPlatforms.length > 0 ? (
               <div className="flex flex-wrap gap-3">
                 {bPlatforms.map((pId) => {
-                  const platform = SUPPORTED_PLATFORMS.find((p) => p.id === pId)
+                  const platform = platformById(pId)
                   if (!platform) return null
                   return (
                     <div
@@ -877,7 +877,7 @@ export default function AgencySettings() {
                       className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border bg-card/50"
                     >
                       <img
-                        src={`/platformIcons/${platform.id === 'google_business' ? 'google_busines' : platform.id}.png`}
+                        src={platformLogo(platform.id)}
                         alt={platform.label}
                         className="size-4 object-contain"
                       />

@@ -77,7 +77,10 @@ import { StatBar, StatCell } from '@/components/ui/stat-bar'
 import WorkflowHealth from '@/components/WorkflowHealth'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
-import { SUPPORTED_PLATFORMS } from '@/lib/platforms'
+import { ENABLED_PLATFORMS, platformChartConfig } from '@/lib/domain/platforms'
+import { PlatformIcon, PlatformChartTick } from '@/components/PlatformIcon'
+
+const PLATFORM_CHART_CONFIG = platformChartConfig('Deliverables')
 import { getUrgencyStatus } from '@/lib/client-helpers'
 import { statusLabel as campaignStatusLabel } from '@/lib/domain/campaignStatus'
 import {
@@ -85,45 +88,6 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from '@/components/ui/chart'
-
-const PlatformIcon = ({ name }) => {
-  const fileName = name === 'google_business' ? 'google_busines' : name
-  const imgSrc = `/platformIcons/${fileName}.png`
-
-  return (
-    <div className="flex size-5 items-center justify-center rounded-full border border-border bg-background shadow-sm overflow-hidden shrink-0">
-      <img
-        src={imgSrc}
-        alt={name}
-        className="size-4 object-contain"
-        onError={(e) => (e.target.style.display = 'none')}
-      />
-    </div>
-  )
-}
-
-const CustomPlatformTick = ({ x, y, payload }) => {
-  return (
-    <g transform={`translate(${x - 30},${y - 12})`}>
-      <image
-        href={`/platformIcons/${payload.value}.png`}
-        height="24"
-        width="24"
-      />
-    </g>
-  )
-}
-
-const platformChartConfig = {
-  posts: { label: 'Deliverables' },
-  ...SUPPORTED_PLATFORMS.reduce((acc, p) => {
-    acc[p.id] =
-      p.id === 'twitter'
-        ? { label: p.label, theme: { light: '#000000', dark: '#cbd5e1' } }
-        : { label: p.label, color: p.color }
-    return acc
-  }, {}),
-}
 
 const STATUS_STYLES = {
   ACTIVE: 'bg-emerald-500/15 text-emerald-700',
@@ -197,7 +161,7 @@ export default function CampaignDetailPage() {
       },
     )
 
-    return SUPPORTED_PLATFORMS
+    return ENABLED_PLATFORMS
       .map((sp) => ({
         platform: sp.id,
         label: sp.label,
@@ -632,7 +596,7 @@ export default function CampaignDetailPage() {
                                 {pv?.platforms?.length > 0 && (
                                   <div className="flex items-center -space-x-1">
                                     {pv.platforms.map((p) => (
-                                      <PlatformIcon key={p} name={p} />
+                                      <PlatformIcon key={p} platform={p} size={20} />
                                     ))}
                                   </div>
                                 )}
@@ -677,7 +641,7 @@ export default function CampaignDetailPage() {
                     </div>
                   ) : (
                     <ChartContainer
-                      config={platformChartConfig}
+                      config={PLATFORM_CHART_CONFIG}
                       className="h-[260px] w-full"
                     >
                       <BarChart
@@ -691,7 +655,7 @@ export default function CampaignDetailPage() {
                           tickLine={false}
                           axisLine={false}
                           width={40}
-                          tick={<CustomPlatformTick />}
+                          tick={<PlatformChartTick />}
                         />
                         <XAxis dataKey="posts" type="number" hide />
                         <ChartTooltip

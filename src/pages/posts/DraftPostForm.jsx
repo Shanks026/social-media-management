@@ -1,3 +1,4 @@
+import { PLATFORMS, platformById, platformLogo } from '@/lib/domain/platforms'
 import { formatFileSize } from '@/lib/format'
 import { useState, useRef, useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -161,45 +162,6 @@ const getFileLabel = (fileOrUrl) => {
 }
 
 const getFileFormat = (name) => name?.split('.').pop()?.toUpperCase() || ''
-
-const PLATFORM_CONFIG = {
-  instagram: {
-    label: 'Instagram',
-    logo: '/platformIcons/instagram.png',
-    selected:
-      'border-pink-400 bg-pink-50 text-pink-700 dark:border-pink-500/50 dark:bg-pink-500/15 dark:text-pink-300',
-  },
-  linkedin: {
-    label: 'LinkedIn',
-    logo: '/platformIcons/linkedin.png',
-    selected:
-      'border-blue-500 bg-blue-50 text-blue-700 dark:border-blue-500/50 dark:bg-blue-600/15 dark:text-blue-300',
-  },
-  facebook: {
-    label: 'Facebook',
-    logo: '/platformIcons/facebook.png',
-    selected:
-      'border-sky-500 bg-sky-50 text-sky-700 dark:border-sky-500/50 dark:bg-sky-500/15 dark:text-sky-300',
-  },
-  google_business: {
-    label: 'Google Business',
-    logo: '/platformIcons/google_busines.png',
-    selected:
-      'border-amber-400 bg-amber-50 text-amber-700 dark:border-amber-500/50 dark:bg-amber-500/15 dark:text-amber-300',
-  },
-  youtube: {
-    label: 'YouTube',
-    logo: '/platformIcons/youtube.png',
-    selected:
-      'border-red-500 bg-red-50 text-red-700 dark:border-red-500/50 dark:bg-red-600/15 dark:text-red-300',
-  },
-  twitter: {
-    label: 'Twitter/X',
-    logo: '/platformIcons/twitter.png',
-    selected:
-      'border-slate-700 bg-slate-100 text-slate-900 dark:border-slate-400/50 dark:bg-slate-500/15 dark:text-slate-200',
-  },
-}
 
 const formSchema = z.object({
   title: z.string().min(1, 'Title is required'),
@@ -1145,9 +1107,10 @@ export default function DraftPostForm({
                                   No platforms configured for this client
                                 </p>
                               ) : (
-                                Object.entries(PLATFORM_CONFIG)
-                                  .filter(([id]) => availablePlatforms.includes(id))
-                                  .map(([id, config]) => {
+                                PLATFORMS
+                                  .filter((p) => availablePlatforms.includes(p.id))
+                                  .map((config) => {
+                                    const id = config.id
                                     const isSelected = field.value?.includes(id)
                                     let isDisabled = false
                                     let tooltipText = ''
@@ -1188,11 +1151,11 @@ export default function DraftPostForm({
                                           className={cn(
                                             'inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-all select-none',
                                             isSelected
-                                              ? config.selected
+                                              ? config.selectedClass
                                               : 'border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground',
                                           )}
                                         >
-                                          <img src={config.logo} alt={config.label} className="h-3.5 w-3.5 shrink-0 object-contain" />
+                                          <img src={platformLogo(config.id)} alt={config.label} className="h-3.5 w-3.5 shrink-0 object-contain" />
                                           {config.label}
                                         </span>
                                       </label>
@@ -1310,7 +1273,7 @@ export default function DraftPostForm({
                             Per-Platform Schedule
                           </p>
                           {watchedPlatforms.map((platformId) => {
-                            const config = PLATFORM_CONFIG[platformId]
+                            const config = platformById(platformId)
                             if (!config) return null
                             const sched = platformSchedulesState[platformId] || { date: null, time: '09:00' }
                             return (
@@ -1322,7 +1285,7 @@ export default function DraftPostForm({
                                       variant="outline"
                                       className={cn('flex-1 justify-start gap-2 font-normal h-10 text-sm', !sched.date && 'text-muted-foreground')}
                                     >
-                                      <img src={config.logo} alt={config.label} className="h-3.5 w-3.5 shrink-0 object-contain" />
+                                      <img src={platformLogo(config.id)} alt={config.label} className="h-3.5 w-3.5 shrink-0 object-contain" />
                                       <span className="flex-1 text-left">{sched.date ? format(sched.date, 'PPP') : 'Pick a date'}</span>
                                       <CalendarIcon className="h-3.5 w-3.5 opacity-40 shrink-0" />
                                     </Button>

@@ -1,3 +1,4 @@
+import { platformLogo } from '@/lib/domain/platforms'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
@@ -269,7 +270,7 @@ export default function ManagementTab({ client }) {
                   className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border bg-card/50"
                 >
                   <img
-                    src={`/platformIcons/${pId === 'google_business' ? 'google_busines' : pId}.png`}
+                    src={platformLogo(pId)}
                     alt={p}
                     className="size-4 object-contain"
                   />

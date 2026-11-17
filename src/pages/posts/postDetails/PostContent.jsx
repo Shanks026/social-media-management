@@ -1,3 +1,5 @@
+import { PlatformIcon } from '@/components/PlatformIcon'
+import { platformById, platformLabel, platformLogo } from '@/lib/domain/platforms'
 import { initials } from '@/lib/format'
 import { useState, useEffect, useCallback } from 'react'
 import { Link } from 'react-router-dom'
@@ -119,70 +121,25 @@ const isVideoSource = (url) => {
   )
 }
 
-const PLATFORM_LABELS = {
-  instagram: 'Instagram',
-  linkedin: 'LinkedIn',
-  facebook: 'Facebook',
-  google_business: 'Google Business',
-  youtube: 'YouTube',
-  twitter: 'Twitter/X',
-}
-
-// Same palette the create-deliverable dialog uses for a selected platform, so
-// a platform reads identically wherever it appears.
-const PLATFORM_BADGE_CLASS = {
-  instagram:
-    'border-pink-400 bg-pink-50 text-pink-700 dark:border-pink-500/50 dark:bg-pink-500/15 dark:text-pink-300',
-  linkedin:
-    'border-blue-500 bg-blue-50 text-blue-700 dark:border-blue-500/50 dark:bg-blue-600/15 dark:text-blue-300',
-  facebook:
-    'border-sky-500 bg-sky-50 text-sky-700 dark:border-sky-500/50 dark:bg-sky-500/15 dark:text-sky-300',
-  google_business:
-    'border-amber-400 bg-amber-50 text-amber-700 dark:border-amber-500/50 dark:bg-amber-500/15 dark:text-amber-300',
-  youtube:
-    'border-red-500 bg-red-50 text-red-700 dark:border-red-500/50 dark:bg-red-600/15 dark:text-red-300',
-  twitter:
-    'border-slate-700 bg-slate-100 text-slate-900 dark:border-slate-400/50 dark:bg-slate-500/15 dark:text-slate-200',
-}
-
 /**
  * Platform pill — icon + label, mirroring the create-deliverable dialog.
  */
 function PlatformBadge({ name }) {
-  const fileName = name === 'google_business' ? 'google_busines' : name
   return (
     <span
       className={cn(
         'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs',
-        PLATFORM_BADGE_CLASS[name] ?? 'text-muted-foreground',
+        platformById(name)?.selectedClass ?? 'text-muted-foreground',
       )}
     >
       <img
-        src={`/platformIcons/${fileName}.png`}
+        src={platformLogo(name)}
         alt=""
         className="size-3.5 shrink-0 object-contain"
         onError={(e) => (e.target.style.display = 'none')}
       />
-      {PLATFORM_LABELS[name] ?? name}
+      {platformLabel(name)}
     </span>
-  )
-}
-
-const PlatformIcon = ({ name, size = 'md' }) => {
-  const fileName = name === 'google_business' ? 'google_busines' : name
-  const sizeClass = size === 'sm' ? 'size-5' : 'size-6'
-  const containerClass = size === 'sm'
-    ? 'flex h-6 w-6 items-center justify-center rounded-full border border-border bg-white dark:bg-zinc-900 shadow-sm overflow-hidden shrink-0'
-    : 'flex h-8 w-8 items-center justify-center rounded-full border border-border bg-white dark:bg-zinc-900 shadow-sm overflow-hidden shrink-0'
-  return (
-    <div className={containerClass}>
-      <img
-        src={`/platformIcons/${fileName}.png`}
-        alt={name}
-        className={cn(sizeClass, 'object-contain')}
-        onError={(e) => (e.target.style.display = 'none')}
-      />
-    </div>
   )
 }
 
@@ -679,9 +636,9 @@ export default function PostContent({
               {Object.entries(post.platform_schedules).map(
                 ([platformId, { scheduled_at, published_at }]) => (
                   <div key={platformId} className="flex items-center gap-3 py-1">
-                    <PlatformIcon name={platformId} size="sm" />
+                    <PlatformIcon platform={platformId} size={24} />
                     <span className="text-sm font-medium w-[110px] shrink-0">
-                      {PLATFORM_LABELS[platformId] ?? platformId}
+                      {platformLabel(platformId)}
                     </span>
                     <span className="text-sm text-muted-foreground flex-1">
                       {format(new Date(scheduled_at), 'dd MMM yyyy, p')}

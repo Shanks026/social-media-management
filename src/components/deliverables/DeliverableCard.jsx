@@ -1,3 +1,4 @@
+import { PlatformIcon } from '@/components/PlatformIcon'
 import { initials } from '@/lib/format'
 import { useState, useEffect } from 'react'
 import { format } from 'date-fns'
@@ -148,22 +149,6 @@ const MediaItem = ({ url, className, isPreview = false }) => {
       alt="Media"
       className={cn('h-full w-full', isPreview ? 'object-contain' : 'object-cover', className)}
     />
-  )
-}
-
-const PlatformIcon = ({ name }) => {
-  const fileName = name === 'google_business' ? 'google_busines' : name
-  const imgSrc = `/platformIcons/${fileName}.png`
-
-  return (
-    <div className="flex h-6 w-6 items-center justify-center rounded-full border-2 border-card bg-white dark:bg-zinc-900 shadow-sm transition-transform hover:scale-110 overflow-hidden relative z-10">
-      <img
-        src={imgSrc}
-        alt={name}
-        className="size-5 object-contain"
-        onError={(e) => (e.target.style.display = 'none')}
-      />
-    </div>
   )
 }
 
