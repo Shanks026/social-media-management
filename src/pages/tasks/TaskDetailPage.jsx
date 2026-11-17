@@ -18,7 +18,8 @@ import {
 import { usePermissions } from '@/api/usePermissions'
 import { useHeader } from '@/components/misc/header-context'
 import { useTaskLookups } from '@/components/tasks/useTaskLookups'
-import { STATUS_CONFIG, STATUS_DOT, PRIORITY_CONFIG, DeliverablePreviewRow } from '@/components/tasks/TaskCard'
+import { DeliverablePreviewRow } from '@/components/tasks/TaskCard'
+import { taskStatusCfg, taskPriorityCfg } from '@/components/tasks/taskPresentation'
 import EditTaskDialog from '@/components/tasks/EditTaskDialog'
 import { CommentThread } from '@/components/comments/CommentThread'
 import { useCommentCount } from '@/api/comments'
@@ -215,8 +216,8 @@ export default function TaskDetailPage() {
   const canReassign = canEdit || isAssignee || wasPastAssignee
 
   const isBusy = isSettingStatus || isReassigning || isDeleting
-  const statusCfg = STATUS_CONFIG[task.status] ?? STATUS_CONFIG.TODO
-  const priorityCfg = PRIORITY_CONFIG[task.priority]
+  const statusCfg = taskStatusCfg(task.status)
+  const priorityCfg = taskPriorityCfg(task.priority)
 
   return (
     <div className="flex flex-col gap-6 p-6">
@@ -225,7 +226,7 @@ export default function TaskDetailPage() {
         <div className="min-w-0 space-y-3">
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant="outline" className={cn('gap-1.5 select-none', statusCfg.className)}>
-              <span className={cn('size-2 shrink-0 rounded-full', STATUS_DOT[task.status] ?? 'bg-zinc-400')} />
+              <span className={cn('size-2 shrink-0 rounded-full', statusCfg.dot)} />
               {statusCfg.label}
             </Badge>
             {priorityCfg && (

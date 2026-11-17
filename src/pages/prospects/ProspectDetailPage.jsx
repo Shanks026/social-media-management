@@ -18,7 +18,8 @@ import { cn } from '@/lib/utils'
 
 import { useProspect, useDeleteProspect, useUpdateProspect, PROSPECT_STATUSES } from '@/api/prospects'
 import { useHeader } from '@/components/misc/header-context'
-import { PROSPECT_STATUS_CONFIG } from '@/components/prospects/ProspectStatusBadge'
+import { statusTone } from '@/lib/statusTone'
+import { statusLabel as prospectStatusLabel } from '@/lib/domain/prospectStatus'
 import { ProspectSourceBadge } from '@/components/prospects/ProspectSourceBadge'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -46,35 +47,6 @@ import ProspectDocumentsTab from './prospectSections/ProspectDocumentsTab'
 import ProspectProposalsTab from './prospectSections/ProspectProposalsTab'
 import EditProspectDialog from '@/components/prospects/EditProspectDialog'
 import { ConvertToClientDialog } from '@/components/prospects/ConvertToClientDialog'
-
-// ── Status dot colors ──────────────────────────────────────────────────────────
-
-const STATUS_DOT = {
-  NEW:            'bg-gray-400',
-  CONTACTED:      'bg-blue-500',
-  FOLLOW_UP:      'bg-amber-500',
-  DISCOVERY_CALL: 'bg-violet-500',
-  PROPOSAL_SENT:      'bg-indigo-500',
-  CHANGES_REQUESTED:  'bg-orange-500',
-  PROPOSAL_ACCEPTED:  'bg-teal-500',
-  CONTRACT_SENT:      'bg-pink-500',
-  WON:                'bg-green-500',
-  LOST:               'bg-red-500',
-}
-
-// Button-style trigger colors (match badge palette)
-const STATUS_BUTTON_CLASS = {
-  NEW:            'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700',
-  CONTACTED:      'bg-blue-100 text-blue-700 hover:bg-blue-200 dark:bg-blue-950 dark:text-blue-300 dark:hover:bg-blue-900',
-  FOLLOW_UP:      'bg-amber-100 text-amber-700 hover:bg-amber-200 dark:bg-amber-950 dark:text-amber-300 dark:hover:bg-amber-900',
-  DISCOVERY_CALL: 'bg-violet-100 text-violet-700 hover:bg-violet-200 dark:bg-violet-950 dark:text-violet-300 dark:hover:bg-violet-900',
-  PROPOSAL_SENT:      'bg-indigo-100 text-indigo-700 hover:bg-indigo-200 dark:bg-indigo-950 dark:text-indigo-300 dark:hover:bg-indigo-900',
-  CHANGES_REQUESTED:  'bg-orange-100 text-orange-700 hover:bg-orange-200 dark:bg-orange-950 dark:text-orange-300 dark:hover:bg-orange-900',
-  PROPOSAL_ACCEPTED:  'bg-teal-100 text-teal-700 hover:bg-teal-200 dark:bg-teal-950 dark:text-teal-300 dark:hover:bg-teal-900',
-  CONTRACT_SENT:      'bg-pink-100 text-pink-700 hover:bg-pink-200 dark:bg-pink-950 dark:text-pink-300 dark:hover:bg-pink-900',
-  WON:                'bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-950 dark:text-green-300 dark:hover:bg-green-900',
-  LOST:               'bg-red-100 text-red-600 hover:bg-red-200 dark:bg-red-950 dark:text-red-300 dark:hover:bg-red-900',
-}
 
 // ── Tabs config ────────────────────────────────────────────────────────────────
 
@@ -126,7 +98,7 @@ export default function ProspectDetailPage() {
         status: newStatus,
         _prevStatus: prospect.status,
       })
-      toast.success(`Status updated to ${PROSPECT_STATUS_CONFIG[newStatus]?.label ?? newStatus}`)
+      toast.success(`Status updated to ${prospectStatusLabel(newStatus)}`)
     } catch (err) {
       toast.error(err.message || 'Failed to update status')
     }
@@ -274,10 +246,11 @@ export default function ProspectDetailPage() {
                 <button
                   className={cn(
                     'h-8 px-3 rounded-md text-sm font-medium flex items-center gap-1.5 transition-colors',
-                    STATUS_BUTTON_CLASS[prospect.status] ?? 'bg-muted text-muted-foreground hover:bg-muted/80'
+                    statusTone('prospect', prospect.status).badge,
+                    statusTone('prospect', prospect.status).hover
                   )}
                 >
-                  {PROSPECT_STATUS_CONFIG[prospect.status]?.label ?? prospect.status}
+                  {prospectStatusLabel(prospect.status)}
                   <ChevronDown className="size-3" />
                 </button>
               </DropdownMenuTrigger>
@@ -291,7 +264,7 @@ export default function ProspectDetailPage() {
                     onClick={() => handleStatusChange(s.value)}
                     className="gap-2.5"
                   >
-                    <span className={cn('size-3 rounded-[3px] shrink-0', STATUS_DOT[s.value] ?? 'bg-muted-foreground')} />
+                    <span className={cn('size-3 rounded-[3px] shrink-0', statusTone('prospect', s.value).dot)} />
                     <span className="flex-1">{s.label}</span>
                     {prospect.status === s.value && (
                       <Check className="size-3 text-muted-foreground shrink-0" />

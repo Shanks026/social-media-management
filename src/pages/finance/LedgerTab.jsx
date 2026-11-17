@@ -129,7 +129,7 @@ export default function LedgerTab() {
     {
       header: 'Status',
       width: '120px',
-      render: (t) => <StatusBadge status={t.status} />,
+      render: (t) => <StatusBadge entity="transaction" status={t.status} />,
     },
     {
       header: 'Amount',

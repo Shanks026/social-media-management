@@ -1,26 +1,14 @@
-// src/lib/utils/client-helpers.js
+// Presentation wrapper over the Client urgency domain module: adds the dot colour.
+import { urgencyOf } from '@/lib/domain/clientStatus'
+
+const URGENCY_DOT = {
+  OVERDUE: 'bg-red-500',
+  URGENT: 'bg-rose-500',
+  WARNING: 'bg-amber-500',
+  HEALTHY: 'bg-green-500',
+}
+
 export function getUrgencyStatus(nextPostAt) {
-  if (!nextPostAt) return null
-
-  const now = new Date()
-  const postDate = new Date(nextPostAt)
-  const diffInHours = (postDate - now) / (1000 * 60 * 60)
-
-  // Alarming color for missed deadlines
-  if (diffInHours < 0) {
-    return { color: 'bg-red-500', label: 'Overdue', pulse: true }
-  }
-
-  // Under 24h: Urgent (Rose)
-  if (diffInHours < 24) {
-    return { color: 'bg-rose-500', label: 'Urgent', pulse: true }
-  }
-
-  // Under 48h: Warning (Amber)
-  if (diffInHours < 48) {
-    return { color: 'bg-amber-500', label: 'Warning', pulse: false }
-  }
-
-  // Healthy: No label needed
-  return { color: 'bg-green-500', label: null, pulse: false }
+  const urgency = urgencyOf(nextPostAt)
+  return urgency && { ...urgency, color: URGENCY_DOT[urgency.key] }
 }

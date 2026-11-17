@@ -22,6 +22,7 @@ import {
 import { ClientAvatar } from '@/components/tasks/ClientAvatar'
 import { INDUSTRY_OPTIONS } from '@/lib/industries'
 import { StatBar, StatCell } from '@/components/ui/stat-bar'
+import { clientStatusCounts } from '@/lib/domain/deliverableStatus'
 import {
   Empty,
   EmptyContent,
@@ -29,17 +30,6 @@ import {
   EmptyHeader,
   EmptyTitle,
 } from '@/components/ui/empty'
-
-const STATUS_LABELS = {
-  DRAFT: 'In Progress',
-  PENDING_APPROVAL: 'Awaiting Approval',
-  NEEDS_REVISION: 'In Revision',
-  APPROVED: 'Approved',
-  SCHEDULED: 'Scheduled',
-  PUBLISHED: 'Delivered',
-  DELIVERED: 'Delivered',
-  ARCHIVED: 'Archived',
-}
 
 export default function ReportsPage() {
   const { setHeader } = useHeader()
@@ -91,7 +81,7 @@ export default function ReportsPage() {
     }
   }
 
-  const statusEntries = Object.entries(report?.deliverables?.by_status || {})
+  const statusEntries = clientStatusCounts(report?.deliverables?.by_status)
 
   const kpis = [
     {
@@ -251,13 +241,13 @@ export default function ReportsPage() {
                 </p>
                 {statusEntries.length > 0 ? (
                   <div className="space-y-2.5">
-                    {statusEntries.map(([status, count]) => (
+                    {statusEntries.map(([label, count]) => (
                       <div
-                        key={status}
+                        key={label}
                         className="flex items-center justify-between text-sm"
                       >
                         <span className="text-muted-foreground">
-                          {STATUS_LABELS[status] || status}
+                          {label}
                         </span>
                         <span className="font-medium tabular-nums">{count}</span>
                       </div>

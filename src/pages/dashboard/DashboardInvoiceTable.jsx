@@ -97,7 +97,7 @@ export default function DashboardInvoiceTable() {
       cellClassName: 'text-right pr-6',
       render: (inv) => (
         <div className="flex justify-end">
-          <StatusBadge status={inv.status} />
+          <StatusBadge entity="invoice" status={inv.status} />
         </div>
       ),
     },

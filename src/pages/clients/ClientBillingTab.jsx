@@ -211,7 +211,7 @@ export function ClientBillingTab({ clientId, client }) {
     {
       header: 'Status',
       width: '130px',
-      render: (inv) => <StatusBadge status={inv.status} />,
+      render: (inv) => <StatusBadge entity="invoice" status={inv.status} />,
     },
     {
       header: 'Amount',

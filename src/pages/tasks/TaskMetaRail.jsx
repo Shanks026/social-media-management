@@ -2,7 +2,7 @@ import { initials } from '@/lib/format'
 import { Link } from 'react-router-dom'
 import { format } from 'date-fns'
 import { Megaphone } from 'lucide-react'
-import { STATUS_CONFIG, STATUS_DOT } from '@/components/tasks/TaskCard'
+import { taskStatusCfg } from '@/components/tasks/taskPresentation'
 import { ClientAvatar } from '@/components/tasks/ClientAvatar'
 import TaskWatchers from '@/components/tasks/TaskWatchers'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -124,8 +124,8 @@ export default function TaskMetaRail({
               {STATUS_OPTIONS.map((key) => (
                 <SelectItem key={key} value={key}>
                   <span className="flex items-center gap-2">
-                    <span className={cn('size-2 shrink-0 rounded-full', STATUS_DOT[key])} />
-                    {STATUS_CONFIG[key].label}
+                    <span className={cn('size-2 shrink-0 rounded-full', taskStatusCfg(key).dot)} />
+                    {taskStatusCfg(key).label}
                   </span>
                 </SelectItem>
               ))}

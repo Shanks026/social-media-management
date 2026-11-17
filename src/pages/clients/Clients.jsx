@@ -10,6 +10,7 @@ import { Lock, Plus, FilterX } from 'lucide-react'
 
 import { fetchClients, deleteClient } from '@/api/clients'
 import { getUrgencyStatus } from '@/lib/client-helpers'
+import { isNeedsAttention } from '@/lib/domain/clientStatus'
 import { useHeader } from '@/components/misc/header-context'
 import { useSubscription } from '../../api/useSubscription'
 import { usePermissions } from '@/api/usePermissions'
@@ -110,9 +111,9 @@ export default function Clients() {
     const health = getUrgencyStatus(client.pipeline?.next_post_at)
     if (!health) {
       counts.idle++
-    } else if (health.label === 'Urgent' || health.label === 'Overdue') {
+    } else if (isNeedsAttention(health.key)) {
       counts.urgent++
-    } else if (health.label === 'Warning') {
+    } else if (health.key === 'WARNING') {
       counts.upcoming++
     }
   })
@@ -122,8 +123,8 @@ export default function Clients() {
     if (urgency === 'all') return true
     const health = getUrgencyStatus(client.pipeline?.next_post_at)
     if (urgency === 'urgent')
-      return health?.label === 'Urgent' || health?.label === 'Overdue'
-    if (urgency === 'upcoming') return health?.label === 'Warning'
+      return isNeedsAttention(health?.key)
+    if (urgency === 'upcoming') return health?.key === 'WARNING'
     if (urgency === 'idle') return !health
     return true
   })

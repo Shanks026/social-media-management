@@ -1,7 +1,8 @@
 import { initials } from '@/lib/format'
 import { format } from 'date-fns'
 import { UserRoundCog, UserRoundPlus, CircleDot, Bot } from 'lucide-react'
-import { STATUS_DOT, StatusChip } from '@/components/tasks/TaskCard'
+import { StatusChip } from '@/components/tasks/TaskCard'
+import { STATUSES as TASK_STATUSES } from '@/lib/domain/taskStatus'
 import { Empty, EmptyHeader, EmptyTitle, EmptyDescription, EmptyMedia } from '@/components/ui/empty'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
@@ -111,7 +112,7 @@ function ActivityRow({ row, memberMap, currentUserId, isLast }) {
         ) : isAssignment ? (
           <UserRoundCog className="size-3 text-muted-foreground" />
         ) : (
-          <CircleDot className={cn('size-3', STATUS_DOT[row.to_status] ? 'text-foreground' : 'text-muted-foreground')} />
+          <CircleDot className={cn('size-3', TASK_STATUSES.includes(row.to_status) ? 'text-foreground' : 'text-muted-foreground')} />
         )}
       </span>
       <div className="min-w-0 flex-1 pt-0.5">

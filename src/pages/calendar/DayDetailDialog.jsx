@@ -28,15 +28,21 @@ import {
 import MeetingRow from '@/components/MeetingRow'
 import { useMarkMeetingDone } from '@/hooks/useMarkMeetingDone'
 import { getPublishState } from '@/lib/helper'
+import { statusTone } from '@/lib/statusTone'
+import { statusLabel } from '@/lib/domain/deliverableStatus'
 
 const STATUS_STATS_CONFIG = [
-  { id: 'DRAFT', label: 'Draft', color: 'bg-blue-600' },
-  { id: 'PENDING_APPROVAL', label: 'Pending', color: 'bg-orange-600' },
-  { id: 'NEEDS_REVISION', label: 'Revisions', color: 'bg-pink-600' },
-  { id: 'SCHEDULED', label: 'Scheduled', color: 'bg-purple-600' },
-  { id: 'PUBLISHED', label: 'Published', color: 'bg-emerald-600' },
-  { id: 'PARTIALLY_PUBLISHED', label: 'Partially Published', color: 'bg-lime-600' },
-]
+  'DRAFT',
+  'PENDING_APPROVAL',
+  'NEEDS_REVISION',
+  'SCHEDULED',
+  'PUBLISHED',
+  'PARTIALLY_PUBLISHED',
+].map((id) => ({
+  id,
+  label: statusLabel(id),
+  color: statusTone('deliverable', id).swatch,
+}))
 
 export function DayDetailDialog({ date, posts = [], open, onOpenChange }) {
   const [searchQuery, setSearchQuery] = useState('')

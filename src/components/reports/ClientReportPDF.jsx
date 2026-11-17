@@ -8,6 +8,7 @@ import {
   Image,
   Font,
 } from '@react-pdf/renderer'
+import { clientStatusCounts } from '@/lib/domain/deliverableStatus'
 
 /* ── Register Inter (full glyph set, incl. ₹ U+20B9) — same fix as InvoicePDF ── */
 Font.register({
@@ -112,17 +113,6 @@ const s = StyleSheet.create({
   footerText: { fontSize: 8, color: C.muted },
 })
 
-const STATUS_LABELS = {
-  DRAFT: 'In Progress',
-  PENDING_APPROVAL: 'Awaiting Approval',
-  NEEDS_REVISION: 'In Revision',
-  APPROVED: 'Approved',
-  SCHEDULED: 'Scheduled',
-  PUBLISHED: 'Delivered',
-  DELIVERED: 'Delivered',
-  ARCHIVED: 'Archived',
-}
-
 export default function ClientReportPDF({
   report,
   agencyName,
@@ -139,7 +129,7 @@ export default function ClientReportPDF({
   const documents = report?.documents || {}
   const pipeline = report?.pipeline || {}
 
-  const statusEntries = Object.entries(deliverables.by_status || {})
+  const statusEntries = clientStatusCounts(deliverables.by_status)
   const nextDeliverable = formatDate(pipeline.next_deliverable_at)
 
   const metaParts = [
@@ -203,9 +193,9 @@ export default function ClientReportPDF({
           <View style={s.col}>
             <Text style={s.sectionLabel}>Deliverables</Text>
             {statusEntries.length > 0 ? (
-              statusEntries.map(([status, count]) => (
-                <View key={status} style={s.kv}>
-                  <Text style={s.kvLabel}>{STATUS_LABELS[status] || status}</Text>
+              statusEntries.map(([label, count]) => (
+                <View key={label} style={s.kv}>
+                  <Text style={s.kvLabel}>{label}</Text>
                   <Text style={s.kvValue}>{count}</Text>
                 </View>
               ))

@@ -20,7 +20,7 @@ import { toast } from 'sonner'
 
 import { useHeader } from '@/components/misc/header-context'
 import { useProspects, useDeleteProspect, PROSPECT_STATUSES } from '@/api/prospects'
-import { ProspectStatusBadge } from '@/components/prospects/ProspectStatusBadge'
+import StatusBadge from '@/components/StatusBadge'
 import { ProspectSourceBadge } from '@/components/prospects/ProspectSourceBadge'
 import { ProspectCard } from '@/components/prospects/ProspectCard'
 import { AddProspectDialog } from '@/components/prospects/AddProspectDialog'
@@ -418,7 +418,7 @@ export default function ProspectsPage() {
                   </span>
 
                   <div className="w-28 flex items-center gap-1.5">
-                    <ProspectStatusBadge status={prospect.status} />
+                    <StatusBadge entity="prospect" status={prospect.status} />
                     {prospect.converted_client_id && (
                       <span
                         onClick={(e) => { e.stopPropagation(); navigate(`/clients/${prospect.converted_client_id}`) }}

@@ -145,7 +145,7 @@ export default function SubscriptionsTab() {
     {
       header: 'Cycle',
       width: '10%',
-      render: (e) => <StatusBadge status={e.billing_cycle} />,
+      render: (e) => <StatusBadge entity="cadence" status={e.billing_cycle} />,
     },
     {
       header: 'Next Renewal',

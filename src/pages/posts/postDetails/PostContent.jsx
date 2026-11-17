@@ -56,7 +56,7 @@ import { deleteIndividualMedia } from '@/api/posts'
 import { useTeamMembers } from '@/api/team'
 import { useAuth } from '@/context/AuthContext'
 import { getPublishState, renderCaption, isDocumentUrl, getDocumentExtension, getDocumentPreviewUrl } from '@/lib/helper'
-import { DELETABLE_POST_STATUSES } from '@/lib/post-statuses'
+import { DELETABLE_STATUSES } from '@/lib/domain/deliverableStatus'
 import StatusBadge from '@/components/StatusBadge'
 import ClientNotes from './ClientNotes'
 import { cn } from '@/lib/utils'
@@ -277,7 +277,7 @@ export default function PostContent({
     !!post.deliverable_creator_id && post.deliverable_creator_id === user?.id
   const canDelete =
     canSendDeliverables ||
-    (isDeliverableCreator && DELETABLE_POST_STATUSES.includes(post.status))
+    (isDeliverableCreator && DELETABLE_STATUSES.includes(post.status))
   // Owner/admin send to client from DRAFT (bypass) or READY (post-internal-approval)
   const canSendForApproval = ['DRAFT', 'READY'].includes(post.status) && !!post.content && canSendDeliverables
   // Owner/admin approve & schedule from DRAFT (bypass) or READY (post-internal-approval)
@@ -325,7 +325,7 @@ export default function PostContent({
     if (post.status === 'SCHEDULED')
       return {
         label: 'Scheduled for',
-        icon: <Clock size={13} className="shrink-0 text-violet-600" />,
+        icon: <Clock size={13} className="shrink-0 text-purple-600" />,
         value: post.target_date,
       }
     if (post.status === 'APPROVED')

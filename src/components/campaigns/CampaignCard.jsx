@@ -1,17 +1,9 @@
 import { formatDate, initials } from '@/lib/format'
 import { Target, CalendarDays } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
-import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
-import { cn } from '@/lib/utils'
-import { statusLabel as campaignStatusLabel } from '@/lib/domain/campaignStatus'
-
-const STATUS_STYLES = {
-  ACTIVE: 'bg-emerald-100 text-emerald-600 border-none hover:bg-emerald-100',
-  COMPLETED: 'bg-blue-100 text-blue-600 border-none hover:bg-blue-100',
-  ARCHIVED: 'bg-muted text-muted-foreground border-none hover:bg-muted',
-}
+import StatusBadge from '@/components/StatusBadge'
 
 const PIPELINE_COLORS = {
   draft_count: 'bg-blue-600',
@@ -129,11 +121,7 @@ export function CampaignCard({
         className="flex items-center justify-between mb-4"
         onClick={(e) => e.stopPropagation()}
       >
-        <Badge
-          className={cn(STATUS_STYLES[status] ?? STATUS_STYLES.ARCHIVED)}
-        >
-          {campaignStatusLabel(status)}
-        </Badge>
+        <StatusBadge entity="campaign" status={status} />
         {total_posts > 0 && (
           <CircularProgress progress={progress} size={22} strokeWidth={2.5} />
         )}
