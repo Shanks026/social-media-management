@@ -305,7 +305,7 @@ export default function InvoicesTab() {
       width: '130px',
       render: (inv) => (
         <div className="flex items-center gap-2">
-          <StatusBadge status={inv.status} />
+          <StatusBadge entity="invoice" status={inv.status} />
           {inv.campaign_id && (
             <Tooltip>
               <TooltipTrigger asChild>

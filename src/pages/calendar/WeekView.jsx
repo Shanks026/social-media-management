@@ -12,6 +12,7 @@ import { Instagram, Linkedin, Youtube, Globe, Clock } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { DayDetailDialog } from './DayDetailDialog' // Import the dialog
 import { getPublishState } from '@/lib/helper'
+import { statusTone } from '@/lib/statusTone'
 
 const PLATFORM_ICONS = {
   instagram: <Instagram className="size-3.5 text-muted-foreground" />,
@@ -20,18 +21,9 @@ const PLATFORM_ICONS = {
   google_business: <Globe className="size-3.5 text-muted-foreground" />,
 }
 
-const STATUS_STYLES = {
-  DRAFT:               'border-l-blue-600',
-  SUBMITTED:           'border-l-amber-600',
-  CHANGES_REQUESTED:   'border-l-rose-600 animate-pulse',
-  READY:               'border-l-violet-600',
-  PENDING_APPROVAL:    'border-l-orange-600',
-  APPROVED:            'border-l-green-600',
-  NEEDS_REVISION:      'border-l-pink-600 animate-pulse',
-  SCHEDULED:           'border-l-purple-600',
-  DELIVERED:           'border-l-teal-600',
-  PUBLISHED:           'border-l-emerald-600',
-  PARTIALLY_PUBLISHED: 'border-l-lime-600',
+const statusEdge = (status) => {
+  const tone = statusTone('deliverable', status)
+  return `${tone.border}${tone.pulse ? ' animate-pulse' : ''}`
 }
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i)
@@ -174,8 +166,7 @@ export default function WeekView({ currentMonth, postsByDate, clientId }) {
                         }}
                         className={cn(
                           'absolute overflow-hidden p-1.5 rounded-lg border border-l-4 transition-all z-10 hover:z-30 hover:scale-[1.02] text-left shadow-md flex flex-col justify-center',
-                          STATUS_STYLES[getPublishState(post)] ||
-                            'border-l-muted',
+                          statusEdge(getPublishState(post)),
                           post.isMeeting
                             ? 'bg-purple-50 dark:bg-purple-950/50 border-purple-200 dark:border-purple-800'
                             : 'bg-card',

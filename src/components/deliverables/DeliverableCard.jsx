@@ -49,7 +49,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { ClientAvatar } from '@/components/tasks/ClientAvatar'
 import { useAuth } from '@/context/AuthContext'
 import { usePermissions } from '@/api/usePermissions'
-import { DELETABLE_POST_STATUSES } from '@/lib/post-statuses'
+import { DELETABLE_STATUSES } from '@/lib/domain/deliverableStatus'
 import { useTeamMembers, useRemovedMembers } from '@/api/team'
 import { useQueryClient, useMutation } from '@tanstack/react-query'
 import { deletePost, createRevision } from '@/api/posts'
@@ -319,7 +319,7 @@ export function DeliverableCard({ post, client }) {
   // calendar RPC) that only expose one creator field, which is already the original.
   const creatorId = post.deliverable_creator_id ?? post.created_by
   const canDeletePost =
-    isAdmin || (creatorId === user?.id && DELETABLE_POST_STATUSES.includes(postStatus))
+    isAdmin || (creatorId === user?.id && DELETABLE_STATUSES.includes(postStatus))
 
   // Calculate health
   const isCompleted = ['PUBLISHED', 'ARCHIVED'].includes(postStatus)
