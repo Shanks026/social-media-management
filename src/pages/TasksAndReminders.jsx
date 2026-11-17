@@ -1,4 +1,5 @@
 ﻿import { useState, useMemo, useEffect } from 'react'
+import { initials } from '@/lib/format'
 import { useQueryClient } from '@tanstack/react-query'
 import {
   useReactTable,
@@ -405,7 +406,7 @@ function TasksTableView({ tasks, isLoading, clientMap, campaignMap, memberMap, c
                   assignee._removed ? 'bg-muted text-muted-foreground' : 'bg-primary/10 text-primary',
                 )}
               >
-                {(assignee.full_name || assignee.email || '?')[0].toUpperCase()}
+                {initials(assignee.full_name, { email: assignee.email, max: 1 })}
               </div>
             )}
             <span className="text-sm truncate">

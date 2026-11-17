@@ -1,3 +1,4 @@
+import { MemberAvatar } from '@/components/MemberAvatar'
 import { useMemo, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
@@ -27,23 +28,6 @@ import {
   updateNoteSharePermission,
   removeNoteShare,
 } from '@/api/noteShares'
-
-function MemberAvatar({ member, size = 'size-7' }) {
-  if (member?.avatar_url) {
-    return (
-      <img
-        src={member.avatar_url}
-        alt=""
-        className={`${size} rounded-full object-cover shrink-0 ring-1 ring-border`}
-      />
-    )
-  }
-  return (
-    <div className={`${size} rounded-full bg-primary/10 flex items-center justify-center text-[11px] font-semibold text-primary shrink-0`}>
-      {(member?.full_name || member?.email || '?')[0].toUpperCase()}
-    </div>
-  )
-}
 
 export default function ShareNoteDialog({ open, onOpenChange, noteId }) {
   const queryClient = useQueryClient()

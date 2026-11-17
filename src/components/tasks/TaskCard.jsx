@@ -1,3 +1,4 @@
+import { MemberAvatar } from '@/components/MemberAvatar'
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query'
@@ -387,22 +388,7 @@ export default function TaskCard({ task, clientMap, campaignMap = {}, memberMap 
             canAssignTasks ? (
               <div className={cn('flex items-center gap-1.5 mt-auto pt-3', assignee._removed && 'opacity-60')}>
                 <span className="text-xs text-muted-foreground shrink-0">Assigned to</span>
-                {assignee.avatar_url ? (
-                  <img
-                    src={assignee.avatar_url}
-                    alt=""
-                    className={cn('size-4 rounded-full object-cover shrink-0', assignee._removed && 'grayscale')}
-                  />
-                ) : (
-                  <div
-                    className={cn(
-                      'size-4 rounded-full flex items-center justify-center text-[8px] font-semibold shrink-0',
-                      assignee._removed ? 'bg-muted text-muted-foreground' : 'bg-primary/10 text-primary',
-                    )}
-                  >
-                    {(assignee.full_name || assignee.email || '?')[0].toUpperCase()}
-                  </div>
-                )}
+                <MemberAvatar member={assignee} size="size-4" className={cn('text-[8px]', assignee._removed && 'grayscale')} />
                 <span className="text-xs text-foreground truncate">
                   {assignee.full_name || assignee.email}
                   {assignee._removed && <span className="text-muted-foreground ml-1">(Removed)</span>}
@@ -414,22 +400,7 @@ export default function TaskCard({ task, clientMap, campaignMap = {}, memberMap 
             ) : (
               <div className={cn('flex items-center gap-1.5 mt-auto pt-3', creatorMember?._removed && 'opacity-60')}>
                 <span className="text-xs text-muted-foreground shrink-0">Assigned by</span>
-                {creatorMember?.avatar_url ? (
-                  <img
-                    src={creatorMember.avatar_url}
-                    alt=""
-                    className={cn('size-4 rounded-full object-cover shrink-0', creatorMember?._removed && 'grayscale')}
-                  />
-                ) : (
-                  <div
-                    className={cn(
-                      'size-4 rounded-full flex items-center justify-center text-[8px] font-semibold shrink-0',
-                      creatorMember?._removed ? 'bg-muted text-muted-foreground' : 'bg-primary/10 text-primary',
-                    )}
-                  >
-                    {(creatorMember?.full_name || creatorMember?.email || '?')[0].toUpperCase()}
-                  </div>
-                )}
+                <MemberAvatar member={creatorMember} size="size-4" className={cn('text-[8px]', creatorMember?._removed && 'grayscale')} />
                 <span className="text-xs text-foreground truncate">
                   {creatorMember?.full_name || creatorMember?.email || 'Team member'}
                   {creatorMember?._removed && <span className="text-muted-foreground ml-1">(Removed)</span>}

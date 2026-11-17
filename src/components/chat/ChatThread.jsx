@@ -6,11 +6,11 @@ import { useQueryClient } from '@tanstack/react-query'
 import { ArrowUp, AtSign, ListChecks, Lock, Pencil, Plus, SmilePlus, Trash2, TriangleAlert, Users, X, Check, PencilRuler } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/context/AuthContext'
+import { useMemberMap } from '@/api/team'
 import { usePermissions } from '@/api/usePermissions'
 import { useTasks } from '@/api/tasks'
 import {
   useChannelMessages,
-  useMemberMap,
   sendMessage,
   editMessage,
   softDeleteMessage,
@@ -30,7 +30,7 @@ import {
 } from '@/lib/mentions'
 import { SYSTEM_ROLE_PALETTE } from '@/lib/team-roles'
 import { detectSlashCommand, splitReferences } from '@/lib/references'
-import { MemberAvatar } from '@/components/chat/MemberAvatar'
+import { MemberAvatar } from '@/components/MemberAvatar'
 import { AttachEntityMenu } from '@/components/chat/AttachEntityMenu'
 import { ChatEntityCard } from '@/components/chat/ChatEntityCard'
 import { Message, MessageAvatar as MessageAvatarSlot, MessageContent, MessageHeader } from '@/components/ui/message'

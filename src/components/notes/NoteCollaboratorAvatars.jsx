@@ -1,5 +1,6 @@
+import { MemberAvatar } from '@/components/MemberAvatar'
 import { useMemo } from 'react'
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card'
 import { useTeamMembers } from '@/api/team'
 import { useNoteShares } from '@/api/noteShares'
@@ -62,12 +63,7 @@ export default function NoteCollaboratorAvatars({
         onClick={(e) => e.stopPropagation()}
         className={cn('flex items-center gap-1.5 min-w-0 shrink-0', className)}
       >
-        <Avatar className={cn(size, 'ring-2 ring-background shrink-0')}>
-          {author.avatar_url && <AvatarImage src={author.avatar_url} alt={author.name} />}
-          <AvatarFallback className="text-[10px] font-semibold">
-            {(author.name || '?')[0].toUpperCase()}
-          </AvatarFallback>
-        </Avatar>
+        <MemberAvatar member={author} size={size} className="ring-2 ring-background" />
         <span className="text-xs text-muted-foreground truncate">
           {author.name} <span className="text-muted-foreground/70">· Workspace</span>
         </span>
@@ -86,12 +82,7 @@ export default function NoteCollaboratorAvatars({
           className={cn('flex -space-x-1 shrink-0', className)}
         >
           {visible.map((p) => (
-            <Avatar key={p.id} className={cn(size, 'ring-2 ring-background')}>
-              {p.avatar_url && <AvatarImage src={p.avatar_url} alt={p.name} />}
-              <AvatarFallback className="text-[10px] font-semibold">
-                {(p.name || '?')[0].toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
+            <MemberAvatar key={p.id} member={p} size={size} className="ring-2 ring-background" />
           ))}
           {overflow > 0 && (
             <Avatar className={cn(size, 'ring-2 ring-background')}>
@@ -113,12 +104,7 @@ export default function NoteCollaboratorAvatars({
         <div className="space-y-0.5">
           {people.map((p) => (
             <div key={p.id} className="flex items-center gap-2.5 rounded-md px-1.5 py-1.5">
-              <Avatar className="size-7">
-                {p.avatar_url && <AvatarImage src={p.avatar_url} alt={p.name} />}
-                <AvatarFallback className="text-[10px] font-semibold">
-                  {(p.name || '?')[0].toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
+              <MemberAvatar member={p} size="size-7" />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium">{p.name}</p>
                 <p className="text-xs text-muted-foreground">{p.roleLabel}</p>

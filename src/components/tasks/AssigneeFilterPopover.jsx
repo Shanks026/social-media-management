@@ -1,7 +1,8 @@
+import { MemberAvatar } from '@/components/MemberAvatar'
 import { Users, Check, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import {
   Popover,
   PopoverContent,
@@ -39,12 +40,7 @@ export default function AssigneeFilterPopover({ members = [], selected = [], onC
             <>
               <div className="flex -space-x-1.5 shrink-0">
                 {visibleAvatars.map((m) => (
-                  <Avatar key={m.id} className="size-5 ring-2 ring-background">
-                    {m.avatar_url && <AvatarImage src={m.avatar_url} alt={m.name} />}
-                    <AvatarFallback className="text-[9px] font-semibold">
-                      {(m.name || '?')[0].toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
+                  <MemberAvatar key={m.id} member={m} size="size-5" className="ring-2 ring-background" />
                 ))}
                 {overflow > 0 && (
                   <Avatar className="size-5 ring-2 ring-background">
@@ -84,12 +80,7 @@ export default function AssigneeFilterPopover({ members = [], selected = [], onC
                     isSelected ? 'bg-muted' : 'hover:bg-muted/60',
                   )}
                 >
-                  <Avatar className="size-6 ring-1 ring-border">
-                    {m.avatar_url && <AvatarImage src={m.avatar_url} alt={m.name} />}
-                    <AvatarFallback className="text-[10px] font-semibold">
-                      {(m.name || '?')[0].toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
+                  <MemberAvatar member={m} size="size-6" className="ring-1 ring-border" />
                   <span className="flex-1 truncate">{m.name}</span>
                   {isSelected && <Check className="size-3.5 shrink-0 text-primary" />}
                 </button>

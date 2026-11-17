@@ -1,3 +1,4 @@
+import { MemberAvatar } from '@/components/MemberAvatar'
 import { formatDate } from '@/lib/format'
 import { useMemo, useState, useRef, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
@@ -41,26 +42,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-
-// ─── Avatar ────────────────────────────────────────────────────────────────────
-
-function MemberAvatar({ member, size = 'size-7' }) {
-  if (member?.avatar_url) {
-    return (
-      <img
-        src={member.avatar_url}
-        alt=""
-        className={cn(size, 'rounded-full object-cover shrink-0 ring-1 ring-border')}
-      />
-    )
-  }
-  return (
-    <div className={cn(size, 'rounded-full bg-primary/10 flex items-center justify-center text-[11px] font-semibold text-primary shrink-0')}>
-      {(member?.full_name || member?.name || member?.email || '?')[0].toUpperCase()}
-    </div>
-  )
-}
-
 
 // ─── Reactions ─────────────────────────────────────────────────────────────────
 

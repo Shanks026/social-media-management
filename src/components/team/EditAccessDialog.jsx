@@ -1,3 +1,4 @@
+import { MemberAvatar } from '@/components/MemberAvatar'
 import {
   useState,
   useRef,
@@ -184,11 +185,7 @@ export function EditAccessDialog({ member, open, onOpenChange, onSave, onSaved, 
         {/* Fixed header */}
         <DialogHeader className="px-6 pt-6 pb-4 shrink-0">
           <div className="flex items-center gap-3">
-            <MemberAvatar
-              name={member?.full_name}
-              email={member?.email}
-              avatarUrl={member?.avatar_url}
-            />
+            <MemberAvatar member={member} size="size-10" shape="square" className="rounded-xl text-sm" />
             <div className="flex-1 min-w-0">
               <DialogTitle className="text-base truncate">
                 {member?.full_name || member?.email}
@@ -344,29 +341,3 @@ export function EditAccessDialog({ member, open, onOpenChange, onSave, onSaved, 
   )
 }
 
-// ─── Avatar initials ───────────────────────────────────────────────────────────
-
-function MemberAvatar({ name, email, avatarUrl }) {
-  if (avatarUrl) {
-    return (
-      <img
-        src={avatarUrl}
-        alt={name || email}
-        className="size-10 rounded-xl object-cover shrink-0"
-      />
-    )
-  }
-  const initials = name
-    ? name
-        .split(' ')
-        .map((w) => w[0])
-        .slice(0, 2)
-        .join('')
-        .toUpperCase()
-    : (email?.[0] ?? '?').toUpperCase()
-  return (
-    <div className="size-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary text-sm font-semibold shrink-0">
-      {initials}
-    </div>
-  )
-}

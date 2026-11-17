@@ -1,4 +1,4 @@
-import { formatDate } from '@/lib/format'
+import { formatDate, initials } from '@/lib/format'
 import { Target, CalendarDays } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { Badge } from '@/components/ui/badge'
@@ -244,7 +244,7 @@ export function CampaignCard({
               <Avatar className="size-6">
                 <AvatarImage src={client_avatar} alt={client_name} />
                 <AvatarFallback className="text-[9px] font-bold">
-                  {client_name.split(' ').filter(w => /[a-zA-Z]/.test(w)).map(w => w[0]).join('').toUpperCase().slice(0, 2)}
+                  {initials(client_name)}
                 </AvatarFallback>
               </Avatar>
               <span className="text-xs font-medium truncate max-w-[120px]">

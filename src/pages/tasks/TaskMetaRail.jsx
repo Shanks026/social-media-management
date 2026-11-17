@@ -1,3 +1,4 @@
+import { initials } from '@/lib/format'
 import { Link } from 'react-router-dom'
 import { format } from 'date-fns'
 import { Megaphone } from 'lucide-react'
@@ -49,7 +50,7 @@ function MemberChip({ member, isSelf }) {
             member._removed ? 'bg-muted text-muted-foreground' : 'bg-primary/10 text-primary',
           )}
         >
-          {(member.full_name || member.email || '?')[0].toUpperCase()}
+          {initials(member.full_name, { email: member.email, max: 1 })}
         </span>
       )}
       <span className="truncate font-medium">
@@ -158,7 +159,7 @@ export default function TaskMetaRail({
                         <img src={m.avatar_url} alt="" className="size-5 shrink-0 rounded-full object-cover" />
                       ) : (
                         <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[9px] font-semibold text-primary">
-                          {(m.full_name || m.email || '?')[0].toUpperCase()}
+                          {initials(m.full_name, { email: m.email, max: 1 })}
                         </span>
                       )}
                       <span className="truncate">

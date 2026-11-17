@@ -1,3 +1,4 @@
+import { MemberAvatar } from '@/components/MemberAvatar'
 import { formatDate } from '@/lib/format'
 import { useEffect, useState, useMemo, useCallback } from 'react'
 import {
@@ -98,26 +99,6 @@ import JobRoleBadges from '@/components/team/JobRoleBadges'
 import { getJobRoleColor } from '@/lib/job-roles'
 
 // ─── Sub-components ─────────────────────────────────────────────────────────
-
-function MemberAvatar({ name, email, avatarUrl }) {
-  if (avatarUrl) {
-    return (
-      <img
-        src={avatarUrl}
-        alt={name || email}
-        className="size-8 rounded-lg object-cover shrink-0"
-      />
-    )
-  }
-  const initials = name
-    ? name.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase()
-    : (email?.[0] ?? '?').toUpperCase()
-  return (
-    <div className="size-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary text-xs font-semibold shrink-0">
-      {initials}
-    </div>
-  )
-}
 
 function SortableHeader({ column, label }) {
   const dir = column.getIsSorted()
@@ -289,7 +270,7 @@ export default function TeamPage() {
         const isSelf = m.member_user_id === user?.id
         return (
           <div className="flex items-center gap-3 py-1">
-            <MemberAvatar name={m.full_name} email={m.email} avatarUrl={m.avatar_url} />
+            <MemberAvatar member={m} size="size-8" shape="square" className="text-xs" />
             <div className="min-w-0">
               <div className="flex items-center gap-1.5 flex-wrap">
                 <span className="text-sm font-medium leading-tight">

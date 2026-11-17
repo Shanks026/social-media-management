@@ -1,3 +1,4 @@
+import { initials } from '@/lib/format'
 import { useState, useEffect } from 'react'
 import { format } from 'date-fns'
 import {
@@ -501,13 +502,13 @@ export function DeliverableCard({ post, client }) {
                 return r ? { ...r, _removed: true } : null
               })()
             if (!creator) return null
-            const initials = creator.full_name?.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2) ?? '?'
+            const creatorInitials = initials(creator.full_name)
             return (
               <div className={cn('flex items-center gap-1.5 mb-3', creator._removed && 'opacity-60')}>
                 <span className="text-xs text-muted-foreground">Created by</span>
                 <Avatar className={cn('size-4 shrink-0', creator._removed && 'grayscale')}>
                   <AvatarImage src={creator.avatar_url} />
-                  <AvatarFallback className="text-[9px]">{initials}</AvatarFallback>
+                  <AvatarFallback className="text-[9px]">{creatorInitials}</AvatarFallback>
                 </Avatar>
                 <span className="text-xs font-medium text-foreground/70 truncate">
                   {creator.full_name}

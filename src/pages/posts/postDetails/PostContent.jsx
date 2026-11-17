@@ -1,3 +1,4 @@
+import { initials } from '@/lib/format'
 import { useState, useEffect, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
@@ -825,7 +826,7 @@ export default function PostContent({
                   <Avatar className="size-4 rounded-sm">
                     <AvatarImage src={post.clients.logo_url} />
                     <AvatarFallback className="rounded-sm text-[9px]">
-                      {post.clients.name[0]?.toUpperCase()}
+                      {initials(post.clients.name, { max: 1 })}
                     </AvatarFallback>
                   </Avatar>
                   <span className="truncate font-medium">{post.clients.name}</span>

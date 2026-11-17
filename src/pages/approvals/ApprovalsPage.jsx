@@ -1,3 +1,5 @@
+import { initials } from '@/lib/format'
+import { MemberAvatar } from '@/components/MemberAvatar'
 import { useState, useEffect, useMemo } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import {
@@ -78,26 +80,7 @@ function isVideoUrl(url) {
   return url ? ['.mp4', '.mov', '.webm', '.m4v'].some((e) => url.toLowerCase().includes(e)) : false
 }
 
-function initials(name, email) {
-  if (name) return name.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase()
-  return email?.[0]?.toUpperCase() ?? '?'
-}
-
 // ── Shared avatar components ──────────────────────────────────────────────────
-
-function UserAvatar({ name, email, avatarUrl, size = 'sm' }) {
-  const [imgError, setImgError] = useState(false)
-  const sz = size === 'sm' ? 'size-7' : 'size-8'
-  const txt = size === 'sm' ? 'text-[10px]' : 'text-xs'
-  if (avatarUrl && !imgError) {
-    return <img src={avatarUrl} alt={name || email} onError={() => setImgError(true)} className={cn(sz, 'rounded-full object-cover shrink-0 ring-1 ring-border')} />
-  }
-  return (
-    <span className={cn(sz, txt, 'rounded-full bg-muted flex items-center justify-center font-semibold text-muted-foreground shrink-0 ring-1 ring-border')}>
-      {initials(name, email)}
-    </span>
-  )
-}
 
 function ClientAvatar({ name, logoUrl, size = 'sm' }) {
   const [imgError, setImgError] = useState(false)
@@ -108,7 +91,7 @@ function ClientAvatar({ name, logoUrl, size = 'sm' }) {
   }
   return (
     <span className={cn(sz, txt, 'rounded-full bg-muted flex items-center justify-center font-semibold text-muted-foreground shrink-0 ring-1 ring-border')}>
-      {name?.[0]?.toUpperCase() ?? '?'}
+      {initials(name, { max: 1 })}
     </span>
   )
 }
@@ -265,7 +248,7 @@ function PendingTab() {
         if (!s) return <span className="text-xs text-muted-foreground">—</span>
         return (
           <div className="flex items-center gap-2 min-w-0">
-            <UserAvatar name={s.full_name} email={s.email} avatarUrl={s.avatar_url} />
+            <MemberAvatar member={s} />
             <div className="min-w-0">
               <p className="text-sm truncate leading-tight">{s.full_name || s.email}</p>
               <p className="text-[11px] text-muted-foreground leading-tight">{timeAgo}</p>
@@ -445,7 +428,7 @@ function LogTab({ action, emptyLabel, emptyDescription }) {
         if (!e.submitter_name && !e.submitter_email) return <span className="text-sm text-muted-foreground">—</span>
         return (
           <div className="flex items-center gap-2 min-w-0">
-            <UserAvatar name={e.submitter_name} email={e.submitter_email} avatarUrl={e.submitter_avatar_url} />
+            <MemberAvatar member={{ full_name: e.submitter_name, email: e.submitter_email, avatar_url: e.submitter_avatar_url }} />
             <span className="text-sm truncate">{e.submitter_name || e.submitter_email}</span>
           </div>
         )
@@ -459,7 +442,7 @@ function LogTab({ action, emptyLabel, emptyDescription }) {
         const e = row.original
         return (
           <div className="flex items-center gap-2 min-w-0">
-            <UserAvatar name={e.actor_name} email={e.actor_email} avatarUrl={e.actor_avatar_url} />
+            <MemberAvatar member={{ full_name: e.actor_name, email: e.actor_email, avatar_url: e.actor_avatar_url }} />
             <span className="text-sm truncate">{e.actor_name}</span>
           </div>
         )

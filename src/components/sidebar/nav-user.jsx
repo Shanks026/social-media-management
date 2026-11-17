@@ -1,3 +1,4 @@
+import { initials } from '@/lib/format'
 import { useState } from 'react'
 import { LogOut, ChevronsUpDown, UserPlus, X } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
@@ -21,16 +22,6 @@ import {
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu'
 import AddAccountDialog from './AddAccountDialog'
-
-function initialsFor(name, fallbackEmail) {
-  const label = name || fallbackEmail?.split('@')[0] || 'User'
-  return label
-    .split(' ')
-    .map((n) => n[0])
-    .slice(0, 2)
-    .join('')
-    .toUpperCase()
-}
 
 export function NavUser({ user }) {
   const navigate = useNavigate()
@@ -75,7 +66,7 @@ export function NavUser({ user }) {
 
   const fullName =
     user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User'
-  const initials = initialsFor(user?.user_metadata?.full_name, user?.email)
+  const userInitials = initials(user?.user_metadata?.full_name, { email: user?.email })
 
   return (
     <SidebarMenu>
@@ -85,7 +76,7 @@ export function NavUser({ user }) {
             <SidebarMenuButton size="lg" tooltip="Account">
               <Avatar className="size-8">
                 <AvatarImage src={user?.user_metadata?.avatar_url} />
-                <AvatarFallback>{initials}</AvatarFallback>
+                <AvatarFallback>{userInitials}</AvatarFallback>
               </Avatar>
               <div className="flex flex-col text-left min-w-0">
                 <span className="text-sm font-medium truncate">{fullName}</span>
@@ -100,7 +91,7 @@ export function NavUser({ user }) {
             <div className="flex items-center gap-3 px-3 py-2.5">
               <Avatar className="size-9 shrink-0">
                 <AvatarImage src={user?.user_metadata?.avatar_url} />
-                <AvatarFallback>{initials}</AvatarFallback>
+                <AvatarFallback>{userInitials}</AvatarFallback>
               </Avatar>
               <div className="flex flex-col min-w-0">
                 <span className="text-sm font-medium truncate">{fullName}</span>
@@ -123,7 +114,7 @@ export function NavUser({ user }) {
                     <Avatar className="size-6 shrink-0">
                       <AvatarImage src={account.avatar_url} />
                       <AvatarFallback className="text-[10px]">
-                        {initialsFor(account.full_name, account.email)}
+                        {initials(account.full_name, { email: account.email })}
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex flex-col min-w-0 flex-1">

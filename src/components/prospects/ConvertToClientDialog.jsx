@@ -1,3 +1,4 @@
+import { initials } from '@/lib/format'
 import { useNavigate } from 'react-router-dom'
 import { CheckCircle2, AlertCircle, ArrowRight, UserRoundPlus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -75,7 +76,7 @@ export function ConvertToClientDialog({ open, onOpenChange, prospect }) {
           {/* Prospect chip */}
           <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-muted/40 border border-border/40">
             <div className="size-8 rounded-md bg-background border border-border/50 flex items-center justify-center shrink-0 text-sm font-bold text-muted-foreground">
-              {prospect.business_name?.[0]?.toUpperCase() ?? 'P'}
+              {initials(prospect.business_name || 'P', { max: 1 })}
             </div>
             <div className="min-w-0">
               <p className="text-xs text-muted-foreground">Converting</p>

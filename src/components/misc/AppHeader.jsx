@@ -1,4 +1,4 @@
-import { formatDate } from '@/lib/format'
+import { formatDate, initials } from '@/lib/format'
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -146,14 +146,6 @@ function UrgencyAlertIndicator() {
 const APP_NAME = 'Tercero'
 const DEFAULT_ICON = '/TerceroIcon.svg'
 
-const getInitials = (name) =>
-  (name || APP_NAME)
-    .split(' ')
-    .map((n) => n[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2)
-
 export function AppHeader({ agencySettings }) {
   const { header } = useHeader()
   const { data: sub } = useSubscription()
@@ -215,7 +207,7 @@ export function AppHeader({ agencySettings }) {
           ) : (
             <div className="flex size-full items-center justify-center bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 rounded-lg">
               <span className="text-[10px] font-black uppercase tracking-tighter">
-                {getInitials(name)}
+                {initials(name || APP_NAME)}
               </span>
             </div>
           )}
