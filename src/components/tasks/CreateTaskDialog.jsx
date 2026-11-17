@@ -21,7 +21,7 @@ import { Megaphone } from 'lucide-react'
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query'
 import { createTask } from '@/api/tasks'
 import { useClients } from '@/api/clients'
-import { fetchActiveCampaignsByClient } from '@/api/campaigns'
+import { useActiveCampaignsByClient } from '@/api/campaigns'
 import { fetchAllPostsByClient, fetchAllDeliverables } from '@/api/posts'
 import { useTeamMembers } from '@/api/team'
 import { usePermissions } from '@/api/usePermissions'
@@ -132,11 +132,7 @@ export default function CreateTaskDialog({
   const selectedClient = allClients.find((c) => c.id === selectedClientId)
 
   const { data: availableCampaigns = [], isLoading: loadingCampaigns } =
-    useQuery({
-      queryKey: ['campaigns', 'active-by-client', selectedClientId],
-      queryFn: () => fetchActiveCampaignsByClient(selectedClientId),
-      enabled: !!selectedClientId && !campaignId,
-    })
+    useActiveCampaignsByClient(selectedClientId, { enabled: !campaignId })
 
   // Client selected → scope to that client's posts (fast). No client ("General")
   // → all deliverables across every client, each labelled with its client.

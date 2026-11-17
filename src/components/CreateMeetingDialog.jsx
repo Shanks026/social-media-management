@@ -35,8 +35,8 @@ import { Building2, Loader2, CalendarDays, Link, Megaphone, Globe, Lock } from '
 import { cn } from '@/lib/utils'
 import { useClients } from '@/api/clients'
 import { createMeeting, updateMeeting } from '@/api/meetings'
-import { fetchActiveCampaignsByClient } from '@/api/campaigns'
-import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query'
+import { useActiveCampaignsByClient } from '@/api/campaigns'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 
 function ClientAvatar({ client }) {
@@ -129,11 +129,7 @@ export default function CreateMeetingDialog({
   const selectedClient = allClients.find((c) => c.id === currentClientId)
 
   // Fetch active campaigns for the selected client — only when campaign is not locked
-  const { data: availableCampaigns = [], isLoading: loadingCampaigns } = useQuery({
-    queryKey: ['campaigns', 'active-by-client', currentClientId],
-    queryFn: () => fetchActiveCampaignsByClient(currentClientId),
-    enabled: !!currentClientId && !campaignId,
-  })
+  const { data: availableCampaigns = [], isLoading: loadingCampaigns } = useActiveCampaignsByClient(currentClientId, { enabled: !campaignId })
 
   React.useEffect(() => {
     if (open && editMeeting) {
