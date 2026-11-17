@@ -70,7 +70,7 @@ import CreateTaskDialog from '@/components/tasks/CreateTaskDialog'
 import { ClientAvatar } from '@/components/tasks/ClientAvatar'
 import TaskCard from '@/components/tasks/TaskCard'
 import { taskStatusCfg, taskPriorityCfg } from '@/components/tasks/taskPresentation'
-import { PRIORITIES } from '@/lib/domain/taskStatus'
+import { PRIORITIES, STATUSES as TASK_STATUSES } from '@/lib/domain/taskStatus'
 import AssigneeFilterPopover from '@/components/tasks/AssigneeFilterPopover'
 import { cn } from '@/lib/utils'
 import {
@@ -85,10 +85,7 @@ import {
 
 const STATUS_TABS = [
   { key: 'ALL', label: 'All' },
-  { key: 'TODO', label: 'To Do' },
-  { key: 'IN_PROGRESS', label: 'In Progress' },
-  { key: 'COMPLETED', label: 'Completed' },
-  { key: 'ARCHIVED', label: 'Archived' },
+  ...TASK_STATUSES.map((key) => ({ key, label: taskStatusCfg(key).label })),
 ]
 
 const TAB_TRIGGER_CLASS =

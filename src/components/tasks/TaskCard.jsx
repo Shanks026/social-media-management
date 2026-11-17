@@ -292,17 +292,17 @@ export default function TaskCard({ task, clientMap, campaignMap = {}, memberMap 
                 <DropdownMenuContent align="end" className="w-44">
                   {canToggle && task.status !== 'IN_PROGRESS' && (
                     <DropdownMenuItem onClick={() => setStatus('IN_PROGRESS')}>
-                      <CircleDashed className="size-3.5 mr-2 text-amber-500" /> In Progress
+                      <CircleDashed className="size-3.5 mr-2 text-amber-500" /> {taskStatusCfg('IN_PROGRESS').label}
                     </DropdownMenuItem>
                   )}
                   {canToggle && task.status !== 'COMPLETED' && (
                     <DropdownMenuItem onClick={() => setStatus('COMPLETED')}>
-                      <CheckCircle2 className="size-3.5 mr-2 text-emerald-500" /> Completed
+                      <CheckCircle2 className="size-3.5 mr-2 text-emerald-500" /> {taskStatusCfg('COMPLETED').label}
                     </DropdownMenuItem>
                   )}
                   {canToggle && task.status !== 'TODO' && (
                     <DropdownMenuItem onClick={() => setStatus('TODO')}>
-                      <Circle className="size-3.5 mr-2" /> To Do
+                      <Circle className="size-3.5 mr-2" /> {taskStatusCfg('TODO').label}
                     </DropdownMenuItem>
                   )}
                   {canToggle && task.status !== 'ARCHIVED' && (
