@@ -10,7 +10,7 @@ import {
   EmptyHeader,
   EmptyTitle,
 } from '@/components/ui/empty'
-import { getPublishState } from '@/lib/helper'
+import { displayStatus } from '@/lib/domain/deliverableStatus'
 import { DeliverableCard } from '@/components/deliverables/DeliverableCard'
 
 /**
@@ -29,7 +29,7 @@ export default function DraftPostList({ client, onCreatePost, statusFilter = 'AL
   })
 
   const filteredData = data
-    .filter((p) => statusFilter === 'ALL' || getPublishState(p) === statusFilter)
+    .filter((p) => statusFilter === 'ALL' || displayStatus(p) === statusFilter)
     .filter((p) => !myWorkOnly || p.created_by === user?.id)
 
   if (isLoading)

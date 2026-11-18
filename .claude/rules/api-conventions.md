@@ -4,52 +4,61 @@ Rules for all code in `src/api/`, and for how the rest of the app uses it. This 
 
 ## The shape of a module
 
-Each domain module (`campaigns.js` is the reference) has four parts, in this order:
+Each domain module (`campaigns.js`, `posts.js`) has these parts:
 
-1. **A query-key factory**, exported: `campaignKeys.all`, `.list(workspaceId, filters)`, `.detail(id)` and any other keys the module needs.
+1. **Its key factory, re-exported** from `queryKeys.js` (below): `export { campaignKeys }`.
 2. **Read hooks** (`useXxxList()`, `useXxxById(id)`): `useQuery` over a `queryFn` that throws on error.
 3. **Mutations as plain exported async functions** (`createXxx(payload)`, `updateXxx({ id, ...fields })`, `deleteXxx(id)`). These are the unit-test surface and can be called outside React (realtime handlers, scripts).
-4. **A hook per mutation** (`useCreateXxx()`) that wraps the plain function in `useMutation` and **owns the `onSuccess` invalidation**.
+4. **A hook per mutation** (`useCreateXxx(options)`), built with `useApiMutation`, which **owns the invalidation**.
 
 ```js
-export const campaignKeys = {
-  all: ['campaigns'],
-  list: (workspaceId, filters = {}) => ['campaigns', 'list', workspaceId, { clientId: filters.clientId ?? null }],
-  detail: (id) => ['campaigns', 'detail', id],
-}
+import { useApiMutation } from '@/api/mutation'
+import { campaignKeys, postKeys } from '@/api/queryKeys'
+
+export { campaignKeys }
 
 export async function deleteCampaign(id) {
   const { error } = await supabase.from('campaigns').delete().eq('id', id)
   if (error) throw error
 }
 
-export function useDeleteCampaign() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: deleteCampaign,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: campaignKeys.all }),
-  })
+export function useDeleteCampaign(options) {
+  return useApiMutation(deleteCampaign, (queryClient) => {
+    queryClient.invalidateQueries({ queryKey: campaignKeys.all })
+    queryClient.invalidateQueries({ queryKey: postKeys.all })
+  }, options)
 }
 ```
 
-## What callers may do
+## `useApiMutation(fn, invalidate, options)`
 
-Components, pages and `src/hooks` **never**:
+`src/api/mutation.js`. It runs `invalidate(queryClient, data, variables)` first, then the caller's `options` callbacks, so callers pass only UI work: toasts, closing a dialog, navigating.
 
-- call `useQuery` or `useMutation` directly,
-- call `invalidateQueries` themselves (the mutation hook already did),
-- import `@/lib/supabase`.
+```js
+const remove = useDeleteCampaign({ onSuccess: () => toast.success('Campaign deleted') })
+remove.mutate(campaign.id)
+```
 
-An ESLint `no-restricted-imports` rule reports the first and third. It is a **warning** while the existing call sites are migrated, and becomes an error in the contract ticket (#158). New code must not add to the warnings.
-
-If a screen needs data or a change that no hook provides, add a function and a hook to the owning `src/api` module.
+- Callers pass **variables**, not closures. A hook whose function needs several values takes an object (`{ versionId, notes }`).
+- `invalidateOn: 'settled'` refreshes even when the mutation throws. Use it for multi-step writes where an early step can land before a later one fails (status changed, email failed).
+- Optimistic updates (kanban drops) live in the hook too: see `useUpdateTaskStatus` and `useSetMeetingCompleted`. They patch every cached list with `setQueriesData` and roll back on error.
 
 ## Query keys
 
-- Always build keys with the module's factory, in hooks and in every `invalidateQueries`. No inline arrays.
-- Workspace-scoped keys take `workspaceUserId` (from `useAuth()`), never `user.id`, so the Owner and invited Members share cache entries.
-- Cross-domain invalidation imports the other module's key factory (creating an invoice invalidates `campaignKeys` analytics and invoices). Until a module has a factory, spell its key once, in the module that needs it, and move it when the factory lands.
+Every factory lives in **`src/api/queryKeys.js`**, a leaf module with no imports. Domains refresh each other: a Deliverable change refreshes Campaigns, Clients and Tasks. Factories imported between domain modules would make import cycles.
+
+- **One root per domain.** Every key a domain caches starts with its root (`postKeys.all = ['posts']`), so `xxxKeys.all` refreshes every view of it. Prefer invalidating the root over listing narrow keys; a missed key is a stale screen. A test checks every factory keeps to its root.
+- Workspace-scoped keys take `workspaceUserId` (from `useAuth()`), never `user.id`, so the Owner and invited Members share cache entries. Keys that are genuinely per person (notifications, chat, "my submissions", "my tasks") take the user's id and say so in `queryKeys.js`.
+- Build keys with the factory, in hooks and in every `invalidateQueries`. A new key goes into `queryKeys.js` under its domain's root.
 - Realtime subscriptions are **invalidators only**: subscribe, then `invalidateQueries` with a factory key. Never write payloads into the cache.
+
+## What callers may do
+
+Components, pages, `src/hooks` and `App.jsx` call `src/api` hooks and plain functions. A lint rule (`no-restricted-imports`, **error**) rejects their importing `useQuery`, `useMutation`, `useQueryClient` or `@/lib/supabase`.
+
+- If a screen needs data or a change that no hook provides, add a function and a hook to the owning `src/api` module.
+- A plain function called from a handler (a reaction, an inline edit) is fine. When its change must show before realtime arrives, the module offers a stable refresh hook (`useRefreshChannel`, `useRefreshCommentThread`).
+- Sign-out and account switch clear the cache through `useClearSessionCache()` in `auth.js`.
 
 ## Error handling
 
@@ -58,7 +67,7 @@ const { data, error } = await supabase.from('table').select('*')
 if (error) throw error  // always throw, never swallow
 ```
 
-Never return `null` to hide an error. Let it reach React Query's `error` state or the mutation caller.
+Never return `null` to hide an error. Let it reach React Query's `error` state or the mutation caller. Best-effort side effects (welcome emails, storage cleanup after the row is gone) log and carry on, and say so in a comment.
 
 ## Enabled guards
 
@@ -72,7 +81,7 @@ enabled: !!clientId && !!dateRange     // multiple dependencies
 
 ## Workspace and auth
 
-Use `useAuth()` only inside hooks. Plain async mutation functions that need the workspace call `resolveWorkspace()` (`src/lib/workspace.js`), and use `auth.getUser()` for `created_by`. Do not call hooks inside them.
+Use `useAuth()` only inside hooks. Plain async mutation functions that need the workspace call `resolveWorkspace()` (`src/lib/workspace.js`), and use `auth.getUser()` for `created_by`. Writes to the agency's own row (`agency_subscriptions`) filter by the resolved `workspaceUserId`, never the caller's id.
 
 ## Data normalization
 
@@ -88,4 +97,4 @@ return data.map((post) => ({
 
 ## Tests
 
-Test the plain functions without React: stub `@/lib/supabase` and `@/lib/workspace`, call the function, and assert on the query it built (see `src/tests/campaigns/campaignsApi.test.js`). Test key factories for shape and workspace scoping.
+Test the plain functions without React. `src/tests/api/supabaseStub.js` records every call and answers per table and operation. `src/tests/api/mutationHarness.jsx` renders a mutation hook and reports which keys it invalidated. `src/tests/finance/financeApi.test.js` uses both.

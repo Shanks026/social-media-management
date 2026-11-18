@@ -500,7 +500,7 @@ export async function fetchGlobalCalendar({ userId, currentMonth }) {
   if (!rows.length) return rows
 
   // get_global_calendar doesn't return platform_schedules, which
-  // getPublishState needs to show (and filter) partially published
+  // displayStatus needs to show (and filter) partially published
   // deliverables (B9). Fetch them for the month's versions and merge.
   const { data: schedules, error: schedError } = await supabase
     .from('post_versions')

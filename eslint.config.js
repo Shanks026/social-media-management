@@ -49,18 +49,23 @@ export default [
   },
   {
     // ADR 0007: src/api owns every query, mutation and cache key. UI code goes
-    // through its hooks. A warning until the existing call sites have moved
-    // (#154–#157); #158 turns it into an error.
-    files: ['src/components/**/*.{js,jsx}', 'src/pages/**/*.{js,jsx}', 'src/hooks/**/*.{js,jsx}'],
+    // through its hooks, which also own invalidation, so UI code never needs
+    // the query client either.
+    files: [
+      'src/App.jsx',
+      'src/components/**/*.{js,jsx}',
+      'src/pages/**/*.{js,jsx}',
+      'src/hooks/**/*.{js,jsx}',
+    ],
     rules: {
       'no-restricted-imports': [
-        'warn',
+        'error',
         {
           paths: [
             {
               name: '@tanstack/react-query',
-              importNames: ['useQuery', 'useMutation'],
-              message: 'Use a hook from src/api (ADR 0007): src/api owns queries and mutations.',
+              importNames: ['useQuery', 'useMutation', 'useQueryClient', 'useInfiniteQuery', 'useQueries'],
+              message: 'Use a hook from src/api (ADR 0007): src/api owns queries, mutations and cache invalidation.',
             },
             {
               name: '@/lib/supabase',

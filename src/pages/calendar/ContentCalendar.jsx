@@ -40,7 +40,6 @@ import {
 import { useGlobalCalendar } from '@/api/posts'
 import { useHeader } from '@/components/misc/header-context'
 import { cn } from '@/lib/utils'
-import { matchesPublishStatus } from '@/lib/helper'
 import { useMeetings } from '@/api/meetings'
 import { useClients } from '@/api/clients'
 import { ClientAvatar } from '@/components/tasks/ClientAvatar'
@@ -63,7 +62,7 @@ import {
 } from './useCalendarReport'
 
 import { statusTone, CHART_STATUSES } from '@/lib/statusTone'
-import { statusLabel } from '@/lib/domain/deliverableStatus'
+import { statusLabel, matchesPublishStatus } from '@/lib/domain/deliverableStatus'
 
 // Calendar Views
 import MonthView from './MonthView'

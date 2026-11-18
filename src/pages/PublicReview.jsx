@@ -30,7 +30,7 @@ import {
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { Badge } from '@/components/ui/badge'
-import { isDocumentUrl, getDocumentExtension, getDocumentPreviewUrl } from '@/lib/helper'
+import { isDocumentUrl, getDocumentExtension, getDocumentPreviewUrl } from '@/lib/media'
 import { cn } from '@/lib/utils'
 import {
   Select,

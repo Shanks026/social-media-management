@@ -12,8 +12,7 @@ import {
 import CreateDraftPost from '../../posts/DraftPostForm'
 import DraftPostList from '../../posts/DraftPostList'
 import { usePostsByClient } from '@/api/posts'
-import { getPublishState } from '@/lib/helper'
-import { statusLabel } from '@/lib/domain/deliverableStatus'
+import { statusLabel, displayStatus } from '@/lib/domain/deliverableStatus'
 
 const ALL_STATUS_TABS = [
   { key: 'ALL', label: 'All' },
@@ -39,7 +38,7 @@ export default function WorkflowTab({ client }) {
 
   const counts = posts.reduce(
     (acc, post) => {
-      const status = getPublishState(post)
+      const status = displayStatus(post)
       acc.ALL++
       if (status && status in acc) acc[status]++
       return acc

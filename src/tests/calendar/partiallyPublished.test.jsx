@@ -17,7 +17,7 @@ vi.mock('@/lib/supabase', () => ({
 }))
 
 import { fetchGlobalCalendar } from '@/api/posts'
-import { matchesPublishStatus } from '@/lib/helper'
+import { matchesPublishStatus } from '@/lib/domain/deliverableStatus'
 
 const partial = {
   version_id: 'v-partial',

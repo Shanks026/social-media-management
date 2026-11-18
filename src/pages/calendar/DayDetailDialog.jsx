@@ -27,9 +27,8 @@ import {
 } from '@/components/ui/empty'
 import MeetingRow from '@/components/MeetingRow'
 import { useMarkMeetingDone } from '@/hooks/useMarkMeetingDone'
-import { getPublishState } from '@/lib/helper'
 import { statusTone } from '@/lib/statusTone'
-import { statusLabel } from '@/lib/domain/deliverableStatus'
+import { statusLabel, displayStatus } from '@/lib/domain/deliverableStatus'
 
 const STATUS_STATS_CONFIG = [
   'DRAFT',
@@ -78,7 +77,7 @@ export function DayDetailDialog({ date, posts = [], open, onOpenChange }) {
 
   const filteredPosts = useMemo(() => {
     return regularPosts.filter((post) => {
-      const pStatus = getPublishState(post) || 'DRAFT'
+      const pStatus = displayStatus(post) || 'DRAFT'
       const matchesSearch = post.title?.toLowerCase().includes(searchQuery.toLowerCase())
       const matchesStatus = statusFilter === 'all' || pStatus === statusFilter
       const matchesClient = clientFilter === 'all' || post.client_name === clientFilter
@@ -88,7 +87,7 @@ export function DayDetailDialog({ date, posts = [], open, onOpenChange }) {
 
   const stats = useMemo(() => {
     return regularPosts.reduce((acc, post) => {
-      const pStatus = getPublishState(post) || 'DRAFT'
+      const pStatus = displayStatus(post) || 'DRAFT'
       acc[pStatus] = (acc[pStatus] || 0) + 1
       return acc
     }, {})

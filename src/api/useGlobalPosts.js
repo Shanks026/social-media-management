@@ -1,7 +1,7 @@
 import { supabase } from '@/lib/supabase'
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '@/context/AuthContext'
-import { getPublishState } from '@/lib/helper'
+import { displayStatus } from '@/lib/domain/deliverableStatus'
 import { postKeys } from '@/api/queryKeys'
 
 /**
@@ -144,10 +144,10 @@ export function useGlobalPosts(filters = {}) {
       if (error) throw error
       let posts = normalizePosts(data)
       if (filters.status === 'PARTIALLY_PUBLISHED') {
-        posts = posts.filter((p) => getPublishState(p) === 'PARTIALLY_PUBLISHED')
+        posts = posts.filter((p) => displayStatus(p) === 'PARTIALLY_PUBLISHED')
       }
       if (filters.status === 'SCHEDULED') {
-        posts = posts.filter((p) => getPublishState(p) === 'SCHEDULED')
+        posts = posts.filter((p) => displayStatus(p) === 'SCHEDULED')
       }
       return posts
     },
@@ -198,7 +198,7 @@ export function usePostCounts() {
       for (const row of data || []) {
         if (!row.post_versions) continue
         counts.all++
-        const derived = getPublishState(row.post_versions)
+        const derived = displayStatus(row.post_versions)
         if (derived in counts) counts[derived]++
       }
       return counts

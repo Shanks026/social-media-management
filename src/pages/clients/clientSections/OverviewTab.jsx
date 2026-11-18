@@ -53,7 +53,7 @@ import { useTransactions } from '@/api/transactions'
 import { usePermissions } from '@/api/usePermissions'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
-import { getPublishState } from '@/lib/helper'
+import { displayStatus } from '@/lib/domain/deliverableStatus'
 import MeetingRow from '@/components/MeetingRow'
 import { useTasks } from '@/api/tasks'
 import { useCampaigns } from '@/api/campaigns'
@@ -208,7 +208,7 @@ export default function OverviewTab({ client }) {
   }, {})
 
   posts.forEach((post) => {
-    const status = normalizeStatus(getPublishState(post))
+    const status = normalizeStatus(displayStatus(post))
     if (visibleStatuses.includes(status)) {
       postCounts[status] += 1
     }
@@ -224,7 +224,7 @@ export default function OverviewTab({ client }) {
   const pieChartData = chartData.filter((d) => d.value > 0)
 
   const totalPosts = posts.filter((post) => {
-    const status = normalizeStatus(getPublishState(post))
+    const status = normalizeStatus(displayStatus(post))
     return visibleStatuses.includes(status)
   }).length
 

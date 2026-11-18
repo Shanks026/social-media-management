@@ -14,7 +14,7 @@ import {
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { DayDetailDialog } from './DayDetailDialog' // Import the dialog
-import { getPublishState } from '@/lib/helper'
+import { displayStatus } from '@/lib/domain/deliverableStatus'
 import { deliverableEdge } from '@/lib/statusTone'
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i)
@@ -157,7 +157,7 @@ export default function WeekView({ currentMonth, postsByDate, clientId }) {
                         }}
                         className={cn(
                           'absolute overflow-hidden p-1.5 rounded-lg border border-l-4 transition-all z-10 hover:z-30 hover:scale-[1.02] text-left shadow-md flex flex-col justify-center',
-                          deliverableEdge(getPublishState(post)),
+                          deliverableEdge(displayStatus(post)),
                           post.isMeeting
                             ? 'bg-purple-50 dark:bg-purple-950/50 border-purple-200 dark:border-purple-800'
                             : 'bg-card',

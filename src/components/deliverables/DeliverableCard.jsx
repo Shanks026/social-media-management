@@ -25,7 +25,8 @@ import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import { getUrgencyStatus } from '@/lib/client-helpers'
 import { isNeedsAttention } from '@/lib/domain/clientStatus'
-import { getPublishState, renderCaption, isDocumentUrl, getDocumentExtension, getDocumentPreviewUrl } from '@/lib/helper'
+import { renderCaption } from '@/components/deliverables/caption'
+import { isDocumentUrl, getDocumentExtension, getDocumentPreviewUrl } from '@/lib/media'
 import StatusBadge from '@/components/StatusBadge'
 import {
   Dialog,
@@ -51,7 +52,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { ClientAvatar } from '@/components/tasks/ClientAvatar'
 import { useAuth } from '@/context/AuthContext'
 import { usePermissions } from '@/api/usePermissions'
-import { DELETABLE_STATUSES } from '@/lib/domain/deliverableStatus'
+import { DELETABLE_STATUSES, displayStatus } from '@/lib/domain/deliverableStatus'
 import { useTeamMembers, useRemovedMembers } from '@/api/team'
 import { useDeletePost, useCreateRevision } from '@/api/posts'
 import { useTasksForPost } from '@/api/tasks'
@@ -305,7 +306,7 @@ export function DeliverableCard({ post, client }) {
         {/* Header: Status/Type badges (left) — Platforms + Actions (right) */}
         <div className="flex items-center justify-between mb-4 gap-2">
           <div className="flex items-center gap-2 min-w-0">
-            <StatusBadge status={getPublishState(post) || 'DRAFT'} />
+            <StatusBadge status={displayStatus(post) || 'DRAFT'} />
             {post.deliverable_type && DELIVERABLE_TYPE_LABELS[post.deliverable_type] && (
               <Badge variant="secondary" className="rounded-full text-xs px-2 py-0.5 shrink-0 text-foreground/80">
                 {DELIVERABLE_TYPE_LABELS[post.deliverable_type]}

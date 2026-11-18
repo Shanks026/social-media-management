@@ -54,8 +54,9 @@ import {
 import { useDeletePostMedia } from '@/api/posts'
 import { useTeamMembers } from '@/api/team'
 import { useAuth } from '@/context/AuthContext'
-import { getPublishState, renderCaption, isDocumentUrl, getDocumentExtension, getDocumentPreviewUrl } from '@/lib/helper'
-import { DELETABLE_STATUSES } from '@/lib/domain/deliverableStatus'
+import { renderCaption } from '@/components/deliverables/caption'
+import { isDocumentUrl, getDocumentExtension, getDocumentPreviewUrl } from '@/lib/media'
+import { DELETABLE_STATUSES, displayStatus } from '@/lib/domain/deliverableStatus'
 import StatusBadge from '@/components/StatusBadge'
 import ClientNotes from './ClientNotes'
 import { cn } from '@/lib/utils'
@@ -342,7 +343,7 @@ export default function PostContent({
       {/* Main Header */}
       <div className="flex flex-col md:flex-row justify-between items-start gap-6">
         <div className="min-w-0 flex-1 space-y-4">
-          <StatusBadge status={getPublishState(post)} />
+          <StatusBadge status={displayStatus(post)} />
 
           <div className="flex flex-row items-center gap-3">
             <h1 className="text-4xl font-semibold tracking-tight bricolage">

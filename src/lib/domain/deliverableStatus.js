@@ -89,3 +89,11 @@ export function clientStatusCounts(byStatus = {}) {
   }
   return [...totals.entries()]
 }
+
+/**
+ * Status-filter predicate that agrees with what the calendar cells show:
+ * compares the derived display status, not the raw stored one (B9).
+ */
+export function matchesPublishStatus(version, statusFilter) {
+  return statusFilter === 'all' || displayStatus(version) === statusFilter
+}

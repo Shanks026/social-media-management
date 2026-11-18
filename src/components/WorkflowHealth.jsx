@@ -15,7 +15,7 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from '@/components/ui/chart'
-import { getPublishState } from '@/lib/helper'
+import { displayStatus } from '@/lib/domain/deliverableStatus'
 import {
   DELIVERABLE_CHART_CONFIG as chartConfig,
   ALLOWED_CHART_STATUSES as ALLOWED_STATUSES,
@@ -58,7 +58,7 @@ export default function WorkflowHealth({
   }, {})
 
   posts.forEach((post) => {
-    const status = normalizeStatus(getPublishState(post))
+    const status = normalizeStatus(displayStatus(post))
     if (status && visibleStatuses.includes(status)) {
       postCounts[status] += 1
     }
