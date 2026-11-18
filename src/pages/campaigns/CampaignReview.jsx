@@ -20,7 +20,7 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
-import { isDocumentUrl, getDocumentExtension, getDocumentPreviewUrl } from '@/lib/helper'
+import { isDocumentUrl, getDocumentExtension, getDocumentPreviewUrl } from '@/lib/media'
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 

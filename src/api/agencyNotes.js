@@ -2,6 +2,10 @@ import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/context/AuthContext'
 import { resolveWorkspace } from '@/lib/workspace'
+import { useApiMutation } from '@/api/mutation'
+import { noteKeys } from '@/api/queryKeys'
+
+export { noteKeys }
 
 // Embed each note's tags via the junction; consumers should never see the
 // PostgREST join alias (api-conventions.md). Flatten to a sorted `tags` array
@@ -21,7 +25,7 @@ function normalizeNote(row) {
 export function useAgencyNotes() {
   const { workspaceUserId } = useAuth()
   return useQuery({
-    queryKey: ['agency-notes', 'list', { userId: workspaceUserId }],
+    queryKey: noteKeys.list(workspaceUserId),
     queryFn: async () => {
       const { data, error } = await supabase
         .from('notes')
@@ -39,7 +43,7 @@ export function useAgencyNotes() {
 
 export function useAgencyNoteById(noteId) {
   return useQuery({
-    queryKey: ['agency-notes', 'detail', noteId],
+    queryKey: noteKeys.detail(noteId),
     queryFn: async () => {
       const { data, error } = await supabase
         .from('notes')
@@ -97,4 +101,23 @@ export async function deleteAgencyNote(noteId) {
   const { error } = await supabase.from('notes').delete().eq('id', noteId)
   if (error) throw error
   return true
+}
+
+// ─── Mutation hooks ───────────────────────────────────────────────────────────
+
+// The notes list and every open note sit under noteKeys.all.
+export const invalidateNotes = (queryClient) =>
+  queryClient.invalidateQueries({ queryKey: noteKeys.all })
+
+export function useCreateNote(options) {
+  return useApiMutation(createAgencyNote, invalidateNotes, options)
+}
+
+/** Variables: `{ id, ...updates }` (auto-save, visibility, flush on leave). */
+export function useUpdateNote(options) {
+  return useApiMutation(({ id, ...updates }) => updateAgencyNote(id, updates), invalidateNotes, options)
+}
+
+export function useDeleteNote(options) {
+  return useApiMutation(deleteAgencyNote, invalidateNotes, options)
 }

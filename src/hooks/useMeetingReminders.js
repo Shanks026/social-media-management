@@ -1,19 +1,13 @@
 import { useEffect, useRef } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { fetchTodayMeetings } from '@/api/meetings'
+import { useTodayMeetings } from '@/api/meetings'
 import { toast } from 'sonner'
 import { differenceInMinutes, isFuture } from 'date-fns'
 
-export function useMeetingReminders(userId) {
+export function useMeetingReminders() {
   const notifiedMeetingsRef = useRef(new Set())
 
-  // Fetch today's meetings. Refresh every 5 minutes in background
-  const { data: meetings = [] } = useQuery({
-    queryKey: ['todayMeetings', userId],
-    queryFn: fetchTodayMeetings,
-    enabled: !!userId,
-    refetchInterval: 5 * 60 * 1000, 
-  })
+  // Today's meetings, refreshed every 5 minutes in the background
+  const { data: meetings = [] } = useTodayMeetings()
 
   useEffect(() => {
     if (!meetings.length) return

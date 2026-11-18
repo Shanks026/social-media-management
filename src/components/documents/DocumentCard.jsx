@@ -20,7 +20,6 @@ import {
   Eye,
   FolderInput,
 } from 'lucide-react'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import {
@@ -65,10 +64,9 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import {
-  deleteDocument,
-  updateDocument,
-  archiveDocument,
-  unarchiveDocument,
+  useDeleteDocument,
+  useUpdateDocument,
+  useArchiveDocument,
   getDocumentSignedUrl,
 } from '@/api/documents'
 import DocumentCategoryBadge from './DocumentCategoryBadge'
@@ -98,7 +96,6 @@ const editSchema = z.object({
 })
 
 export default function DocumentCard({ doc, canManage = true }) {
-  const queryClient = useQueryClient()
   const { data: sub } = useSubscription()
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
@@ -115,29 +112,16 @@ export default function DocumentCard({ doc, canManage = true }) {
   })
 
   // ── Delete ──
-  const deleteMutation = useMutation({
-    mutationFn: () =>
-      deleteDocument({
-        id: doc.id,
-        storagePath: doc.storage_path,
-      }),
+  const deleteMutation = useDeleteDocument({
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['documents', 'list'] })
       toast.success('Document deleted')
     },
     onError: (err) => toast.error(err.message || 'Failed to delete document'),
   })
 
   // ── Update ──
-  const updateMutation = useMutation({
-    mutationFn: (values) =>
-      updateDocument(doc.id, {
-        displayName: values.displayName,
-        category: values.category,
-        notes: values.notes,
-      }),
+  const updateMutation = useUpdateDocument({
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['documents', 'list'] })
       setEditOpen(false)
       toast.success('Document updated')
     },
@@ -145,23 +129,10 @@ export default function DocumentCard({ doc, canManage = true }) {
   })
 
   // ── Archive ──
-  const archiveMutation = useMutation({
-    mutationFn: () => archiveDocument(doc.id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['documents', 'list'] })
-      toast.success('Document archived')
-    },
-    onError: (err) => toast.error(err.message || 'Failed to archive document'),
-  })
-
-  // ── Unarchive ──
-  const unarchiveMutation = useMutation({
-    mutationFn: () => unarchiveDocument(doc.id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['documents', 'list'] })
-      toast.success('Document restored')
-    },
-    onError: (err) => toast.error(err.message || 'Failed to restore document'),
+  const archiveMutation = useArchiveDocument({
+    onSuccess: (_, { archived }) => toast.success(archived ? 'Document archived' : 'Document restored'),
+    onError: (err, { archived }) =>
+      toast.error(err.message || `Failed to ${archived ? 'archive' : 'restore'} document`),
   })
 
   // ── Download ──
@@ -306,15 +277,15 @@ export default function DocumentCard({ doc, canManage = true }) {
                 </DropdownMenuItem>
                 {isArchived ? (
                   <DropdownMenuItem
-                    onClick={() => unarchiveMutation.mutate()}
-                    disabled={unarchiveMutation.isPending}
+                    onClick={() => archiveMutation.mutate({ id: doc.id, archived: false })}
+                    disabled={archiveMutation.isPending}
                   >
                     <ArchiveRestore className="size-4" />
                     Restore
                   </DropdownMenuItem>
                 ) : (
                   <DropdownMenuItem
-                    onClick={() => archiveMutation.mutate()}
+                    onClick={() => archiveMutation.mutate({ id: doc.id, archived: true })}
                     disabled={archiveMutation.isPending}
                   >
                     <Archive className="size-4" />
@@ -349,7 +320,7 @@ export default function DocumentCard({ doc, canManage = true }) {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={() => deleteMutation.mutate()}
+              onClick={() => deleteMutation.mutate({ id: doc.id, storagePath: doc.storage_path })}
               disabled={deleteMutation.isPending}
             >
               Delete
@@ -380,7 +351,14 @@ export default function DocumentCard({ doc, canManage = true }) {
 
           <Form {...form}>
             <form
-              onSubmit={form.handleSubmit((values) => updateMutation.mutate(values))}
+              onSubmit={form.handleSubmit((values) =>
+                updateMutation.mutate({
+                  id: doc.id,
+                  displayName: values.displayName,
+                  category: values.category,
+                  notes: values.notes,
+                }),
+              )}
               className="space-y-4"
             >
               <FormField

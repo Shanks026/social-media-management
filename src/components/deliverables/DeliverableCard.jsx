@@ -25,7 +25,8 @@ import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import { getUrgencyStatus } from '@/lib/client-helpers'
 import { isNeedsAttention } from '@/lib/domain/clientStatus'
-import { getPublishState, renderCaption, isDocumentUrl, getDocumentExtension, getDocumentPreviewUrl } from '@/lib/helper'
+import { renderCaption } from '@/components/deliverables/caption'
+import { isDocumentUrl, getDocumentExtension, getDocumentPreviewUrl } from '@/lib/media'
 import StatusBadge from '@/components/StatusBadge'
 import {
   Dialog,
@@ -51,10 +52,9 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { ClientAvatar } from '@/components/tasks/ClientAvatar'
 import { useAuth } from '@/context/AuthContext'
 import { usePermissions } from '@/api/usePermissions'
-import { DELETABLE_STATUSES } from '@/lib/domain/deliverableStatus'
+import { DELETABLE_STATUSES, displayStatus } from '@/lib/domain/deliverableStatus'
 import { useTeamMembers, useRemovedMembers } from '@/api/team'
-import { useQueryClient, useMutation } from '@tanstack/react-query'
-import { deletePost, createRevision } from '@/api/posts'
+import { useDeletePost, useCreateRevision } from '@/api/posts'
 import { useTasksForPost } from '@/api/tasks'
 import DraftPostForm from '@/pages/posts/DraftPostForm'
 import { toast } from 'sonner'
@@ -162,7 +162,6 @@ const MediaItem = ({ url, className, isPreview = false }) => {
  */
 export function DeliverableCard({ post, client }) {
   const navigate = useNavigate()
-  const queryClient = useQueryClient()
   const { user } = useAuth()
   const { isAdmin } = usePermissions()
   const [isPreviewOpen, setIsPreviewOpen] = useState(false)
@@ -177,12 +176,8 @@ export function DeliverableCard({ post, client }) {
   // post.id is the parent posts.id, which is what task_posts links against.
   const { data: linkedTasks = [] } = useTasksForPost(post.id)
 
-  const createRevisionMutation = useMutation({
-    mutationFn: () => createRevision(post.version_id, user?.id),
+  const createRevisionMutation = useCreateRevision({
     onSuccess: (newVersionId) => {
-      queryClient.invalidateQueries({ queryKey: ['draft-posts', post.client_id] })
-      queryClient.invalidateQueries({ queryKey: ['global-posts'] })
-      queryClient.invalidateQueries({ queryKey: ['global-calendar'] })
       toast.success('New version created')
       navigate(`/clients/${post.client_id}/deliverables/${newVersionId}`)
     },
@@ -191,17 +186,8 @@ export function DeliverableCard({ post, client }) {
     },
   })
 
-  const { mutate: handleDeletePost, isPending: isDeletingPost } = useMutation({
-    mutationFn: (postId) => deletePost(postId),
+  const { mutate: handleDeletePost, isPending: isDeletingPost } = useDeletePost({
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['draft-posts', post?.client_id] })
-      queryClient.invalidateQueries({ queryKey: ['posts', post?.client_id] })
-      queryClient.invalidateQueries({ queryKey: ['global-posts'] })
-      queryClient.invalidateQueries({ queryKey: ['calendar'] })
-      queryClient.invalidateQueries({ queryKey: ['global-calendar'] })
-      queryClient.invalidateQueries({ queryKey: ['global-post-counts'] })
-      queryClient.invalidateQueries({ queryKey: ['postCounts', post?.client_id] })
-      queryClient.invalidateQueries({ queryKey: ['subscription'] })
       toast.success('Post deleted successfully')
       setPostToDelete(null)
     },
@@ -320,7 +306,7 @@ export function DeliverableCard({ post, client }) {
         {/* Header: Status/Type badges (left) — Platforms + Actions (right) */}
         <div className="flex items-center justify-between mb-4 gap-2">
           <div className="flex items-center gap-2 min-w-0">
-            <StatusBadge status={getPublishState(post) || 'DRAFT'} />
+            <StatusBadge status={displayStatus(post) || 'DRAFT'} />
             {post.deliverable_type && DELIVERABLE_TYPE_LABELS[post.deliverable_type] && (
               <Badge variant="secondary" className="rounded-full text-xs px-2 py-0.5 shrink-0 text-foreground/80">
                 {DELIVERABLE_TYPE_LABELS[post.deliverable_type]}
@@ -408,7 +394,7 @@ export function DeliverableCard({ post, client }) {
                     className="cursor-pointer font-medium text-foreground py-2"
                     onClick={(e) => {
                       e.stopPropagation()
-                      createRevisionMutation.mutate()
+                      createRevisionMutation.mutate({ versionId: post.version_id, userId: user?.id })
                     }}
                   >
                     <Plus className="h-4 w-4 mr-2" /> Create New Version

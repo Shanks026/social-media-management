@@ -3,7 +3,6 @@ import { formatDate } from '@/lib/format'
 import { useMemo, useState, useRef, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
-import { useQueryClient } from '@tanstack/react-query'
 import { Pencil, Trash2, X, Check, Plus, ArrowUp, SmilePlus, UserRoundPlus } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/context/AuthContext'
@@ -11,12 +10,12 @@ import { usePermissions } from '@/api/usePermissions'
 import { useTeamMembers } from '@/api/team'
 import {
   useComments,
-  createComment,
+  useCreateComment,
+  useDeleteComment,
+  useRefreshCommentThread,
   updateComment,
-  softDeleteComment,
   toggleReaction,
   REACTION_EMOJIS,
-  commentKeys,
 } from '@/api/comments'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
@@ -321,7 +320,9 @@ function CommentRow({ comment, author, mentionNames, myMentionName, memberMap, c
 export function CommentThread({ entityType, entityId, composerPosition = 'bottom', mentionAccessIds }) {
   const { user } = useAuth()
   const { isAdmin } = usePermissions()
-  const queryClient = useQueryClient()
+  const { mutateAsync: postComment } = useCreateComment()
+  const { mutateAsync: removeComment } = useDeleteComment()
+  const invalidate = useRefreshCommentThread({ entityType, entityId })
   const { data: comments = [], isLoading } = useComments({ entityType, entityId })
   const { data: teamMembers = [] } = useTeamMembers()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -362,9 +363,6 @@ export function CommentThread({ entityType, entityId, composerPosition = 'bottom
     return () => clearTimeout(timeout)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [deepLinkedId, isLoading, comments.length])
-
-  const invalidate = () =>
-    queryClient.invalidateQueries({ queryKey: commentKeys.thread(entityType, entityId) })
 
   const memberMap = useMemo(() => {
     const map = Object.fromEntries(teamMembers.map((m) => [m.member_user_id, m]))
@@ -482,10 +480,9 @@ export function CommentThread({ entityType, entityId, composerPosition = 'bottom
       .map((m) => m.id)
     setSending(true)
     try {
-      await createComment({ entityType, entityId, body: trimmed, mentionedUids })
+      await postComment({ entityType, entityId, body: trimmed, mentionedUids })
       setBody('')
       setPendingMentions([])
-      invalidate()
     } catch (err) {
       toast.error(err.message || 'Failed to post comment')
     } finally {
@@ -496,8 +493,7 @@ export function CommentThread({ entityType, entityId, composerPosition = 'bottom
   async function handleDelete() {
     if (!deleting) return
     try {
-      await softDeleteComment(deleting.id)
-      invalidate()
+      await removeComment({ id: deleting.id, entityType, entityId })
       toast.success('Comment deleted')
     } catch (err) {
       toast.error(err.message || 'Failed to delete comment')

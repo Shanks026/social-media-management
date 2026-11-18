@@ -1,7 +1,6 @@
 import { PlatformIcon } from '@/components/PlatformIcon'
 import { ENABLED_PLATFORMS } from '@/lib/domain/platforms'
 import { useState, useMemo, useEffect } from 'react'
-import { useQuery } from '@tanstack/react-query'
 import {
   format,
   startOfWeek,
@@ -39,11 +38,9 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useGlobalCalendar } from '@/api/posts'
-import { useAuth } from '@/context/AuthContext'
 import { useHeader } from '@/components/misc/header-context'
 import { cn } from '@/lib/utils'
-import { matchesPublishStatus } from '@/lib/helper'
-import { fetchMeetings } from '@/api/meetings'
+import { useMeetings } from '@/api/meetings'
 import { useClients } from '@/api/clients'
 import { ClientAvatar } from '@/components/tasks/ClientAvatar'
 import CreateMeetingDialog from '@/components/CreateMeetingDialog'
@@ -65,7 +62,7 @@ import {
 } from './useCalendarReport'
 
 import { statusTone, CHART_STATUSES } from '@/lib/statusTone'
-import { statusLabel } from '@/lib/domain/deliverableStatus'
+import { statusLabel, matchesPublishStatus } from '@/lib/domain/deliverableStatus'
 
 // Calendar Views
 import MonthView from './MonthView'
@@ -81,7 +78,6 @@ export default function ContentCalendar({
   clientId = null,
   hideHeader = false,
 }) {
-  const { user } = useAuth()
   const { setHeader } = useHeader()
   const [currentDate, setCurrentDate] = useState(new Date())
   const [view, setView] = useState('month')
@@ -109,11 +105,10 @@ export default function ContentCalendar({
     clientId && String(clientsData?.internalAccount?.id) === String(clientId)
   const hasNoExternalClients = (subscription?.client_count ?? 1) === 0
 
-  const { data: meetings = [], isLoading: isLoadingMeetings } = useQuery({
-    queryKey: ['meetings', clientId, format(currentDate, 'yyyy-MM-dd')],
-    queryFn: () => fetchMeetings({ clientId }),
-    enabled: !!user?.id && !isInternalClient,
-  })
+  const { data: meetings = [], isLoading: isLoadingMeetings } = useMeetings(
+    { clientId },
+    { enabled: !isInternalClient },
+  )
 
   const calendarTitle = useMemo(() => {
     if (view === 'month') return format(currentDate, 'MMMM yyyy')

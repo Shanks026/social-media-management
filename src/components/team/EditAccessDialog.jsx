@@ -5,21 +5,19 @@ import {
   useEffect,
   useLayoutEffect,
 } from 'react'
-import { useAuth } from '@/context/AuthContext'
 import { usePermissions } from '@/api/usePermissions'
 import {
   useJobRoles,
   useMemberJobRoles,
-  createJobRole,
-  setMemberJobRoles,
-  setMemberResponsibilities,
+  useCreateJobRole,
+  useSetMemberJobRoles,
+  useSetMemberResponsibilities,
 } from '@/api/jobRoles'
 import { nextJobRoleColor } from '@/lib/job-roles'
 import JobRolePill from '@/components/team/JobRolePill'
 import JobRolePicker from '@/components/team/JobRolePicker'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
-import { useQueryClient } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -93,8 +91,10 @@ export function EditAccessDialog({ member, open, onOpenChange, onSave, onSaved, 
   const [saving, setSaving] = useState(false)
 
   const { isOwner } = usePermissions()
-  const { workspaceUserId } = useAuth()
-  const queryClient = useQueryClient()
+  // These hooks refresh the roster and job-role caches themselves.
+  const { mutateAsync: createJobRole } = useCreateJobRole()
+  const { mutateAsync: saveMemberJobRoles } = useSetMemberJobRoles()
+  const { mutateAsync: saveResponsibilities } = useSetMemberResponsibilities()
   const canManageJobRoles = isOwner
   const { data: allJobRoles = [] } = useJobRoles()
   const { data: memberJobRoles = {} } = useMemberJobRoles()
@@ -115,15 +115,7 @@ export function EditAccessDialog({ member, open, onOpenChange, onSave, onSaved, 
     try {
       const created = await createJobRole({ name, color: nextJobRoleColor(allJobRoles.length) })
 
-      // The picker switches the new id on immediately, but the pill is
-      // rendered by looking that id up in `allJobRoles` — so without seeding
-      // the cache here, a freshly created role vanished until the next
-      // refetch. Seed for the instant render, then invalidate so the server
-      // stays the source of truth.
-      queryClient.setQueryData(['job-roles', 'list', workspaceUserId], (old) =>
-        [...(old ?? []), created].sort((a, b) => a.name.localeCompare(b.name)),
-      )
-      queryClient.invalidateQueries({ queryKey: ['job-roles'] })
+      // useCreateJobRole seeds the cached list, so the new pill renders at once.
 
       return created
     } catch (err) {
@@ -144,10 +136,10 @@ export function EditAccessDialog({ member, open, onOpenChange, onSave, onSaved, 
       // writes. That separation is what lets the owner edit their own
       // description while update_member_access still refuses their row.
       if (isOwnerRow) {
-        await setMemberResponsibilities(
-          member.member_user_id,
-          rolesAndResponsibilities.trim() || null,
-        )
+        await saveResponsibilities({
+          memberUserId: member.member_user_id,
+          text: rolesAndResponsibilities.trim() || null,
+        })
       } else {
         await onSave(member.id, {
           system_role: systemRole,
@@ -160,13 +152,7 @@ export function EditAccessDialog({ member, open, onOpenChange, onSave, onSaved, 
       // else. It works on the owner's own row too — they are an ordinary
       // member of agency_members.
       if (canManageJobRoles) {
-        await setMemberJobRoles(member.member_user_id, jobRoleIds)
-        // setMemberJobRoles is a plain async function, not a mutation with its
-        // own onSuccess — nothing else invalidates the by-member map this
-        // writes into. Without this, the team table (and every other reader
-        // of useMemberJobRoles) kept showing the old titles until an
-        // unrelated refetch happened to run.
-        queryClient.invalidateQueries({ queryKey: ['job-roles'] })
+        await saveMemberJobRoles({ memberUserId: member.member_user_id, jobRoleIds })
       }
 
       if (isOwnerRow) onSaved?.()

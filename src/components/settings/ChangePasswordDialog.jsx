@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { supabase } from '@/lib/supabase'
+import { sendPasswordChangeCode, verifyPasswordCode, updatePassword } from '@/api/auth'
 import { toast } from 'sonner'
 import {
   Dialog,
@@ -95,11 +95,7 @@ export default function ChangePasswordDialog({
   const handleSendOtp = async () => {
     setIsBusy(true)
     try {
-      const { error } = await supabase.auth.signInWithOtp({
-        email: userEmail,
-        options: { shouldCreateUser: false },
-      })
-      if (error) throw error
+      await sendPasswordChangeCode(userEmail)
       toast.success('OTP sent to your email!')
       setStep(STEPS.VERIFY_OTP)
     } catch (err) {
@@ -117,12 +113,7 @@ export default function ChangePasswordDialog({
     }
     setIsBusy(true)
     try {
-      const { error } = await supabase.auth.verifyOtp({
-        email: userEmail,
-        token: otp,
-        type: 'email',
-      })
-      if (error) throw error
+      await verifyPasswordCode({ email: userEmail, code: otp, type: 'email' })
       toast.success('Identity verified!')
       setStep(STEPS.NEW_PASSWORD)
     } catch (err) {
@@ -148,40 +139,10 @@ export default function ChangePasswordDialog({
     }
     setIsBusy(true)
     try {
-      // 1. Verify old password first
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: userEmail,
-        password: oldPassword,
-      })
-
-      if (signInError) {
-        throw new Error('Incorrect old password.')
-      }
-
-      const { data: userData, error } = await supabase.auth.updateUser({
-        password: newPassword,
-      })
-      if (error) throw error
-
+      // Re-checks the old password, sets the new one, emails the
+      // confirmation and logs the user out.
+      await updatePassword({ newPassword, reason: 'change', email: userEmail, oldPassword })
       toast.success('Password updated successfully! Logging you out...')
-
-      // Get fresh session to ensure the edge function succeeds
-      const {
-        data: { session },
-      } = await supabase.auth.getSession()
-
-      // Send notification email
-      if (userData?.user?.email && session?.access_token) {
-        await supabase.functions.invoke('send-password-update-email', {
-          body: { email: userData.user.email, type: 'change' },
-          headers: {
-            Authorization: `Bearer ${session.access_token}`,
-          },
-        })
-      }
-
-      // Auto logout
-      await supabase.auth.signOut()
 
       resetAll()
       onOpenChange(false)

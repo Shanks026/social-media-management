@@ -1,5 +1,39 @@
+// Deliverables API (ADR 0007): plain async functions (the unit-test surface,
+// callable outside React), read hooks, and a hook per mutation that owns the
+// cache invalidation. Components never call useQuery/useMutation or import
+// supabase for Deliverables.
 import { supabase } from '@/lib/supabase'
 import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, format } from 'date-fns'
+import { useQuery } from '@tanstack/react-query'
+import { useAuth } from '@/context/AuthContext'
+import { useApiMutation } from '@/api/mutation'
+import { uploadPostImage } from '@/api/storage'
+import {
+  postKeys,
+  campaignKeys,
+  clientKeys,
+  taskKeys,
+  reportKeys,
+  subscriptionKeys,
+} from '@/api/queryKeys'
+
+export { postKeys }
+
+// A Deliverable's status, dates and media show up across the app: its own
+// lists and calendar, campaign progress and analytics, client pipelines, the
+// tasks that link it and client reports.
+export function invalidateDeliverables(queryClient) {
+  for (const queryKey of [postKeys.all, campaignKeys.all, clientKeys.all, taskKeys.all, reportKeys.all]) {
+    queryClient.invalidateQueries({ queryKey })
+  }
+}
+
+// Creating, deleting or re-uploading media also moves the storage figure on
+// the subscription row.
+function invalidateDeliverablesAndStorage(queryClient) {
+  invalidateDeliverables(queryClient)
+  queryClient.invalidateQueries({ queryKey: subscriptionKeys.all })
+}
 
 /**
  * Fetches all posts for a client, joining the current version data.
@@ -466,7 +500,7 @@ export async function fetchGlobalCalendar({ userId, currentMonth }) {
   if (!rows.length) return rows
 
   // get_global_calendar doesn't return platform_schedules, which
-  // getPublishState needs to show (and filter) partially published
+  // displayStatus needs to show (and filter) partially published
   // deliverables (B9). Fetch them for the month's versions and merge.
   const { data: schedules, error: schedError } = await supabase
     .from('post_versions')
@@ -486,13 +520,11 @@ export async function fetchGlobalCalendar({ userId, currentMonth }) {
 export function useGlobalCalendar({ currentMonth, clientId = null, view } = {}) {
   const { workspaceUserId } = useAuth()
   return useQuery({
-    queryKey: [
-      'calendar',
-      workspaceUserId,
+    queryKey: postKeys.calendar(workspaceUserId, {
       clientId,
       view,
-      format(currentMonth, 'yyyy-MM-dd'),
-    ],
+      month: format(currentMonth, 'yyyy-MM-dd'),
+    }),
     queryFn: () =>
       fetchGlobalCalendar({ userId: workspaceUserId, currentMonth }),
     enabled: !!workspaceUserId,
@@ -605,13 +637,10 @@ export async function resendApprovalLink(version) {
   )
 }
 
-import { useQuery } from '@tanstack/react-query'
-import { useAuth } from '@/context/AuthContext'
-
 export function usePendingApprovals() {
   const { workspaceUserId } = useAuth()
   return useQuery({
-    queryKey: ['pending-approvals', workspaceUserId],
+    queryKey: postKeys.pendingApprovals(workspaceUserId),
     enabled: !!workspaceUserId,
     queryFn: async () => {
       // The workspace predicate is explicit, not just implied by RLS. RLS stays
@@ -664,7 +693,7 @@ export function usePendingApprovals() {
 export function usePendingApprovalsCount() {
   const { workspaceUserId } = useAuth()
   return useQuery({
-    queryKey: ['pending-approvals-count', workspaceUserId],
+    queryKey: postKeys.pendingApprovalsCount(workspaceUserId),
     enabled: !!workspaceUserId,
     refetchInterval: 60_000,
     queryFn: async () => {
@@ -688,7 +717,7 @@ export function usePendingApprovalsCount() {
 export function useApprovalLog({ action = null, page = 0, pageSize = 25 } = {}) {
   const { workspaceUserId } = useAuth()
   return useQuery({
-    queryKey: ['approval-log', workspaceUserId, action, page],
+    queryKey: postKeys.approvalLog(workspaceUserId, action, page),
     enabled: !!workspaceUserId,
     queryFn: async () => {
       const [{ data, error }, { data: countData, error: countError }] = await Promise.all([
@@ -709,7 +738,7 @@ export function useApprovalLog({ action = null, page = 0, pageSize = 25 } = {}) 
 export function useApprovalLogCount(action) {
   const { workspaceUserId } = useAuth()
   return useQuery({
-    queryKey: ['approval-log', workspaceUserId, action, 'count'],
+    queryKey: postKeys.approvalLogCount(workspaceUserId, action),
     enabled: !!workspaceUserId,
     queryFn: async () => {
       const { data, error } = await supabase.rpc('get_approval_log_count', {
@@ -727,10 +756,10 @@ export async function deleteApprovalEvents(ids) {
 }
 
 export function useMySubmissions({ status = null, page = 0, pageSize = 25 } = {}) {
-  const { workspaceUserId } = useAuth()
+  const { user } = useAuth()
   return useQuery({
-    queryKey: ['my-submissions', workspaceUserId, status, page],
-    enabled: !!workspaceUserId,
+    queryKey: postKeys.mySubmissions(user?.id, status, page),
+    enabled: !!user?.id,
     staleTime: 30_000,
     queryFn: async () => {
       const { data, error } = await supabase.rpc('get_my_submissions', {
@@ -745,10 +774,10 @@ export function useMySubmissions({ status = null, page = 0, pageSize = 25 } = {}
 }
 
 export function useMySubmissionsCount(status = null) {
-  const { workspaceUserId } = useAuth()
+  const { user } = useAuth()
   return useQuery({
-    queryKey: ['my-submissions', workspaceUserId, status, 'count'],
-    enabled: !!workspaceUserId,
+    queryKey: postKeys.mySubmissionsCount(user?.id, status),
+    enabled: !!user?.id,
     staleTime: 30_000,
     refetchInterval: 60_000,
     queryFn: async () => {
@@ -761,15 +790,8 @@ export function useMySubmissionsCount(status = null) {
   })
 }
 
-import { useMutation, useQueryClient } from '@tanstack/react-query'
-export function useRegeneratePostShareToken() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: (versionId) => regeneratePostShareToken(versionId),
-    onSuccess: (_, versionId) => {
-      queryClient.invalidateQueries({ queryKey: ['post-version', versionId] })
-    },
-  })
+export function useRegeneratePostShareToken(options) {
+  return useApiMutation(regeneratePostShareToken, invalidateDeliverables, options)
 }
 
 // ─── Public review (unauthenticated, token from the URL) ───────────────────────
@@ -787,7 +809,7 @@ export function useRegeneratePostShareToken() {
  */
 export function usePostReview(token) {
   return useQuery({
-    queryKey: ['post-review', token],
+    queryKey: postKeys.review(token),
     enabled: !!token,
     staleTime: 0,
     retry: 2,
@@ -814,4 +836,341 @@ export function usePostReview(token) {
       return { post, branding }
     },
   })
+}
+
+// ─── Reads (hooks) ────────────────────────────────────────────────────────────
+
+/** Every Deliverable of one client, current version each (client tabs, lists). */
+export function usePostsByClient(clientId, options = {}) {
+  return useQuery({
+    ...options,
+    queryKey: postKeys.byClient(clientId),
+    queryFn: () => fetchAllPostsByClient(clientId),
+    enabled: !!clientId && (options.enabled ?? true),
+  })
+}
+
+/** Every Deliverable in the workspace, labelled by client (the task picker). */
+export function useAllDeliverables(options = {}) {
+  const { workspaceUserId } = useAuth()
+  return useQuery({
+    ...options,
+    queryKey: postKeys.picker(workspaceUserId),
+    queryFn: () => fetchAllDeliverables(workspaceUserId),
+    enabled: !!workspaceUserId && (options.enabled ?? true),
+  })
+}
+
+/**
+ * Deliverables a task can link: one client's when a client is chosen, else
+ * every client's, labelled by client ("General" tasks).
+ */
+export function useDeliverableOptions(clientId, { enabled = true } = {}) {
+  const byClient = usePostsByClient(clientId, { enabled: enabled && !!clientId })
+  const all = useAllDeliverables({ enabled: enabled && !clientId })
+  return clientId ? byClient : all
+}
+
+/** One version with its post and client, by version (or post) id. */
+export function usePostDetails(versionId) {
+  return useQuery({
+    queryKey: postKeys.detail(versionId),
+    queryFn: () => fetchPostDetails(versionId),
+    enabled: !!versionId,
+    retry: false,
+  })
+}
+
+export async function fetchPostVersions(postId) {
+  const { data, error } = await supabase
+    .from('post_versions')
+    .select('id, version_number, status, created_at')
+    .eq('post_id', postId)
+    .order('version_number', { ascending: false })
+  if (error) throw error
+  return data
+}
+
+/** A post's version history, newest first. */
+export function usePostVersions(postId) {
+  return useQuery({
+    queryKey: postKeys.versions(postId),
+    queryFn: () => fetchPostVersions(postId),
+    enabled: !!postId,
+  })
+}
+
+/**
+ * One client's SCHEDULED or APPROVED Deliverables dated between `from` and
+ * `to` (the client week timeline).
+ */
+export async function fetchClientWeekPosts(clientId, { from, to }) {
+  const { data, error } = await supabase
+    .from('posts')
+    .select(`
+      id,
+      post_versions!fk_current_version (
+        id,
+        title,
+        status,
+        platform,
+        target_date
+      )
+    `)
+    .eq('client_id', clientId)
+  if (error) throw error
+
+  return (data || [])
+    .map((p) => ({
+      id: p.id,
+      ...p.post_versions,
+      platforms: p.post_versions?.platform || [],
+    }))
+    .filter(
+      (p) =>
+        (p.status === 'SCHEDULED' || p.status === 'APPROVED') &&
+        p.target_date &&
+        new Date(p.target_date) >= from &&
+        new Date(p.target_date) <= to,
+    )
+}
+
+export function useClientWeekPosts(clientId, { from, to }, options = {}) {
+  const { workspaceUserId } = useAuth()
+  return useQuery({
+    ...options,
+    queryKey: postKeys.week(workspaceUserId, { clientId, from: from.toISOString() }),
+    queryFn: () => fetchClientWeekPosts(clientId, { from, to }),
+    enabled: !!clientId,
+  })
+}
+
+/** How many Deliverables the workspace has made (the trial-expired page). */
+export function useWorkspacePostCount() {
+  const { workspaceUserId } = useAuth()
+  return useQuery({
+    queryKey: postKeys.trialCount(workspaceUserId),
+    enabled: !!workspaceUserId,
+    staleTime: Infinity,
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from('posts')
+        .select('id, clients!inner(user_id)', { count: 'exact', head: true })
+        .eq('clients.user_id', workspaceUserId)
+      if (error) throw error
+      return count || 0
+    },
+  })
+}
+
+// ─── Mutations ────────────────────────────────────────────────────────────────
+
+/**
+ * Create a draft Deliverable, or update an editable version. Media removed in
+ * the form is cleaned up first (only when no other version uses it), new files
+ * are uploaded, and the kept and new URLs are saved together.
+ *
+ * @param {object} args
+ * @param {string|null} args.versionId     set when editing
+ * @param {string} [args.postId]           the parent post, when editing (moves campaign)
+ * @param {string} args.clientId
+ * @param {string[]} [args.removedMediaUrls]
+ * @param {string[]} [args.keptMediaUrls]  already-uploaded URLs to keep
+ * @param {File[]} [args.newFiles]
+ * @param {object} args.fields             title, content, platforms, target_date,
+ *   userId, adminNotes, platformSchedules, campaignId, deliverableType
+ */
+export async function saveDeliverable({
+  versionId = null,
+  postId,
+  clientId,
+  removedMediaUrls = [],
+  keptMediaUrls = [],
+  newFiles = [],
+  fields,
+}) {
+  if (versionId) await cleanupRemovedMedia(removedMediaUrls)
+
+  const newMediaUrls = await Promise.all(
+    newFiles.map((file) => uploadPostImage({ file, clientId })),
+  )
+  const payload = { ...fields, clientId, mediaUrls: [...keptMediaUrls, ...newMediaUrls] }
+
+  if (versionId) return updatePost(versionId, { ...payload, postId })
+  return createDraftPost(payload)
+}
+
+export function useSaveDeliverable(options) {
+  return useApiMutation(saveDeliverable, invalidateDeliverablesAndStorage, options)
+}
+
+export function useCreateRevision(options) {
+  return useApiMutation(
+    ({ versionId, userId, adminNotes }) => {
+      if (!userId) throw new Error('You must be logged in to create a revision')
+      return createRevision(versionId, userId, adminNotes)
+    },
+    invalidateDeliverables,
+    options,
+  )
+}
+
+export function useDeletePost(options) {
+  return useApiMutation(
+    (postId) => {
+      if (!postId) throw new Error('Post ID missing')
+      return deletePost(postId)
+    },
+    invalidateDeliverablesAndStorage,
+    options,
+  )
+}
+
+export function useMarkPostDelivered(options) {
+  return useApiMutation(
+    ({ versionId, deliveryNote }) => markPostDelivered(versionId, deliveryNote),
+    invalidateDeliverables,
+    options,
+  )
+}
+
+/** Internal only: approve a non-social deliverable directly. */
+export async function approveDeliverable(versionId) {
+  const { error } = await supabase
+    .from('post_versions')
+    .update({ status: 'APPROVED' })
+    .eq('id', versionId)
+  if (error) throw error
+}
+
+export function useApproveDeliverable(options) {
+  return useApiMutation(approveDeliverable, invalidateDeliverables, options)
+}
+
+/**
+ * Internal only: schedule without client approval. A per-platform deliverable
+ * already carries its dates, so only the status moves; otherwise a publish
+ * date is required.
+ */
+export async function scheduleDeliverable({ versionId, perPlatform, targetDate }) {
+  const patch = { status: 'SCHEDULED' }
+  if (!perPlatform) {
+    if (!targetDate) throw new Error('Please select a publish date.')
+    patch.target_date = targetDate.toISOString()
+  }
+  const { error } = await supabase.from('post_versions').update(patch).eq('id', versionId)
+  if (error) throw error
+}
+
+export function useScheduleDeliverable(options) {
+  return useApiMutation(scheduleDeliverable, invalidateDeliverables, options)
+}
+
+/** Tell the client a platform (or the whole deliverable) went live. */
+async function sendPublishedEmail({ versionId, platform, allPublished }) {
+  const { error } = await supabase.functions.invoke('send-platform-published-email', {
+    body: { post_version_id: versionId, platform, all_published: allPublished },
+  })
+  if (error) console.error('[send-platform-published-email]', error)
+  return !error
+}
+
+/**
+ * Mark one platform of a per-platform deliverable published; the last one
+ * marks the whole deliverable PUBLISHED. Emails the client either way.
+ *
+ * @returns {{ platform, allPublished, versionId, emailSent }}
+ */
+export async function markPlatformPublished({ versionId, platformSchedules, platform }) {
+  const now = new Date().toISOString()
+  const updated = {
+    ...platformSchedules,
+    [platform]: { ...platformSchedules[platform], published_at: now },
+  }
+  const allPublished = Object.values(updated).every((v) => v.published_at)
+  const patch = {
+    platform_schedules: updated,
+    ...(allPublished && { status: 'PUBLISHED', published_at: now }),
+  }
+  const { error } = await supabase.from('post_versions').update(patch).eq('id', versionId)
+  if (error) throw error
+
+  const emailSent = await sendPublishedEmail({ versionId, platform, allPublished })
+  return { platform, allPublished, versionId, emailSent }
+}
+
+export function useMarkPlatformPublished(options) {
+  return useApiMutation(markPlatformPublished, invalidateDeliverables, options)
+}
+
+/** Mark a single-date deliverable PUBLISHED and email the client. */
+export async function markPublished(versionId) {
+  const { error } = await supabase
+    .from('post_versions')
+    .update({ status: 'PUBLISHED', published_at: new Date().toISOString() })
+    .eq('id', versionId)
+  if (error) throw error
+
+  const emailSent = await sendPublishedEmail({ versionId, platform: null, allPublished: true })
+  return { versionId, emailSent }
+}
+
+export function useMarkPublished(options) {
+  return useApiMutation(markPublished, invalidateDeliverables, options)
+}
+
+// Status changes first, email second (B10): even when only the email fails,
+// the status moved, so refresh on settle.
+export function useSendPostForClientApproval(options) {
+  return useApiMutation(sendPostForClientApproval, invalidateDeliverables, {
+    invalidateOn: 'settled',
+    ...options,
+  })
+}
+
+export function useResendApprovalLink(options) {
+  return useApiMutation(resendApprovalLink, invalidateDeliverables, options)
+}
+
+export function useSubmitForInternalApproval(options) {
+  return useApiMutation(submitForInternalApproval, invalidateDeliverables, options)
+}
+
+export function useApproveInternally(options) {
+  return useApiMutation(approveInternally, invalidateDeliverables, options)
+}
+
+export function useRequestInternalChanges(options) {
+  return useApiMutation(
+    ({ versionId, notes }) => requestInternalChanges(versionId, notes),
+    invalidateDeliverables,
+    options,
+  )
+}
+
+export function useDeletePostMedia(options) {
+  return useApiMutation(
+    ({ versionId, url, mediaUrls }) => deleteIndividualMedia(versionId, url, mediaUrls),
+    invalidateDeliverablesAndStorage,
+    options,
+  )
+}
+
+/** Remove entries from the approval log (approvals page, my submissions). */
+export function useDeleteApprovalEvents(options) {
+  return useApiMutation(deleteApprovalEvents, (queryClient) =>
+    queryClient.invalidateQueries({ queryKey: postKeys.all }), options)
+}
+
+/**
+ * The client's verdict from a public review link (no auth): SCHEDULED or
+ * APPROVED when accepted, NEEDS_REVISION with feedback otherwise.
+ */
+export async function respondToPostReview({ token, status, feedback }) {
+  const { error } = await supabase.rpc('update_post_status_by_token', {
+    p_token: token,
+    p_status: status,
+    p_feedback: feedback,
+  })
+  if (error) throw error
 }

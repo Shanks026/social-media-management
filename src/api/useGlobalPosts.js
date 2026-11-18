@@ -1,7 +1,8 @@
 import { supabase } from '@/lib/supabase'
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '@/context/AuthContext'
-import { getPublishState } from '@/lib/helper'
+import { displayStatus } from '@/lib/domain/deliverableStatus'
+import { postKeys } from '@/api/queryKeys'
 
 /**
  * Builds a Supabase query for global posts with dynamic filters.
@@ -137,16 +138,16 @@ export function useGlobalPosts(filters = {}) {
   const { workspaceUserId } = useAuth()
 
   return useQuery({
-    queryKey: ['global-posts', workspaceUserId, filters],
+    queryKey: postKeys.global(workspaceUserId, filters),
     queryFn: async () => {
       const { data, error } = await buildPostsQuery(workspaceUserId, filters)
       if (error) throw error
       let posts = normalizePosts(data)
       if (filters.status === 'PARTIALLY_PUBLISHED') {
-        posts = posts.filter((p) => getPublishState(p) === 'PARTIALLY_PUBLISHED')
+        posts = posts.filter((p) => displayStatus(p) === 'PARTIALLY_PUBLISHED')
       }
       if (filters.status === 'SCHEDULED') {
-        posts = posts.filter((p) => getPublishState(p) === 'SCHEDULED')
+        posts = posts.filter((p) => displayStatus(p) === 'SCHEDULED')
       }
       return posts
     },
@@ -164,7 +165,7 @@ export function usePostCounts() {
   const { workspaceUserId } = useAuth()
 
   return useQuery({
-    queryKey: ['global-post-counts', workspaceUserId],
+    queryKey: postKeys.globalCounts(workspaceUserId),
     queryFn: async () => {
       const { data, error } = await supabase
         .from('posts')
@@ -197,7 +198,7 @@ export function usePostCounts() {
       for (const row of data || []) {
         if (!row.post_versions) continue
         counts.all++
-        const derived = getPublishState(row.post_versions)
+        const derived = displayStatus(row.post_versions)
         if (derived in counts) counts[derived]++
       }
       return counts

@@ -52,7 +52,7 @@ Pages/Components → API functions (src/api/) → Supabase client → PostgreSQL
 
 **Layout (AppShell.jsx):** Sidebar nav + header wrapper; feature content renders via React Router `<Outlet>`.
 
-**API layer (src/api/):** Domain-scoped modules (clients, posts, invoices, expenses, transactions, meetings, notes, documents, agency, storage). Each exports plain async functions for mutations and React Query hooks for reads. `useGlobalPosts.js` handles cross-client post queries. Supabase RPC calls are used for complex aggregations:
+**API layer (src/api/):** One module per domain (posts, tasks, clients, campaigns, invoices, expenses, transactions, proposals, prospects, meetings, notes, documents, team, agency, auth, chat, comments, notifications, …), owning every query, mutation and cache key (ADR 0007; rules in `.claude/rules/api-conventions.md`). Every key factory lives in `queryKeys.js`; every mutation hook is built with `useApiMutation` from `mutation.js`. `useGlobalPosts.js` handles cross-client post queries. Supabase RPC calls are used for complex aggregations:
 - `get_clients_with_pipeline()` — client analytics
 - `create_post_draft_v3()` — atomic post creation
 - `create_revision_version()` — post versioning
@@ -63,7 +63,9 @@ Pages/Components → API functions (src/api/) → Supabase client → PostgreSQL
 **Header context (`src/components/misc/header-context.jsx`):** Pages call `useHeader()` to set the dynamic breadcrumb/title in the shell header via `setHeader({ title, breadcrumbs })`.
 
 **Shared utilities:**
-- `src/lib/helper.js` — `formatDate(dateInput)` → "2 Jan, 2026"; `formatFileSize(bytes)` → "2.3 MB"; `getPublishState(version)` → derives display status from `platform_schedules` (returns `'PARTIALLY_PUBLISHED'` when some but not all platforms have `published_at`); `MAX_DOCUMENT_SIZE_BYTES` constant (50 MB)
+- `src/lib/format.js` — `formatDate(value)` → "2 Jan, 2026"; `formatFileSize(bytes)` → "2.3 MB"; `formatCurrency`, `initials`, the datetime-local pair
+- `src/lib/domain/` — per-entity values, labels and pure helpers, no JSX (ADR 0006): `deliverableStatus.js` (`displayStatus(version)` derives the display status, `'PARTIALLY_PUBLISHED'` when some but not all platforms have `published_at`), `platforms.js`, and one module per status vocabulary. Presentation (classes, icons) lives in components: `StatusBadge`, `PlatformIcon`, `MemberAvatar`, `statusTone()`
+- `src/lib/media.js` — attachment helpers (`isDocumentUrl`, `getDocumentPreviewUrl`, …) and `MAX_DOCUMENT_SIZE_BYTES` (50 MB)
 - `src/lib/client-helpers.js` — `getUrgencyStatus(nextPostAt)` → urgency color/label for pipeline indicators
 - `src/lib/workspace.js` — `resolveWorkspace()` async helper for plain mutation functions that need `workspaceUserId` without React context (calls `auth.getUser()` then checks `agency_members`)
 - `src/lib/industries.js` — `INDUSTRY_OPTIONS` array (value/label pairs, e.g. `{ value: 'SaaS', label: 'SaaS & Tech' }`). The DB stores the short `value`; always resolve to `label` for display via `.find(i => i.value === x)?.label`.
@@ -77,7 +79,7 @@ Pages/Components → API functions (src/api/) → Supabase client → PostgreSQL
 
 **Post management:** Versioning via parent-child post relationships. Statuses: the 11 stored values in `src/lib/domain/deliverableStatus.js` (`STATUSES`), kept equal to the DB CHECK by a drift test (ADR 0006); see `.claude/rules/post-versioning.md` for the flow. In the campaign review flow, posts are set to `PENDING_APPROVAL` when awaiting client review, then transitioned to `SCHEDULED` (approved) or `NEEDS_REVISION` (revisions requested) via the `update_post_status_by_token` RPC. Media stored in Supabase `post-media` bucket; deletions are deferred until media is unused. Shareable public review via token. `DraftPostForm` (`src/pages/posts/DraftPostForm.jsx`) is used both as a standalone page and as a dialog (pass `open`/`onOpenChange` props); it accepts `clientId`, `initialCampaignId`, and `initialCampaignName` to pre-fill context.
 
-Posts support two publishing modes: (1) simple — single `target_date`, marked published in one action; (2) per-platform — `platform_schedules` JSONB column maps each platform to `{ scheduled_at, published_at }`. Use `displayStatus(version)` from `src/lib/domain/deliverableStatus.js` (formerly `getPublishState` in `helper.js`, still re-exported there) to derive display status — never read `version.status` directly for display when `platform_schedules` is present. Both publishing paths in `PostDetails.jsx` trigger `send-platform-published-email`.
+Posts support two publishing modes: (1) simple — single `target_date`, marked published in one action; (2) per-platform — `platform_schedules` JSONB column maps each platform to `{ scheduled_at, published_at }`. Use `displayStatus(version)` from `src/lib/domain/deliverableStatus.js` to derive display status — never read `version.status` directly for display when `platform_schedules` is present. Both publishing paths in `PostDetails.jsx` trigger `send-platform-published-email`.
 
 **Clients:** "Internal Account" vs real clients (`is_internal` flag). `useClients()` returns `{ internalAccount, realClients }` — fetches all non-internal clients with fields `id, name, logo_url, is_internal, email, address, industry, status`. For displaying an ACTIVE-only count (e.g. dashboard), filter `realClients` by `status === 'ACTIVE'`. `useSubscription().client_count` counts all non-internal clients regardless of status (used for billing limits — do not use for display counts). Pipeline analytics via `view_client_profitability` DB view. Tiers and industries for filtering; industry stored as short key (`'SaaS'`), display via `INDUSTRY_OPTIONS`.
 
@@ -116,7 +118,7 @@ All email goes through `sendEmail(fn, template, payload)` in `supabase/functions
 
 - `send-approval-email` — triggered from `PostDetails.jsx` on status change to `PENDING_APPROVAL`, and from the `update_post_status_by_token` RPC for `SCHEDULED` / `NEEDS_REVISION`; requires JWT (`verify_jwt: false`, manually verified inside)
 - `send-client-welcome` — triggered from `createClient()` in `src/api/clients.js` after INSERT; sends "Your workspace is live" (internal) or "You're in" (external); requires JWT; skips silently (returns 200) when `record.email` is null
-- `send-signup-welcome` — triggered from `signup-form.jsx` after successful `supabase.auth.signUp()`; no JWT required; takes `{ email, name }`
+- `send-signup-welcome` — triggered by `signUpOwner()` in `src/api/auth.js` after a successful sign-up; no JWT required; takes `{ email, name }`
 - `send-platform-published-email` — triggered from `PostDetails.jsx` when a platform is marked published; takes `{ post_version_id, platform, all_published }`; skips internal clients
 - `send-campaign-review-email` — triggered from campaign detail page when sharing review link
 - `send-proposal-email` — triggered from proposals flow

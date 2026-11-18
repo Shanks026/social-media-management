@@ -1,6 +1,5 @@
 ﻿import { useState, useMemo, useEffect } from 'react'
 import { initials } from '@/lib/format'
-import { useQueryClient } from '@tanstack/react-query'
 import {
   useReactTable,
   getCoreRowModel,
@@ -64,7 +63,7 @@ import { useHeader } from '@/components/misc/header-context'
 import { useAuth } from '@/context/AuthContext'
 import { useClients } from '@/api/clients'
 import { useCampaigns } from '@/api/campaigns'
-import { useTasks, updateTaskStatus } from '@/api/tasks'
+import { useTasks, useUpdateTaskStatus } from '@/api/tasks'
 import { useTeamMembers, useRemovedMembers } from '@/api/team'
 import { usePermissions } from '@/api/usePermissions'
 import CreateTaskDialog from '@/components/tasks/CreateTaskDialog'
@@ -89,9 +88,6 @@ const STATUS_TABS = [
   ...TASK_STATUSES.map((key) => ({ key, label: taskStatusCfg(key).label })),
 ]
 
-// The canonical key for the global tasks list — used for optimistic updates in kanban
-const GLOBAL_TASKS_QK = ['tasks', 'list', { clientId: null, campaignId: null }]
-
 // --- Helpers ---
 
 function ColHeader({ label }) {
@@ -112,8 +108,6 @@ function SortableColHeader({ column, label }) {
     </button>
   )
 }
-
-
 
 // --- Kanban: Draggable Card Wrapper ---
 
@@ -209,7 +203,8 @@ function KanbanColumn({
 
 // --- Kanban View ---
 
-function KanbanTasksView({ tasks, clientMap, campaignMap, memberMap, currentUserId, queryClient }) {
+function KanbanTasksView({ tasks, clientMap, campaignMap, memberMap, currentUserId }) {
+  const { mutate: updateStatus } = useUpdateTaskStatus()
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
   )
@@ -226,21 +221,15 @@ function KanbanTasksView({ tasks, clientMap, campaignMap, memberMap, currentUser
     const task = tasks.find((t) => t.id === active.id)
     if (!task || task.status === newStatus) return
 
-    const previous = queryClient.getQueryData(GLOBAL_TASKS_QK)
-    queryClient.setQueryData(GLOBAL_TASKS_QK, (old = []) =>
-      old.map((t) => (t.id === active.id ? { ...t, status: newStatus } : t)),
+    // Optimistic: the hook moves the card in every cached list at once and
+    // rolls back if the update fails.
+    updateStatus(
+      { id: active.id, status: newStatus },
+      {
+        onSuccess: () => toast.success(`Moved to ${taskStatusCfg(newStatus).label}`),
+        onError: (err) => toast.error('Failed to update: ' + err.message),
+      },
     )
-
-    updateTaskStatus(active.id, newStatus)
-      .then(() =>
-        toast.success(
-          `Moved to ${taskStatusCfg(newStatus).label}`,
-        ),
-      )
-      .catch((err) => {
-        queryClient.setQueryData(GLOBAL_TASKS_QK, previous)
-        toast.error('Failed to update: ' + err.message)
-      })
   }
 
   return (
@@ -533,7 +522,6 @@ function TasksTableView({ tasks, isLoading, clientMap, campaignMap, memberMap, c
 
 export default function TasksAndReminders() {
   const { setHeader } = useHeader()
-  const queryClient = useQueryClient()
   const { user } = useAuth()
   const currentUserId = user?.id ?? null
   const { canAssignTasks, isOwner } = usePermissions()
@@ -724,9 +712,6 @@ export default function TasksAndReminders() {
 
         <CreateTaskDialog
           clientId={defaultClientId}
-          onSuccess={() =>
-            queryClient.invalidateQueries({ queryKey: ['tasks', 'list'], exact: false })
-          }
         >
           <Button className="gap-2 h-9">
             <Plus size={16} />
@@ -933,9 +918,6 @@ export default function TasksAndReminders() {
               ) : (
                 <CreateTaskDialog
                   clientId={defaultClientId}
-                  onSuccess={() =>
-                    queryClient.invalidateQueries({ queryKey: ['tasks', 'list'], exact: false })
-                  }
                 >
                   <Button variant="outline" size="sm">
                     <Plus className="size-4 mr-2" />
@@ -952,7 +934,6 @@ export default function TasksAndReminders() {
             campaignMap={campaignMap}
             memberMap={memberMap}
             currentUserId={currentUserId}
-            queryClient={queryClient}
           />
         ) : view === 'table' ? (
           <TasksTableView

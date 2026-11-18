@@ -15,7 +15,7 @@ import {
 import { cn } from '@/lib/utils'
 import { INDUSTRY_OPTIONS } from '@/lib/industries'
 import HorizontalLogoCropDialog from '@/components/HorizontalLogoCropDialog'
-import { uploadBrandingAsset, removeBrandingAsset } from '../uploads'
+import { uploadBrandingAsset, removeBrandingAsset } from '@/api/agency'
 
 export default function IdentityStep({ form }) {
   const {

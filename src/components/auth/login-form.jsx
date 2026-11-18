@@ -1,13 +1,13 @@
 import { cn } from '@/lib/utils'
 import { useState } from 'react'
-import { supabase } from '@/lib/supabase'
+import { signInWithPassword } from '@/api/auth'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Loader2, AlertCircle } from 'lucide-react'
 import ForgotPasswordDialog from './ForgotPasswordDialog'
 
-export function LoginForm({ className, client = supabase, onSuccess, ...props }) {
+export function LoginForm({ className, client, onSuccess, ...props }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [isForgotOpen, setIsForgotOpen] = useState(false)
@@ -20,24 +20,17 @@ export function LoginForm({ className, client = supabase, onSuccess, ...props })
     const password = form.get('password')
 
     setLoading(true)
-    const { data, error } = await client.auth.signInWithPassword({
-      email,
-      password,
-    })
-    setLoading(false)
+    let session
+    try {
+      session = await signInWithPassword({ email, password }, client)
+    } catch (err) {
+      setError(err.message)
+      return
+    } finally {
+      setLoading(false)
+    }
 
-    if (error) {
-      if (error.code === 'invalid_credentials') {
-        const { data: exists } = await client.rpc('check_email_exists', { p_email: email })
-        setError(
-          exists
-            ? 'Incorrect password. Please try again or reset your password.'
-            : 'No account found with this email address. Please sign up.'
-        )
-      } else {
-        setError(error.message)
-      }
-    } else if (data?.session) {
+    if (session) {
       // No navigate() here on purpose. signInWithPassword resolves before
       // AuthContext's onAuthStateChange listener has committed setSession, so
       // navigating in this tick lands on a router that still has only the
@@ -47,7 +40,7 @@ export function LoginForm({ className, client = supabase, onSuccess, ...props })
       //
       // PublicOnlyRoute already redirects to /dashboard the moment `session`
       // lands, so letting the route react is both correct and race-free.
-      if (onSuccess) onSuccess(data.session)
+      if (onSuccess) onSuccess(session)
     }
   }
 

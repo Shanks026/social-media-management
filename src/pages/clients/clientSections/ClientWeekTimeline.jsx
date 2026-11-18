@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useClientWeekPosts } from '@/api/posts'
+import { useMeetingsBetween } from '@/api/meetings'
 import {
   format,
   isToday,
@@ -11,7 +12,6 @@ import {
 } from 'date-fns'
 import { useNavigate } from 'react-router-dom'
 import { ArrowUpRight, Clock } from 'lucide-react'
-import { supabase } from '@/lib/supabase'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -43,61 +43,17 @@ export default function ClientWeekTimeline({ clientId }) {
   )
 
   // ── Client posts (SCHEDULED or APPROVED) for this week ──
-  const { data: posts = [], isLoading: loadingPosts } = useQuery({
-    queryKey: ['client-week-timeline-posts', clientId, today.toISOString()],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('posts')
-        .select(`
-          id,
-          post_versions!fk_current_version (
-            id,
-            title,
-            status,
-            platform,
-            target_date
-          )
-        `)
-        .eq('client_id', clientId)
-      if (error) throw error
-
-      return (data || [])
-        .map((p) => ({
-          id: p.id,
-          ...p.post_versions,
-          platforms: p.post_versions?.platform || [],
-        }))
-        .filter(
-          (p) =>
-            (p.status === 'SCHEDULED' || p.status === 'APPROVED') &&
-            p.target_date &&
-            new Date(p.target_date) >= today &&
-            new Date(p.target_date) <= weekEnd,
-        )
-    },
-    enabled: !!clientId,
-    staleTime: 0,
-    refetchOnWindowFocus: true,
-  })
+  const { data: posts = [], isLoading: loadingPosts } = useClientWeekPosts(
+    clientId,
+    { from: today, to: weekEnd },
+    { staleTime: 0, refetchOnWindowFocus: true },
+  )
 
   // ── Client meetings for this week ──
-  const { data: meetings = [], isLoading: loadingMeetings } = useQuery({
-    queryKey: ['client-week-timeline-meetings', clientId, today.toISOString()],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('meetings')
-        .select('*')
-        .eq('client_id', clientId)
-        .gte('datetime', today.toISOString())
-        .lte('datetime', weekEnd.toISOString())
-        .order('datetime', { ascending: true })
-      if (error) throw error
-      return data || []
-    },
-    enabled: !!clientId,
-    staleTime: 0,
-    refetchOnWindowFocus: true,
-  })
+  const { data: meetings = [], isLoading: loadingMeetings } = useMeetingsBetween(
+    { from: today, to: weekEnd, clientId },
+    { enabled: !!clientId, staleTime: 0, refetchOnWindowFocus: true },
+  )
 
   // ── Group by day ──
   const postsByDay = useMemo(() => {

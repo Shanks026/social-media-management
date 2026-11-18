@@ -1,6 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Pencil, Archive, RotateCcw, Trash2, PencilRuler } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
@@ -10,10 +9,10 @@ import {
   useTaskExists,
   useTaskActivity,
   useTaskWatchers,
-  updateTaskStatus,
-  reassignTask,
-  deleteTask,
-  fetchTaskDeliverables,
+  useUpdateTaskStatus,
+  useReassignTask,
+  useDeleteTask,
+  useTaskDeliverables,
 } from '@/api/tasks'
 import { usePermissions } from '@/api/usePermissions'
 import { useHeader } from '@/components/misc/header-context'
@@ -56,7 +55,6 @@ import {
 export default function TaskDetailPage() {
   const { taskId } = useParams()
   const navigate = useNavigate()
-  const queryClient = useQueryClient()
   const { setHeader } = useHeader()
   const { isAdmin } = usePermissions()
   const { clientMap, campaignMap, memberMap, currentUserId } = useTaskLookups()
@@ -75,37 +73,29 @@ export default function TaskDetailPage() {
     enabled: !isLoading && !task,
   })
 
-  const { data: linkedPosts = [], isLoading: isLoadingPosts } = useQuery({
-    queryKey: ['task-deliverables', taskId],
-    queryFn: () => fetchTaskDeliverables(taskId),
-    enabled: !!taskId && !!task,
-  })
+  const { data: linkedPosts = [], isLoading: isLoadingPosts } = useTaskDeliverables(
+    task ? taskId : null,
+  )
 
-  // Every task mutation can move the list, the detail row and the activity
-  // feed at once, so all three invalidate together.
-  const invalidate = () => queryClient.invalidateQueries({ queryKey: ['tasks'], exact: false })
-
-  const { mutate: setStatus, isPending: isSettingStatus } = useMutation({
-    mutationFn: (next) => updateTaskStatus(taskId, next),
-    onSuccess: invalidate,
+  // The task hooks refresh the list, the detail row and the activity feed.
+  const { mutate: updateStatus, isPending: isSettingStatus } = useUpdateTaskStatus({
     onError: (err) => toast.error('Failed to update: ' + err.message),
   })
+  const setStatus = (status) => updateStatus({ id: taskId, status })
 
-  const { mutate: reassign, isPending: isReassigning } = useMutation({
-    mutationFn: (next) => reassignTask(taskId, next),
-    onSuccess: invalidate,
+  const { mutate: reassignMutate, isPending: isReassigning } = useReassignTask({
     onError: (err) => toast.error('Failed to reassign: ' + err.message),
   })
+  const reassign = (assignedTo) => reassignMutate({ taskId, assignedTo })
 
-  const { mutate: remove, isPending: isDeleting } = useMutation({
-    mutationFn: () => deleteTask(taskId),
+  const { mutate: deleteTaskById, isPending: isDeleting } = useDeleteTask({
     onSuccess: () => {
-      invalidate()
       toast.success('Task deleted')
       navigate('/tasks')
     },
     onError: (err) => toast.error('Failed to delete: ' + err.message),
   })
+  const remove = () => deleteTaskById(taskId)
 
   const client = task?.client_id ? clientMap[String(task.client_id)] : null
   const campaign = task?.campaign_id ? campaignMap[String(task.campaign_id)] : null

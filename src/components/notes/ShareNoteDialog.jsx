@@ -1,6 +1,5 @@
 import { MemberAvatar } from '@/components/MemberAvatar'
 import { useMemo, useState } from 'react'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { X, UserPlus } from 'lucide-react'
 import {
@@ -23,14 +22,12 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { useTeamMembers } from '@/api/team'
 import {
   useNoteShares,
-  noteShareKeys,
-  shareNoteWithMany,
-  updateNoteSharePermission,
-  removeNoteShare,
+  useShareNote,
+  useUpdateNoteSharePermission,
+  useRemoveNoteShare,
 } from '@/api/noteShares'
 
 export default function ShareNoteDialog({ open, onOpenChange, noteId }) {
-  const queryClient = useQueryClient()
   const { data: teamMembers = [] } = useTeamMembers()
   const { data: shares = [], isLoading } = useNoteShares(noteId)
   const [selectedIds, setSelectedIds] = useState([])
@@ -46,30 +43,18 @@ export default function ShareNoteDialog({ open, onOpenChange, noteId }) {
     [teamMembers, sharedIds],
   )
 
-  function invalidateAll() {
-    queryClient.invalidateQueries({ queryKey: noteShareKeys.list(noteId) })
-    queryClient.invalidateQueries({ queryKey: ['agency-notes', 'detail', noteId] })
-    queryClient.invalidateQueries({ queryKey: ['agency-notes', 'list'] })
-  }
-
-  const addMutation = useMutation({
-    mutationFn: shareNoteWithMany,
+  const addMutation = useShareNote({
     onSuccess: () => {
-      invalidateAll()
       setSelectedIds([])
     },
     onError: (err) => toast.error(err.message || 'Failed to share note'),
   })
 
-  const permissionMutation = useMutation({
-    mutationFn: ({ shareId, permission }) => updateNoteSharePermission(shareId, permission),
-    onSuccess: invalidateAll,
+  const permissionMutation = useUpdateNoteSharePermission({
     onError: (err) => toast.error(err.message || 'Failed to update permission'),
   })
 
-  const removeMutation = useMutation({
-    mutationFn: removeNoteShare,
-    onSuccess: invalidateAll,
+  const removeMutation = useRemoveNoteShare({
     onError: (err) => toast.error(err.message || 'Failed to remove access'),
   })
 

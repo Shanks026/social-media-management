@@ -6,7 +6,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/context/AuthContext'
 import { resolveWorkspace } from '@/lib/workspace'
 import { statusLabel as prospectStatusLabel } from '@/lib/domain/prospectStatus'
-import { prospectActivityKeys } from '@/api/salesKeys'
+import { prospectActivityKeys } from '@/api/queryKeys'
 
 export { prospectActivityKeys }
 

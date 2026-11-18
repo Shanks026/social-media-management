@@ -1,6 +1,5 @@
 import { formatDate } from '@/lib/format'
 import { useState } from 'react'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import {
   ChevronRight,
@@ -29,13 +28,11 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { cn } from '@/lib/utils'
-import { deleteCollection, documentKeys } from '@/api/documents'
+import { useDeleteCollection, useUploadDocument } from '@/api/documents'
 import DocumentCard from './DocumentCard'
 import CreateCollectionDialog from './CreateCollectionDialog'
 import DocumentUploadZone from './DocumentUploadZone'
 import UploadMetaDialog from './UploadMetaDialog'
-import { useMutation as useUploadMutation } from '@tanstack/react-query'
-import { uploadDocument } from '@/api/documents'
 import { Accordion, AccordionItem, AccordionContent } from '@/components/ui/accordion'
 import { Accordion as AccordionPrimitive } from 'radix-ui'
 import { Lock } from 'lucide-react'
@@ -48,7 +45,6 @@ import { Lock } from 'lucide-react'
  *   documents    — array of documents belonging to this collection
  */
 export default function CollectionCard({ collection, documents = [], locked = false, canManage = true }) {
-  const queryClient = useQueryClient()
   const [expanded, setExpanded] = useState(false)
   const [renameOpen, setRenameOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
@@ -58,20 +54,9 @@ export default function CollectionCard({ collection, documents = [], locked = fa
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(null)
 
-  const uploadMutation = useUploadMutation({
-    mutationFn: ({ file, displayName, category, notes, isConfidential }) =>
-      uploadDocument({
-        clientId: collection.client_id,
-        file,
-        displayName,
-        category,
-        notes,
-        isConfidential,
-        collectionId: collection.id,
-      }),
+  const uploadMutation = useUploadDocument({
     onMutate: () => setUploadProgress(10),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['documents', 'list'] })
       setUploadProgress(100)
       setTimeout(() => {
         setUploadProgress(null)
@@ -94,7 +79,15 @@ export default function CollectionCard({ collection, documents = [], locked = fa
   function handleConfirmUpload({ displayName, category, notes, isConfidential }) {
     if (!pendingFile) return
     setUploadProgress(30)
-    uploadMutation.mutate({ file: pendingFile, displayName, category, notes, isConfidential })
+    uploadMutation.mutate({
+      clientId: collection.client_id,
+      collectionId: collection.id,
+      file: pendingFile,
+      displayName,
+      category,
+      notes,
+      isConfidential,
+    })
   }
 
   function handleUploadDialogClose(open) {
@@ -105,12 +98,8 @@ export default function CollectionCard({ collection, documents = [], locked = fa
   }
 
   // ── Delete collection ──
-  const deleteMutation = useMutation({
-    mutationFn: () => deleteCollection(collection.id),
+  const deleteMutation = useDeleteCollection({
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: documentKeys.collections(collection.client_id) })
-      queryClient.invalidateQueries({ queryKey: documentKeys.allCollections() })
-      queryClient.invalidateQueries({ queryKey: ['documents', 'list'] })
       toast.success('Collection deleted — documents moved to ungrouped')
     },
     onError: (err) => toast.error(err.message || 'Failed to delete collection'),
@@ -256,7 +245,7 @@ export default function CollectionCard({ collection, documents = [], locked = fa
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={() => deleteMutation.mutate()}
+              onClick={() => deleteMutation.mutate(collection.id)}
               disabled={deleteMutation.isPending}
             >
               Delete

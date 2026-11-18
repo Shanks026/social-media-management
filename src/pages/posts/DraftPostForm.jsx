@@ -1,7 +1,6 @@
 import { PLATFORMS, platformById, platformLogo } from '@/lib/domain/platforms'
 import { formatFileSize } from '@/lib/format'
 import { useState, useRef, useEffect } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
@@ -16,9 +15,8 @@ import {
 } from 'lucide-react'
 
 import { MAX_VIDEO_SIZE_MB, MAX_VIDEO_SIZE_BYTES } from '@/utils/constants'
-import { createDraftPost, updatePost, cleanupRemovedMedia } from '@/api/posts'
-import { uploadPostImage } from '@/api/storage'
-import { fetchClientById } from '@/api/clients'
+import { useSaveDeliverable } from '@/api/posts'
+import { useClientById } from '@/api/clients'
 import { fetchActiveCampaignsByClient } from '@/api/campaigns'
 
 import {
@@ -188,7 +186,6 @@ export default function DraftPostForm({
   initialCampaignName = null,
 }) {
   const { user } = useAuth()
-  const queryClient = useQueryClient()
   const { data: subscription } = useSubscription()
   const isEditMode = !!initialData
 
@@ -396,10 +393,8 @@ export default function DraftPostForm({
     }
   }
 
-  const { data: client, isLoading: isClientLoading } = useQuery({
-    queryKey: ['client', effectiveClientId],
-    queryFn: () => fetchClientById(effectiveClientId),
-    enabled: !!effectiveClientId && open,
+  const { data: client, isLoading: isClientLoading } = useClientById(effectiveClientId, {
+    enabled: open,
   })
 
   const availablePlatforms = client?.platforms || []
@@ -441,36 +436,35 @@ export default function DraftPostForm({
       }
     }
 
-    mutation.mutate(values)
+    submitDeliverable(values)
   }
 
-  const mutation = useMutation({
-    mutationFn: async (values) => {
-      if (isEditMode) {
-        const initialUrls = initialData.media_urls || []
-        const currentUrls = previews.map((p) => p.url)
-        const urlsToRemove = initialUrls.filter(
-          (url) => !currentUrls.includes(url),
+  const mutation = useSaveDeliverable({
+    onSuccess: () => {
+      toast.success(isEditMode ? 'Deliverable updated' : 'Draft created')
+      resetAndClose()
+    },
+  })
+
+  // Media still in the form are kept; media dropped from it are cleaned up
+  // (when nothing else uses them); new files are uploaded.
+  function submitDeliverable(values) {
+    const keptMediaUrls = previews.filter((p) => p.url.startsWith('http')).map((p) => p.url)
+    const removedMediaUrls = isEditMode
+      ? (initialData.media_urls || []).filter(
+          (url) => !previews.some((p) => p.url === url),
         )
-        await cleanupRemovedMedia(urlsToRemove)
-      }
-
-      const uploadPromises = (values.images || []).map((file) =>
-        uploadPostImage({ file, clientId: effectiveClientId }),
-      )
-      const newMediaUrls = await Promise.all(uploadPromises)
-
-      const existingRemoteUrls = previews
-        .filter((p) => p.url.startsWith('http'))
-        .map((p) => p.url)
-
-      const finalMediaUrls = [...existingRemoteUrls, ...newMediaUrls]
-
-      const payload = {
-        clientId: effectiveClientId,
+      : []
+    mutation.mutate({
+      versionId: isEditMode ? initialData.version_id : null,
+      postId: isEditMode ? initialData.actual_post_id : undefined,
+      clientId: effectiveClientId,
+      removedMediaUrls,
+      keptMediaUrls,
+      newFiles: values.images || [],
+      fields: {
         title: values.title,
         content: values.content,
-        mediaUrls: finalMediaUrls,
         platforms: values.platforms,
         target_date: values.target_date?.toISOString(),
         userId: user?.id,
@@ -480,31 +474,9 @@ export default function DraftPostForm({
           : null,
         campaignId: values.campaign_id || null,
         deliverableType: values.deliverable_type || null,
-      }
-
-      if (isEditMode)
-        return updatePost(initialData.version_id, {
-          ...payload,
-          postId: initialData.actual_post_id,
-        })
-      return createDraftPost(payload)
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ['draft-posts', effectiveClientId],
-      })
-      queryClient.invalidateQueries({ queryKey: ['posts', effectiveClientId] })
-      queryClient.invalidateQueries({ queryKey: ['global-posts'] })
-      queryClient.invalidateQueries({ queryKey: ['calendar'] })
-      queryClient.invalidateQueries({ queryKey: ['subscription', user?.id] })
-      if (isEditMode)
-        queryClient.invalidateQueries({
-          queryKey: ['post-version', initialData.version_id],
-        })
-      toast.success(isEditMode ? 'Deliverable updated' : 'Draft created')
-      resetAndClose()
-    },
-  })
+      },
+    })
+  }
 
   function resetAndClose() {
     form.reset()

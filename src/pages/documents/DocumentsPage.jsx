@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams, Link } from 'react-router-dom'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import {
   FolderOpen,
@@ -26,7 +25,7 @@ import {
 import {
   useDocuments,
   useAllCollections,
-  uploadDocument,
+  useUploadDocument,
 } from '@/api/documents'
 import {
   DOCUMENT_CATEGORIES,
@@ -62,7 +61,6 @@ import CreateCollectionDialog from '@/components/documents/CreateCollectionDialo
 
 export default function DocumentsPage() {
   const { setHeader } = useHeader()
-  const queryClient = useQueryClient()
   const [searchParams, setSearchParams] = useSearchParams()
 
   const activeTab = searchParams.get('doc_tab') ?? 'all'
@@ -209,12 +207,9 @@ export default function DocumentsPage() {
   const [uploadProgress, setUploadProgress] = useState(null)
   const [createCollectionOpen, setCreateCollectionOpen] = useState(false)
 
-  const uploadMutation = useMutation({
-    mutationFn: ({ file, displayName, category, clientId, prospectId, notes, isConfidential }) =>
-      uploadDocument({ clientId, prospectId, file, displayName, category, notes, isConfidential }),
+  const uploadMutation = useUploadDocument({
     onMutate: () => setUploadProgress(10),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['documents', 'list'] })
       setUploadProgress(100)
       setTimeout(() => {
         setUploadProgress(null)

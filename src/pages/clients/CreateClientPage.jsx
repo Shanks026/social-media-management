@@ -1,8 +1,12 @@
 import { useState, useRef, useEffect } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { createClient, updateClient, fetchClientById } from '@/api/clients'
+import {
+  useSaveClient,
+  useClientById,
+  uploadClientLogo,
+  removeClientLogo,
+} from '@/api/clients'
+import { useSubscription } from '@/api/useSubscription'
 import { useMarkProspectConverted } from '@/api/prospects'
-import { supabase } from '@/lib/supabase'
 import { useNavigate, useParams, useOutletContext, useLocation } from 'react-router-dom'
 
 // UI Components
@@ -37,7 +41,6 @@ import { cn } from '@/lib/utils'
 // Custom Components
 import PlatformSelector from './PlatformSelector'
 import { INDUSTRY_OPTIONS } from '../../lib/industries'
-import { useAuth } from '@/context/AuthContext'
 import { useHeader } from '@/components/misc/header-context'
 
 const CLIENT_TYPE_OPTIONS = [
@@ -80,12 +83,6 @@ const clientSchema = z.object({
   ),
 })
 
-function extractStoragePath(publicUrl) {
-  if (!publicUrl) return null
-  const marker = '/post-media/'
-  const idx = publicUrl.indexOf(marker)
-  return idx !== -1 ? publicUrl.slice(idx + marker.length) : null
-}
 
 export default function CreateClientPage({
   customSubmit,
@@ -99,9 +96,7 @@ export default function CreateClientPage({
   const navigate = useNavigate()
   const location = useLocation()
   const { setHeader } = useHeader()
-  const queryClient = useQueryClient()
   const markProspectConverted = useMarkProspectConverted()
-  const { user, workspaceUserId } = useAuth()
   const { refreshAgency } = useOutletContext() || {}
   const fileInputRef = useRef(null)
 
@@ -110,21 +105,10 @@ export default function CreateClientPage({
 
   const [isUploading, setIsUploading] = useState(false)
   const [previewUrl, setPreviewUrl] = useState(null)
-  const [agencyBrandingMissing, setAgencyBrandingMissing] = useState(false)
-
-  // Check if agency brand identity is configured (only relevant for external client creation)
-  useEffect(() => {
-    if (isEditMode || standalone || !workspaceUserId) return
-    async function checkAgencyBranding() {
-      const { data } = await supabase
-        .from('agency_subscriptions')
-        .select('agency_name')
-        .eq('user_id', workspaceUserId)
-        .maybeSingle()
-      if (!data?.agency_name) setAgencyBrandingMissing(true)
-    }
-    checkAgencyBranding()
-  }, [isEditMode, standalone, workspaceUserId])
+  // Is the agency brand identity configured? (only relevant for external client creation)
+  const { data: subscription, isSuccess: subscriptionLoaded } = useSubscription()
+  const agencyBrandingMissing =
+    !isEditMode && !standalone && subscriptionLoaded && !subscription?.agency_name
 
   const form = useForm({
     resolver: zodResolver(clientSchema),
@@ -177,9 +161,7 @@ export default function CreateClientPage({
     defaultValues?.tier === 'INTERNAL' ||
     form.getValues('tier') === 'INTERNAL'
 
-  const { data: existingClient, isLoading } = useQuery({
-    queryKey: ['client', clientId],
-    queryFn: () => fetchClientById(clientId),
+  const { data: existingClient, isLoading } = useClientById(clientId, {
     enabled: isEditMode,
   })
 
@@ -243,38 +225,17 @@ export default function CreateClientPage({
     })
   }, [setHeader, isEditMode, existingClient, clientId])
 
-  const mutation = useMutation({
-    mutationFn: (cleanValues) => {
-      if (customSubmit) return customSubmit(cleanValues)
-      return isEditMode
-        ? updateClient(clientId, cleanValues) // Uses clientId from useParams
-        : createClient({ ...cleanValues, user_id: user?.id })
-    },
+  // The hook refreshes client views and syncs the agency branding when the
+  // internal account is saved; this handles only what happens next.
+  const mutation = useSaveClient({
     onSuccess: async (data) => {
       if (onSuccess) {
         onSuccess(data)
         return
       }
-      queryClient.invalidateQueries({ queryKey: ['clients'] })
-      queryClient.invalidateQueries({ queryKey: ['subscription'] })
-      if (clientId)
-        queryClient.invalidateQueries({ queryKey: ['client', clientId] })
 
-      // When editing the internal (agency) client, keep agency_subscriptions in sync
-      // so the sidebar name/logo and settings page reflect the changes immediately.
-      if (data?.is_internal) {
-        queryClient.invalidateQueries({ queryKey: ['internal-client'] })
-        const { error: syncError } = await supabase
-          .from('agency_subscriptions')
-          .update({
-            agency_name: data.name,
-            logo_url: data.logo_url ?? null,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('user_id', user?.id)
-        if (syncError) console.error('Failed to sync agency branding:', syncError)
-        if (refreshAgency) await refreshAgency()
-      }
+      // The sidebar reads agency branding from the shell's own state
+      if (data?.is_internal && refreshAgency) await refreshAgency()
 
       // If converting from a prospect, mark it as converted
       if (fromProspect?.id && data?.id) {
@@ -302,19 +263,7 @@ export default function CreateClientPage({
 
     try {
       setIsUploading(true)
-      const fileExt = file.name.split('.').pop()
-      const fileName = `${Date.now()}.${fileExt}`
-      const filePath = `branding/${fileName}`
-
-      const { error: uploadError } = await supabase.storage
-        .from('post-media')
-        .upload(filePath, file)
-
-      if (uploadError) throw uploadError
-
-      const {
-        data: { publicUrl },
-      } = supabase.storage.from('post-media').getPublicUrl(filePath)
+      const publicUrl = await uploadClientLogo(file)
 
       form.setValue('logo_url', publicUrl, {
         shouldValidate: true,
@@ -323,10 +272,7 @@ export default function CreateClientPage({
       setPreviewUrl(publicUrl)
 
       // Delete previous logo from storage (old saved logo or unsubmitted upload)
-      if (previousUrl) {
-        const path = extractStoragePath(previousUrl)
-        if (path) await supabase.storage.from('post-media').remove([path])
-      }
+      if (previousUrl) await removeClientLogo(previousUrl)
 
       toast.success('Logo uploaded!')
     } catch (error) {
@@ -340,10 +286,7 @@ export default function CreateClientPage({
   const removeLogo = (e) => {
     e.stopPropagation()
     // Delete the file from storage (uploaded but not yet saved, or existing logo being cleared)
-    if (previewUrl) {
-      const path = extractStoragePath(previewUrl)
-      if (path) supabase.storage.from('post-media').remove([path])
-    }
+    if (previewUrl) removeClientLogo(previewUrl)
     form.setValue('logo_url', '', { shouldValidate: true, shouldDirty: true })
     setPreviewUrl(null)
     if (fileInputRef.current) fileInputRef.current.value = ''
@@ -354,7 +297,11 @@ export default function CreateClientPage({
     const { id, created_at, user_id, is_internal, ...cleanValues } = values
 
     // Send only the clean values to the mutation
-    mutation.mutate(cleanValues)
+    mutation.mutate({
+      clientId: isEditMode ? clientId : undefined,
+      values: cleanValues,
+      submit: customSubmit,
+    })
   }
 
   if (isEditMode && isLoading) {

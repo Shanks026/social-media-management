@@ -1,20 +1,11 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/context/AuthContext'
 import { resolveWorkspace } from '@/lib/workspace'
+import { useApiMutation } from '@/api/mutation'
+import { documentKeys, subscriptionKeys } from '@/api/queryKeys'
 
-// ─── Query Keys ────────────────────────────────────────────────────────────────
-
-export const documentKeys = {
-  all: ['documents'],
-  list: (filters) => ['documents', 'list', filters ?? {}],
-  detail: (id) => ['documents', 'detail', id],
-  collections: (clientId) => ['document-collections', clientId],
-  allCollections: () => ['document-collections', 'all'],
-  // Outside the 'documents' prefix: broad document invalidations shouldn't
-  // re-sign URLs that are still valid.
-  signedUrl: (storagePath) => ['document-signed-url', storagePath],
-}
+export { documentKeys }
 
 // ─── Read Hooks ────────────────────────────────────────────────────────────────
 
@@ -135,17 +126,6 @@ export async function uploadDocument({ clientId, prospectId, file, displayName, 
   return data
 }
 
-// Upload hook (ADR 0007). The other document callers still invalidate by hand
-// and move onto this in #157.
-export function useUploadDocument() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: uploadDocument,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: documentKeys.all })
-    },
-  })
-}
 
 /**
  * Update document display name, category, and/or collection.
@@ -323,4 +303,62 @@ export async function deleteCollection(id) {
     .delete()
     .eq('id', id)
   if (error) throw error
+}
+
+// ─── Mutation hooks ───────────────────────────────────────────────────────────
+
+// Every document view (lists, collections and their counts) sits under
+// documentKeys.all; uploads and deletes also move the plan's storage figure.
+const invalidateDocuments = (queryClient) =>
+  queryClient.invalidateQueries({ queryKey: documentKeys.all })
+const invalidateDocumentsAndStorage = (queryClient) => {
+  invalidateDocuments(queryClient)
+  queryClient.invalidateQueries({ queryKey: subscriptionKeys.all })
+}
+
+/** Variables: uploadDocument's ({ clientId | prospectId, file, displayName, … }). */
+export function useUploadDocument(options) {
+  return useApiMutation(uploadDocument, invalidateDocumentsAndStorage, options)
+}
+
+/** Variables: `{ id, storagePath }`. */
+export function useDeleteDocument(options) {
+  return useApiMutation(deleteDocument, invalidateDocumentsAndStorage, options)
+}
+
+/** Variables: `{ id, ...fields }` (displayName, category, notes, …). */
+export function useUpdateDocument(options) {
+  return useApiMutation(({ id, ...fields }) => updateDocument(id, fields), invalidateDocuments, options)
+}
+
+/** Variables: `{ id, archived }`. */
+export function useArchiveDocument(options) {
+  return useApiMutation(
+    ({ id, archived }) => (archived ? archiveDocument(id) : unarchiveDocument(id)),
+    invalidateDocuments,
+    options,
+  )
+}
+
+/** Variables: `{ documentId, collectionId }` (null = ungrouped). */
+export function useMoveDocument(options) {
+  return useApiMutation(
+    ({ documentId, collectionId }) => moveDocumentToCollection(documentId, collectionId),
+    invalidateDocuments,
+    options,
+  )
+}
+
+/** Variables: `{ id?, clientId, name, description }`. With an id it renames. */
+export function useSaveCollection(options) {
+  return useApiMutation(
+    ({ id, clientId, name, description }) =>
+      id ? updateCollection(id, { name, description }) : createCollection({ clientId, name, description }),
+    invalidateDocuments,
+    options,
+  )
+}
+
+export function useDeleteCollection(options) {
+  return useApiMutation(deleteCollection, invalidateDocuments, options)
 }

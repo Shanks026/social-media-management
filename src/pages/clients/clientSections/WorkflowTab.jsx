@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
 import { Search, Globe, Plus, User } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -12,9 +11,8 @@ import {
 } from '@/components/ui/select'
 import CreateDraftPost from '../../posts/DraftPostForm'
 import DraftPostList from '../../posts/DraftPostList'
-import { fetchAllPostsByClient } from '@/api/posts'
-import { getPublishState } from '@/lib/helper'
-import { statusLabel } from '@/lib/domain/deliverableStatus'
+import { usePostsByClient } from '@/api/posts'
+import { statusLabel, displayStatus } from '@/lib/domain/deliverableStatus'
 
 const ALL_STATUS_TABS = [
   { key: 'ALL', label: 'All' },
@@ -32,17 +30,15 @@ export default function WorkflowTab({ client }) {
     ? ALL_STATUS_TABS.filter((t) => !INTERNAL_EXCLUDED.includes(t.key))
     : ALL_STATUS_TABS
 
-  // Same query key as DraftPostList — React Query deduplicates the request
-  const { data: posts = [] } = useQuery({
-    queryKey: ['draft-posts', client.id],
-    queryFn: () => fetchAllPostsByClient(client.id),
+  // Same query as DraftPostList — React Query deduplicates the request
+  const { data: posts = [] } = usePostsByClient(client.id, {
     staleTime: 0,
     refetchOnWindowFocus: true,
   })
 
   const counts = posts.reduce(
     (acc, post) => {
-      const status = getPublishState(post)
+      const status = displayStatus(post)
       acc.ALL++
       if (status && status in acc) acc[status]++
       return acc

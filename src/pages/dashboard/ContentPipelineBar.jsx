@@ -17,7 +17,7 @@ import {
 import { AlertCircle, ArrowUpRight, CheckCircle2 } from 'lucide-react'
 import { useGlobalPosts } from '@/api/useGlobalPosts'
 import { Button } from '@/components/ui/button'
-import { getPublishState } from '@/lib/helper'
+import { displayStatus } from '@/lib/domain/deliverableStatus'
 import {
   DELIVERABLE_CHART_CONFIG as chartConfig,
   ALLOWED_CHART_STATUSES as ALLOWED_STATUSES,
@@ -48,7 +48,7 @@ export default function ContentPipelineBar() {
     }, {})
 
     posts.forEach((post) => {
-      const status = normalizeStatus(getPublishState(post))
+      const status = normalizeStatus(displayStatus(post))
       if (status && ALLOWED_STATUSES.includes(status)) {
         counts[status] += 1
       }
@@ -61,7 +61,7 @@ export default function ContentPipelineBar() {
     }))
 
     const nextTotalPosts = posts.filter((post) => {
-      const status = getPublishState(post)?.replace(/_/g, ' ') || 'DRAFT'
+      const status = displayStatus(post)?.replace(/_/g, ' ') || 'DRAFT'
       return ALLOWED_STATUSES.includes(status)
     }).length
 

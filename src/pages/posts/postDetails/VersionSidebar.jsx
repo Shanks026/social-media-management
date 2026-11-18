@@ -3,7 +3,7 @@ import { format } from 'date-fns'
 import { X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge' // Import Badge
-import { getPublishState } from '@/lib/helper'
+import { displayStatus } from '@/lib/domain/deliverableStatus'
 import { statusTone } from '@/lib/statusTone'
 
 const getStatusDotColor = (status) => statusTone('deliverable', status).dot
@@ -52,7 +52,7 @@ export default function VersionSidebar({
             >
               <div className="flex items-center gap-3">
                 <div
-                  className={`size-2.5 rounded-full shrink-0 ${getStatusDotColor(getPublishState(v))}`}
+                  className={`size-2.5 rounded-full shrink-0 ${getStatusDotColor(displayStatus(v))}`}
                 />
                 <div className="flex items-center gap-2">
                   <span

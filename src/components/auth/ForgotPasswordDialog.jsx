@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { supabase } from '@/lib/supabase'
+import { sendPasswordResetCode, verifyPasswordCode, updatePassword } from '@/api/auth'
 import { toast } from 'sonner'
 import {
   Dialog,
@@ -96,8 +96,7 @@ export default function ForgotPasswordDialog({ open, onOpenChange }) {
     }
     setIsBusy(true)
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email)
-      if (error) throw error
+      await sendPasswordResetCode(email)
       toast.success('Password reset code sent to your email!')
       setStep(STEPS.VERIFY_OTP)
     } catch (err) {
@@ -116,12 +115,7 @@ export default function ForgotPasswordDialog({ open, onOpenChange }) {
     }
     setIsBusy(true)
     try {
-      const { error } = await supabase.auth.verifyOtp({
-        email,
-        token: otp,
-        type: 'recovery',
-      })
-      if (error) throw error
+      await verifyPasswordCode({ email, code: otp, type: 'recovery' })
       toast.success('Identity verified!')
       setStep(STEPS.NEW_PASSWORD)
     } catch (err) {
@@ -144,30 +138,10 @@ export default function ForgotPasswordDialog({ open, onOpenChange }) {
     }
     setIsBusy(true)
     try {
-      const { data: userData, error } = await supabase.auth.updateUser({
-        password: newPassword,
-      })
-      if (error) throw error
+      // Emails the confirmation, then signs out: recovery logs the user in
+      // implicitly and they should go through the normal login.
+      await updatePassword({ newPassword, reason: 'reset' })
       toast.success('Password updated successfully! You can now log in.')
-
-      // Get fresh session to ensure the edge function succeeds
-      const {
-        data: { session },
-      } = await supabase.auth.getSession()
-
-      // Send notification email
-      if (userData?.user?.email && session?.access_token) {
-        await supabase.functions.invoke('send-password-update-email', {
-          body: { email: userData.user.email, type: 'reset' },
-          headers: {
-            Authorization: `Bearer ${session.access_token}`,
-          },
-        })
-      }
-
-      // We immediately sign out because recovery logs them in implicitly
-      // and we want them to go through the normal login flow.
-      await supabase.auth.signOut()
 
       resetAll()
       onOpenChange(false)

@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { useQueryClient, useMutation } from '@tanstack/react-query'
 import { format } from 'date-fns'
 import { ArrowLeft, Trash2, Check, Loader2, AlertCircle, Building2, Printer, Lock } from 'lucide-react'
 import { toast } from 'sonner'
@@ -33,15 +32,14 @@ import { usePermissions } from '@/api/usePermissions'
 import { useClients } from '@/api/clients'
 import {
   useAgencyNoteById,
-  updateAgencyNote,
-  deleteAgencyNote,
+  useUpdateNote,
+  useDeleteNote,
 } from '@/api/agencyNotes'
 import { useNoteShares } from '@/api/noteShares'
 import {
   useNoteTags,
-  createNoteTag,
-  addTagToNote,
-  removeTagFromNote,
+  useCreateNoteTag,
+  useSetNoteTag,
 } from '@/api/noteTags'
 import { nextTagColor } from '@/lib/noteTags'
 import { ClientAvatar } from '@/components/tasks/ClientAvatar'
@@ -80,7 +78,9 @@ function SaveIndicator({ state }) {
 export default function NoteEditorPage() {
   const { noteId } = useParams()
   const navigate = useNavigate()
-  const queryClient = useQueryClient()
+  // The note hooks refresh the list and this note; callers only handle UI.
+  const { mutateAsync: saveNote } = useUpdateNote()
+  const { mutateAsync: removeNote } = useDeleteNote()
   const { setHeader } = useHeader()
   const { user } = useAuth()
   const { isAdmin } = usePermissions()
@@ -123,25 +123,16 @@ export default function NoteEditorPage() {
   // Tags live in a junction table, independent of the note's auto-save. They are
   // mutated directly and never touch dirtyRef — so tagging a note then hitting
   // Back must NOT bump updated_at or reorder the list.
-  const invalidateNoteTags = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: ['agency-notes', 'detail', noteId] })
-    queryClient.invalidateQueries({ queryKey: ['agency-notes', 'list'] })
-  }, [queryClient, noteId])
-
-  const toggleTagMutation = useMutation({
-    mutationFn: async (tagId) => {
-      if (selectedTagIds.includes(tagId)) await removeTagFromNote(noteId, tagId)
-      else await addTagToNote(noteId, tagId)
-    },
-    onSuccess: invalidateNoteTags,
+  const setTagMutation = useSetNoteTag({
     onError: (err) => toast.error(err.message || 'Failed to update tags'),
   })
 
-  const createTagMutation = useMutation({
-    mutationFn: (name) =>
-      createNoteTag({ name, color: nextTagColor(allTags?.length ?? 0) }),
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ['note-tags', 'list'] }),
+  const toggleTagMutation = {
+    mutate: (tagId) =>
+      setTagMutation.mutate({ noteId, tagId, tagged: !selectedTagIds.includes(tagId) }),
+  }
+
+  const createTagMutation = useCreateNoteTag({
     onError: (err) => toast.error(err.message || 'Failed to create tag'),
   })
 
@@ -193,12 +184,10 @@ export default function NoteEditorPage() {
       clearTimeout(saveTimer.current)
       saveTimer.current = setTimeout(async () => {
         try {
-          await updateAgencyNote(noteId, valuesRef.current)
+          await saveNote({ id: noteId, ...valuesRef.current })
           if (!mountedRef.current) return
           dirtyRef.current = false
           setSaveState('saved')
-          queryClient.invalidateQueries({ queryKey: ['agency-notes', 'list'] })
-          queryClient.invalidateQueries({ queryKey: ['agency-notes', 'detail', noteId] })
           clearTimeout(idleTimer.current)
           idleTimer.current = setTimeout(() => {
             if (mountedRef.current) setSaveState('idle')
@@ -210,7 +199,7 @@ export default function NoteEditorPage() {
         }
       }, 600)
     },
-    [noteId, queryClient],
+    [noteId, saveNote],
   )
 
   function handleTitleChange(e) {
@@ -235,10 +224,8 @@ export default function NoteEditorPage() {
       return
     }
     try {
-      await updateAgencyNote(noteId, valuesRef.current)
+      await saveNote({ id: noteId, ...valuesRef.current })
       dirtyRef.current = false
-      queryClient.invalidateQueries({ queryKey: ['agency-notes', 'list'] })
-      queryClient.invalidateQueries({ queryKey: ['agency-notes', 'detail', noteId] })
     } catch {
       // best-effort flush; navigation proceeds regardless
     }
@@ -247,9 +234,7 @@ export default function NoteEditorPage() {
 
   async function handleVisibilityChange(newVisibility) {
     try {
-      await updateAgencyNote(noteId, { visibility: newVisibility })
-      queryClient.invalidateQueries({ queryKey: ['agency-notes', 'detail', noteId] })
-      queryClient.invalidateQueries({ queryKey: ['agency-notes', 'list'] })
+      await saveNote({ id: noteId, visibility: newVisibility })
       toast.success(newVisibility === 'private' ? 'Note set to Private' : 'Note set to Workspace')
     } catch (err) {
       toast.error(err.message || 'Failed to update visibility')
@@ -258,8 +243,7 @@ export default function NoteEditorPage() {
 
   async function handleDelete() {
     try {
-      await deleteAgencyNote(noteId)
-      queryClient.invalidateQueries({ queryKey: ['agency-notes', 'list'] })
+      await removeNote(noteId)
       toast.success('Note deleted')
       navigate('/operations/notes')
     } catch (err) {
@@ -390,7 +374,9 @@ export default function NoteEditorPage() {
             selectedTagIds={selectedTagIds}
             allTags={allTags ?? []}
             onToggle={(tagId) => toggleTagMutation.mutate(tagId)}
-            onCreate={(name) => createTagMutation.mutateAsync(name)}
+            onCreate={(name) =>
+              createTagMutation.mutateAsync({ name, color: nextTagColor(allTags?.length ?? 0) })
+            }
             isBusy={createTagMutation.isPending}
             onManage={() => setManageTagsOpen(true)}
           />

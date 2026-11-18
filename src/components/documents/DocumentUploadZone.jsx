@@ -2,7 +2,7 @@ import { useRef, useState } from 'react'
 import { Upload } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { MAX_DOCUMENT_SIZE_BYTES } from '@/lib/helper'
+import { MAX_DOCUMENT_SIZE_BYTES } from '@/lib/media'
 import { toast } from 'sonner'
 
 const ACCEPTED_EXTENSIONS = [

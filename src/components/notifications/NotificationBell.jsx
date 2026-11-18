@@ -2,7 +2,6 @@ import { formatDate, initials } from '@/lib/format'
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { toast } from 'sonner'
-import { useQueryClient } from '@tanstack/react-query'
 import {
   Bell,
   FileText,
@@ -38,9 +37,9 @@ import {
   useUnreadNotificationCount,
   useNotifications,
   markNotificationRead,
-  markAllNotificationsRead,
+  useMarkAllNotificationsRead,
+  useRefreshNotifications,
   deleteNotification,
-  notificationKeys,
   useNotificationStream,
 } from '@/api/notifications'
 import { useMemberMap } from '@/api/team'
@@ -227,7 +226,8 @@ function NotificationRow({ notification, memberMap, onRead, onDeleted }) {
 
 function NotificationPanel() {
   const { user } = useAuth()
-  const queryClient = useQueryClient()
+  const { mutateAsync: markAllRead } = useMarkAllNotificationsRead()
+  const invalidate = useRefreshNotifications()
   const { data: notifications = [], isLoading } = useNotifications()
   const { data: unreadCount = 0 } = useUnreadNotificationCount()
   // actor_user_id → { full_name, avatar_url, email }. The merged roster
@@ -235,15 +235,9 @@ function NotificationPanel() {
   // out the owner, so the owner's actions showed no name or avatar (B14).
   const memberMap = useMemberMap()
 
-  const invalidate = () => {
-    queryClient.invalidateQueries({ queryKey: notificationKeys.count(user?.id) })
-    queryClient.invalidateQueries({ queryKey: notificationKeys.list(user?.id) })
-  }
-
   const handleMarkAllRead = async () => {
     if (!user?.id || unreadCount === 0) return
-    await markAllNotificationsRead(user.id)
-    invalidate()
+    await markAllRead(user.id)
   }
 
   return (

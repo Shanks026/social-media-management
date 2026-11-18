@@ -2,7 +2,6 @@ import { PlatformIcon } from '@/components/PlatformIcon'
 import { MemberAvatar } from '@/components/MemberAvatar'
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query'
 import {
   Building2,
   Circle,
@@ -19,7 +18,7 @@ import {
 import { format, parseISO } from 'date-fns'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
-import { updateTaskStatus, deleteTask, fetchTaskDeliverables } from '@/api/tasks'
+import { useUpdateTaskStatus, useDeleteTask, useTaskDeliverables } from '@/api/tasks'
 import { usePermissions } from '@/api/usePermissions'
 import { getUrgencyStatus } from '@/lib/client-helpers'
 import StatusBadge from '@/components/StatusBadge'
@@ -149,7 +148,6 @@ export function DeliverablePreviewRow({ post, client }) {
 
 export default function TaskCard({ task, clientMap, campaignMap = {}, memberMap = {}, currentUserId = null }) {
   const navigate = useNavigate()
-  const queryClient = useQueryClient()
   const [editOpen, setEditOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const { isAdmin, canAssignTasks } = usePermissions()
@@ -164,29 +162,20 @@ export default function TaskCard({ task, clientMap, campaignMap = {}, memberMap 
   const canEdit    = isAdmin || isCreator
   const canToggle  = isAdmin || isCreator || isAssignee
 
-  const invalidate = () =>
-    queryClient.invalidateQueries({ queryKey: ['tasks', 'list'], exact: false })
-
-  const { mutate: setStatus, isPending: isSettingStatus } = useMutation({
-    mutationFn: (newStatus) => updateTaskStatus(task.id, newStatus),
-    onSuccess: invalidate,
+  const { mutate: updateStatus, isPending: isSettingStatus } = useUpdateTaskStatus({
     onError: (err) => toast.error('Failed to update task: ' + err.message),
   })
 
-  const { mutate: remove, isPending: isDeleting } = useMutation({
-    mutationFn: () => deleteTask(task.id),
+  const { mutate: deleteTaskById, isPending: isDeleting } = useDeleteTask({
     onSuccess: () => {
-      invalidate()
       toast.success('Task deleted')
     },
     onError: (err) => toast.error('Failed to delete task: ' + err.message),
   })
 
-  const { data: linkedPosts = [] } = useQuery({
-    queryKey: ['task-deliverables', task.id],
-    queryFn: () => fetchTaskDeliverables(task.id),
-    enabled: !!task.id,
-  })
+  const { data: linkedPosts = [] } = useTaskDeliverables(task.id)
+  const setStatus = (status) => updateStatus({ id: task.id, status })
+  const remove = () => deleteTaskById(task.id)
 
   const isBusy = isSettingStatus || isDeleting
   const overdue =

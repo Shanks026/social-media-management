@@ -2,15 +2,18 @@ import { useState, useRef } from 'react'
 import { useAuth } from '@/context/AuthContext'
 import { usePermissions } from '@/api/usePermissions'
 import { useOutletContext, useNavigate } from 'react-router-dom'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
 import { cn } from '@/lib/utils'
 
 // API
-import { fetchInternalClient } from '@/api/clients'
-import { activateInternalWorkspace } from '@/api/agency'
+import { useInternalClient } from '@/api/clients'
+import {
+  useActivateInternalWorkspace,
+  useSaveAgencyLogo,
+  useSaveHorizontalLogo,
+  uploadBrandingAsset,
+} from '@/api/agency'
 import OnboardingPage from '@/pages/onboarding/Onboarding'
 
 // UI
@@ -49,18 +52,15 @@ import {
 import { platformById, platformLogo } from '@/lib/domain/platforms'
 import HorizontalLogoCropDialog from '@/components/HorizontalLogoCropDialog'
 
-function extractStoragePath(publicUrl) {
-  if (!publicUrl) return null
-  const marker = '/post-media/'
-  const idx = publicUrl.indexOf(marker)
-  return idx !== -1 ? publicUrl.slice(idx + marker.length) : null
-}
 
 export default function AgencySettings() {
   const { user } = useAuth()
   const { canEditWorkspace } = usePermissions()
   const { agencySettings, refreshAgency } = useOutletContext() || {}
-  const queryClient = useQueryClient()
+  // The agency hooks refresh the subscription row and the internal client.
+  const { mutateAsync: activateInternalWorkspace } = useActivateInternalWorkspace()
+  const { mutateAsync: saveAgencyLogo } = useSaveAgencyLogo()
+  const { mutateAsync: saveHorizontalLogo } = useSaveHorizontalLogo()
   const navigate = useNavigate()
 
   // Setup & activation state
@@ -87,11 +87,7 @@ export default function AgencySettings() {
   const [cropSrc, setCropSrc] = useState(null) // local objectURL for the crop modal
   const [isCropOpen, setIsCropOpen] = useState(false) // controls crop dialog visibility
 
-  const { data: internalClient, isLoading: isClientLoading } = useQuery({
-    queryKey: ['internal-client', user?.id],
-    queryFn: fetchInternalClient,
-    enabled: !!user,
-  })
+  const { data: internalClient, isLoading: isClientLoading } = useInternalClient()
 
   // ── Handlers ──
 
@@ -108,8 +104,6 @@ export default function AgencySettings() {
     setIsActivating(true)
     try {
       await activateInternalWorkspace(agencySettings)
-      await queryClient.invalidateQueries({ queryKey: ['internal-client'] })
-      queryClient.invalidateQueries({ queryKey: ['clients'] })
       if (refreshAgency) await refreshAgency()
       toast.success('Internal workspace activated.')
     } catch {
@@ -125,18 +119,7 @@ export default function AgencySettings() {
 
     try {
       setIsUploadingLogo(true)
-      const fileExt = file.name.split('.').pop()
-      const fileName = `${Date.now()}.${fileExt}`
-      const filePath = `branding/${fileName}`
-
-      const { error: uploadError } = await supabase.storage
-        .from('post-media')
-        .upload(filePath, file)
-      if (uploadError) throw uploadError
-
-      const {
-        data: { publicUrl },
-      } = supabase.storage.from('post-media').getPublicUrl(filePath)
+      const publicUrl = await uploadBrandingAsset(file, 'branding')
 
       setAgencyLogoUrl(publicUrl)
       toast.success('Logo uploaded! Click Save to apply.')
@@ -152,34 +135,13 @@ export default function AgencySettings() {
     if (agencyLogoUrl === null || !internalClient) return
     setIsSavingAgency(true)
     try {
-      const oldUrl = internalClient.logo_url
-      const dbUrl = agencyLogoUrl === '' ? null : agencyLogoUrl
-      // Update client record
-      const { error: clientErr } = await supabase
-        .from('clients')
-        .update({ logo_url: dbUrl })
-        .eq('id', internalClient.id)
-
-      if (clientErr) throw clientErr
-
-      // Update agency_subscriptions branding
-      const { error: subErr } = await supabase
-        .from('agency_subscriptions')
-        .update({
-          logo_url: dbUrl,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('user_id', user?.id)
-
-      if (subErr) throw subErr
-
-      // Delete old logo from storage if replaced or removed
-      if (oldUrl && oldUrl !== (agencyLogoUrl || '')) {
-        const path = extractStoragePath(oldUrl)
-        if (path) await supabase.storage.from('post-media').remove([path])
-      }
-
-      await queryClient.invalidateQueries({ queryKey: ['internal-client'] })
+      // Updates the internal client and the subscription row, then removes
+      // the replaced file
+      await saveAgencyLogo({
+        internalClientId: internalClient.id,
+        logoUrl: agencyLogoUrl,
+        previousUrl: internalClient.logo_url,
+      })
       if (refreshAgency) await refreshAgency()
       setAgencyLogoUrl(null)
       toast.success('Agency logo updated!')
@@ -205,14 +167,7 @@ export default function AgencySettings() {
   const handleCropApplied = async (blob) => {
     setIsUploadingHorizontalLogo(true)
     try {
-      const filePath = `branding/${Date.now()}.png`
-      const { error: uploadError } = await supabase.storage
-        .from('post-media')
-        .upload(filePath, blob, { contentType: 'image/png' })
-      if (uploadError) throw uploadError
-      const {
-        data: { publicUrl },
-      } = supabase.storage.from('post-media').getPublicUrl(filePath)
+      const publicUrl = await uploadBrandingAsset(blob, 'branding', 'png')
       setHorizontalLogoUrl(publicUrl)
       toast.success('Horizontal logo cropped! Click Save to apply.')
     } finally {
@@ -235,22 +190,9 @@ export default function AgencySettings() {
     if (horizontalLogoUrl === null) return
     setIsSavingHorizontalLogo(true)
     try {
-      const oldUrl = savedHorizontalLogoUrl
       const dbUrl = horizontalLogoUrl === '' ? null : horizontalLogoUrl
-      const { error: subErr } = await supabase
-        .from('agency_subscriptions')
-        .update({
-          logo_horizontal_url: dbUrl,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('user_id', user?.id)
-      if (subErr) throw subErr
-
-      // Delete old horizontal logo from storage if replaced or removed
-      if (oldUrl && oldUrl !== (horizontalLogoUrl || '')) {
-        const path = extractStoragePath(oldUrl)
-        if (path) await supabase.storage.from('post-media').remove([path])
-      }
+      // Removes the replaced file too
+      await saveHorizontalLogo({ logoUrl: horizontalLogoUrl, previousUrl: savedHorizontalLogoUrl })
 
       // Pin the display URL locally before nulling so the preview doesn't flicker
       // while agencySettings refetches in the background
@@ -274,10 +216,6 @@ export default function AgencySettings() {
           includeActivation={false}
           onComplete={async () => {
             if (refreshAgency) await refreshAgency()
-            await queryClient.invalidateQueries({
-              queryKey: ['internal-client'],
-            })
-            queryClient.invalidateQueries({ queryKey: ['clients'] })
             setIsSetupModalOpen(false)
           }}
           onSkip={() => setIsSetupModalOpen(false)}

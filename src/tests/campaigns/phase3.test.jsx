@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest'
 import { renderHook, waitFor, render, screen, fireEvent, act } from '@testing-library/react'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import { createWrapper } from '../test-utils'
@@ -431,6 +431,13 @@ const baseCampaignRow = {
 }
 
 describe('Group F — Send for Approval button', () => {
+  // Load the page once, outside any test's 5s budget. Its first (cold) import
+  // pulls in the whole campaign detail tree, and under a full parallel run that
+  // alone could exceed the timeout of whichever test happened to go first.
+  beforeAll(async () => {
+    await import('@/pages/campaigns/CampaignDetailPage')
+  }, 30_000)
+
   beforeEach(() => vi.clearAllMocks())
 
   it('shows Share Review Link button when PENDING_APPROVAL posts exist', async () => {

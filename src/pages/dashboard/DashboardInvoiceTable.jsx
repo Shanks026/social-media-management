@@ -3,8 +3,6 @@ import { useNavigate } from 'react-router-dom'
 import { format } from 'date-fns'
 import { Building2, FileText, ArrowUpRight } from 'lucide-react'
 import { useInvoices } from '@/api/invoices'
-import { useQuery } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
 
 // UI Components
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -17,27 +15,8 @@ export default function DashboardInvoiceTable() {
   const navigate = useNavigate()
   const { data: invoices = [], isLoading: isLoadingInvoices } = useInvoices()
 
-  const { data: clientData = [] } = useQuery({
-    queryKey: ['clients-list'],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from('clients')
-        .select('id, name, logo_url, is_internal')
-      return data || []
-    },
-  })
-
-  // Merge client data into invoices
-  const tableData = invoices
-    .map((inv) => {
-      const client = Array.isArray(clientData)
-        ? clientData.find((c) => c.id === inv.client_id)
-        : null
-      return {
-        ...inv,
-        client,
-      }
-    })
+  // Invoices arrive with their client joined (useInvoices).
+  const tableData = [...invoices]
     .sort((a, b) => new Date(b.issue_date) - new Date(a.issue_date))
     .slice(0, 5) // Show top 5 most recent
 

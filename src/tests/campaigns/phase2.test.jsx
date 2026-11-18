@@ -82,6 +82,8 @@ vi.mock('@/api/clients', () => ({
       realClients: [{ id: 'c1', name: 'Acme Corp', email: 'acme@test.com' }],
     },
   }),
+  // the deliverable dialog on the detail page reads its client's platforms
+  useClientById: () => ({ data: null, isLoading: false }),
 }))
 
 vi.mock('@/components/HTMLInvoicePreview', () => ({

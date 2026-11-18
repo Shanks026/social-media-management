@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useHeader } from '@/components/misc/header-context'
 import { useAuth } from '@/context/AuthContext'
 import { usePermissions } from '@/api/usePermissions'
@@ -10,8 +9,8 @@ import { toast } from 'sonner'
 import ClientProfileView from '@/pages/clients/ClientProfileView'
 import { Button } from '@/components/ui/button'
 import OnboardingPage from '@/pages/onboarding/Onboarding'
-import { fetchInternalClient } from '@/api/clients'
-import { activateInternalWorkspace } from '@/api/agency'
+import { useInternalClient } from '@/api/clients'
+import { useActivateInternalWorkspace } from '@/api/agency'
 
 // UI Components
 import {
@@ -38,7 +37,7 @@ export default function MyOrganization() {
   const { setHeader } = useHeader()
   const { user } = useAuth()
   const { canEditWorkspace } = usePermissions()
-  const queryClient = useQueryClient()
+  const { mutateAsync: activateInternalWorkspace } = useActivateInternalWorkspace()
   const { agencySettings, refreshAgency } = useOutletContext() || {}
 
   const [isActivating, setIsActivating] = useState(false)
@@ -49,11 +48,7 @@ export default function MyOrganization() {
     data: internalClient,
     isLoading: isClientLoading,
     isRefetching: isClientRefetching,
-  } = useQuery({
-    queryKey: ['internal-client', user?.id],
-    queryFn: fetchInternalClient,
-    enabled: !!user,
-  })
+  } = useInternalClient()
 
   useEffect(() => {
     setHeader({
@@ -74,8 +69,6 @@ export default function MyOrganization() {
     setIsActivating(true)
     try {
       await activateInternalWorkspace(agencySettings)
-      await queryClient.invalidateQueries({ queryKey: ['internal-client'] })
-      queryClient.invalidateQueries({ queryKey: ['clients'] })
       if (refreshAgency) await refreshAgency()
       toast.success('Internal workspace activated.')
     } catch {
@@ -106,10 +99,6 @@ export default function MyOrganization() {
           onComplete={async () => {
             // Wait for AppShell to fetch and update AppSidebar
             if (refreshAgency) await refreshAgency()
-            await queryClient.invalidateQueries({
-              queryKey: ['internal-client'],
-            })
-            queryClient.invalidateQueries({ queryKey: ['clients'] })
             // Then close to reveal the newly branded workspace
             setIsSetupModalOpen(false)
           }}

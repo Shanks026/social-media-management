@@ -1,8 +1,21 @@
+// Tasks API (ADR 0007): plain async functions, read hooks, and a hook per
+// mutation that owns the cache invalidation.
 import { supabase } from '@/lib/supabase'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query'
 import { useAuth } from '@/context/AuthContext'
 import { resolveWorkspace } from '@/lib/workspace'
 import { fetchPostSummary } from '@/api/posts'
+import { useApiMutation } from '@/api/mutation'
+import { taskKeys, clientKeys } from '@/api/queryKeys'
+
+export { taskKeys }
+
+// A task shows up in every task list, its detail and activity, the "Linked
+// tasks" list on its deliverables and the client's task count.
+function invalidateTasks(queryClient) {
+  queryClient.invalidateQueries({ queryKey: taskKeys.all })
+  queryClient.invalidateQueries({ queryKey: clientKeys.all })
+}
 
 /**
  * Whether a task id exists at all in the caller's workspace, without
@@ -13,7 +26,7 @@ import { fetchPostSummary } from '@/api/posts'
  */
 export function useTaskExists(taskId, { enabled = true } = {}) {
   return useQuery({
-    queryKey: ['tasks', 'exists', taskId],
+    queryKey: taskKeys.exists(taskId),
     queryFn: async () => {
       const { data, error } = await supabase.rpc('task_reference_exists', { p_task_id: taskId })
       if (error) throw error
@@ -26,14 +39,11 @@ export function useTaskExists(taskId, { enabled = true } = {}) {
 export function useTasks({ clientId, campaignId, assignedToMe } = {}) {
   const { workspaceUserId, user } = useAuth()
   return useQuery({
-    queryKey: [
-      'tasks', 'list',
-      {
-        clientId: clientId ?? null,
-        campaignId: campaignId ?? null,
-        ...(assignedToMe ? { assignedToMe: true } : {}),
-      },
-    ],
+    queryKey: taskKeys.list(workspaceUserId, {
+      clientId: clientId ?? null,
+      campaignId: campaignId ?? null,
+      ...(assignedToMe ? { assignedToMe: user?.id } : {}),
+    }),
     queryFn: async () => {
       let q = supabase
         .from('tasks')
@@ -207,7 +217,7 @@ function notifyAssignee(taskId) {
 export function useTaskById(taskId) {
   const { workspaceUserId } = useAuth()
   return useQuery({
-    queryKey: ['tasks', 'detail', taskId],
+    queryKey: taskKeys.detail(taskId),
     queryFn: async () => {
       const { data, error } = await supabase
         .from('tasks')
@@ -229,7 +239,7 @@ export function useTaskById(taskId) {
 export function useTaskActivity(taskId) {
   const { workspaceUserId } = useAuth()
   return useQuery({
-    queryKey: ['tasks', 'activity', taskId],
+    queryKey: taskKeys.activity(taskId),
     queryFn: async () => {
       const { data, error } = await supabase
         .from('task_activity')
@@ -272,7 +282,7 @@ export async function deleteTask(id) {
 export function useTasksForPost(postId) {
   const { workspaceUserId } = useAuth()
   return useQuery({
-    queryKey: ['tasks', 'for-post', postId],
+    queryKey: taskKeys.forPost(postId),
     queryFn: async () => {
       const { data, error } = await supabase
         .from('task_posts')
@@ -291,7 +301,7 @@ export function useTasksForPost(postId) {
 export function useMyTasks() {
   const { workspaceUserId, user } = useAuth()
   return useQuery({
-    queryKey: ['tasks', 'list', 'my-tasks', user?.id],
+    queryKey: taskKeys.mine(user?.id),
     queryFn: async () => {
       if (!user?.id) return []
       const { data, error } = await supabase
@@ -326,7 +336,7 @@ export function useMyTasks() {
 export function useMyOpenTaskCount() {
   const { workspaceUserId, user } = useAuth()
   return useQuery({
-    queryKey: ['tasks', 'list', 'my-open-count', user?.id],
+    queryKey: taskKeys.myOpenCount(user?.id),
     queryFn: async () => {
       if (!user?.id) return 0
       const { count, error } = await supabase
@@ -339,5 +349,77 @@ export function useMyOpenTaskCount() {
       return count ?? 0
     },
     enabled: !!workspaceUserId && !!user?.id,
+  })
+}
+
+// ─── Deliverable links (hooks) ────────────────────────────────────────────────
+
+/** Linked post ids, for seeding the edit dialog. */
+export function useTaskPostIds(taskId, { enabled = true } = {}) {
+  return useQuery({
+    queryKey: taskKeys.postIds(taskId),
+    queryFn: () => fetchTaskPostIds(taskId),
+    enabled: !!taskId && enabled,
+  })
+}
+
+/** Linked deliverables as summaries, for display. */
+export function useTaskDeliverables(taskId) {
+  return useQuery({
+    queryKey: taskKeys.deliverables(taskId),
+    queryFn: () => fetchTaskDeliverables(taskId),
+    enabled: !!taskId,
+  })
+}
+
+// ─── Mutation hooks ───────────────────────────────────────────────────────────
+
+export function useCreateTask(options) {
+  return useApiMutation(createTask, invalidateTasks, options)
+}
+
+/** Variables: `{ id, ...updates }` (pass `post_ids` to replace the links). */
+export function useUpdateTask(options) {
+  return useApiMutation(({ id, ...updates }) => updateTask(id, updates), invalidateTasks, options)
+}
+
+export function useReassignTask(options) {
+  return useApiMutation(
+    ({ taskId, assignedTo }) => reassignTask(taskId, assignedTo),
+    invalidateTasks,
+    options,
+  )
+}
+
+export function useDeleteTask(options) {
+  return useApiMutation(deleteTask, invalidateTasks, options)
+}
+
+/**
+ * Move a task to a new status. Optimistic: every cached task list shows the
+ * new status at once (the kanban drop), and rolls back if the RPC fails.
+ * Variables: `{ id, status }`.
+ */
+export function useUpdateTaskStatus({ onSuccess, onError, ...options } = {}) {
+  const queryClient = useQueryClient()
+  const listsKey = taskKeys.lists()
+
+  return useMutation({
+    ...options,
+    mutationFn: ({ id, status }) => updateTaskStatus(id, status),
+    onMutate: async ({ id, status }) => {
+      await queryClient.cancelQueries({ queryKey: listsKey })
+      const previous = queryClient.getQueriesData({ queryKey: listsKey })
+      queryClient.setQueriesData({ queryKey: listsKey }, (old) =>
+        Array.isArray(old) ? old.map((t) => (t.id === id ? { ...t, status } : t)) : old,
+      )
+      return { previous }
+    },
+    onError: (err, variables, context) => {
+      for (const [key, data] of context?.previous ?? []) queryClient.setQueryData(key, data)
+      return onError?.(err, variables, context)
+    },
+    onSuccess,
+    onSettled: () => invalidateTasks(queryClient),
   })
 }

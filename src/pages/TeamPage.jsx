@@ -74,10 +74,8 @@ import {
   useRevokeInvite,
   useRestoreMember,
   useDeleteMemberPermanently,
-  updateMemberAccess,
-  teamKeys,
+  useUpdateMemberAccess,
 } from '@/api/team'
-import { useQueryClient } from '@tanstack/react-query'
 import { InviteDialog } from '@/components/team/InviteDialog'
 import { EditAccessDialog } from '@/components/team/EditAccessDialog'
 import { DOCS_LEVEL_CONFIG } from '@/components/team/teamAccessConfig'
@@ -125,9 +123,9 @@ const columnHelper = createColumnHelper()
 
 export default function TeamPage() {
   const { setHeader } = useHeader()
-  const { user, workspaceUserId } = useAuth()
+  const { user } = useAuth()
   const { canManageTeam, isAdmin, isOwner } = usePermissions()
-  const queryClient = useQueryClient()
+  const { mutateAsync: saveMemberAccess } = useUpdateMemberAccess()
 
   const [activeTab, setActiveTab] = useState('active')
   const [sorting, setSorting] = useState([])
@@ -206,10 +204,9 @@ export default function TeamPage() {
   }, [deletingMember, deleteMemberPermanently])
 
   const handleSaveAccess = useCallback(async (memberId, payload) => {
-    await updateMemberAccess(memberId, payload)
-    queryClient.invalidateQueries({ queryKey: teamKeys.members(workspaceUserId) })
+    await saveMemberAccess({ memberId, ...payload })
     toast.success('Member updated')
-  }, [queryClient, workspaceUserId])
+  }, [saveMemberAccess])
 
   // jobRoleId → how many members hold it. Derived from the map already loaded
   // for the roster, so the delete confirmation can state its blast radius
@@ -845,11 +842,9 @@ export default function TeamPage() {
               onOpenChange={(v) => { if (!v) setEditingMember(null) }}
               onSave={handleSaveAccess}
               // The owner-row path writes via set_member_responsibilities
-              // instead of onSave, so it needs its own refresh + toast.
-              onSaved={() => {
-                queryClient.invalidateQueries({ queryKey: teamKeys.members(workspaceUserId) })
-                toast.success('Details updated')
-              }}
+              // instead of onSave (its hook refreshes the roster), so it needs
+              // its own toast.
+              onSaved={() => toast.success('Details updated')}
               onManageJobRoles={() => setJobRolesOpen(true)}
             />
           )}

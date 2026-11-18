@@ -21,7 +21,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
-import { supabase } from '@/lib/supabase'
+import { requestPlanChange } from '@/api/agency'
 import { useAuth } from '@/context/AuthContext'
 import { useSubscription } from '@/api/useSubscription'
 import { PlanOverview } from './PlanOverview'
@@ -55,17 +55,14 @@ export const UpgradeRequestDialog = ({
   const handleSubmit = async () => {
     setIsSubmitting(true)
     try {
-      const { error } = await supabase.functions.invoke('send-renewal-request', {
-        body: {
+      await requestPlanChange({
           requestType: isRenewal ? 'renewal' : 'upgrade',
           agencyName: sub?.agency_name || 'Unknown Agency',
           agencyEmail: user?.email || '',
           currentPlan: currentPlanName,
           requestedPlan: isRenewal ? undefined : targetPlan.name,
           additionalNotes: additionalNotes.trim() || null,
-        },
       })
-      if (error) throw error
       setAdditionalNotes('')
       onOpenChange(false)
       toast.success(isRenewal ? 'Renewal request sent' : 'Upgrade request sent', {

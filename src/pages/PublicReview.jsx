@@ -1,8 +1,8 @@
 import { PlatformIcon } from '@/components/PlatformIcon'
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { supabase } from '@/lib/supabase'
-import { usePostReview } from '@/api/posts'
+import { toast } from 'sonner'
+import { usePostReview, respondToPostReview } from '@/api/posts'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import {
@@ -30,7 +30,7 @@ import {
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { Badge } from '@/components/ui/badge'
-import { isDocumentUrl, getDocumentExtension, getDocumentPreviewUrl } from '@/lib/helper'
+import { isDocumentUrl, getDocumentExtension, getDocumentPreviewUrl } from '@/lib/media'
 import { cn } from '@/lib/utils'
 import {
   Select,
@@ -129,18 +129,14 @@ export default function PublicReview() {
       ? (hasPlatforms ? 'SCHEDULED' : 'APPROVED')
       : newStatus
 
-    const { error } = await supabase.rpc('update_post_status_by_token', {
-      p_token: token,
-      p_status: finalStatus,
-      p_feedback: feedback,
-    })
-
-    if (!error) {
+    try {
+      await respondToPostReview({ token, status: finalStatus, feedback })
       setStatusUpdated(finalStatus)
-    } else {
-      alert('Something went wrong. Please try again.')
+    } catch {
+      toast.error('Something went wrong. Please try again.')
+    } finally {
+      setIsSubmitting(false)
     }
-    setIsSubmitting(false)
   }
 
   // Determine branding

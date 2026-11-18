@@ -5,11 +5,9 @@ import { useNavigate } from 'react-router-dom'
 import { Calendar as CalendarIcon, Plus, Trash2, FileText, Settings2 } from 'lucide-react'
 
 // API
-import { useQueryClient } from '@tanstack/react-query'
 import {
   useCreateInvoice,
   useNextInvoiceNumber,
-  invoiceKeys,
 } from '@/api/invoices'
 import { useClients } from '@/api/clients'
 import { useSubscription } from '@/api/useSubscription'
@@ -65,7 +63,6 @@ export function CreateInvoiceDialog({
   // Called after successful invoice creation. Use to e.g. navigate to /finance/invoices.
   onSuccess: onSuccessCallback = null,
 }) {
-  const queryClient = useQueryClient()
   const navigate = useNavigate()
   const { data: clientData } = useClients()
   const { data: nextNumber } = useNextInvoiceNumber()
@@ -258,10 +255,6 @@ export function CreateInvoiceDialog({
       {
         onSuccess: () => {
           toast.success('Invoice created as draft')
-          // Prefetch the client's invoices to avoid flicker on navigation
-          queryClient.prefetchQuery({
-            queryKey: invoiceKeys.list({ clientId, status: undefined }),
-          })
           onOpenChange(false)
           // Small delay for the dialog to start closing before the page transition
           if (onSuccessCallback) {

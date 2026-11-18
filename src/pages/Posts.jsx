@@ -54,8 +54,7 @@ import { CustomTable } from '@/components/CustomTable'
 import { CalendarPostCard } from '@/pages/calendar/CalendarPostCard'
 import DraftPostForm from '@/pages/posts/DraftPostForm'
 import StatusBadge from '@/components/StatusBadge'
-import { getPublishState } from '@/lib/helper'
-import { statusLabel } from '@/lib/domain/deliverableStatus'
+import { statusLabel, displayStatus } from '@/lib/domain/deliverableStatus'
 import { useHeader } from '@/components/misc/header-context'
 import { useGlobalPosts, usePostCounts } from '@/api/useGlobalPosts'
 import { useClients } from '@/api/clients'
@@ -276,7 +275,7 @@ export default function Posts() {
     {
       header: 'Status',
       width: '160px',
-      render: (item) => <StatusBadge status={getPublishState(item)} />,
+      render: (item) => <StatusBadge status={displayStatus(item)} />,
     },
     {
       header: 'Target Date',

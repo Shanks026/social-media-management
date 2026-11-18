@@ -1,7 +1,6 @@
 import { initials } from '@/lib/format'
 import { MemberAvatar } from '@/components/MemberAvatar'
 import { useState, useEffect, useMemo } from 'react'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   useReactTable,
   getCoreRowModel,
@@ -60,7 +59,7 @@ import {
   usePendingApprovalsCount,
   useApprovalLog,
   useApprovalLogCount,
-  deleteApprovalEvents,
+  useDeleteApprovalEvents,
 } from '@/api/posts'
 import { useTeamMembers } from '@/api/team'
 import { PlatformStack } from '@/components/PlatformIcon'
@@ -358,7 +357,6 @@ function PendingTab() {
 const logCol = createColumnHelper()
 
 function LogTab({ action, emptyLabel, emptyDescription }) {
-  const queryClient = useQueryClient()
   const [page, setPage] = useState(0)
   const [globalFilter, setGlobalFilter] = useState('')
   const [deletingIds, setDeletingIds] = useState(null)
@@ -368,10 +366,8 @@ function LogTab({ action, emptyLabel, emptyDescription }) {
   const total = data?.total ?? 0
   const totalPages = Math.ceil(total / PAGE_SIZE)
 
-  const deleteMutation = useMutation({
-    mutationFn: (ids) => deleteApprovalEvents(ids),
+  const deleteMutation = useDeleteApprovalEvents({
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['approval-log'] })
       toast.success('Log entry removed')
       setDeletingIds(null)
     },

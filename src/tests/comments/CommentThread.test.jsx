@@ -29,12 +29,13 @@ vi.mock('@/api/team', () => ({
 
 vi.mock('@/api/comments', () => ({
   useComments: () => ({ data: mockComments, isLoading: false }),
-  createComment: (...args) => mockCreate(...args),
+  // the post/delete hooks wrap createComment/softDeleteComment and refresh the thread
+  useCreateComment: () => ({ mutateAsync: (...args) => mockCreate(...args) }),
+  useDeleteComment: () => ({ mutateAsync: vi.fn() }),
+  useRefreshCommentThread: () => () => {},
   updateComment: vi.fn(),
-  softDeleteComment: vi.fn(),
   toggleReaction: vi.fn(),
   REACTION_EMOJIS: ['👍', '❤️', '🎉'],
-  commentKeys: { thread: () => ['comments'] },
 }))
 
 import { CommentThread } from '@/components/comments/CommentThread'
@@ -95,7 +96,7 @@ describe('CommentThread', () => {
     expect(mention.className).toContain(MENTION_TEXT_CLASS)
   })
 
-  it('posts a comment via createComment with the entity context', async () => {
+  it('posts a comment with the entity context', async () => {
     const user = userEvent.setup()
     renderThread()
 

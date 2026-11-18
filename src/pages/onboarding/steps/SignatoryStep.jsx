@@ -5,7 +5,7 @@ import { toast } from 'sonner'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
-import { uploadBrandingAsset, removeBrandingAsset } from '../uploads'
+import { uploadBrandingAsset, removeBrandingAsset } from '@/api/agency'
 
 export default function SignatoryStep({ form }) {
   const { register, setValue, watch } = form

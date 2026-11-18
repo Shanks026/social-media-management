@@ -1,9 +1,8 @@
 import { useState } from 'react'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Check, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
-import { createJobRole, deleteJobRole, updateJobRoleColor } from '@/api/jobRoles'
+import { useCreateJobRole, useDeleteJobRole, useUpdateJobRoleColor } from '@/api/jobRoles'
 import {
   JOB_ROLE_COLORS,
   JOB_ROLE_COLOR_KEYS,
@@ -82,29 +81,23 @@ function ColorPicker({ value, onPick }) {
  * One existing job role. No rename — create and delete only, by decision, so
  * a role's meaning can't shift under the people already holding it.
  */
-function JobRoleRow({ role, count, onMutated, canManage }) {
+function JobRoleRow({ role, count, canManage }) {
   const [confirmOpen, setConfirmOpen] = useState(false)
 
-  const deleteMutation = useMutation({
-    mutationFn: () => deleteJobRole(role.id),
-    onSuccess: () => {
-      toast.success('Job role deleted')
-      onMutated()
-    },
+  const deleteMutation = useDeleteJobRole({
+    onSuccess: () => toast.success('Job role deleted'),
     onError: (err) => toast.error(err.message || 'Failed to delete job role'),
   })
 
   // Colour is presentation, not identity, so it stays editable even though
   // names deliberately are not.
-  const colorMutation = useMutation({
-    mutationFn: (color) => updateJobRoleColor(role.id, color),
-    onSuccess: onMutated,
+  const colorMutation = useUpdateJobRoleColor({
     onError: (err) => toast.error(err.message || 'Failed to change colour'),
   })
 
   return (
     <div className="flex items-center gap-2 py-2">
-      {canManage && <ColorPicker value={role.color} onPick={(c) => colorMutation.mutate(c)} />}
+      {canManage && <ColorPicker value={role.color} onPick={(c) => colorMutation.mutate({ id: role.id, color: c })} />}
       <JobRolePill role={role} />
       <span className="flex-1" />
       <span className="shrink-0 text-xs text-muted-foreground">
@@ -139,7 +132,7 @@ function JobRoleRow({ role, count, onMutated, canManage }) {
             <AlertDialogCancel disabled={deleteMutation.isPending}>Cancel</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={() => deleteMutation.mutate()}
+              onClick={() => deleteMutation.mutate(role.id)}
               disabled={deleteMutation.isPending}
             >
               {deleteMutation.isPending ? 'Deleting…' : 'Delete'}
@@ -165,20 +158,11 @@ export default function ManageJobRolesDialog({
   memberCounts = {},
   canManage = false,
 }) {
-  const queryClient = useQueryClient()
   const [newName, setNewName] = useState('')
   const [newColor, setNewColor] = useState(() => nextJobRoleColor(0))
 
-  const handleMutated = () => {
-    queryClient.invalidateQueries({ queryKey: ['job-roles'] })
-    // A delete cascades into member links, which the team roster renders.
-    queryClient.invalidateQueries({ queryKey: ['team'] })
-  }
-
-  const createMutation = useMutation({
-    mutationFn: () => createJobRole({ name: newName.trim(), color: newColor }),
+  const createMutation = useCreateJobRole({
     onSuccess: () => {
-      handleMutated()
       setNewName('')
       setNewColor(nextJobRoleColor(roles.length + 1))
     },
@@ -192,7 +176,7 @@ export default function ManageJobRolesDialog({
 
   function handleCreate() {
     if (!newName.trim()) return
-    createMutation.mutate()
+    createMutation.mutate({ name: newName.trim(), color: newColor })
   }
 
   return (
@@ -214,7 +198,6 @@ export default function ManageJobRolesDialog({
                 key={role.id}
                 role={role}
                 count={memberCounts[role.id] ?? 0}
-                onMutated={handleMutated}
                 canManage={canManage}
               />
             ))}

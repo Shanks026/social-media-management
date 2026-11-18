@@ -8,7 +8,7 @@ How to interact with Supabase in Tercero.
 import { supabase } from '@/lib/supabase'
 ```
 
-Never instantiate a new Supabase client inline. Always use this shared singleton.
+Only `src/api` (and `src/lib`, `src/context`) import it; UI code goes through `src/api` hooks and functions (ADR 0007, enforced by lint). Never instantiate a new Supabase client inline. Always use this shared singleton; the one exception is the isolated client for linking a second account (`src/lib/accountSwitcherClient.js`).
 
 ## Auth
 
@@ -21,9 +21,9 @@ Auth state is managed by `AuthContext` via `supabase.auth.onAuthStateChange`. Do
 
 ## Row-Level Security
 
-All tables use RLS. Queries are automatically scoped via the Supabase anon key + user session. Still explicitly filter by `user_id` where appropriate as a secondary guard:
+All tables use RLS. Queries are automatically scoped via the Supabase anon key + user session. Still filter by the workspace explicitly as a secondary guard, with `workspaceUserId` (the owner's id, shared by invited Members), never the caller's `user.id`:
 ```js
-.eq('user_id', user.id)
+.eq('user_id', workspaceUserId)
 ```
 
 ## Joins and Relationships
@@ -83,7 +83,7 @@ const { data, error } = await supabase.functions.invoke('function-name', {
 })
 ```
 
-Current functions: `send-approval-email`, `send-client-welcome`, `send-password-update-email`.
+Call them from `src/api` functions only; the functions themselves are listed in `.claude/CLAUDE.md`.
 
 ## Views
 

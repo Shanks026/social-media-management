@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useMeetingsBetween } from '@/api/meetings'
 import {
   format,
   isToday,
@@ -11,7 +11,6 @@ import {
 } from 'date-fns'
 import { useNavigate } from 'react-router-dom'
 import { ArrowUpRight, Clock } from 'lucide-react'
-import { supabase } from '@/lib/supabase'
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -91,21 +90,10 @@ export default function DashboardWeekTimeline() {
   )
 
   // ── Meetings ──
-  const { data: meetings = [], isLoading: loadingMeetings } = useQuery({
-    queryKey: ['meetings', 'week-timeline', today.toISOString()],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('meetings')
-        .select('*')
-        .gte('datetime', today.toISOString())
-        .lte('datetime', weekEnd.toISOString())
-        .order('datetime', { ascending: true })
-      if (error) throw error
-      return data || []
-    },
-    staleTime: 0,
-    refetchOnWindowFocus: true,
-  })
+  const { data: meetings = [], isLoading: loadingMeetings } = useMeetingsBetween(
+    { from: today, to: weekEnd },
+    { staleTime: 0, refetchOnWindowFocus: true },
+  )
 
   // ── Group by day ──
   const postsByDay = useMemo(() => {

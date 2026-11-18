@@ -2,7 +2,6 @@ import { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Building2 } from 'lucide-react'
 import {
@@ -32,7 +31,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
-import { createCollection, updateCollection, documentKeys } from '@/api/documents'
+import { useSaveCollection } from '@/api/documents'
 import { useSubscription } from '@/api/useSubscription'
 
 const baseSchema = z.object({
@@ -67,7 +66,6 @@ export default function CreateCollectionDialog({
   defaultClientId,
   onSuccess,
 }) {
-  const queryClient = useQueryClient()
   const { data: sub } = useSubscription()
   const effectiveOpen = open && (sub?.documents_collections ?? false)
   const isEdit = !!editCollection
@@ -91,21 +89,8 @@ export default function CreateCollectionDialog({
   const resolvedClientId = (values) =>
     isEdit ? (editCollection?.client_id ?? clientId) : (values.clientId || clientId)
 
-  const mutation = useMutation({
-    mutationFn: (values) => {
-      if (isEdit) {
-        return updateCollection(editCollection.id, { name: values.name, description: values.description })
-      }
-      return createCollection({
-        clientId: resolvedClientId(values),
-        name: values.name,
-        description: values.description || undefined,
-      })
-    },
-    onSuccess: (_, values) => {
-      const cid = resolvedClientId(values)
-      queryClient.invalidateQueries({ queryKey: documentKeys.collections(cid) })
-      queryClient.invalidateQueries({ queryKey: documentKeys.allCollections() })
+  const mutation = useSaveCollection({
+    onSuccess: () => {
       toast.success(isEdit ? 'Collection renamed' : 'Collection created')
       onOpenChange(false)
       if (!isEdit) onSuccess?.()
@@ -121,7 +106,14 @@ export default function CreateCollectionDialog({
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit((v) => mutation.mutate(v))} className="space-y-4">
+          <form onSubmit={form.handleSubmit((v) =>
+            mutation.mutate({
+              id: isEdit ? editCollection.id : undefined,
+              clientId: resolvedClientId(v),
+              name: v.name,
+              description: isEdit ? v.description : v.description || undefined,
+            }),
+          )} className="space-y-4">
 
             {/* Client selector — only on global page, create mode */}
             {showClientSelector && !isEdit && (

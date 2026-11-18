@@ -2,15 +2,10 @@ import { useEffect, useState, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/context/AuthContext'
+import { useApiMutation } from '@/api/mutation'
+import { teamKeys, subscriptionKeys } from '@/api/queryKeys'
 
-// ─── Query Keys ────────────────────────────────────────────────────────────────
-
-export const teamKeys = {
-  members: (agencyUserId) => ['team', 'members', agencyUserId],
-  invites: (agencyUserId) => ['team', 'invites', agencyUserId],
-  removed: (agencyUserId) => ['team', 'removed', agencyUserId],
-  myRecord: (agencyUserId, userId) => ['team', 'my-record', agencyUserId, userId],
-}
+export { teamKeys }
 
 // ─── Read Hooks ────────────────────────────────────────────────────────────────
 
@@ -493,7 +488,7 @@ export function useWorkspaceOwner() {
   const { workspaceUserId } = useAuth()
 
   return useQuery({
-    queryKey: ['chat', 'workspace-owner', workspaceUserId],
+    queryKey: teamKeys.owner(workspaceUserId),
     queryFn: async () => {
       const { data, error } = await supabase.rpc('get_my_workspace_owner')
       if (error) throw error
@@ -540,4 +535,27 @@ export function useMemberMap() {
     }
     return map
   }, [teamMembers, owner, user])
+}
+
+// ─── More mutation hooks ──────────────────────────────────────────────────────
+
+/** Variables: `{ memberId, system_role, permissions, roles_and_responsibilities }`. */
+export function useUpdateMemberAccess(options) {
+  return useApiMutation(
+    ({ memberId, ...access }) => updateMemberAccess(memberId, access),
+    (queryClient) => queryClient.invalidateQueries({ queryKey: teamKeys.all }),
+    options,
+  )
+}
+
+// The pending-deletion state lives on the subscription row.
+const refreshSubscription = (queryClient) =>
+  queryClient.invalidateQueries({ queryKey: subscriptionKeys.all })
+
+export function useRequestWorkspaceDeletion(options) {
+  return useApiMutation(requestWorkspaceDeletion, refreshSubscription, options)
+}
+
+export function useCancelWorkspaceDeletion(options) {
+  return useApiMutation(cancelWorkspaceDeletion, refreshSubscription, options)
 }

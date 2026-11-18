@@ -18,11 +18,10 @@ import {
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Megaphone } from 'lucide-react'
-import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query'
-import { createTask } from '@/api/tasks'
+import { useCreateTask } from '@/api/tasks'
 import { useClients } from '@/api/clients'
 import { useActiveCampaignsByClient } from '@/api/campaigns'
-import { fetchAllPostsByClient, fetchAllDeliverables } from '@/api/posts'
+import { useDeliverableOptions } from '@/api/posts'
 import { useTeamMembers } from '@/api/team'
 import { usePermissions } from '@/api/usePermissions'
 import { useAuth } from '@/context/AuthContext'
@@ -74,7 +73,6 @@ export default function CreateTaskDialog({
   const isOpen = isControlled ? open : internalOpen
   const setIsOpen = isControlled ? onOpenChange : setInternalOpen
 
-  const queryClient = useQueryClient()
   const descRef = useRef(null)
 
   const { data: clientsData, isLoading: isLoadingClients } = useClients()
@@ -93,7 +91,7 @@ export default function CreateTaskDialog({
   const [priority, setPriority] = useState('NORMAL')
 
   const { canAssignTasks } = usePermissions()
-  const { user, workspaceUserId } = useAuth()
+  const { user } = useAuth()
   const { data: teamMembers = [] } = useTeamMembers()
   const assigneeOptions = useMemo(
     () =>
@@ -136,16 +134,8 @@ export default function CreateTaskDialog({
 
   // Client selected → scope to that client's posts (fast). No client ("General")
   // → all deliverables across every client, each labelled with its client.
-  const { data: availablePosts = [], isLoading: loadingPosts } = useQuery({
-    queryKey: selectedClientId
-      ? ['posts', 'by-client', selectedClientId]
-      : ['posts', 'all-deliverables', workspaceUserId],
-    queryFn: () =>
-      selectedClientId
-        ? fetchAllPostsByClient(selectedClientId)
-        : fetchAllDeliverables(workspaceUserId),
-    enabled: isOpen && (!!selectedClientId || !!workspaceUserId),
-  })
+  const { data: availablePosts = [], isLoading: loadingPosts } =
+    useDeliverableOptions(selectedClientId, { enabled: isOpen })
 
   const selectedPosts = availablePosts.filter((p) => selectedPostIds.includes(p.id))
 
@@ -155,13 +145,8 @@ export default function CreateTaskDialog({
       ? selectedCampaignId
       : null)
 
-  const mutation = useMutation({
-    mutationFn: (newTask) => createTask(newTask),
+  const mutation = useCreateTask({
     onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ['tasks', 'list'],
-        exact: false,
-      })
       toast.success('Task added successfully')
       setIsOpen(false)
       onSuccess?.()

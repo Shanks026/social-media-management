@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { FolderPlus, Search, Upload, X, Lock } from 'lucide-react'
 import { useSubscription } from '@/api/useSubscription'
@@ -10,7 +9,7 @@ import {
   TooltipTrigger,
   TooltipContent,
 } from '@/components/ui/tooltip'
-import { useDocuments, useCollections, uploadDocument } from '@/api/documents'
+import { useDocuments, useCollections, useUploadDocument } from '@/api/documents'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -42,7 +41,6 @@ import CreateCollectionDialog from './CreateCollectionDialog'
  *   clientId — UUID of the client whose documents to show.
  */
 export default function DocumentsTab({ clientId }) {
-  const queryClient = useQueryClient()
   const { data: sub } = useSubscription()
   const collectionsUnlocked = sub?.documents_collections ?? false
   const { documents: docsLevel } = usePermissions()
@@ -98,12 +96,9 @@ export default function DocumentsTab({ clientId }) {
   const [uploadProgress, setUploadProgress] = useState(null)
   const [createCollectionOpen, setCreateCollectionOpen] = useState(false)
 
-  const uploadMutation = useMutation({
-    mutationFn: ({ file, displayName, category, notes, isConfidential }) =>
-      uploadDocument({ clientId, file, displayName, category, notes, isConfidential }),
+  const uploadMutation = useUploadDocument({
     onMutate: () => setUploadProgress(10),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['documents', 'list'] })
       setUploadProgress(100)
       setTimeout(() => {
         setUploadProgress(null)
@@ -130,7 +125,7 @@ export default function DocumentsTab({ clientId }) {
   function handleConfirmUpload({ displayName, category, notes, isConfidential }) {
     if (!pendingFile) return
     setUploadProgress(30)
-    uploadMutation.mutate({ file: pendingFile, displayName, category, notes, isConfidential })
+    uploadMutation.mutate({ clientId, file: pendingFile, displayName, category, notes, isConfidential })
   }
 
   function handleDialogClose(open) {

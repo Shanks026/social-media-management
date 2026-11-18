@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { useQueryClient, useMutation } from '@tanstack/react-query'
 import {
   Clock,
   Lock,
@@ -30,59 +29,40 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
-import {
-  deleteMeeting,
-  markMeetingCompleted,
-  unmarkMeetingCompleted,
-} from '@/api/meetings'
+import { useDeleteMeeting, useSetMeetingCompleted } from '@/api/meetings'
 import CreateMeetingDialog from '@/components/CreateMeetingDialog'
 import { ClientAvatar } from '@/components/tasks/ClientAvatar'
 import { cn } from '@/lib/utils'
 
 /**
  * Shared meeting card used by the global Meetings page and the reusable
- * MeetingsTab (client- and campaign-scoped). Invalidates every meetings query
- * key so all surfaces refresh regardless of which one triggered the mutation.
+ * MeetingsTab (client- and campaign-scoped). The meeting hooks refresh every
+ * meeting view, whichever surface triggered the change.
  */
 export default function MeetingCard({ meeting, clientMap = {} }) {
-  const queryClient = useQueryClient()
   const [editOpen, setEditOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
 
-  const invalidate = () => {
-    queryClient.invalidateQueries({ queryKey: ['global-meetings'] })
-    queryClient.invalidateQueries({ queryKey: ['meetings'] })
-    queryClient.invalidateQueries({ queryKey: ['campaign-meetings'] })
-  }
-
-  const { mutate: remove, isPending: isDeleting } = useMutation({
-    mutationFn: () => deleteMeeting(meeting.id),
+  const { mutate: deleteById, isPending: isDeleting } = useDeleteMeeting({
     onSuccess: () => {
-      invalidate()
       toast.success('Meeting deleted')
     },
     onError: (err) => toast.error('Failed to delete meeting: ' + err.message),
   })
 
-  const { mutate: markDone, isPending: isMarkingDone } = useMutation({
-    mutationFn: () => markMeetingCompleted(meeting.id),
-    onSuccess: () => {
-      invalidate()
+  const { mutate: setCompleted, isPending: isMarkingDone } = useSetMeetingCompleted({
+    onSuccess: (_, { completed }) => {
+      if (!completed) return toast.success('Meeting restored')
       toast.success('Meeting marked as completed')
     },
     onError: (err) => toast.error('Failed to update meeting: ' + err.message),
   })
 
-  const { mutate: unmarkDone, isPending: isUnmarkingDone } = useMutation({
-    mutationFn: () => unmarkMeetingCompleted(meeting.id),
-    onSuccess: () => {
-      invalidate()
-      toast.success('Meeting restored')
-    },
-    onError: (err) => toast.error('Failed to update meeting: ' + err.message),
-  })
+  const remove = () => deleteById(meeting.id)
+  const markDone = () => setCompleted({ id: meeting.id, completed: true })
+  const unmarkDone = () => setCompleted({ id: meeting.id, completed: false })
 
-  const isBusy = isDeleting || isMarkingDone || isUnmarkingDone
+  const isBusy = isDeleting || isMarkingDone
   const isCompleted = Boolean(meeting.completed_at)
   const isMeetingPast = isPast(new Date(meeting.datetime))
   const client = clientMap[meeting.client_id]
@@ -268,7 +248,6 @@ export default function MeetingCard({ meeting, clientMap = {} }) {
         editMeeting={meeting}
         open={editOpen}
         onOpenChange={setEditOpen}
-        onSuccess={invalidate}
       />
 
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>

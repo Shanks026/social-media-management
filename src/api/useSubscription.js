@@ -1,6 +1,10 @@
-import { useQuery } from '@tanstack/react-query'
+import { useCallback } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/context/AuthContext'
+import { subscriptionKeys } from '@/api/queryKeys'
+
+export { subscriptionKeys }
 
 // ── TESTING ONLY: set to a number (1–16+) to simulate a trial day.
 // Day 1 = first day of trial, Day 15 = grace period, Day 16 = locked.
@@ -16,7 +20,7 @@ export function useSubscription() {
   const { workspaceUserId } = useAuth()
 
   return useQuery({
-    queryKey: ['subscription', workspaceUserId],
+    queryKey: subscriptionKeys.detail(workspaceUserId),
     enabled: !!workspaceUserId,
     queryFn: async () => {
       if (!workspaceUserId) return null
@@ -209,4 +213,13 @@ export function useSubscription() {
       return failureCount < 1
     },
   })
+}
+
+/** Refetch the subscription row (the shell re-checks agency setup with it). */
+export function useRefreshSubscription() {
+  const queryClient = useQueryClient()
+  return useCallback(
+    () => queryClient.invalidateQueries({ queryKey: subscriptionKeys.all }),
+    [queryClient],
+  )
 }

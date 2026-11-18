@@ -3,7 +3,6 @@ import { platformById, platformLabel, platformLogo } from '@/lib/domain/platform
 import { initials } from '@/lib/format'
 import { useState, useEffect, useCallback } from 'react'
 import { Link } from 'react-router-dom'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { format, formatDistanceToNow } from 'date-fns'
 import { toast } from 'sonner'
 import {
@@ -52,11 +51,12 @@ import {
 } from '@/components/ui/dropdown-menu'
 
 // Custom Components & API
-import { deleteIndividualMedia } from '@/api/posts'
+import { useDeletePostMedia } from '@/api/posts'
 import { useTeamMembers } from '@/api/team'
 import { useAuth } from '@/context/AuthContext'
-import { getPublishState, renderCaption, isDocumentUrl, getDocumentExtension, getDocumentPreviewUrl } from '@/lib/helper'
-import { DELETABLE_STATUSES } from '@/lib/domain/deliverableStatus'
+import { renderCaption } from '@/components/deliverables/caption'
+import { isDocumentUrl, getDocumentExtension, getDocumentPreviewUrl } from '@/lib/media'
+import { DELETABLE_STATUSES, displayStatus } from '@/lib/domain/deliverableStatus'
 import StatusBadge from '@/components/StatusBadge'
 import ClientNotes from './ClientNotes'
 import { cn } from '@/lib/utils'
@@ -252,7 +252,6 @@ export default function PostContent({
   isApproveInternallyPending,
   onRequestChanges,
 }) {
-  const queryClient = useQueryClient()
   const { user } = useAuth()
   const { data: members = [] } = useTeamMembers()
   const creator = members.find(m => m.member_user_id === post.created_by)
@@ -301,10 +300,8 @@ export default function PostContent({
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [isPreviewOpen, post.media_urls, handlePrev, handleNext])
 
-  const deleteMediaMutation = useMutation({
-    mutationFn: (url) => deleteIndividualMedia(post.id, url, post.media_urls),
+  const deleteMediaMutation = useDeletePostMedia({
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['post-version', post.id] })
       toast.success('Media removed')
       setMediaToDelete(null)
     },
@@ -346,7 +343,7 @@ export default function PostContent({
       {/* Main Header */}
       <div className="flex flex-col md:flex-row justify-between items-start gap-6">
         <div className="min-w-0 flex-1 space-y-4">
-          <StatusBadge status={getPublishState(post)} />
+          <StatusBadge status={displayStatus(post)} />
 
           <div className="flex flex-row items-center gap-3">
             <h1 className="text-4xl font-semibold tracking-tight bricolage">
@@ -911,7 +908,11 @@ export default function PostContent({
             </Button>
             <Button
               variant="destructive"
-              onClick={() => deleteMediaMutation.mutate(mediaToDelete)}
+              onClick={() => deleteMediaMutation.mutate({
+                  versionId: post.id,
+                  url: mediaToDelete,
+                  mediaUrls: post.media_urls,
+                })}
               disabled={deleteMediaMutation.isPending}
             >
               {deleteMediaMutation.isPending && (

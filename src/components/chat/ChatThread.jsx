@@ -2,7 +2,6 @@ import { formatDate } from '@/lib/format'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
-import { useQueryClient } from '@tanstack/react-query'
 import { ArrowUp, AtSign, ListChecks, Lock, Pencil, Plus, SmilePlus, Trash2, TriangleAlert, Users, X, Check, PencilRuler } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/context/AuthContext'
@@ -11,13 +10,13 @@ import { usePermissions } from '@/api/usePermissions'
 import { useTasks } from '@/api/tasks'
 import {
   useChannelMessages,
-  sendMessage,
+  useSendMessage,
+  useDeleteMessage,
+  useRefreshChannel,
   editMessage,
-  softDeleteMessage,
   toggleChatReaction,
   markChannelRead,
   CHAT_REACTION_EMOJIS,
-  chatKeys,
 } from '@/api/chat'
 import {
   splitMentions,
@@ -438,7 +437,9 @@ function ChatMessageRow({ message, author, isOwn, canModify, canDelete, showRole
 export function ChatThread({ channelId, channelType, otherUserId }) {
   const { user } = useAuth()
   const { isAdmin } = usePermissions()
-  const queryClient = useQueryClient()
+  const { mutateAsync: sendMessageAndRefresh } = useSendMessage()
+  const { mutateAsync: deleteMessageAndRefresh } = useDeleteMessage()
+  const invalidate = useRefreshChannel(channelId)
   const { data: messages = [], isLoading } = useChannelMessages(channelId)
   const memberMap = useMemberMap()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -564,8 +565,6 @@ export function ChatThread({ channelId, channelType, otherUserId }) {
     return () => clearTimeout(timeout)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [deepLinkedId, isLoading, messages.length])
-
-  const invalidate = () => queryClient.invalidateQueries({ queryKey: chatKeys.messages(channelId) })
 
   // "@Full Name" (or email) token for the current user — distinguishes
   // mentions of me from mentions of anyone else when rendering message bodies.
@@ -733,16 +732,12 @@ export function ChatThread({ channelId, channelType, otherUserId }) {
     const references = pendingReferences.filter((r) => trimmed.includes(`[[${r.title}]]`))
     setSending(true)
     try {
-      await sendMessage({ channelId, body: trimmed, mentionedUids, references })
+      // Refreshes this thread and the sidebar previews without waiting on the
+      // realtime relay.
+      await sendMessageAndRefresh({ channelId, body: trimmed, mentionedUids, references })
       setBody('')
       setPendingMentions([])
       setPendingReferences([])
-      invalidate()
-      // Don't wait on the chat_messages realtime event to reorder/update our
-      // own sidebar preview — that round-trips through the (occasionally
-      // flaky) postgres_changes relay. The sender already knows a message
-      // just went out, so refresh the channel list directly.
-      queryClient.invalidateQueries({ queryKey: chatKeys.channels(user?.id) })
     } catch (err) {
       toast.error(err.message || 'Failed to send message')
     } finally {
@@ -753,8 +748,7 @@ export function ChatThread({ channelId, channelType, otherUserId }) {
   async function handleDelete() {
     if (!deleting) return
     try {
-      await softDeleteMessage(deleting.id)
-      invalidate()
+      await deleteMessageAndRefresh({ id: deleting.id, channelId })
       toast.success('Message deleted')
     } catch (err) {
       toast.error(err.message || 'Failed to delete message')

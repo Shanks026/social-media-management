@@ -2,6 +2,10 @@ import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/context/AuthContext'
 import { resolveWorkspace } from '@/lib/workspace'
+import { useApiMutation } from '@/api/mutation'
+import { jobRoleKeys, teamKeys } from '@/api/queryKeys'
+
+export { jobRoleKeys }
 
 /**
  * Job roles are the workspace's own job titles — owner-defined, many per
@@ -18,7 +22,7 @@ import { resolveWorkspace } from '@/lib/workspace'
 export function useJobRoles() {
   const { workspaceUserId } = useAuth()
   return useQuery({
-    queryKey: ['job-roles', 'list', workspaceUserId],
+    queryKey: jobRoleKeys.list(workspaceUserId),
     queryFn: async () => {
       const { data, error } = await supabase
         .from('agency_job_roles')
@@ -40,7 +44,7 @@ export function useJobRoles() {
 export function useMemberJobRoles() {
   const { workspaceUserId } = useAuth()
   return useQuery({
-    queryKey: ['job-roles', 'by-member', workspaceUserId],
+    queryKey: jobRoleKeys.byMember(workspaceUserId),
     queryFn: async () => {
       const { data, error } = await supabase
         .from('agency_member_job_roles')
@@ -129,4 +133,58 @@ export async function setMemberResponsibilities(memberUserId, text) {
     p_text: text ?? null,
   })
   if (error) throw error
+}
+
+// ─── Mutation hooks ───────────────────────────────────────────────────────────
+
+// Job roles show in the picker and on the roster (a delete cascades into
+// member links), so both refresh.
+const invalidateJobRoles = (queryClient) => {
+  queryClient.invalidateQueries({ queryKey: jobRoleKeys.all })
+  queryClient.invalidateQueries({ queryKey: teamKeys.all })
+}
+
+/**
+ * Create a job role. The new role is written into the cached list at once:
+ * the picker switches its id on immediately and renders the pill by looking
+ * that id up in the list, so without the seed it vanished until a refetch.
+ */
+export function useCreateJobRole(options) {
+  return useApiMutation(
+    createJobRole,
+    (qc, created) => {
+      qc.setQueriesData({ queryKey: [...jobRoleKeys.all, 'list'] }, (old) =>
+        [...(old ?? []), created].sort((a, b) => a.name.localeCompare(b.name)),
+      )
+      invalidateJobRoles(qc)
+    },
+    options,
+  )
+}
+
+/** Variables: `{ id, color }`. */
+export function useUpdateJobRoleColor(options) {
+  return useApiMutation(({ id, color }) => updateJobRoleColor(id, color), invalidateJobRoles, options)
+}
+
+export function useDeleteJobRole(options) {
+  return useApiMutation(deleteJobRole, invalidateJobRoles, options)
+}
+
+/** Variables: `{ memberUserId, jobRoleIds }` (replaces the member's set). */
+export function useSetMemberJobRoles(options) {
+  return useApiMutation(
+    ({ memberUserId, jobRoleIds }) => setMemberJobRoles(memberUserId, jobRoleIds),
+    invalidateJobRoles,
+    options,
+  )
+}
+
+/** Variables: `{ memberUserId, text }`. */
+export function useSetMemberResponsibilities(options) {
+  return useApiMutation(
+    ({ memberUserId, text }) => setMemberResponsibilities(memberUserId, text),
+    invalidateJobRoles,
+    options,
+  )
 }
