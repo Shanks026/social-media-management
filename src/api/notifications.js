@@ -2,13 +2,9 @@ import { supabase } from '@/lib/supabase'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/context/AuthContext'
 import { useEffect, useRef } from 'react'
+import { notificationKeys } from '@/api/queryKeys'
 
-// ─── Query Keys ────────────────────────────────────────────────────────────────
-
-export const notificationKeys = {
-  count: (userId) => ['notifications', 'count', userId],
-  list: (userId) => ['notifications', 'list', userId],
-}
+export { notificationKeys }
 
 // ─── Read Hooks ────────────────────────────────────────────────────────────────
 

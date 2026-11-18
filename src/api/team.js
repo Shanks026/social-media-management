@@ -2,15 +2,9 @@ import { useEffect, useState, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/context/AuthContext'
+import { teamKeys } from '@/api/queryKeys'
 
-// ─── Query Keys ────────────────────────────────────────────────────────────────
-
-export const teamKeys = {
-  members: (agencyUserId) => ['team', 'members', agencyUserId],
-  invites: (agencyUserId) => ['team', 'invites', agencyUserId],
-  removed: (agencyUserId) => ['team', 'removed', agencyUserId],
-  myRecord: (agencyUserId, userId) => ['team', 'my-record', agencyUserId, userId],
-}
+export { teamKeys }
 
 // ─── Read Hooks ────────────────────────────────────────────────────────────────
 

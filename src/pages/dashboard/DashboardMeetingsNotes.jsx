@@ -1,6 +1,4 @@
 import { useState, useMemo } from 'react'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/context/AuthContext'
 import { useNavigate } from 'react-router-dom'
 import {
@@ -22,6 +20,8 @@ import CreateTaskDialog from '@/components/tasks/CreateTaskDialog'
 import TaskCard from '@/components/tasks/TaskCard'
 import { useMarkMeetingDone } from '@/hooks/useMarkMeetingDone'
 import { useMyTasks } from '@/api/tasks'
+import { useClients } from '@/api/clients'
+import { useOpenUpcomingMeetings } from '@/api/meetings'
 import { useCampaigns } from '@/api/campaigns'
 import { useTeamMembers } from '@/api/team'
 import { useSubscription } from '@/api/useSubscription'
@@ -32,38 +32,22 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 export default function DashboardMeetingsNotes() {
   const [activeTab, setActiveTab] = useState('notes')
   const navigate = useNavigate()
-  const queryClient = useQueryClient()
-  const { workspaceUserId, user } = useAuth()
+  const { user } = useAuth()
   const { data: sub } = useSubscription()
   const hasNoExternalClients = (sub?.client_count ?? 1) === 0
 
-  const { data: clientsMap = {} } = useQuery({
-    queryKey: ['clients-map-for-dashboard', workspaceUserId],
-    queryFn: async () => {
-      if (!workspaceUserId) return {}
-      const { data } = await supabase
-        .from('clients')
-        .select('id, name, logo_url, is_internal')
-        .eq('user_id', workspaceUserId)
-      // Keyed by real client id only — a null client_id ("General / no client")
-      // must not resolve to the internal account; TaskCard shows "General (no client)".
-      return (data || []).reduce((acc, c) => ({ ...acc, [String(c.id)]: c }), {})
-    },
-    enabled: !!workspaceUserId,
-  })
+  const { data: clientsData } = useClients()
+  // Keyed by real client id only — a null client_id ("General / no client")
+  // must not resolve to the internal account; TaskCard shows "General (no client)".
+  const clientsMap = useMemo(() => {
+    const all = [
+      ...(clientsData?.internalAccount ? [clientsData.internalAccount] : []),
+      ...(clientsData?.realClients ?? []),
+    ]
+    return Object.fromEntries(all.map((c) => [String(c.id), c]))
+  }, [clientsData])
 
-  const { data: upcomingMeetings = [], isLoading: loadingMeetings } = useQuery({
-    queryKey: ['meetings', 'dashboard-upcoming'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('meetings')
-        .select('*')
-        .is('completed_at', null)
-        .gte('datetime', new Date().toISOString())
-        .order('datetime', { ascending: true })
-      if (error) throw error
-      return data
-    },
+  const { data: upcomingMeetings = [], isLoading: loadingMeetings } = useOpenUpcomingMeetings({
     staleTime: 0,
     refetchOnWindowFocus: true,
   })
@@ -120,9 +104,6 @@ export default function DashboardMeetingsNotes() {
                   <span>
                     <CreateMeetingDialog
                       lockClient={false}
-                      onSuccess={() =>
-                        queryClient.refetchQueries({ queryKey: ['meetings', 'dashboard-upcoming'] })
-                      }
                     >
                       <Button variant="ghost" size="icon" className="h-8 w-8" disabled={hasNoExternalClients}>
                         <Plus className="h-4 w-4" />
@@ -137,9 +118,6 @@ export default function DashboardMeetingsNotes() {
             ) : (
               <CreateTaskDialog
                 lockClient={false}
-                onSuccess={() =>
-                  queryClient.invalidateQueries({ queryKey: ['tasks', 'list'], exact: false })
-                }
               >
                 <Button variant="ghost" size="icon" className="h-8 w-8">
                   <Plus className="h-4 w-4" />

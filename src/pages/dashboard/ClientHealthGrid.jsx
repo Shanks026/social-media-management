@@ -1,11 +1,10 @@
-import { useQuery } from '@tanstack/react-query'
 import { isBefore, formatDistanceToNow } from 'date-fns'
 import { useNavigate } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import { cn } from '@/lib/utils'
-import { fetchClients } from '@/api/clients'
+import { useClientPipeline } from '@/api/clients'
 import { ArrowUpRight, UserStar } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
@@ -49,11 +48,7 @@ const HEALTH_CONFIG = {
 
 export default function ClientHealthGrid() {
   const navigate = useNavigate()
-  const { data: clientsData, isLoading } = useQuery({
-    queryKey: ['clients-pipeline-dashboard'],
-    queryFn: () => fetchClients(),
-    staleTime: 30000,
-  })
+  const { data: clientsData, isLoading } = useClientPipeline()
 
   const realClients = (clientsData?.clients ?? []).filter((c) => !c.is_internal)
 

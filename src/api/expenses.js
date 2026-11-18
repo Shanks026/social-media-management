@@ -5,16 +5,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/context/AuthContext'
 import { resolveWorkspace } from '@/lib/workspace'
-import { transactionKeys } from '@/api/transactions'
-import { clientKeys } from '@/api/clients'
+import { clientKeys, expenseKeys, transactionKeys } from '@/api/queryKeys'
 
-// ─── Query keys ───────────────────────────────────────────────────────────────
-
-export const expenseKeys = {
-  all: ['expenses'],
-  list: (workspaceId, filters = {}) => ['expenses', 'list', workspaceId, { ...filters }],
-  burnRate: (workspaceId) => ['expenses', 'burn-rate', workspaceId],
-}
+export { expenseKeys }
 
 // Recurring expenses feed the burn rate, the finance overview (its monthly
 // burn) and client profitability.

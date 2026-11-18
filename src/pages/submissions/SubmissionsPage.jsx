@@ -2,7 +2,6 @@ import { initials } from '@/lib/format'
 import { MemberAvatar } from '@/components/MemberAvatar'
 import { useState, useMemo, useEffect } from 'react'
 import { NavLink, useNavigate, useSearchParams } from 'react-router-dom'
-import { useQueryClient } from '@tanstack/react-query'
 import {
   useReactTable,
   getCoreRowModel,
@@ -17,7 +16,7 @@ import { toast } from 'sonner'
 
 import { Input } from '@/components/ui/input'
 import { useHeader } from '@/components/misc/header-context'
-import { useMySubmissions, useMySubmissionsCount, deleteApprovalEvents } from '@/api/posts'
+import { useMySubmissions, useMySubmissionsCount, useDeleteApprovalEvents } from '@/api/posts'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import {
   Table,
@@ -114,7 +113,7 @@ const subCol = createColumnHelper()
 function SubmissionsTab({ tab }) {
   const status = TAB_STATUS[tab]
   const navigate = useNavigate()
-  const queryClient = useQueryClient()
+  const { mutateAsync: deleteApprovalEvents } = useDeleteApprovalEvents()
   const [deletingIds, setDeletingIds] = useState(new Set())
   const [globalFilter, setGlobalFilter] = useState('')
 
@@ -282,7 +281,6 @@ function SubmissionsTab({ tab }) {
     setDeletingIds((prev) => new Set(prev).add(id))
     try {
       await deleteApprovalEvents([id])
-      queryClient.invalidateQueries({ queryKey: ['my-submissions'] })
       toast.success('Removed from submissions')
     } catch (err) {
       toast.error(err.message || 'Failed to remove')

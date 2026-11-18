@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react'
 import { useNavigate, Navigate } from 'react-router-dom'
 import { useSubscription } from '@/api/useSubscription'
-import { supabase } from '@/lib/supabase'
+import { useAuth } from '@/context/AuthContext'
 import { Button } from '@/components/ui/button'
 import { ChevronDown, LogOut, RefreshCw } from 'lucide-react'
 import { plans } from '@/pages/billingAndUsage/planMeta'
@@ -15,6 +15,7 @@ const APP_NAME = 'Tercero'
 
 export default function SubscriptionExpired() {
   const navigate = useNavigate()
+  const { signOut } = useAuth()
   const { data: sub, isLoading: subLoading } = useSubscription()
   const plansRef = useRef(null)
 
@@ -34,7 +35,9 @@ export default function SubscriptionExpired() {
   }
 
   const handleLogout = async () => {
-    await supabase.auth.signOut()
+    // The context's signOut clears auth state at once; the raw Supabase call
+    // leaves the session set for a moment and bounces back (see NoWorkspaceAccess).
+    await signOut()
     navigate('/login')
   }
 

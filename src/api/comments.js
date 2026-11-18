@@ -3,13 +3,9 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/context/AuthContext'
 import { useEffect } from 'react'
 import { resolveWorkspace } from '@/lib/workspace'
+import { commentKeys } from '@/api/queryKeys'
 
-// ─── Query Keys ────────────────────────────────────────────────────────────────
-
-export const commentKeys = {
-  thread: (entityType, entityId) => ['comments', entityType, entityId],
-  count: (entityType, entityId) => ['comments', 'count', entityType, entityId],
-}
+export { commentKeys }
 
 /**
  * Just how many live comments an entity has, for a tab badge.

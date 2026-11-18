@@ -1,14 +1,12 @@
 import { useEffect } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   useSearchParams,
   useNavigate,
-  useOutletContext,
-} from 'react-router-dom'
+  } from 'react-router-dom'
 import { toast } from 'sonner'
 import { Lock, Plus, FilterX } from 'lucide-react'
 
-import { fetchClients, deleteClient } from '@/api/clients'
+import { useClientsWithPipeline, useDeleteClient } from '@/api/clients'
 import { getUrgencyStatus } from '@/lib/client-helpers'
 import { isNeedsAttention } from '@/lib/domain/clientStatus'
 import { useHeader } from '@/components/misc/header-context'
@@ -40,9 +38,7 @@ import {
 export default function Clients() {
   const [searchParams, setSearchParams] = useSearchParams()
   const navigate = useNavigate()
-  const queryClient = useQueryClient()
   const { setHeader } = useHeader()
-  const { user } = useOutletContext()
 
   const { data: subscription, isLoading: isSubLoading } = useSubscription()
   const { canCreateClients } = usePermissions()
@@ -90,11 +86,12 @@ export default function Clients() {
     status !== 'ACTIVE'
   const resetFilters = () => setSearchParams({})
 
-  const { data, isLoading } = useQuery({
-    queryKey: ['clients', user.id, { search, industry, tier, status }],
-    queryFn: () =>
-      fetchClients({ search, industry, tier, urgency: 'all', status }),
-    enabled: !!user?.id,
+  const { data, isLoading } = useClientsWithPipeline({
+    search,
+    industry,
+    tier,
+    urgency: 'all',
+    status,
   })
 
   const allClients = data?.clients || []
@@ -137,13 +134,7 @@ export default function Clients() {
 
   const realClientCount = clients.filter((c) => !c.is_internal).length
 
-  const deleteMutation = useMutation({
-    mutationFn: deleteClient,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['clients'] })
-      queryClient.invalidateQueries({ queryKey: ['subscription'] })
-    },
-  })
+  const deleteMutation = useDeleteClient()
 
   function handleDelete(client) {
     return new Promise((resolve, reject) => {

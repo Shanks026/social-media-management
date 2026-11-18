@@ -1,26 +1,15 @@
+// Clients API (ADR 0007): plain async functions, read hooks, and a hook per
+// mutation that owns the cache invalidation.
 import { supabase } from '@/lib/supabase'
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '@/context/AuthContext'
 import { resolveWorkspace } from '@/lib/workspace'
 import { getUrgencyStatus } from '@/lib/client-helpers'
 import { isNeedsAttention } from '@/lib/domain/clientStatus'
+import { useApiMutation } from '@/api/mutation'
+import { clientKeys, subscriptionKeys, postKeys, campaignKeys } from '@/api/queryKeys'
 
-// ─── Query keys ───────────────────────────────────────────────────────────────
-// Every client view shares the 'clients' root, so a change that touches client
-// data (status, billing, pipeline) refreshes them all with clientKeys.all.
-
-export const clientKeys = {
-  all: ['clients'],
-  // id/name/logo options for pickers and lookups, split into the internal
-  // account and real clients
-  options: (workspaceId) => ['clients', 'options', workspaceId],
-  // the Clients page, with pipeline analytics
-  list: (workspaceId, filters = {}) => ['clients', 'list', workspaceId, { ...filters }],
-  // the unfiltered pipeline the dashboard reads
-  pipeline: (workspaceId) => ['clients', 'pipeline', workspaceId],
-  detail: (id) => ['clients', 'detail', id],
-  internal: (workspaceId) => ['clients', 'internal', workspaceId],
-}
+export { clientKeys }
 
 export function useClients() {
   const { workspaceUserId } = useAuth()
@@ -57,7 +46,7 @@ const getPathFromUrl = (url) => {
 
 /**
  * Returns clients whose next_post_at is overdue or urgent (< 24h).
- * Shares the same query cache as ClientHealthGrid.
+ * Shares the same query cache as useClientPipeline (ClientHealthGrid).
  */
 export function useUrgentClients() {
   const { workspaceUserId } = useAuth()
@@ -399,4 +388,135 @@ export async function fetchInternalClient() {
 
   if (error) throw error
   return data
+}
+
+// ─── Read hooks ───────────────────────────────────────────────────────────────
+
+/** The Clients page: clients with pipeline analytics, filtered server-side. */
+export function useClientsWithPipeline(filters = {}) {
+  const { workspaceUserId } = useAuth()
+  return useQuery({
+    queryKey: clientKeys.list(workspaceUserId, filters),
+    queryFn: () => fetchClients(filters),
+    enabled: !!workspaceUserId,
+  })
+}
+
+/** The dashboard's unfiltered (active) pipeline. */
+export function useClientPipeline() {
+  const { workspaceUserId } = useAuth()
+  return useQuery({
+    queryKey: clientKeys.pipeline(workspaceUserId),
+    queryFn: () => fetchClients(),
+    enabled: !!workspaceUserId,
+    staleTime: 30000,
+  })
+}
+
+/** One client with its computed financial metrics and totals. */
+export function useClientById(clientId, { enabled = true } = {}) {
+  return useQuery({
+    queryKey: clientKeys.detail(clientId),
+    queryFn: () => fetchClientById(clientId),
+    enabled: !!clientId && enabled,
+  })
+}
+
+/** The workspace's internal (agency) account, or null. */
+export function useInternalClient() {
+  const { workspaceUserId } = useAuth()
+  return useQuery({
+    queryKey: clientKeys.internal(workspaceUserId),
+    queryFn: fetchInternalClient,
+    enabled: !!workspaceUserId,
+  })
+}
+
+// ─── Mutations ────────────────────────────────────────────────────────────────
+
+/**
+ * Keep the agency's own branding (sidebar name and logo, settings page) in
+ * step with its internal account. Best effort: logged, never thrown, since the
+ * client save itself has already succeeded.
+ */
+async function syncAgencyBranding(internalClient) {
+  const { workspaceUserId } = await resolveWorkspace()
+  const { error } = await supabase
+    .from('agency_subscriptions')
+    .update({
+      agency_name: internalClient.name,
+      logo_url: internalClient.logo_url ?? null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('user_id', workspaceUserId)
+  if (error) console.error('Failed to sync agency branding:', error)
+}
+
+/**
+ * Create a client, or update one when `clientId` is given. `submit`, when
+ * passed, replaces the default create/update (CreateClientPage's customSubmit
+ * prop). Saving the internal account also syncs the agency branding.
+ */
+export async function saveClient({ clientId, values, submit }) {
+  let saved
+  if (submit) saved = await submit(values)
+  else if (clientId) saved = await updateClient(clientId, values)
+  else saved = await createClient(values)
+
+  if (saved?.is_internal) await syncAgencyBranding(saved)
+  return saved
+}
+
+// A client change shows in every client view, the plan's client count, and
+// the agency branding when it is the internal account.
+const invalidateClients = (queryClient) => {
+  queryClient.invalidateQueries({ queryKey: clientKeys.all })
+  queryClient.invalidateQueries({ queryKey: subscriptionKeys.all })
+}
+
+export function useSaveClient(options) {
+  return useApiMutation(saveClient, invalidateClients, options)
+}
+
+export function useUpdateClientStatus(options) {
+  return useApiMutation(
+    ({ clientId, status }) => updateClientStatus(clientId, status),
+    invalidateClients,
+    options,
+  )
+}
+
+// Deleting a client cascades to its deliverables and campaigns.
+export function useDeleteClient(options) {
+  return useApiMutation(
+    deleteClient,
+    (queryClient) => {
+      invalidateClients(queryClient)
+      queryClient.invalidateQueries({ queryKey: postKeys.all })
+      queryClient.invalidateQueries({ queryKey: campaignKeys.all })
+    },
+    options,
+  )
+}
+
+// ─── Logo storage ─────────────────────────────────────────────────────────────
+
+/** Upload a client logo to post-media/branding; returns its public URL. */
+export async function uploadClientLogo(file) {
+  const fileExt = file.name.split('.').pop()
+  const filePath = `branding/${Date.now()}.${fileExt}`
+  const { error } = await supabase.storage.from('post-media').upload(filePath, file)
+  if (error) throw error
+  return supabase.storage.from('post-media').getPublicUrl(filePath).data.publicUrl
+}
+
+/** Remove a logo by its public URL. Best effort: a missing file is fine. */
+export async function removeClientLogo(publicUrl) {
+  const marker = '/post-media/'
+  const idx = publicUrl?.indexOf(marker) ?? -1
+  if (idx === -1) return
+  const { error } = await supabase.storage
+    .from('post-media')
+    .remove([publicUrl.slice(idx + marker.length)])
+  if (error) console.error('Logo cleanup failed:', error)
 }

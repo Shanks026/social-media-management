@@ -34,9 +34,8 @@ import { Badge } from '@/components/ui/badge'
 import { Building2, Loader2, CalendarDays, Link, Megaphone, Globe, Lock } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useClients } from '@/api/clients'
-import { createMeeting, updateMeeting } from '@/api/meetings'
+import { useSaveMeeting } from '@/api/meetings'
 import { useActiveCampaignsByClient } from '@/api/campaigns'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 
 function ClientAvatar({ client }) {
@@ -88,7 +87,6 @@ export default function CreateMeetingDialog({
   const isControlled = controlledOpen !== undefined
   const open = isControlled ? controlledOpen : internalOpen
   const setOpen = isControlled ? controlledOnOpenChange : setInternalOpen
-  const queryClient = useQueryClient()
 
   const { data: clientsData, isLoading: loadingClients } = useClients()
 
@@ -161,19 +159,8 @@ export default function CreateMeetingDialog({
     }
   }, [open, editMeeting, defaultClientId])
 
-  const mutationFn = editMeeting
-    ? (payload) => updateMeeting(editMeeting.id, payload)
-    : createMeeting
-
-  const { mutate, isPending } = useMutation({
-    mutationFn,
+  const { mutate, isPending } = useSaveMeeting({
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['meetings'] })
-      queryClient.invalidateQueries({ queryKey: ['upcomingMeetings'] })
-      queryClient.invalidateQueries({ queryKey: ['todayMeetings'] })
-      if (campaignId) {
-        queryClient.invalidateQueries({ queryKey: ['campaign-meetings', campaignId] })
-      }
       toast.success(editMeeting ? 'Meeting updated successfully' : 'Meeting scheduled successfully')
       setOpen(false)
       form.reset()
@@ -192,9 +179,12 @@ export default function CreateMeetingDialog({
       (values.campaign_id && values.campaign_id !== NONE ? values.campaign_id : null)
 
     mutate({
-      ...values,
-      datetime: utcDate.toISOString(),
-      campaign_id: effectiveCampaignId,
+      id: editMeeting?.id,
+      payload: {
+        ...values,
+        datetime: utcDate.toISOString(),
+        campaign_id: effectiveCampaignId,
+      },
     })
   }
 

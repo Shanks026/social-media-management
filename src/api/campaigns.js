@@ -6,29 +6,10 @@ import { supabase } from '@/lib/supabase'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/context/AuthContext'
 import { resolveWorkspace } from '@/lib/workspace'
+import { campaignKeys, postKeys } from '@/api/queryKeys'
 
-// ─── Query keys ───────────────────────────────────────────────────────────────
+export { campaignKeys }
 
-export const campaignKeys = {
-  all: ['campaigns'],
-  list: (workspaceId, filters = {}) => [
-    'campaigns',
-    'list',
-    workspaceId,
-    { clientId: filters.clientId ?? null },
-  ],
-  detail: (id) => ['campaigns', 'detail', id],
-  analytics: (id) => ['campaigns', 'analytics', id],
-  invoices: (id) => ['campaigns', 'invoices', id],
-  review: (token) => ['campaigns', 'review', token],
-  activeByClient: (clientId) => ['campaigns', 'active-by-client', clientId],
-  unlinkedPosts: (clientId) => ['campaigns', 'unlinked-posts', clientId],
-}
-
-// Everything a change to a campaign's linked posts can touch outside this
-// module. Keys for other domains are spelled here until those modules ship
-// their own factories (#154–#157).
-const POST_RELATED_KEYS = [['global-posts'], ['draft-posts'], ['calendar'], ['global-calendar']]
 
 // ─── Reads ────────────────────────────────────────────────────────────────────
 
@@ -302,7 +283,7 @@ export function useDeleteCampaign() {
 
 function invalidateCampaignPostLinks(queryClient) {
   queryClient.invalidateQueries({ queryKey: campaignKeys.all })
-  POST_RELATED_KEYS.forEach((queryKey) => queryClient.invalidateQueries({ queryKey }))
+  queryClient.invalidateQueries({ queryKey: postKeys.all })
 }
 
 export function useAssignPostsToCampaign() {

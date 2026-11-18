@@ -3,7 +3,6 @@ import { platformById, platformLabel, platformLogo } from '@/lib/domain/platform
 import { initials } from '@/lib/format'
 import { useState, useEffect, useCallback } from 'react'
 import { Link } from 'react-router-dom'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { format, formatDistanceToNow } from 'date-fns'
 import { toast } from 'sonner'
 import {
@@ -52,7 +51,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 
 // Custom Components & API
-import { deleteIndividualMedia } from '@/api/posts'
+import { useDeletePostMedia } from '@/api/posts'
 import { useTeamMembers } from '@/api/team'
 import { useAuth } from '@/context/AuthContext'
 import { getPublishState, renderCaption, isDocumentUrl, getDocumentExtension, getDocumentPreviewUrl } from '@/lib/helper'
@@ -252,7 +251,6 @@ export default function PostContent({
   isApproveInternallyPending,
   onRequestChanges,
 }) {
-  const queryClient = useQueryClient()
   const { user } = useAuth()
   const { data: members = [] } = useTeamMembers()
   const creator = members.find(m => m.member_user_id === post.created_by)
@@ -301,10 +299,8 @@ export default function PostContent({
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [isPreviewOpen, post.media_urls, handlePrev, handleNext])
 
-  const deleteMediaMutation = useMutation({
-    mutationFn: (url) => deleteIndividualMedia(post.id, url, post.media_urls),
+  const deleteMediaMutation = useDeletePostMedia({
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['post-version', post.id] })
       toast.success('Media removed')
       setMediaToDelete(null)
     },
@@ -911,7 +907,11 @@ export default function PostContent({
             </Button>
             <Button
               variant="destructive"
-              onClick={() => deleteMediaMutation.mutate(mediaToDelete)}
+              onClick={() => deleteMediaMutation.mutate({
+                  versionId: post.id,
+                  url: mediaToDelete,
+                  mediaUrls: post.media_urls,
+                })}
               disabled={deleteMediaMutation.isPending}
             >
               {deleteMediaMutation.isPending && (

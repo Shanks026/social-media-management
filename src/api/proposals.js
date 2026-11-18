@@ -7,7 +7,7 @@ import { useAuth } from '@/context/AuthContext'
 import { resolveWorkspace } from '@/lib/workspace'
 import { logStatusChange } from '@/api/prospectActivities'
 import { STAGES_BEFORE_PROPOSAL_SENT } from '@/lib/domain/prospectStatus'
-import { proposalKeys, prospectKeys, prospectActivityKeys } from '@/api/salesKeys'
+import { proposalKeys, prospectActivityKeys, prospectKeys } from '@/api/queryKeys'
 
 export { proposalKeys }
 

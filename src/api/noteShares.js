@@ -1,10 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { resolveWorkspace } from '@/lib/workspace'
+import { noteShareKeys } from '@/api/queryKeys'
 
-export const noteShareKeys = {
-  list: (noteId) => ['note-shares', 'list', noteId],
-}
+export { noteShareKeys }
 
 export function useNoteShares(noteId) {
   return useQuery({

@@ -1,5 +1,4 @@
 import { useState, useMemo, useEffect } from 'react'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   DndContext,
   closestCenter,
@@ -32,11 +31,7 @@ import {
 
 import { useHeader } from '@/components/misc/header-context'
 import { useClients } from '@/api/clients'
-import {
-  fetchMeetings,
-  markMeetingCompleted,
-  unmarkMeetingCompleted,
-} from '@/api/meetings'
+import { useMeetings, useSetMeetingCompleted } from '@/api/meetings'
 import CreateMeetingDialog from '@/components/CreateMeetingDialog'
 import MeetingCard from '@/components/meetings/MeetingCard'
 import { ClientAvatar } from '@/components/tasks/ClientAvatar'
@@ -151,12 +146,8 @@ function KanbanColumn({ id, title, count, accentClass, children }) {
 
 // ─── Kanban Meetings View ─────────────────────────────────────────────────────
 
-function KanbanMeetingsView({
-  meetings,
-  clientMap,
-  queryClient,
-  selectedClient,
-}) {
+function KanbanMeetingsView({ meetings, clientMap }) {
+  const { mutate: setCompleted } = useSetMeetingCompleted()
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
   )
@@ -169,8 +160,6 @@ function KanbanMeetingsView({
   )
   const completedMeetings = meetings.filter((m) => Boolean(m.completed_at))
 
-  const queryKey = ['global-meetings', selectedClient]
-
   function handleDragEnd(event) {
     const { active, over } = event
     if (!over) return
@@ -179,32 +168,19 @@ function KanbanMeetingsView({
     if (!meeting) return
 
     // Only meaningful transitions: anything → COMPLETED, or COMPLETED → non-completed
+    // Optimistic: the hook moves the card in every cached list at once and
+    // rolls back if the write fails.
+    const onError = (err) => toast.error('Failed to update: ' + err.message)
     if (targetColumn === 'COMPLETED' && !meeting.completed_at) {
-      const previous = queryClient.getQueryData(queryKey)
-      queryClient.setQueryData(queryKey, (old = []) =>
-        old.map((m) =>
-          m.id === active.id
-            ? { ...m, completed_at: new Date().toISOString() }
-            : m,
-        ),
+      setCompleted(
+        { id: active.id, completed: true },
+        { onSuccess: () => toast.success('Meeting marked as completed'), onError },
       )
-      markMeetingCompleted(active.id)
-        .then(() => toast.success('Meeting marked as completed'))
-        .catch((err) => {
-          queryClient.setQueryData(queryKey, previous)
-          toast.error('Failed to update: ' + err.message)
-        })
     } else if (targetColumn !== 'COMPLETED' && meeting.completed_at) {
-      const previous = queryClient.getQueryData(queryKey)
-      queryClient.setQueryData(queryKey, (old = []) =>
-        old.map((m) => (m.id === active.id ? { ...m, completed_at: null } : m)),
+      setCompleted(
+        { id: active.id, completed: false },
+        { onSuccess: () => toast.success('Meeting restored'), onError },
       )
-      unmarkMeetingCompleted(active.id)
-        .then(() => toast.success('Meeting restored'))
-        .catch((err) => {
-          queryClient.setQueryData(queryKey, previous)
-          toast.error('Failed to update: ' + err.message)
-        })
     }
   }
 
@@ -262,7 +238,6 @@ function KanbanMeetingsView({
 
 export default function MeetingsPage() {
   const { setHeader } = useHeader()
-  const queryClient = useQueryClient()
 
   const [statusTab, setStatusTab] = useState('ALL')
   const [selectedClient, setSelectedClient] = useState('all')
@@ -301,13 +276,8 @@ export default function MeetingsPage() {
     [allClients],
   )
 
-  const { data: allMeetings = [], isLoading: isLoadingMeetings } = useQuery({
-    queryKey: ['global-meetings', selectedClient],
-    queryFn: async () => {
-      return await fetchMeetings(
-        selectedClient !== 'all' ? { clientId: selectedClient } : {},
-      )
-    },
+  const { data: allMeetings = [], isLoading: isLoadingMeetings } = useMeetings({
+    clientId: selectedClient !== 'all' ? selectedClient : null,
   })
   // ── Filtering & Grouping ──────────────────────────────────────────────────
 
@@ -413,10 +383,6 @@ export default function MeetingsPage() {
           <TooltipTrigger asChild>
             <span>
               <CreateMeetingDialog
-                onSuccess={() => {
-                  queryClient.invalidateQueries({ queryKey: ['global-meetings'] })
-                  queryClient.invalidateQueries({ queryKey: ['meetings'] })
-                }}
               >
                 <Button
                   className="w-full sm:w-auto gap-2 h-9"
@@ -598,12 +564,6 @@ export default function MeetingsPage() {
                 <TooltipTrigger asChild>
                   <span>
                     <CreateMeetingDialog
-                      onSuccess={() => {
-                        queryClient.invalidateQueries({
-                          queryKey: ['global-meetings'],
-                        })
-                        queryClient.invalidateQueries({ queryKey: ['meetings'] })
-                      }}
                     >
                       <Button variant="outline" size="sm" disabled={hasNoExternalClients}>
                         <Plus className="size-4 mr-2" />
@@ -623,8 +583,6 @@ export default function MeetingsPage() {
         <KanbanMeetingsView
           meetings={filteredMeetings}
           clientMap={clientMap}
-          queryClient={queryClient}
-          selectedClient={selectedClient}
         />
       ) : (
         <div className="space-y-8 pt-1">

@@ -89,9 +89,14 @@ export function createSupabaseStub() {
     client,
     calls,
     storageCalls,
-    /** Register what `${table}.${op}` (or `rpc.name`, `fn.name`) resolves. */
-    answer(table, op, value) {
-      answers[op === undefined ? table : `${table}.${op}`] = value
+    /**
+     * Register what a call resolves: `answer('invoices', 'update', value)`, or
+     * with a single key, `answer('rpc.name', value)` / `answer('fn.name', value)`.
+     * A function value is called per request (e.g. to return a pending promise).
+     */
+    answer(...args) {
+      const [key, value] = args.length === 2 ? args : [`${args[0]}.${args[1]}`, args[2]]
+      answers[key] = value
     },
     reset() {
       calls.length = 0

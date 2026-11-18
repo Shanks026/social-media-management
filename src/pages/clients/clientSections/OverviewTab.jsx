@@ -46,9 +46,8 @@ import { ENABLED_PLATFORMS, platformChartConfig } from '@/lib/domain/platforms'
 import { PlatformChartTick } from '@/components/PlatformIcon'
 
 const PLATFORM_CHART_CONFIG = platformChartConfig('Posts')
-import { useQuery } from '@tanstack/react-query'
-import { fetchAllPostsByClient } from '@/api/posts'
-import { fetchUpcomingMeetings } from '@/api/meetings'
+import { usePostsByClient } from '@/api/posts'
+import { useUpcomingMeetings } from '@/api/meetings'
 import { useMarkMeetingDone } from '@/hooks/useMarkMeetingDone'
 import { useTransactions } from '@/api/transactions'
 import { usePermissions } from '@/api/usePermissions'
@@ -110,10 +109,7 @@ export default function OverviewTab({ client }) {
 
 
   // Data Fetching
-  const { data: posts = [], isLoading: isLoadingPosts } = useQuery({
-    queryKey: ['posts', client.id],
-    queryFn: () => fetchAllPostsByClient(client.id),
-  })
+  const { data: posts = [], isLoading: isLoadingPosts } = usePostsByClient(client.id)
 
   // Compute platform distribution for the Mixed Bar Chart
   const platformData = React.useMemo(() => {
@@ -149,10 +145,7 @@ export default function OverviewTab({ client }) {
   }, [posts])
 
   const { data: upcomingMeetings = [], isLoading: isLoadingMeetings } =
-    useQuery({
-      queryKey: ['upcomingMeetings', client.id],
-      queryFn: () => fetchUpcomingMeetings(client.id, 50),
-    })
+    useUpcomingMeetings(client.id, 50)
 
   const { data: notes = [], isLoading: isLoadingNotes } = useTasks({ clientId: client.id })
 

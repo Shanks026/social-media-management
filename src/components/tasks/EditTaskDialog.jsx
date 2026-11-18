@@ -18,12 +18,11 @@ import {
 } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query'
 import { Megaphone } from 'lucide-react'
-import { updateTask, fetchTaskPostIds } from '@/api/tasks'
+import { useUpdateTask, useTaskPostIds } from '@/api/tasks'
 import { useClients } from '@/api/clients'
 import { useActiveCampaignsByClient } from '@/api/campaigns'
-import { fetchAllPostsByClient, fetchAllDeliverables } from '@/api/posts'
+import { useDeliverableOptions } from '@/api/posts'
 import { useTeamMembers } from '@/api/team'
 import { useAuth } from '@/context/AuthContext'
 import { toast } from 'sonner'
@@ -60,7 +59,6 @@ export default function EditTaskDialog({
   onOpenChange,
   onSuccess,
 }) {
-  const queryClient = useQueryClient()
   const descRef = useRef(null)
 
   const [selectedClientId, setSelectedClientId] = useState(
@@ -76,7 +74,7 @@ export default function EditTaskDialog({
   const [dueAt, setDueAt] = useState('')
   const [priority, setPriority] = useState(task?.priority ?? 'NORMAL')
 
-  const { user, workspaceUserId } = useAuth()
+  const { user } = useAuth()
   const { data: teamMembers = [] } = useTeamMembers()
   const assigneeOptions = useMemo(
     () =>
@@ -105,10 +103,8 @@ export default function EditTaskDialog({
   }, [open, task])
 
   // Linked deliverables live in the task_posts join table, not on the task row.
-  const { data: linkedPostIds, isSuccess: linkedIdsLoaded } = useQuery({
-    queryKey: ['task-post-ids', task?.id],
-    queryFn: () => fetchTaskPostIds(task.id),
-    enabled: !!task?.id && open,
+  const { data: linkedPostIds, isSuccess: linkedIdsLoaded } = useTaskPostIds(task?.id, {
+    enabled: open,
   })
 
   // Seed the selection once per open, so a background refetch never clobbers
@@ -132,16 +128,8 @@ export default function EditTaskDialog({
 
   // Client selected → scope to that client's posts. No client ("General") →
   // all deliverables across every client, each labelled with its client.
-  const { data: availablePosts = [], isLoading: loadingPosts } = useQuery({
-    queryKey: selectedClientId
-      ? ['posts', 'by-client', selectedClientId]
-      : ['posts', 'all-deliverables', workspaceUserId],
-    queryFn: () =>
-      selectedClientId
-        ? fetchAllPostsByClient(selectedClientId)
-        : fetchAllDeliverables(workspaceUserId),
-    enabled: open && (!!selectedClientId || !!workspaceUserId),
-  })
+  const { data: availablePosts = [], isLoading: loadingPosts } =
+    useDeliverableOptions(selectedClientId, { enabled: open })
 
   const selectedPosts = availablePosts.filter((p) => selectedPostIds.includes(p.id))
 
@@ -153,15 +141,8 @@ export default function EditTaskDialog({
     ]
   }, [clientsData])
 
-  const mutation = useMutation({
-    mutationFn: (updates) => updateTask(task.id, updates),
+  const mutation = useUpdateTask({
     onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ['tasks', 'list'],
-        exact: false,
-      })
-      queryClient.invalidateQueries({ queryKey: ['task-post-ids', task.id] })
-      queryClient.invalidateQueries({ queryKey: ['task-deliverables', task.id] })
       toast.success('Task updated successfully')
       onOpenChange(false)
       onSuccess?.()
@@ -176,6 +157,7 @@ export default function EditTaskDialog({
     const finalClientId = selectedClientId || null
 
     mutation.mutate({
+      id: task.id,
       client_id: finalClientId,
       title: title.trim(),
       description: description.trim() || null,

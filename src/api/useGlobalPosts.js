@@ -2,6 +2,7 @@ import { supabase } from '@/lib/supabase'
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '@/context/AuthContext'
 import { getPublishState } from '@/lib/helper'
+import { postKeys } from '@/api/queryKeys'
 
 /**
  * Builds a Supabase query for global posts with dynamic filters.
@@ -137,7 +138,7 @@ export function useGlobalPosts(filters = {}) {
   const { workspaceUserId } = useAuth()
 
   return useQuery({
-    queryKey: ['global-posts', workspaceUserId, filters],
+    queryKey: postKeys.global(workspaceUserId, filters),
     queryFn: async () => {
       const { data, error } = await buildPostsQuery(workspaceUserId, filters)
       if (error) throw error
@@ -164,7 +165,7 @@ export function usePostCounts() {
   const { workspaceUserId } = useAuth()
 
   return useQuery({
-    queryKey: ['global-post-counts', workspaceUserId],
+    queryKey: postKeys.globalCounts(workspaceUserId),
     queryFn: async () => {
       const { data, error } = await supabase
         .from('posts')

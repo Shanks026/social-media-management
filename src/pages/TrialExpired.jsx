@@ -1,9 +1,8 @@
 import { useState, useRef } from 'react'
 import { useNavigate, Navigate } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/context/AuthContext'
 import { useSubscription } from '@/api/useSubscription'
+import { useWorkspacePostCount } from '@/api/posts'
 import { Button } from '@/components/ui/button'
 import { ChevronDown, LogOut } from 'lucide-react'
 import { plans } from '@/pages/billingAndUsage/planMeta'
@@ -17,7 +16,7 @@ const LANDSCAPE_LOGO = '/TerceroLand.svg'
 
 export default function TrialExpired() {
   const navigate = useNavigate()
-  const { workspaceUserId } = useAuth()
+  const { signOut } = useAuth()
   const { data: sub, isLoading: subLoading } = useSubscription()
   const plansRef = useRef(null)
 
@@ -28,18 +27,7 @@ export default function TrialExpired() {
   const agencyName = sub?.agency_name && sub.agency_name !== APP_NAME ? sub.agency_name : null
   const clientCount = sub?.client_count ?? 0
 
-  const { data: postCount = 0 } = useQuery({
-    queryKey: ['trial-expired-post-count', workspaceUserId],
-    enabled: !!workspaceUserId,
-    queryFn: async () => {
-      const { count } = await supabase
-        .from('posts')
-        .select('id, clients!inner(user_id)', { count: 'exact', head: true })
-        .eq('clients.user_id', workspaceUserId)
-      return count || 0
-    },
-    staleTime: Infinity,
-  })
+  const { data: postCount = 0 } = useWorkspacePostCount()
 
   const handleContactTeam = (plan) => {
     setSelectedPlan(plan)
@@ -47,7 +35,9 @@ export default function TrialExpired() {
   }
 
   const handleLogout = async () => {
-    await supabase.auth.signOut()
+    // The context's signOut clears auth state at once; the raw Supabase call
+    // leaves the session set for a moment and bounces back (see NoWorkspaceAccess).
+    await signOut()
     navigate('/login')
   }
 

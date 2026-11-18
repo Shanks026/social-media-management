@@ -2,19 +2,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/context/AuthContext'
 import { resolveWorkspace } from '@/lib/workspace'
+import { documentKeys } from '@/api/queryKeys'
 
-// ─── Query Keys ────────────────────────────────────────────────────────────────
-
-export const documentKeys = {
-  all: ['documents'],
-  list: (filters) => ['documents', 'list', filters ?? {}],
-  detail: (id) => ['documents', 'detail', id],
-  collections: (clientId) => ['document-collections', clientId],
-  allCollections: () => ['document-collections', 'all'],
-  // Outside the 'documents' prefix: broad document invalidations shouldn't
-  // re-sign URLs that are still valid.
-  signedUrl: (storagePath) => ['document-signed-url', storagePath],
-}
+export { documentKeys }
 
 // ─── Read Hooks ────────────────────────────────────────────────────────────────
 

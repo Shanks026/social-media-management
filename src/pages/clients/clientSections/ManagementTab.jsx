@@ -1,8 +1,7 @@
 import { platformLogo } from '@/lib/domain/platforms'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { deleteClient, updateClientStatus } from '@/api/clients'
+import { useDeleteClient, useUpdateClientStatus } from '@/api/clients'
 import { usePermissions } from '@/api/usePermissions'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
@@ -47,17 +46,13 @@ const CLIENT_TYPE_LABELS = {
 
 export default function ManagementTab({ client }) {
   const navigate = useNavigate()
-  const queryClient = useQueryClient()
   const { canCreateClients } = usePermissions()
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [archiveDialogOpen, setArchiveDialogOpen] = useState(false)
 
-  const archiveMutation = useMutation({
-    mutationFn: (newStatus) => updateClientStatus(client.id, newStatus),
-    onSuccess: (_, newStatus) => {
-      queryClient.invalidateQueries({ queryKey: ['clients'] })
-      queryClient.invalidateQueries({ queryKey: ['client', client.id] })
+  const archiveMutation = useUpdateClientStatus({
+    onSuccess: (_, { status: newStatus }) => {
       toast.success(
         newStatus === 'ARCHIVED' ? 'Client archived' : 'Client restored',
       )
@@ -66,12 +61,8 @@ export default function ManagementTab({ client }) {
     onError: () => toast.error('Failed to update client status'),
   })
 
-  const deleteMutation = useMutation({
-    mutationFn: deleteClient,
+  const deleteMutation = useDeleteClient({
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['clients'] })
-      queryClient.invalidateQueries({ queryKey: ['subscription'] })
-      queryClient.invalidateQueries({ queryKey: ['internal-client'] })
       toast.success('Client workspace deleted')
       navigate('/clients')
     },
@@ -339,7 +330,7 @@ export default function ManagementTab({ client }) {
               variant="outline"
               size="sm"
               className="gap-2 shrink-0"
-              onClick={() => archiveMutation.mutate('ACTIVE')}
+              onClick={() => archiveMutation.mutate({ clientId: client.id, status: 'ACTIVE' })}
               disabled={archiveMutation.isPending}
             >
               <ArchiveRestore size={14} />
@@ -393,7 +384,7 @@ export default function ManagementTab({ client }) {
               variant="outline"
               className="w-full sm:w-auto gap-2"
               onClick={() => {
-                archiveMutation.mutate('ARCHIVED')
+                archiveMutation.mutate({ clientId: client.id, status: 'ARCHIVED' })
                 setArchiveDialogOpen(false)
               }}
               disabled={archiveMutation.isPending}

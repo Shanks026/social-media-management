@@ -1,20 +1,22 @@
-import { campaignKeys } from '@/api/campaigns'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
-import { supabase } from '@/lib/supabase'
 import { useHeader } from '../../../components/misc/header-context'
 import { toast } from 'sonner'
 import {
-  createRevision,
-  fetchPostDetails,
-  deletePost,
-  markPostDelivered,
-  submitForInternalApproval,
-  approveInternally,
-  requestInternalChanges,
-  sendPostForClientApproval,
-  resendApprovalLink,
+  usePostDetails,
+  usePostVersions,
+  useCreateRevision,
+  useSendPostForClientApproval,
+  useApproveDeliverable,
+  useScheduleDeliverable,
+  useMarkPlatformPublished,
+  useMarkPublished,
+  useMarkPostDelivered,
+  useDeletePost,
+  useResendApprovalLink,
+  useSubmitForInternalApproval,
+  useApproveInternally,
+  useRequestInternalChanges,
   ApprovalEmailError,
 } from '@/api/posts'
 import { usePermissions } from '@/api/usePermissions'
@@ -44,7 +46,6 @@ export default function PostDetails() {
   const { user } = useAuth()
   const navigate = useNavigate()
   const { setHeader } = useHeader()
-  const queryClient = useQueryClient()
 
   const { canSendDeliverables } = usePermissions()
 
@@ -70,70 +71,25 @@ export default function PostDetails() {
   const [isRequestChangesOpen, setIsRequestChangesOpen] = useState(false)
   const [changeNotes, setChangeNotes] = useState('')
 
-  // Invalidate all caches that depend on post status/counts
-  const invalidatePostRelated = () => {
-    queryClient.invalidateQueries({ queryKey: campaignKeys.all })
-    queryClient.invalidateQueries({ queryKey: ['clients'] })
-    queryClient.invalidateQueries({ queryKey: ['clients-list'] })
-    queryClient.invalidateQueries({ queryKey: ['postCounts', clientId] })
-    queryClient.invalidateQueries({ queryKey: ['global-post-counts'] })
-  }
-
   // --- Queries ---
 
-  const {
-    data: post,
-    isLoading,
-    error,
-  } = useQuery({
-    queryKey: ['post-version', postId],
-    queryFn: () => fetchPostDetails(postId),
-    retry: false,
-  })
+  const { data: post, isLoading, error, refetch } = usePostDetails(postId)
 
   // Derive whether this post belongs to an internal client
   const isInternal = post?.clients?.is_internal === true
 
-  // Fetches the sidebar history based on the post_id found in the query above
-  const { data: versions } = useQuery({
-    queryKey: ['post-versions-list', post?.actual_post_id],
-    enabled: !!post?.actual_post_id,
-    queryFn: async () => {
-      const { data, error: vError } = await supabase
-        .from('post_versions')
-        .select('id, version_number, status, created_at')
-        .eq('post_id', post.actual_post_id)
-        .order('version_number', { ascending: false })
-      if (vError) throw vError
-      return data
-    },
-  })
+  // The sidebar history, from the post_id found in the query above
+  const { data: versions } = usePostVersions(post?.actual_post_id)
 
   // --- Mutations ---
+  // Each hook refreshes the Deliverable everywhere it shows (lists, calendar,
+  // campaigns, clients, linked tasks); these callbacks are UI only.
 
-  const createRevisionMutation = useMutation({
-    mutationFn: () => {
-      if (!user?.id)
-        throw new Error('You must be logged in to create a revision')
-      return createRevision(post.id, user.id, adminNotes)
-    },
+  const createRevisionMutation = useCreateRevision({
     onSuccess: (newVersionId) => {
       toast.success('New version created')
       setIsRevisionConfirmOpen(false)
       setAdminNotes('')
-
-      queryClient.invalidateQueries({
-        queryKey: ['post-versions-list', post?.actual_post_id],
-      })
-      queryClient.invalidateQueries({
-        queryKey: ['post-version', post.id],
-      })
-      invalidatePostRelated()
-      queryClient.setQueryData(['post-version', post.id], (oldData) => {
-        if (!oldData) return oldData
-        return { ...oldData, status: 'ARCHIVED' }
-      })
-
       navigate(`/clients/${clientId}/deliverables/${newVersionId}`)
     },
     onError: (err) => {
@@ -143,8 +99,7 @@ export default function PostDetails() {
   })
 
   // Status change first, email second (B10) — see sendPostForClientApproval.
-  const sendForApprovalMutation = useMutation({
-    mutationFn: () => sendPostForClientApproval(post),
+  const sendForApprovalMutation = useSendPostForClientApproval({
     onSuccess: () => {
       toast.success(`Sent for approval to ${post.clients.email}`)
     },
@@ -155,157 +110,58 @@ export default function PostDetails() {
       // Once the status has changed (full success, or only the email failed)
       // the dialog has nothing left to confirm, so close it (B6).
       if (!err || err instanceof ApprovalEmailError) setIsConfirmOpen(false)
-      queryClient.invalidateQueries({ queryKey: ['post-version', postId] })
-      invalidatePostRelated()
     },
   })
 
   // Internal only: directly approve a non-social deliverable (no platform, no date picker)
-  const approveDeliverableMutation = useMutation({
-    mutationFn: async (versionId) => {
-      const { error: upError } = await supabase
-        .from('post_versions')
-        .update({ status: 'APPROVED' })
-        .eq('id', versionId)
-      if (upError) throw upError
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['post-version', postId] })
-      invalidatePostRelated()
-      toast.success('Deliverable approved')
-    },
+  const approveDeliverableMutation = useApproveDeliverable({
+    onSuccess: () => toast.success('Deliverable approved'),
     onError: (err) => toast.error(err.message),
   })
 
   // Internal only: directly schedule without client approval
-  const approveAndScheduleMutation = useMutation({
-    mutationFn: async (versionId) => {
-      if (post.platform_schedules) {
-        // Per-platform: dates already in JSONB — just transition status
-        const { error: upError } = await supabase
-          .from('post_versions')
-          .update({ status: 'SCHEDULED' })
-          .eq('id', versionId)
-        if (upError) throw upError
-      } else {
-        if (!approveDate) throw new Error('Please select a publish date.')
-        const { error: upError } = await supabase
-          .from('post_versions')
-          .update({
-            status: 'SCHEDULED',
-            target_date: approveDate.toISOString(),
-          })
-          .eq('id', versionId)
-        if (upError) throw upError
-      }
-    },
+  const approveAndScheduleMutation = useScheduleDeliverable({
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['post-version', postId] })
-      invalidatePostRelated()
-      queryClient.invalidateQueries({ queryKey: ['calendar'] })
-      queryClient.invalidateQueries({ queryKey: ['global-calendar'] })
       toast.success('Post scheduled successfully')
       setIsApproveScheduleOpen(false)
       setApproveDate(null)
     },
     onError: (err) => toast.error(err.message),
   })
-
-  const markPlatformAsPublishedMutation = useMutation({
-    mutationFn: async ({ versionId, platform }) => {
-      const current = post.platform_schedules
-      const updated = {
-        ...current,
-        [platform]: { ...current[platform], published_at: new Date().toISOString() },
-      }
-      const allPublished = Object.values(updated).every((v) => v.published_at)
-      const patch = {
-        platform_schedules: updated,
-        ...(allPublished && {
-          status: 'PUBLISHED',
-          published_at: new Date().toISOString(),
-        }),
-      }
-      const { error: upError } = await supabase
-        .from('post_versions')
-        .update(patch)
-        .eq('id', versionId)
-      if (upError) throw upError
-      return { platform, allPublished, versionId }
-    },
-    onSuccess: async ({ platform, allPublished, versionId }) => {
+  const markPlatformAsPublishedMutation = useMarkPlatformPublished({
+    onSuccess: ({ platform, allPublished, emailSent }) => {
       setPublishingPlatformId(null)
-      queryClient.invalidateQueries({ queryKey: ['post-version', postId] })
-      invalidatePostRelated()
-      queryClient.invalidateQueries({ queryKey: ['calendar'] })
-      queryClient.invalidateQueries({ queryKey: ['global-calendar'] })
       if (allPublished) {
         toast.success('All platforms published — post marked as Published')
       } else {
         const label = platform.replace('_', ' ').replace(/\b\w/g, (c) => c.toUpperCase())
         toast.success(`${label} marked as published`)
       }
-      const { error: fnError } = await supabase.functions.invoke('send-platform-published-email', {
-        body: { post_version_id: versionId, platform, all_published: allPublished },
-      })
-      if (fnError) {
-        console.error('[send-platform-published-email]', fnError)
-        toast.error("Marked as published, but the client's email failed to send")
-      }
+      if (!emailSent) toast.error("Marked as published, but the client's email failed to send")
     },
     onError: (err) => {
       setPublishingPlatformId(null)
       toast.error(err.message)
     },
   })
-
-  const markAsPublishedMutation = useMutation({
-    mutationFn: async (versionId) => {
-      const { error: upError } = await supabase
-        .from('post_versions')
-        .update({
-          status: 'PUBLISHED',
-          published_at: new Date().toISOString(),
-        })
-        .eq('id', versionId)
-      if (upError) throw upError
-      return versionId
-    },
-    onSuccess: async (versionId) => {
-      queryClient.invalidateQueries({ queryKey: ['post-version', postId] })
-      invalidatePostRelated()
-      queryClient.invalidateQueries({ queryKey: ['calendar'] })
-      queryClient.invalidateQueries({ queryKey: ['global-calendar'] })
+  const markAsPublishedMutation = useMarkPublished({
+    onSuccess: ({ emailSent }) => {
       toast.success('Post marked as published')
       setIsPublishConfirmOpen(false)
-      const { error: fnError } = await supabase.functions.invoke('send-platform-published-email', {
-        body: { post_version_id: versionId, platform: null, all_published: true },
-      })
-      if (fnError) {
-        console.error('[send-platform-published-email]', fnError)
-        toast.error("Marked as published, but the client's email failed to send")
-      }
+      if (!emailSent) toast.error("Marked as published, but the client's email failed to send")
     },
     onError: (err) => toast.error(err.message),
   })
-  
-  const markAsDeliveredMutation = useMutation({
-    mutationFn: () => markPostDelivered(post.id, deliveryNote),
+
+  const markAsDeliveredMutation = useMarkPostDelivered({
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['post-version', postId] })
-      invalidatePostRelated()
       toast.success('Deliverable marked as delivered')
       setIsMarkDeliveredOpen(false)
       setDeliveryNote('')
     },
     onError: (err) => toast.error(err.message),
   })
-
-  const deletePostMutation = useMutation({
-    mutationFn: (actualId) => {
-        if(!actualId) throw new Error("Post ID missing")
-        return deletePost(actualId)
-    },
+  const deletePostMutation = useDeletePost({
     onSuccess: () => {
       toast.success('Post deleted permanently')
       setIsDeleteConfirmOpen(false)
@@ -317,8 +173,7 @@ export default function PostDetails() {
     },
   })
 
-  const resendApprovalLinkMutation = useMutation({
-    mutationFn: () => resendApprovalLink(post),
+  const resendApprovalLinkMutation = useResendApprovalLink({
     onSuccess: () => {
       toast.success(`Approval link resent to ${post.clients.email}`)
       setIsResendConfirmOpen(false)
@@ -330,37 +185,18 @@ export default function PostDetails() {
 
   // Phase 5 mutations ─────────────────────────────────────────────────────────
 
-  const submitForApprovalMutation = useMutation({
-    mutationFn: () => submitForInternalApproval(post.id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['post-version', postId] })
-      queryClient.invalidateQueries({ queryKey: ['pending-approvals'] })
-      queryClient.invalidateQueries({ queryKey: ['pending-approvals-count'] })
-      invalidatePostRelated()
-      toast.success('Submitted for internal review')
-    },
+  const submitForApprovalMutation = useSubmitForInternalApproval({
+    onSuccess: () => toast.success('Submitted for internal review'),
     onError: (err) => toast.error(err.message),
   })
 
-  const approveInternallyMutation = useMutation({
-    mutationFn: () => approveInternally(post.id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['post-version', postId] })
-      queryClient.invalidateQueries({ queryKey: ['pending-approvals'] })
-      queryClient.invalidateQueries({ queryKey: ['pending-approvals-count'] })
-      invalidatePostRelated()
-      toast.success('Deliverable approved — now Ready')
-    },
+  const approveInternallyMutation = useApproveInternally({
+    onSuccess: () => toast.success('Deliverable approved — now Ready'),
     onError: (err) => toast.error(err.message),
   })
 
-  const requestChangesMutation = useMutation({
-    mutationFn: () => requestInternalChanges(post.id, changeNotes),
+  const requestChangesMutation = useRequestInternalChanges({
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['post-version', postId] })
-      queryClient.invalidateQueries({ queryKey: ['pending-approvals'] })
-      queryClient.invalidateQueries({ queryKey: ['pending-approvals-count'] })
-      invalidatePostRelated()
       toast.success('Changes requested')
       setIsRequestChangesOpen(false)
       setChangeNotes('')
@@ -369,7 +205,7 @@ export default function PostDetails() {
   })
 
   const handleRefresh = () => {
-    queryClient.invalidateQueries({ queryKey: ['post-version', postId] })
+    refetch()
     toast.success('Status refreshed')
   }
 
@@ -424,7 +260,11 @@ export default function PostDetails() {
         onPublish={() => setIsPublishConfirmOpen(true)}
         onPublishPlatform={(platform) => {
           setPublishingPlatformId(platform)
-          markPlatformAsPublishedMutation.mutate({ versionId: post.id, platform })
+          markPlatformAsPublishedMutation.mutate({
+            versionId: post.id,
+            platform,
+            platformSchedules: post.platform_schedules,
+          })
         }}
         onCreateRevision={() => setIsRevisionConfirmOpen(true)}
         onEdit={() => setIsEditOpen(true)}
@@ -439,9 +279,9 @@ export default function PostDetails() {
         isApproveSchedulePending={approveAndScheduleMutation.isPending || approveDeliverableMutation.isPending}
         onMarkDelivered={() => setIsMarkDeliveredOpen(true)}
         isMarkDeliveredPending={markAsDeliveredMutation.isPending}
-        onSubmitForApproval={() => submitForApprovalMutation.mutate()}
+        onSubmitForApproval={() => submitForApprovalMutation.mutate(post.id)}
         isSubmitPending={submitForApprovalMutation.isPending}
-        onApproveInternally={() => approveInternallyMutation.mutate()}
+        onApproveInternally={() => approveInternallyMutation.mutate(post.id)}
         isApproveInternallyPending={approveInternallyMutation.isPending}
         onRequestChanges={() => setIsRequestChangesOpen(true)}
       />
@@ -489,13 +329,15 @@ export default function PostDetails() {
         setIsConfirmOpen={setIsConfirmOpen}
         isPublishConfirmOpen={isPublishConfirmOpen}
         setIsPublishConfirmOpen={setIsPublishConfirmOpen}
-        onConfirmApproval={() => sendForApprovalMutation.mutate()}
+        onConfirmApproval={() => sendForApprovalMutation.mutate(post)}
         onConfirmPublish={() => markAsPublishedMutation.mutate(post.id)}
         isApprovalPending={sendForApprovalMutation.isPending}
         isPublishPending={markAsPublishedMutation.isPending}
         isRevisionConfirmOpen={isRevisionConfirmOpen}
         setIsRevisionConfirmOpen={setIsRevisionConfirmOpen}
-        onConfirmRevision={() => createRevisionMutation.mutate()}
+        onConfirmRevision={() =>
+          createRevisionMutation.mutate({ versionId: post.id, userId: user?.id, adminNotes })
+        }
         isRevisionPending={createRevisionMutation.isPending}
         adminNotes={adminNotes}
         setAdminNotes={setAdminNotes}
@@ -503,7 +345,13 @@ export default function PostDetails() {
         setIsApproveScheduleOpen={setIsApproveScheduleOpen}
         approveDate={approveDate}
         setApproveDate={setApproveDate}
-        onConfirmApproveSchedule={() => approveAndScheduleMutation.mutate(post.id)}
+        onConfirmApproveSchedule={() =>
+          approveAndScheduleMutation.mutate({
+            versionId: post.id,
+            perPlatform: !!post.platform_schedules,
+            targetDate: approveDate,
+          })
+        }
         isApproveSchedulePending={approveAndScheduleMutation.isPending}
         isDeleteConfirmOpen={isDeleteConfirmOpen}
         setIsDeleteConfirmOpen={setIsDeleteConfirmOpen}
@@ -511,7 +359,7 @@ export default function PostDetails() {
         isDeletePending={deletePostMutation.isPending}
         isResendConfirmOpen={isResendConfirmOpen}
         setIsResendConfirmOpen={setIsResendConfirmOpen}
-        onConfirmResend={() => resendApprovalLinkMutation.mutate()}
+        onConfirmResend={() => resendApprovalLinkMutation.mutate(post)}
         isResendPending={resendApprovalLinkMutation.isPending}
       />
 
@@ -537,7 +385,7 @@ export default function PostDetails() {
             </Button>
             <Button
               variant="destructive"
-              onClick={() => requestChangesMutation.mutate()}
+              onClick={() => requestChangesMutation.mutate({ versionId: post.id, notes: changeNotes })}
               disabled={requestChangesMutation.isPending}
             >
               {requestChangesMutation.isPending && <Loader2 size={13} className="animate-spin mr-1.5" />}
@@ -567,7 +415,10 @@ export default function PostDetails() {
             <Button variant="outline" onClick={() => setIsMarkDeliveredOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={() => markAsDeliveredMutation.mutate()} disabled={markAsDeliveredMutation.isPending}>
+            <Button
+              onClick={() => markAsDeliveredMutation.mutate({ versionId: post.id, deliveryNote })}
+              disabled={markAsDeliveredMutation.isPending}
+            >
               {markAsDeliveredMutation.isPending && <Loader2 size={13} className="animate-spin mr-1.5" />}
               Confirm Delivery
             </Button>

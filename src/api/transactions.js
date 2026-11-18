@@ -5,17 +5,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/context/AuthContext'
 import { resolveWorkspace } from '@/lib/workspace'
-import { campaignKeys } from '@/api/campaigns'
-import { clientKeys } from '@/api/clients'
+import { campaignKeys, clientKeys, transactionKeys } from '@/api/queryKeys'
 
-// ─── Query keys ───────────────────────────────────────────────────────────────
-
-export const transactionKeys = {
-  all: ['transactions'],
-  list: (workspaceId, filters = {}) => ['transactions', 'list', workspaceId, { ...filters }],
-  overview: (workspaceId) => ['transactions', 'overview', workspaceId],
-  byCampaign: (campaignId) => ['transactions', 'campaign', campaignId],
-}
+export { transactionKeys }
 
 // A transaction moves the ledger, the overview, campaign budgets and client
 // profitability.

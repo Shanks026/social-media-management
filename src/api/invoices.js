@@ -6,21 +6,9 @@ import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/context/AuthContext'
 import { resolveWorkspace } from '@/lib/workspace'
 import { invalidateMoney } from '@/api/transactions'
-import { subscriptionKeys } from '@/api/useSubscription'
+import { invoiceKeys, recurringInvoiceKeys, subscriptionKeys } from '@/api/queryKeys'
 
-// --- Query keys ---
-
-export const invoiceKeys = {
-  all: ['invoices'],
-  list: (workspaceId, filters = {}) => ['invoices', 'list', workspaceId, { ...filters }],
-  detail: (id) => ['invoices', 'detail', id],
-  nextNumber: (workspaceId) => ['invoices', 'next-number', workspaceId],
-}
-
-export const recurringInvoiceKeys = {
-  all: ['recurring_invoices'],
-  list: (workspaceId, filters = {}) => ['recurring_invoices', 'list', workspaceId, { ...filters }],
-}
+export { invoiceKeys, recurringInvoiceKeys }
 
 // An invoice shows up in the invoice lists, campaign invoices/analytics and
 // client billing; paying or voiding one also moves the ledger. invalidateMoney

@@ -3,13 +3,9 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/context/AuthContext'
 import { useEffect, useId, useMemo } from 'react'
 import { resolveWorkspace } from '@/lib/workspace'
+import { chatKeys } from '@/api/queryKeys'
 
-// ─── Query Keys ────────────────────────────────────────────────────────────────
-
-export const chatKeys = {
-  channels: (userId) => ['chat', 'channels', userId],
-  messages: (channelId) => ['chat', 'messages', channelId],
-}
+export { chatKeys }
 
 // Fixed 14-emoji set — matches the DB check constraint on
 // chat_message_reactions.emoji (kept separately from comments.REACTION_EMOJIS

@@ -1,7 +1,6 @@
 import { useEffect } from 'react'
 import { useParams } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
-import { fetchClientById } from '../../api/clients'
+import { useClientById } from '@/api/clients'
 import { useHeader } from '@/components/misc/header-context'
 import ClientProfileView from './ClientProfileView'
 
@@ -13,11 +12,7 @@ export default function ClientDetails() {
     data: client,
     isLoading,
     error,
-  } = useQuery({
-    queryKey: ['client', clientId],
-    queryFn: () => fetchClientById(clientId),
-    enabled: !!clientId,
-  })
+  } = useClientById(clientId)
 
   useEffect(() => {
     if (client) {

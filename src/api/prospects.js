@@ -7,9 +7,8 @@ import { useAuth } from '@/context/AuthContext'
 import { resolveWorkspace } from '@/lib/workspace'
 import { logStatusChange } from '@/api/prospectActivities'
 import { deleteProposalFile } from '@/api/proposals'
-import { documentKeys } from '@/api/documents'
-import { prospectKeys, proposalKeys, prospectActivityKeys } from '@/api/salesKeys'
 import { STATUSES, statusLabel } from '@/lib/domain/prospectStatus'
+import { documentKeys, proposalKeys, prospectActivityKeys, prospectKeys } from '@/api/queryKeys'
 
 export { prospectKeys }
 

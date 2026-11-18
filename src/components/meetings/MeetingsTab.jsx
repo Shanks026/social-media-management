@@ -1,8 +1,7 @@
 import { useState, useMemo } from 'react'
-import { useQuery } from '@tanstack/react-query'
 import { Plus, Search, X, CalendarDays } from 'lucide-react'
 import { isPast } from 'date-fns'
-import { fetchMeetings, fetchCampaignMeetings } from '@/api/meetings'
+import { useMeetings, useCampaignMeetings } from '@/api/meetings'
 import { useClients } from '@/api/clients'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -32,18 +31,9 @@ export default function MeetingsTab({ clientId, campaignId, campaignName }) {
   const [statusFilter, setStatusFilter] = useState('all')
   const [search, setSearch] = useState('')
 
-  const queryKey = campaignId
-    ? ['campaign-meetings', campaignId]
-    : ['meetings', clientId]
-
-  const { data: allMeetings = [], isLoading } = useQuery({
-    queryKey,
-    queryFn: () =>
-      campaignId
-        ? fetchCampaignMeetings(campaignId)
-        : fetchMeetings({ clientId }),
-    enabled: !!campaignId || !!clientId,
-  })
+  const campaignMeetings = useCampaignMeetings(campaignId)
+  const clientMeetings = useMeetings({ clientId }, { enabled: !campaignId && !!clientId })
+  const { data: allMeetings = [], isLoading } = campaignId ? campaignMeetings : clientMeetings
 
   const { data: clientsData } = useClients()
   const clientMap = useMemo(() => {

@@ -1,6 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/context/AuthContext'
+import { subscriptionKeys } from '@/api/queryKeys'
+
+export { subscriptionKeys }
 
 // ── TESTING ONLY: set to a number (1–16+) to simulate a trial day.
 // Day 1 = first day of trial, Day 15 = grace period, Day 16 = locked.
@@ -11,12 +14,6 @@ const TRIAL_DAY_OVERRIDE = null // e.g. TRIAL_DAY_OVERRIDE = 8
 // Positive = days remaining, 0 = expires today, negative = days past expiry.
 // Set to null for production.
 const SUB_DAY_OVERRIDE = null // e.g. SUB_DAY_OVERRIDE = 2
-
-// The agency's own plan row (flags, limits, branding, invoice numbering).
-export const subscriptionKeys = {
-  all: ['subscription'],
-  detail: (workspaceId) => ['subscription', workspaceId],
-}
 
 export function useSubscription() {
   const { workspaceUserId } = useAuth()

@@ -46,7 +46,7 @@ export function AppShell({ user }) {
       wasChatRouteRef.current = isChatRoute
     }
   }, [isChatRoute])
-  useMeetingReminders(user?.id)
+  useMeetingReminders()
   // Read previously-cached settings for this user so remounts skip the loading screen.
   const settingsKey = `agency_settings_${user?.id}`
   const [agencySettings, setAgencySettings] = useState(() => {

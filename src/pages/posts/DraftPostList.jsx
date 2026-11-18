@@ -1,5 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
-import { fetchAllPostsByClient } from '@/api/posts'
+import { usePostsByClient } from '@/api/posts'
 import { useAuth } from '@/context/AuthContext'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
@@ -24,10 +23,7 @@ export default function DraftPostList({ client, onCreatePost, statusFilter = 'AL
   const { user } = useAuth()
   const clientId = client?.id
 
-  const { data = [], isLoading } = useQuery({
-    queryKey: ['draft-posts', clientId],
-    queryFn: () => fetchAllPostsByClient(clientId),
-    enabled: !!clientId,
+  const { data = [], isLoading } = usePostsByClient(clientId, {
     staleTime: 0,
     refetchOnWindowFocus: true,
   })
