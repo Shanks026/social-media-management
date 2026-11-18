@@ -5,10 +5,27 @@ import { resolveWorkspace } from '@/lib/workspace'
 import { getUrgencyStatus } from '@/lib/client-helpers'
 import { isNeedsAttention } from '@/lib/domain/clientStatus'
 
+// ─── Query keys ───────────────────────────────────────────────────────────────
+// Every client view shares the 'clients' root, so a change that touches client
+// data (status, billing, pipeline) refreshes them all with clientKeys.all.
+
+export const clientKeys = {
+  all: ['clients'],
+  // id/name/logo options for pickers and lookups, split into the internal
+  // account and real clients
+  options: (workspaceId) => ['clients', 'options', workspaceId],
+  // the Clients page, with pipeline analytics
+  list: (workspaceId, filters = {}) => ['clients', 'list', workspaceId, { ...filters }],
+  // the unfiltered pipeline the dashboard reads
+  pipeline: (workspaceId) => ['clients', 'pipeline', workspaceId],
+  detail: (id) => ['clients', 'detail', id],
+  internal: (workspaceId) => ['clients', 'internal', workspaceId],
+}
+
 export function useClients() {
   const { workspaceUserId } = useAuth()
   return useQuery({
-    queryKey: ['clients-list', workspaceUserId],
+    queryKey: clientKeys.options(workspaceUserId),
     queryFn: async () => {
       if (!workspaceUserId) return { internalAccount: null, realClients: [] }
 
@@ -43,9 +60,11 @@ const getPathFromUrl = (url) => {
  * Shares the same query cache as ClientHealthGrid.
  */
 export function useUrgentClients() {
+  const { workspaceUserId } = useAuth()
   return useQuery({
-    queryKey: ['clients-pipeline-dashboard'],
+    queryKey: clientKeys.pipeline(workspaceUserId),
     queryFn: () => fetchClients(),
+    enabled: !!workspaceUserId,
     staleTime: 30000,
     select: (data) =>
       (data?.clients ?? [])

@@ -32,7 +32,6 @@ import {
   MessageSquare,
 } from 'lucide-react'
 
-import { supabase } from '@/lib/supabase'
 import { useHeader } from '@/components/misc/header-context'
 import {
   useCampaign,
@@ -40,6 +39,7 @@ import {
   useCampaignInvoices,
   useRegenerateCampaignReviewToken,
   useMarkReviewSent,
+  sendCampaignReviewEmail,
 } from '@/api/campaigns'
 import { useGlobalPosts } from '@/api/useGlobalPosts'
 import { useSubscription } from '@/api/useSubscription'
@@ -228,18 +228,12 @@ export default function CampaignDetailPage() {
     if (!campaign?.clients?.email) return
     setSendingEmail(true)
     try {
-      const { error } = await supabase.functions.invoke(
-        'send-campaign-review-email',
-        {
-          body: {
-            client_email: campaign.clients.email,
-            client_name: campaign.clients.name,
-            campaign_name: campaign.name,
-            review_url: shareDialogUrl,
-          },
-        },
-      )
-      if (error) throw error
+      await sendCampaignReviewEmail({
+        clientEmail: campaign.clients.email,
+        clientName: campaign.clients.name,
+        campaignName: campaign.name,
+        reviewUrl: shareDialogUrl,
+      })
       markReviewSent.mutate(campaignId)
       toast.success(`Review link sent to ${campaign.clients.email}`)
       setShareDialogOpen(false)

@@ -50,13 +50,13 @@ import {
   useRecurringInvoices,
   useDeleteRecurringInvoice,
   useGenerateFromRecurring,
+  fetchInvoiceItems,
 } from '@/api/invoices'
 import { useSubscription } from '@/api/useSubscription'
 import { CreateInvoiceDialog } from '@/pages/finance/CreateInvoiceDialog'
 import { EditInvoiceDialog } from '@/pages/finance/EditInvoiceDialog'
 import { RecurringInvoiceDialog } from '@/pages/finance/RecurringInvoiceDialog'
 import { downloadInvoicePDF } from '@/utils/downloadInvoicePDF'
-import { supabase } from '@/lib/supabase'
 import { toast } from 'sonner'
 
 const STATUS_OPTIONS = [
@@ -153,15 +153,7 @@ export function ClientBillingTab({ clientId, client }) {
 
   const handleDownloadPDF = async (invoice) => {
     try {
-      const { data: items, error } = await supabase
-        .from('invoice_items')
-        .select('*')
-        .eq('invoice_id', invoice.id)
-        .order('created_at', { ascending: true })
-
-      if (error) throw error
-
-      const fullInvoice = { ...invoice, items: items || [] }
+      const fullInvoice = { ...invoice, items: await fetchInvoiceItems(invoice.id) }
       await downloadInvoicePDF(fullInvoice, subscription || {})
       toast.success('Invoice PDF downloaded')
     } catch (err) {

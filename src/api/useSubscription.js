@@ -12,11 +12,17 @@ const TRIAL_DAY_OVERRIDE = null // e.g. TRIAL_DAY_OVERRIDE = 8
 // Set to null for production.
 const SUB_DAY_OVERRIDE = null // e.g. SUB_DAY_OVERRIDE = 2
 
+// The agency's own plan row (flags, limits, branding, invoice numbering).
+export const subscriptionKeys = {
+  all: ['subscription'],
+  detail: (workspaceId) => ['subscription', workspaceId],
+}
+
 export function useSubscription() {
   const { workspaceUserId } = useAuth()
 
   return useQuery({
-    queryKey: ['subscription', workspaceUserId],
+    queryKey: subscriptionKeys.detail(workspaceUserId),
     enabled: !!workspaceUserId,
     queryFn: async () => {
       if (!workspaceUserId) return null

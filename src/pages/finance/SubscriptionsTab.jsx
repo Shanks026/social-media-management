@@ -17,8 +17,7 @@ import {
   useRenewSubscription,
   useUpdateExpense,
 } from '@/api/expenses'
-import { supabase } from '@/lib/supabase'
-import { useQuery } from '@tanstack/react-query'
+import { useClients } from '@/api/clients'
 
 // Components
 import { Button } from '@/components/ui/button'
@@ -54,21 +53,10 @@ export default function SubscriptionsTab() {
   const { mutate: renewSubscription } = useRenewSubscription()
   const { mutate: updateExpense } = useUpdateExpense()
 
-  const { data: clientData } = useQuery({
-    queryKey: ['clients-list'],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from('clients')
-        .select('id, name, is_internal')
-      return {
-        internalAccount: data?.find((c) => c.is_internal) || null,
-        realClients: data?.filter((c) => !c.is_internal) || [],
-      }
-    },
-  })
+  const { data: clientData } = useClients()
 
   const internalAccount = clientData?.internalAccount
-  const clients = clientData?.realClients || []
+  const clients = useMemo(() => clientData?.realClients || [], [clientData])
 
   const filteredExpenses = useMemo(() => {
     if (filterMode === 'ALL') return allExpenses

@@ -253,6 +253,18 @@ export async function markReviewSent(campaignId) {
 
 // Per post, from the public review page. postReviewToken is share_tokens.token
 // for that post version.
+export async function sendCampaignReviewEmail({ clientEmail, clientName, campaignName, reviewUrl }) {
+  const { error } = await supabase.functions.invoke('send-campaign-review-email', {
+    body: {
+      client_email: clientEmail,
+      client_name: clientName,
+      campaign_name: campaignName,
+      review_url: reviewUrl,
+    },
+  })
+  if (error) throw error
+}
+
 export async function submitCampaignPostReview(postReviewToken, status, feedback) {
   const { error } = await supabase.rpc('update_post_status_by_token', {
     p_token: postReviewToken,

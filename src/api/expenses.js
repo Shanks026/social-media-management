@@ -1,26 +1,39 @@
+// Expenses API (ADR 0007): the key factory, a plain async function per
+// mutation (the unit-test surface, callable outside React), and a hook that
+// wraps each one and owns the cache invalidation.
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/context/AuthContext'
 import { resolveWorkspace } from '@/lib/workspace'
+import { transactionKeys } from '@/api/transactions'
+import { clientKeys } from '@/api/clients'
+
+// ─── Query keys ───────────────────────────────────────────────────────────────
 
 export const expenseKeys = {
   all: ['expenses'],
-  list: (filters) => [...expenseKeys.all, 'list', { ...filters }],
-  burnRate: () => [...expenseKeys.all, 'burn-rate'],
+  list: (workspaceId, filters = {}) => ['expenses', 'list', workspaceId, { ...filters }],
+  burnRate: (workspaceId) => ['expenses', 'burn-rate', workspaceId],
 }
 
-// --- 1. FETCH ALL EXPENSES ---
+// Recurring expenses feed the burn rate, the finance overview (its monthly
+// burn) and client profitability.
+function invalidateExpenses(queryClient) {
+  queryClient.invalidateQueries({ queryKey: expenseKeys.all })
+  queryClient.invalidateQueries({ queryKey: transactionKeys.all })
+  queryClient.invalidateQueries({ queryKey: clientKeys.all })
+}
+
+// ─── Reads ────────────────────────────────────────────────────────────────────
+
 export function useExpenses(filters = {}, options = {}) {
   const { workspaceUserId } = useAuth()
 
   return useQuery({
-    queryKey: expenseKeys.list(filters),
+    queryKey: expenseKeys.list(workspaceUserId, filters),
     queryFn: async () => {
-      if (!workspaceUserId) throw new Error('User not authenticated')
-
       let query = supabase
         .from('expenses')
-        // FIX: Removed comments from inside this string
         .select(
           `
           id,
@@ -46,7 +59,6 @@ export function useExpenses(filters = {}, options = {}) {
       }
 
       const { data, error } = await query
-
       if (error) throw error
       return data
     },
@@ -55,15 +67,12 @@ export function useExpenses(filters = {}, options = {}) {
   })
 }
 
-// --- 2. FETCH BURN RATE ---
 export function useBurnRate() {
   const { workspaceUserId } = useAuth()
 
   return useQuery({
-    queryKey: expenseKeys.burnRate(),
+    queryKey: expenseKeys.burnRate(workspaceUserId),
     queryFn: async () => {
-      if (!workspaceUserId) return 0
-
       const { data, error } = await supabase
         .from('view_monthly_burn_rate')
         .select('total_monthly_burn')
@@ -77,111 +86,93 @@ export function useBurnRate() {
   })
 }
 
-// --- 3. CREATE EXPENSE ---
+// ─── Mutations ────────────────────────────────────────────────────────────────
+
+// The form sends 'myself' / '' for "the agency itself".
+const toClientId = (value) => (!value || value === 'myself' ? null : value)
+
+export async function createExpense(formData) {
+  const { workspaceUserId } = await resolveWorkspace()
+
+  const { data, error } = await supabase
+    .from('expenses')
+    .insert({
+      user_id: workspaceUserId,
+      name: formData.name,
+      cost: parseFloat(formData.cost),
+      billing_cycle: formData.billing_cycle,
+      next_billing_date: formData.next_billing_date,
+      category: formData.category,
+      is_active: formData.is_active !== undefined ? formData.is_active : true,
+      assigned_client_id: toClientId(formData.assigned_client_id),
+    })
+    .select()
+    .single()
+
+  if (error) throw error
+  return data
+}
+
 export function useCreateExpense() {
   const queryClient = useQueryClient()
-
   return useMutation({
-    mutationFn: async (formData) => {
-      const { workspaceUserId } = await resolveWorkspace()
-      const sanitizedClientId =
-        !formData.assigned_client_id ||
-        formData.assigned_client_id === '' ||
-        formData.assigned_client_id === 'myself'
-          ? null
-          : formData.assigned_client_id
-
-      const payload = {
-        user_id: workspaceUserId,
-        name: formData.name,
-        cost: parseFloat(formData.cost),
-        billing_cycle: formData.billing_cycle,
-        next_billing_date: formData.next_billing_date,
-        category: formData.category,
-        is_active: formData.is_active !== undefined ? formData.is_active : true,
-        assigned_client_id: sanitizedClientId,
-      }
-
-      const { data, error } = await supabase
-        .from('expenses')
-        .insert(payload)
-        .select()
-        .single()
-
-      if (error) throw error
-      return data
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries(expenseKeys.all)
-    },
+    mutationFn: createExpense,
+    onSuccess: () => invalidateExpenses(queryClient),
   })
 }
 
-// --- 4. UPDATE EXPENSE ---
+export async function updateExpense({ id, updates }) {
+  const cleanUpdates = { ...updates }
+  // Only the "agency itself" sentinels become null; an absent field is left
+  // out of the update so it doesn't clear the assignment.
+  if (cleanUpdates.assigned_client_id === 'myself' || cleanUpdates.assigned_client_id === '') {
+    cleanUpdates.assigned_client_id = null
+  }
+  if (cleanUpdates.cost) cleanUpdates.cost = parseFloat(cleanUpdates.cost)
+
+  const { data, error } = await supabase
+    .from('expenses')
+    .update(cleanUpdates)
+    .eq('id', id)
+    .select()
+    .single()
+
+  if (error) throw error
+  return data
+}
+
 export function useUpdateExpense() {
   const queryClient = useQueryClient()
-
   return useMutation({
-    mutationFn: async ({ id, updates }) => {
-      const cleanUpdates = { ...updates }
-
-      if (
-        cleanUpdates.assigned_client_id === 'myself' ||
-        cleanUpdates.assigned_client_id === ''
-      ) {
-        cleanUpdates.assigned_client_id = null
-      }
-
-      if (cleanUpdates.cost) {
-        cleanUpdates.cost = parseFloat(cleanUpdates.cost)
-      }
-
-      const { data, error } = await supabase
-        .from('expenses')
-        .update(cleanUpdates)
-        .eq('id', id)
-        .select()
-        .single()
-
-      if (error) throw error
-      return data
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries(expenseKeys.all)
-    },
+    mutationFn: updateExpense,
+    onSuccess: () => invalidateExpenses(queryClient),
   })
 }
 
-// --- 5. DELETE EXPENSE ---
+export async function deleteExpense(id) {
+  const { error } = await supabase.from('expenses').delete().eq('id', id)
+  if (error) throw error
+  return true
+}
+
 export function useDeleteExpense() {
   const queryClient = useQueryClient()
-
   return useMutation({
-    mutationFn: async (id) => {
-      const { error } = await supabase.from('expenses').delete().eq('id', id)
-
-      if (error) throw error
-      return true
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries(expenseKeys.all)
-    },
+    mutationFn: deleteExpense,
+    onSuccess: () => invalidateExpenses(queryClient),
   })
 }
 
-// --- 6. RENEW SUBSCRIPTION ---
+export async function renewSubscription(id) {
+  const { data, error } = await supabase.rpc('advance_expense_billing_date', { expense_id: id })
+  if (error) throw error
+  return data
+}
+
 export function useRenewSubscription() {
   const queryClient = useQueryClient()
-
   return useMutation({
-    mutationFn: async (id) => {
-      const { data, error } = await supabase.rpc('advance_expense_billing_date', { expense_id: id })
-
-      if (error) throw error
-      return data
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries(expenseKeys.all)
-    },
+    mutationFn: renewSubscription,
+    onSuccess: () => invalidateExpenses(queryClient),
   })
 }
