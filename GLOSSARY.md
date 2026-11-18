@@ -50,6 +50,10 @@ _Avoid_: Lead, opportunity
 A recorded contact attempt with a Prospect, on a channel such as WhatsApp, email or a call.
 _Avoid_: Activity (when meaning a contact attempt), touchpoint
 
+**Discovery call**:
+The stage where a call with a Prospect has been booked to learn their needs before a Proposal.
+_Avoid_: Demo, demo call
+
 **Proposal**:
 An offer of work sent to a Client or Prospect, which they can accept, decline or ask to change.
 _Avoid_: Quote, pitch, estimate
