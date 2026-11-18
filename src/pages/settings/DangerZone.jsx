@@ -1,12 +1,11 @@
 import { formatDate } from '@/lib/format'
 import { useState } from 'react'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { AlertTriangle, Loader2, CalendarClock } from 'lucide-react'
 
 import { useAuth } from '@/context/AuthContext'
 import { useSubscription } from '@/api/useSubscription'
-import { requestWorkspaceDeletion, cancelWorkspaceDeletion } from '@/api/team'
+import { useRequestWorkspaceDeletion, useCancelWorkspaceDeletion } from '@/api/team'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -24,7 +23,6 @@ import {
 export default function DangerZone() {
   const { user, workspaceUserId } = useAuth()
   const { data: sub } = useSubscription()
-  const queryClient = useQueryClient()
 
   const isOwner = !!user?.id && user.id === workspaceUserId
   const agencyName = sub?.agency_name || 'Tercero'
@@ -34,22 +32,16 @@ export default function DangerZone() {
   const [open, setOpen] = useState(false)
   const [confirmText, setConfirmText] = useState('')
 
-  const refresh = () => queryClient.invalidateQueries({ queryKey: ['subscription'] })
-
-  const schedule = useMutation({
-    mutationFn: requestWorkspaceDeletion,
+  const schedule = useRequestWorkspaceDeletion({
     onSuccess: () => {
-      refresh()
       setOpen(false)
       toast.success('Workspace scheduled for deletion. You can cancel any time before then.')
     },
     onError: (err) => toast.error(err.message || 'Failed to schedule deletion'),
   })
 
-  const cancel = useMutation({
-    mutationFn: cancelWorkspaceDeletion,
+  const cancel = useCancelWorkspaceDeletion({
     onSuccess: () => {
-      refresh()
       toast.success('Deletion cancelled. Your workspace is safe.')
     },
     onError: (err) => toast.error(err.message || 'Failed to cancel deletion'),

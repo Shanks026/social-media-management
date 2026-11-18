@@ -1,4 +1,5 @@
-import { useQuery } from '@tanstack/react-query'
+import { useCallback } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/context/AuthContext'
 import { subscriptionKeys } from '@/api/queryKeys'
@@ -212,4 +213,13 @@ export function useSubscription() {
       return failureCount < 1
     },
   })
+}
+
+/** Refetch the subscription row (the shell re-checks agency setup with it). */
+export function useRefreshSubscription() {
+  const queryClient = useQueryClient()
+  return useCallback(
+    () => queryClient.invalidateQueries({ queryKey: subscriptionKeys.all }),
+    [queryClient],
+  )
 }

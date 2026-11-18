@@ -1,8 +1,9 @@
 import { supabase } from '@/lib/supabase'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/context/AuthContext'
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useCallback } from 'react'
 import { notificationKeys } from '@/api/queryKeys'
+import { useApiMutation } from '@/api/mutation'
 
 export { notificationKeys }
 
@@ -134,4 +135,21 @@ export async function deleteNotification(id) {
     .delete()
     .eq('id', id)
   if (error) throw error
+}
+
+export function useMarkAllNotificationsRead(options) {
+  return useApiMutation(
+    markAllNotificationsRead,
+    (queryClient) => queryClient.invalidateQueries({ queryKey: notificationKeys.all }),
+    options,
+  )
+}
+
+/** A refresh for the bell, for rows that mark read or delete through plain functions. */
+export function useRefreshNotifications() {
+  const queryClient = useQueryClient()
+  return useCallback(
+    () => queryClient.invalidateQueries({ queryKey: notificationKeys.all }),
+    [queryClient],
+  )
 }

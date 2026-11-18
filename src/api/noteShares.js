@@ -1,7 +1,8 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { resolveWorkspace } from '@/lib/workspace'
-import { noteShareKeys } from '@/api/queryKeys'
+import { useApiMutation } from '@/api/mutation'
+import { noteShareKeys, noteKeys } from '@/api/queryKeys'
 
 export { noteShareKeys }
 
@@ -61,4 +62,29 @@ export async function removeNoteShare(shareId) {
   const { error } = await supabase.from('note_shares').delete().eq('id', shareId)
   if (error) throw error
   return true
+}
+
+// ─── Mutation hooks ───────────────────────────────────────────────────────────
+
+// Sharing also flips the note's visibility, so the note refreshes too.
+const invalidateShares = (queryClient) => {
+  queryClient.invalidateQueries({ queryKey: noteShareKeys.all })
+  queryClient.invalidateQueries({ queryKey: noteKeys.all })
+}
+
+export function useShareNote(options) {
+  return useApiMutation(shareNoteWithMany, invalidateShares, options)
+}
+
+/** Variables: `{ shareId, permission }`. */
+export function useUpdateNoteSharePermission(options) {
+  return useApiMutation(
+    ({ shareId, permission }) => updateNoteSharePermission(shareId, permission),
+    invalidateShares,
+    options,
+  )
+}
+
+export function useRemoveNoteShare(options) {
+  return useApiMutation(removeNoteShare, invalidateShares, options)
 }

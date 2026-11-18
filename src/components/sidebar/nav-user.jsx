@@ -1,7 +1,7 @@
 import { initials } from '@/lib/format'
 import { useState } from 'react'
 import { LogOut, ChevronsUpDown, UserPlus, X } from 'lucide-react'
-import { useQueryClient } from '@tanstack/react-query'
+import { useClearSessionCache } from '@/api/auth'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { useAuth } from '@/context/AuthContext'
@@ -25,7 +25,7 @@ import AddAccountDialog from './AddAccountDialog'
 
 export function NavUser({ user }) {
   const navigate = useNavigate()
-  const queryClient = useQueryClient()
+  const clearSessionCache = useClearSessionCache()
   const { signOut, userRole } = useAuth()
   const [addAccountOpen, setAddAccountOpen] = useState(false)
   const [accounts, setAccounts] = useState(() => getLinkedAccounts())
@@ -42,13 +42,13 @@ export function NavUser({ user }) {
     // flashes the screen.
     await signOut()
     if (user?.id) removeLinkedAccount(user.id)
-    queryClient.clear()
+    clearSessionCache()
   }
 
   const handleSwitch = async (account) => {
     const { success, error } = await switchToAccount(account.user_id)
     if (success) {
-      queryClient.clear()
+      clearSessionCache()
       navigate('/dashboard')
     } else {
       toast.error(

@@ -1,9 +1,10 @@
 import { supabase } from '@/lib/supabase'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/context/AuthContext'
-import { useEffect, useId, useMemo } from 'react'
+import { useEffect, useId, useMemo, useCallback } from 'react'
 import { resolveWorkspace } from '@/lib/workspace'
 import { chatKeys } from '@/api/queryKeys'
+import { useApiMutation } from '@/api/mutation'
 
 export { chatKeys }
 
@@ -233,4 +234,40 @@ export async function getOrCreateDmChannel(otherUserId) {
   })
   if (error) throw error
   return data
+}
+
+// ─── Mutation hooks ───────────────────────────────────────────────────────────
+// Realtime refreshes everyone else; these refresh the sender at once instead
+// of waiting on the (occasionally flaky) postgres_changes relay.
+
+const refreshChannel = (queryClient, channelId) => {
+  queryClient.invalidateQueries({ queryKey: chatKeys.messages(channelId) })
+  // the sidebar's previews and order
+  queryClient.invalidateQueries({ queryKey: [...chatKeys.all, 'channels'] })
+}
+
+/** Variables: sendMessage's ({ channelId, body, mentionedUids, references }). */
+export function useSendMessage(options) {
+  return useApiMutation(sendMessage, (qc, _data, { channelId }) => refreshChannel(qc, channelId), options)
+}
+
+/** Variables: `{ id, channelId }`. */
+export function useDeleteMessage(options) {
+  return useApiMutation(
+    ({ id }) => softDeleteMessage(id),
+    (qc, _data, { channelId }) => refreshChannel(qc, channelId),
+    options,
+  )
+}
+
+/**
+ * A refresh for one thread, for rows that write through a plain function
+ * (reactions, edits) and want their change visible before the realtime event.
+ */
+export function useRefreshChannel(channelId) {
+  const queryClient = useQueryClient()
+  return useCallback(
+    () => queryClient.invalidateQueries({ queryKey: chatKeys.messages(channelId) }),
+    [queryClient, channelId],
+  )
 }

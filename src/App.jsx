@@ -1,7 +1,5 @@
-import { lazy, Suspense, useEffect, useState } from 'react'
+import { lazy, Suspense, useState } from 'react'
 import { Routes, Route, Navigate, useParams } from 'react-router-dom'
-import { useQueryClient } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
 import { AuthProvider, useAuth } from '../src/context/AuthContext'
 import { useSubscription } from './api/useSubscription'
 import { usePermissions } from './api/usePermissions'
@@ -63,24 +61,8 @@ const SubmissionsPage = lazy(() => import('./pages/submissions/SubmissionsPage')
 const ChatPage = lazy(() => import('./pages/chat/ChatPage'))
 
 function MaintenanceGate({ children }) {
-  const queryClient = useQueryClient()
+  // Watches the flag live (Realtime invalidates the query)
   const { data } = useMaintenanceMode()
-
-  useEffect(() => {
-    const channel = supabase
-      .channel('maintenance_mode_watch')
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'app_config',
-        filter: 'key=eq.maintenance_mode',
-      }, () => {
-        queryClient.invalidateQueries({ queryKey: ['app-config', 'maintenance_mode'] })
-      })
-      .subscribe()
-
-    return () => { supabase.removeChannel(channel) }
-  }, [queryClient])
 
   // Maintenance-off is the safe default — always render the app. Only REPLACE it
   // with the maintenance screen when the flag is explicitly active. Never gate on

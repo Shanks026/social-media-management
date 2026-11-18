@@ -1,5 +1,4 @@
 import { useState, useMemo, useEffect } from 'react'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { Plus, Search, ChevronDown, Settings2 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -35,8 +34,8 @@ import { useAuth } from '@/context/AuthContext'
 import { useClients } from '@/api/clients'
 import {
   useAgencyNotes,
-  createAgencyNote,
-  deleteAgencyNote,
+  useCreateNote,
+  useDeleteNote,
 } from '@/api/agencyNotes'
 import { useNoteTags } from '@/api/noteTags'
 import { getTagColor } from '@/lib/noteTags'
@@ -45,7 +44,6 @@ import ManageTagsDialog from '@/components/notes/ManageTagsDialog'
 
 export default function Notes() {
   const { setHeader } = useHeader()
-  const queryClient = useQueryClient()
   const navigate = useNavigate()
   const { user } = useAuth()
 
@@ -138,19 +136,15 @@ export default function Notes() {
     return result
   }, [notes, clientFilter, visibilityFilter, search, selectedTagIds, user?.id])
 
-  const createMutation = useMutation({
-    mutationFn: createAgencyNote,
+  const createMutation = useCreateNote({
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['agency-notes', 'list'] })
       navigate(`/operations/notes/${data.id}`)
     },
     onError: (err) => toast.error(err.message || 'Failed to create note'),
   })
 
-  const deleteMutation = useMutation({
-    mutationFn: deleteAgencyNote,
+  const deleteMutation = useDeleteNote({
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['agency-notes', 'list'] })
       toast.success('Note deleted')
     },
     onError: (err) => toast.error(err.message || 'Failed to delete note'),

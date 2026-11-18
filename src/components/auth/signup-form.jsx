@@ -1,5 +1,5 @@
 import { cn } from '@/lib/utils'
-import { supabase } from '@/lib/supabase'
+import { signUpOwner } from '@/api/auth'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
@@ -29,28 +29,15 @@ export function SignupForm({ className, ...props }) {
     }
 
     setLoading(true)
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: { full_name: name },
-      },
-    })
-    setLoading(false)
-
-    if (error) {
-      setError(error.message)
-    } else {
-      // Fire welcome email — don't await, non-blocking
-      supabase.functions.invoke('send-signup-welcome', {
-        body: { email, name },
-      }).catch(() => { /* ignore */ })
-
-      if (data?.session) {
-        navigate('/dashboard')
-      } else {
-        setSuccess(true)
-      }
+    try {
+      // Also sends the welcome email (not awaited)
+      const session = await signUpOwner({ email, password, name })
+      if (session) navigate('/dashboard')
+      else setSuccess(true)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
     }
   }
 

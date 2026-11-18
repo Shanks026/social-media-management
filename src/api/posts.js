@@ -1161,3 +1161,16 @@ export function useDeleteApprovalEvents(options) {
   return useApiMutation(deleteApprovalEvents, (queryClient) =>
     queryClient.invalidateQueries({ queryKey: postKeys.all }), options)
 }
+
+/**
+ * The client's verdict from a public review link (no auth): SCHEDULED or
+ * APPROVED when accepted, NEEDS_REVISION with feedback otherwise.
+ */
+export async function respondToPostReview({ token, status, feedback }) {
+  const { error } = await supabase.rpc('update_post_status_by_token', {
+    p_token: token,
+    p_status: status,
+    p_feedback: feedback,
+  })
+  if (error) throw error
+}

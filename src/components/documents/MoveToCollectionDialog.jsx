@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Folder, FolderOpen } from 'lucide-react'
 import {
@@ -13,12 +12,11 @@ import {
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
-import { useCollections, moveDocumentToCollection, documentKeys } from '@/api/documents'
+import { useCollections, useMoveDocument } from '@/api/documents'
 import CreateCollectionDialog from './CreateCollectionDialog'
 import { useSubscription } from '@/api/useSubscription'
 
 export default function MoveToCollectionDialog({ open, onOpenChange, document }) {
-  const queryClient = useQueryClient()
   const { data: sub } = useSubscription()
   const effectiveOpen = open && (sub?.documents_collections ?? false)
   const [selectedCollectionId, setSelectedCollectionId] = useState(
@@ -29,12 +27,8 @@ export default function MoveToCollectionDialog({ open, onOpenChange, document })
 
   const { data: collections = [], isLoading } = useCollections(document?.client_id)
 
-  const moveMutation = useMutation({
-    mutationFn: (collectionId) => moveDocumentToCollection(document.id, collectionId),
-    onSuccess: (_, collectionId) => {
-      queryClient.invalidateQueries({ queryKey: ['documents', 'list'] })
-      queryClient.invalidateQueries({ queryKey: documentKeys.collections(document.client_id) })
-      queryClient.invalidateQueries({ queryKey: documentKeys.allCollections() })
+  const moveMutation = useMoveDocument({
+    onSuccess: (_, { collectionId }) => {
       const target = collections.find((c) => c.id === collectionId)
       if (collectionId === null) {
         toast.success('Document removed from collection')
@@ -152,7 +146,7 @@ export default function MoveToCollectionDialog({ open, onOpenChange, document })
                     <Button
                       variant="destructive"
                       size="sm"
-                      onClick={() => moveMutation.mutate(null)}
+                      onClick={() => moveMutation.mutate({ documentId: document.id, collectionId: null })}
                       disabled={moveMutation.isPending}
                     >
                       Remove
@@ -180,7 +174,9 @@ export default function MoveToCollectionDialog({ open, onOpenChange, document })
               Cancel
             </Button>
             <Button
-              onClick={() => moveMutation.mutate(selectedCollectionId)}
+              onClick={() =>
+                moveMutation.mutate({ documentId: document.id, collectionId: selectedCollectionId })
+              }
               disabled={
                 isSameAsCurrent ||
                 selectedCollectionId === null ||

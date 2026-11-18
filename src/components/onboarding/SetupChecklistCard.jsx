@@ -1,5 +1,4 @@
 import { Link } from 'react-router-dom'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   ArrowRight,
   Building2,
@@ -20,7 +19,7 @@ import { useAuth } from '@/context/AuthContext'
 import { usePermissions } from '@/api/usePermissions'
 import { useSubscription } from '@/api/useSubscription'
 import { usePendingInvites, useTeamMembers } from '@/api/team'
-import { dismissSetupChecklist } from '@/api/agency'
+import { useDismissSetupChecklist } from '@/api/agency'
 
 /**
  * "Finish setting up" checklist for the dashboard.
@@ -147,16 +146,13 @@ function ProgressRing({ percent }) {
 }
 
 export default function SetupChecklistCard() {
-  const queryClient = useQueryClient()
   const { workspaceUserId } = useAuth()
   const { canEditWorkspace } = usePermissions()
   const { data: sub } = useSubscription()
   const { data: members } = useTeamMembers()
   const { data: pendingInvites } = usePendingInvites()
 
-  const dismiss = useMutation({
-    mutationFn: dismissSetupChecklist,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['subscription'] }),
+  const dismiss = useDismissSetupChecklist({
     onError: () => toast.error('Could not dismiss. Please try again.'),
   })
 

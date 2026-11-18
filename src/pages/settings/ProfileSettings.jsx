@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react'
 import { useAuth } from '@/context/AuthContext'
 import { useNavigate } from 'react-router-dom'
-import { supabase } from '@/lib/supabase'
+import { uploadAvatar, updateProfile } from '@/api/auth'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
 import { useSubscription } from '@/api/useSubscription'
@@ -40,12 +40,6 @@ import {
 import { cn } from '@/lib/utils'
 import ChangePasswordDialog from '@/components/settings/ChangePasswordDialog'
 
-function extractStoragePath(publicUrl) {
-  if (!publicUrl) return null
-  const marker = '/post-media/'
-  const idx = publicUrl.indexOf(marker)
-  return idx !== -1 ? publicUrl.slice(idx + marker.length) : null
-}
 
 export default function ProfileSettings() {
   const { user, workspaceUserId } = useAuth()
@@ -115,18 +109,7 @@ export default function ProfileSettings() {
 
     try {
       setIsUploading(true)
-      const fileExt = file.name.split('.').pop()
-      const fileName = `${Date.now()}.${fileExt}`
-      const filePath = `avatars/${fileName}`
-
-      const { error: uploadError } = await supabase.storage
-        .from('post-media')
-        .upload(filePath, file)
-      if (uploadError) throw uploadError
-
-      const {
-        data: { publicUrl },
-      } = supabase.storage.from('post-media').getPublicUrl(filePath)
+      const publicUrl = await uploadAvatar(file)
 
       setAvatarUrl(publicUrl)
       toast.success('Profile photo uploaded! Click Save Changes to apply.')
@@ -146,17 +129,13 @@ export default function ProfileSettings() {
   const handleSaveProfile = async () => {
     setIsSaving(true)
     try {
-      const previousAvatarUrl = user?.user_metadata?.avatar_url || ''
-      const { error } = await supabase.auth.updateUser({
-        data: { full_name: fullName, avatar_url: avatarUrl, mobile_number: mobileNumber.trim() || null },
+      // Also removes the old photo from storage when it changed
+      await updateProfile({
+        fullName,
+        avatarUrl,
+        mobileNumber: mobileNumber.trim() || null,
+        previousAvatarUrl: user?.user_metadata?.avatar_url || '',
       })
-      if (error) throw error
-
-      // Delete old avatar from storage if it changed
-      if (previousAvatarUrl && previousAvatarUrl !== avatarUrl) {
-        const path = extractStoragePath(previousAvatarUrl)
-        if (path) await supabase.storage.from('post-media').remove([path])
-      }
 
       toast.success('Profile updated!')
     } catch {

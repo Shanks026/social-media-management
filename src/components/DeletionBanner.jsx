@@ -1,12 +1,11 @@
 import { formatDate } from '@/lib/format'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { AlertTriangle, Loader2 } from 'lucide-react'
 
 import { useAuth } from '@/context/AuthContext'
 import { useSubscription } from '@/api/useSubscription'
-import { cancelWorkspaceDeletion } from '@/api/team'
+import { useCancelWorkspaceDeletion } from '@/api/team'
 import { Button } from '@/components/ui/button'
 
 /**
@@ -17,15 +16,12 @@ import { Button } from '@/components/ui/button'
 export function DeletionBanner() {
   const { data: sub } = useSubscription()
   const { user, workspaceUserId } = useAuth()
-  const queryClient = useQueryClient()
   const navigate = useNavigate()
 
   const isOwner = !!user?.id && user.id === workspaceUserId
 
-  const cancel = useMutation({
-    mutationFn: cancelWorkspaceDeletion,
+  const cancel = useCancelWorkspaceDeletion({
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['subscription'] })
       toast.success('Deletion cancelled. Your workspace is safe.')
     },
     onError: (err) => toast.error(err.message || 'Failed to cancel deletion'),

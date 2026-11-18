@@ -1,9 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
-import { useAuth } from '@/context/AuthContext'
 import { useSubscription } from '@/api/useSubscription'
-import { useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import { supabase } from '@/lib/supabase'
+import { useSaveInvoiceSignatory, uploadBrandingAsset, removeBrandingAsset } from '@/api/agency'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 
@@ -12,17 +10,10 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Loader2, PenLine, Save, X, ArrowRight } from 'lucide-react'
 
-function extractStoragePath(publicUrl) {
-  if (!publicUrl) return null
-  const marker = '/post-media/'
-  const idx = publicUrl.indexOf(marker)
-  return idx !== -1 ? publicUrl.slice(idx + marker.length) : null
-}
 
 export default function InvoiceSettings() {
-  const { workspaceUserId } = useAuth()
   const { data: subscription, isLoading } = useSubscription()
-  const queryClient = useQueryClient()
+  const { mutateAsync: saveInvoiceSignatory } = useSaveInvoiceSignatory()
   const navigate = useNavigate()
   const signatureInputRef = useRef(null)
   const hasInitialized = useRef(false)
@@ -48,22 +39,8 @@ export default function InvoiceSettings() {
     if (!file) return
     try {
       setIsUploadingSignature(true)
-      const fileExt = file.name.split('.').pop()
-      const filePath = `signatures/${Date.now()}.${fileExt}`
-
-      const { error: uploadError } = await supabase.storage
-        .from('post-media')
-        .upload(filePath, file)
-      if (uploadError) throw uploadError
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('post-media')
-        .getPublicUrl(filePath)
-
-      if (signatureUrl) {
-        const oldPath = extractStoragePath(signatureUrl)
-        if (oldPath) await supabase.storage.from('post-media').remove([oldPath])
-      }
+      const publicUrl = await uploadBrandingAsset(file, 'signatures')
+      if (signatureUrl) await removeBrandingAsset(signatureUrl)
 
       setSignatureUrl(publicUrl)
       toast.success('Signature uploaded. Click Save to apply.')
@@ -77,10 +54,7 @@ export default function InvoiceSettings() {
   }
 
   const removeSignature = async () => {
-    if (signatureUrl) {
-      const path = extractStoragePath(signatureUrl)
-      if (path) await supabase.storage.from('post-media').remove([path])
-    }
+    if (signatureUrl) await removeBrandingAsset(signatureUrl)
     setSignatureUrl(null)
     if (signatureInputRef.current) signatureInputRef.current.value = ''
   }
@@ -88,19 +62,11 @@ export default function InvoiceSettings() {
   const handleSave = async () => {
     setIsSaving(true)
     try {
-      const { error } = await supabase
-        .from('agency_subscriptions')
-        .update({
-          signatory_name: signatoryName || null,
-          signatory_designation: signatoryDesignation || null,
-          signature_url: signatureUrl || null,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('user_id', workspaceUserId)
-
-      if (error) throw error
-
-      await queryClient.invalidateQueries({ queryKey: ['subscription'] })
+      await saveInvoiceSignatory({
+        name: signatoryName,
+        designation: signatoryDesignation,
+        signatureUrl,
+      })
       toast.success('Invoice settings saved')
     } catch (err) {
       console.error(err)

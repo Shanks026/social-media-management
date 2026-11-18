@@ -1,9 +1,10 @@
 import { supabase } from '@/lib/supabase'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/context/AuthContext'
-import { useEffect } from 'react'
+import { useEffect, useCallback } from 'react'
 import { resolveWorkspace } from '@/lib/workspace'
 import { commentKeys } from '@/api/queryKeys'
+import { useApiMutation } from '@/api/mutation'
 
 export { commentKeys }
 
@@ -181,4 +182,31 @@ export async function toggleReaction(commentId, emoji) {
     p_emoji: emoji,
   })
   if (error) throw error
+}
+
+// ─── Mutation hooks ───────────────────────────────────────────────────────────
+// Realtime refreshes other viewers; these refresh the author's thread at once.
+
+const refreshThread = (queryClient, { entityType, entityId }) => {
+  queryClient.invalidateQueries({ queryKey: commentKeys.thread(entityType, entityId) })
+  queryClient.invalidateQueries({ queryKey: commentKeys.count(entityType, entityId) })
+}
+
+/** Variables: createComment's ({ entityType, entityId, body, mentionedUids }). */
+export function useCreateComment(options) {
+  return useApiMutation(createComment, (qc, _data, vars) => refreshThread(qc, vars), options)
+}
+
+/** Variables: `{ id, entityType, entityId }`. */
+export function useDeleteComment(options) {
+  return useApiMutation(({ id }) => softDeleteComment(id), (qc, _data, vars) => refreshThread(qc, vars), options)
+}
+
+/** A refresh for one thread, for rows that react or edit through plain functions. */
+export function useRefreshCommentThread({ entityType, entityId }) {
+  const queryClient = useQueryClient()
+  return useCallback(
+    () => queryClient.invalidateQueries({ queryKey: commentKeys.thread(entityType, entityId) }),
+    [queryClient, entityType, entityId],
+  )
 }

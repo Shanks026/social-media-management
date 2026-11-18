@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { supabase } from '@/lib/supabase'
+import { signUpInvitedMember, sendTeamWelcome } from '@/api/auth'
 import { fetchInviteByToken, joinTeam } from '@/api/team'
 import { SYSTEM_ROLE_PALETTE } from '@/lib/team-roles'
 import { useAuth } from '@/context/AuthContext'
@@ -77,28 +77,13 @@ export default function JoinTeam() {
     setSubmitError(null)
     setIsSubmitting(true)
     try {
-      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+      await signUpInvitedMember({
         email: values.email,
         password: values.password,
-        options: {
-          data: {
-            invite_token: token,
-            first_name: values.firstName,
-            last_name: values.lastName,
-            full_name: `${values.firstName} ${values.lastName}`.trim(),
-          },
-        },
+        firstName: values.firstName,
+        lastName: values.lastName,
+        token,
       })
-
-      if (signUpError) throw signUpError
-
-      if (!signUpData.session) {
-        const { error: signInError } = await supabase.auth.signInWithPassword({
-          email: values.email,
-          password: values.password,
-        })
-        if (signInError) throw signInError
-      }
 
       // No job title here: a member no longer self-declares one. The owner
       // assigns job roles from the Team page after they join — titles are the
@@ -115,19 +100,12 @@ export default function JoinTeam() {
       // the failure path: a bounced greeting must never strand someone who has
       // already joined, so it logs and moves on.
       if (result?.is_new_member) {
-        supabase.functions
-          .invoke('send-team-welcome', {
-            body: {
-              email: values.email,
-              name: `${values.firstName} ${values.lastName}`.trim(),
-              agency_name: invite?.agency_name,
-              system_role: invite?.system_role,
-            },
-          })
-          .then(({ error: fnError }) => {
-            if (fnError) console.error('[send-team-welcome]', fnError)
-          })
-          .catch((fnErr) => console.error('[send-team-welcome]', fnErr))
+        sendTeamWelcome({
+          email: values.email,
+          name: `${values.firstName} ${values.lastName}`.trim(),
+          agencyName: invite?.agency_name,
+          systemRole: invite?.system_role,
+        })
       }
 
       await refreshWorkspace()

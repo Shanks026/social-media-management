@@ -2,15 +2,14 @@ import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, ArrowRight, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import {
-  completeAgencyOnboarding,
-  markOnboardingComplete,
+  useCompleteAgencyOnboarding,
+  useMarkOnboardingComplete,
 } from '@/api/agency'
 
 import OnboardingStepper from './OnboardingStepper'
@@ -116,7 +115,7 @@ export default function OnboardingPage({
   onSkip,
   includeActivation = true,
 }) {
-  const queryClient = useQueryClient()
+  const { mutateAsync: markOnboardingComplete } = useMarkOnboardingComplete()
   const [step, setStep] = useState(0)
   const [agencySaved, setAgencySaved] = useState(false)
   const [isFinishing, setIsFinishing] = useState(false)
@@ -195,7 +194,6 @@ export default function OnboardingPage({
       setIsFinishing(true)
       try {
         await markOnboardingComplete({ skippedSteps: collectSkippedSteps() })
-        await queryClient.invalidateQueries({ queryKey: ['subscription'] })
       } catch (err) {
         // Non-blocking: the agency is already saved and the wizard won't
         // reappear, so never trap the user here over a checklist write.
@@ -209,14 +207,11 @@ export default function OnboardingPage({
     else window.location.href = '/'
   }
 
-  const mutation = useMutation({
-    mutationFn: (values) => completeAgencyOnboarding(values),
+  // The hook refreshes the subscription row and the internal client.
+  const mutation = useCompleteAgencyOnboarding({
     onSuccess: async () => {
       // A failed attempt's error toast must not outlive the save that fixed it.
       toast.dismiss(ERROR_TOAST_ID)
-      await queryClient.invalidateQueries({ queryKey: ['internal-client'] })
-      queryClient.invalidateQueries({ queryKey: ['clients'] })
-      queryClient.invalidateQueries({ queryKey: ['subscription'] })
 
       if (includeActivation) {
         setAgencySaved(true)

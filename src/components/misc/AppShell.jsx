@@ -8,9 +8,9 @@ import { SidebarProvider } from '@/components/ui/sidebar'
 import { Suspense, useState, useEffect, useRef, useCallback } from 'react'
 import { RouteFallback } from './RouteFallback'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { useQueryClient } from '@tanstack/react-query'
 
 import { usePermissions } from '@/api/usePermissions'
+import { useRefreshSubscription } from '@/api/useSubscription'
 import {
   fetchAgencySettings,
   markOnboardingComplete,
@@ -22,7 +22,7 @@ import { DeletionBanner } from '../DeletionBanner'
 import { useMeetingReminders } from '../../hooks/useMeetingReminders'
 
 export function AppShell({ user }) {
-  const queryClient = useQueryClient()
+  const refreshSubscription = useRefreshSubscription()
   const { canEditWorkspace } = usePermissions()
   const scrollContainerRef = useRef(null)
   const isCheckingRef = useRef(false)
@@ -75,7 +75,7 @@ export function AppShell({ user }) {
     }
     try {
       // Refresh both the local state and the global subscription query
-      await queryClient.invalidateQueries({ queryKey: ['subscription'] })
+      await refreshSubscription()
       let settings = await fetchAgencySettings()
 
       // One-time carry-over of the legacy per-device flag: a user who dismissed
@@ -103,7 +103,7 @@ export function AppShell({ user }) {
       isCheckingRef.current = false
       setLoading(false)
     }
-  }, [user, queryClient, canOnboard])
+  }, [user, refreshSubscription, canOnboard])
 
   useEffect(() => {
     checkAgencyStatus()

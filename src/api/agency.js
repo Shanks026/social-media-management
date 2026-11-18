@@ -1,5 +1,10 @@
+// Agency API (ADR 0007): the agency's own identity (branding, signatory,
+// onboarding state), stored on its internal client and its agency_subscriptions
+// row. Plain async functions plus hooks that own the cache invalidation.
 import { supabase } from '@/lib/supabase'
 import { resolveWorkspace } from '@/lib/workspace'
+import { useApiMutation } from '@/api/mutation'
+import { clientKeys, subscriptionKeys } from '@/api/queryKeys'
 
 export async function fetchAgencySettings() {
   const { workspaceUserId } = await resolveWorkspace()
@@ -247,4 +252,141 @@ export async function activateInternalWorkspace(brandingData) {
   }
 
   return result
+}
+
+// ─── Branding assets (post-media) ─────────────────────────────────────────────
+
+const BRANDING_BUCKET = 'post-media'
+
+/** The storage path inside post-media for one of its public URLs, or null. */
+export function extractStoragePath(publicUrl) {
+  if (!publicUrl) return null
+  const marker = `/${BRANDING_BUCKET}/`
+  const idx = publicUrl.indexOf(marker)
+  return idx !== -1 ? publicUrl.slice(idx + marker.length) : null
+}
+
+/**
+ * Upload a File or Blob under `prefix` ('branding' for logos, 'signatures'
+ * for the invoice signature) and return its public URL.
+ */
+export async function uploadBrandingAsset(fileOrBlob, prefix, ext) {
+  const resolvedExt = ext || (fileOrBlob.name ? fileOrBlob.name.split('.').pop() : 'png')
+  const filePath = `${prefix}/${Date.now()}.${resolvedExt}`
+
+  const { error } = await supabase.storage
+    .from(BRANDING_BUCKET)
+    .upload(filePath, fileOrBlob, { contentType: fileOrBlob.type || undefined })
+  if (error) throw error
+
+  return supabase.storage.from(BRANDING_BUCKET).getPublicUrl(filePath).data.publicUrl
+}
+
+/**
+ * Best-effort removal of a superseded asset. Never throws: an orphaned file
+ * is not worth failing a save over.
+ */
+export async function removeBrandingAsset(publicUrl) {
+  const path = extractStoragePath(publicUrl)
+  if (!path) return
+  try {
+    await supabase.storage.from(BRANDING_BUCKET).remove([path])
+  } catch {
+    /* orphaned file; not worth surfacing */
+  }
+}
+
+// ─── Branding writes ──────────────────────────────────────────────────────────
+
+/**
+ * Set the agency logo on its internal client and its subscription row (the
+ * sidebar reads the latter). The replaced file is removed afterwards.
+ * `logoUrl` '' or null clears it.
+ */
+export async function saveAgencyLogo({ internalClientId, logoUrl, previousUrl }) {
+  const { workspaceUserId } = await resolveWorkspace()
+  const dbUrl = logoUrl || null
+
+  const { error: clientError } = await supabase
+    .from('clients')
+    .update({ logo_url: dbUrl })
+    .eq('id', internalClientId)
+  if (clientError) throw clientError
+
+  const { error: subError } = await supabase
+    .from('agency_subscriptions')
+    .update({ logo_url: dbUrl, updated_at: new Date().toISOString() })
+    .eq('user_id', workspaceUserId)
+  if (subError) throw subError
+
+  if (previousUrl && previousUrl !== (logoUrl || '')) await removeBrandingAsset(previousUrl)
+}
+
+/** Set (or clear) the horizontal logo used on documents. */
+export async function saveHorizontalLogo({ logoUrl, previousUrl }) {
+  const { workspaceUserId } = await resolveWorkspace()
+  const { error } = await supabase
+    .from('agency_subscriptions')
+    .update({ logo_horizontal_url: logoUrl || null, updated_at: new Date().toISOString() })
+    .eq('user_id', workspaceUserId)
+  if (error) throw error
+
+  if (previousUrl && previousUrl !== (logoUrl || '')) await removeBrandingAsset(previousUrl)
+}
+
+/** The signatory shown on invoices. */
+export async function saveInvoiceSignatory({ name, designation, signatureUrl }) {
+  const { workspaceUserId } = await resolveWorkspace()
+  const { error } = await supabase
+    .from('agency_subscriptions')
+    .update({
+      signatory_name: name || null,
+      signatory_designation: designation || null,
+      signature_url: signatureUrl || null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('user_id', workspaceUserId)
+  if (error) throw error
+}
+
+/** Ask the Tercero team for a plan renewal or upgrade (an email to them). */
+export async function requestPlanChange(request) {
+  const { error } = await supabase.functions.invoke('send-renewal-request', { body: request })
+  if (error) throw error
+}
+
+// ─── Mutation hooks ───────────────────────────────────────────────────────────
+
+// The agency identity lives on the subscription row and the internal client.
+const invalidateAgency = (queryClient) => {
+  queryClient.invalidateQueries({ queryKey: subscriptionKeys.all })
+  queryClient.invalidateQueries({ queryKey: clientKeys.all })
+}
+
+export function useCompleteAgencyOnboarding(options) {
+  return useApiMutation(completeAgencyOnboarding, invalidateAgency, options)
+}
+
+export function useMarkOnboardingComplete(options) {
+  return useApiMutation(markOnboardingComplete, invalidateAgency, options)
+}
+
+export function useDismissSetupChecklist(options) {
+  return useApiMutation(dismissSetupChecklist, invalidateAgency, options)
+}
+
+export function useActivateInternalWorkspace(options) {
+  return useApiMutation(activateInternalWorkspace, invalidateAgency, options)
+}
+
+export function useSaveAgencyLogo(options) {
+  return useApiMutation(saveAgencyLogo, invalidateAgency, options)
+}
+
+export function useSaveHorizontalLogo(options) {
+  return useApiMutation(saveHorizontalLogo, invalidateAgency, options)
+}
+
+export function useSaveInvoiceSignatory(options) {
+  return useApiMutation(saveInvoiceSignatory, invalidateAgency, options)
 }

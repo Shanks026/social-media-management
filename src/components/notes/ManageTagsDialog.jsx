@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Trash2, Check } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -28,7 +27,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { createNoteTag, updateNoteTag, deleteNoteTag } from '@/api/noteTags'
+import { useCreateNoteTag, useUpdateNoteTag, useDeleteNoteTag } from '@/api/noteTags'
 import { TAG_COLORS, TAG_COLOR_KEYS, getTagColor, nextTagColor } from '@/lib/noteTags'
 
 function ColorPicker({ value, onPick }) {
@@ -70,25 +69,19 @@ function ColorPicker({ value, onPick }) {
   )
 }
 
-function TagRow({ tag, count, onMutated }) {  // count is undefined when called without noteCounts
+function TagRow({ tag, count }) {  // count is undefined when called without noteCounts
   const [name, setName] = useState(tag.name)
   const [confirmOpen, setConfirmOpen] = useState(false)
 
-  const updateMutation = useMutation({
-    mutationFn: (updates) => updateNoteTag(tag.id, updates),
-    onSuccess: onMutated,
+  const updateMutation = useUpdateNoteTag({
     onError: (err) => {
       toast.error(err.message?.includes('duplicate') ? 'A tag with that name already exists' : err.message || 'Failed to update tag')
       setName(tag.name)
     },
   })
 
-  const deleteMutation = useMutation({
-    mutationFn: () => deleteNoteTag(tag.id),
-    onSuccess: () => {
-      toast.success('Tag deleted')
-      onMutated()
-    },
+  const deleteMutation = useDeleteNoteTag({
+    onSuccess: () => toast.success('Tag deleted'),
     onError: (err) => toast.error(err.message || 'Failed to delete tag'),
   })
 
@@ -98,12 +91,12 @@ function TagRow({ tag, count, onMutated }) {  // count is undefined when called 
       setName(tag.name)
       return
     }
-    if (trimmed !== tag.name) updateMutation.mutate({ name: trimmed })
+    if (trimmed !== tag.name) updateMutation.mutate({ id: tag.id, name: trimmed })
   }
 
   return (
     <div className="flex items-center gap-2 py-1.5">
-      <ColorPicker value={tag.color} onPick={(color) => updateMutation.mutate({ color })} />
+      <ColorPicker value={tag.color} onPick={(color) => updateMutation.mutate({ id: tag.id, color })} />
       <Input
         value={name}
         onChange={(e) => setName(e.target.value)}
@@ -145,7 +138,7 @@ function TagRow({ tag, count, onMutated }) {  // count is undefined when called 
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={() => deleteMutation.mutate()}
+              onClick={() => deleteMutation.mutate(tag.id)}
             >
               Delete
             </AlertDialogAction>
@@ -157,19 +150,11 @@ function TagRow({ tag, count, onMutated }) {  // count is undefined when called 
 }
 
 export default function ManageTagsDialog({ open, onOpenChange, tags = [], noteCounts }) {
-  const queryClient = useQueryClient()
   const [newName, setNewName] = useState('')
   const [newColor, setNewColor] = useState(() => nextTagColor(0))
 
-  const handleMutated = () => {
-    queryClient.invalidateQueries({ queryKey: ['note-tags', 'list'] })
-    queryClient.invalidateQueries({ queryKey: ['agency-notes', 'list'] })
-  }
-
-  const createMutation = useMutation({
-    mutationFn: () => createNoteTag({ name: newName.trim(), color: newColor }),
+  const createMutation = useCreateNoteTag({
     onSuccess: () => {
-      handleMutated()
       setNewName('')
       setNewColor(nextTagColor(tags.length + 1))
     },
@@ -183,7 +168,7 @@ export default function ManageTagsDialog({ open, onOpenChange, tags = [], noteCo
 
   function handleCreate() {
     if (!newName.trim()) return
-    createMutation.mutate()
+    createMutation.mutate({ name: newName.trim(), color: newColor })
   }
 
   return (
@@ -202,7 +187,6 @@ export default function ManageTagsDialog({ open, onOpenChange, tags = [], noteCo
                 key={tag.id}
                 tag={tag}
                 count={noteCounts ? (noteCounts[tag.id] ?? 0) : undefined}
-                onMutated={handleMutated}
               />
             ))}
           </div>
