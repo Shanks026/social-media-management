@@ -1,8 +1,14 @@
+// Outreach API (ADR 0007): the key factory, a plain async function per
+// mutation (the unit-test surface, callable outside React), and a hook that
+// wraps each one and owns the cache invalidation.
 import { supabase } from '@/lib/supabase'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/context/AuthContext'
 import { resolveWorkspace } from '@/lib/workspace'
 import { statusLabel as prospectStatusLabel } from '@/lib/domain/prospectStatus'
+import { prospectActivityKeys } from '@/api/salesKeys'
+
+export { prospectActivityKeys }
 
 // ─── Constants ─────────────────────────────────────────────────────────────────
 
@@ -23,7 +29,7 @@ export function useProspectActivities(prospectId) {
   const { workspaceUserId } = useAuth()
 
   return useQuery({
-    queryKey: ['prospect-activities', prospectId],
+    queryKey: prospectActivityKeys.list(prospectId),
     queryFn: async () => {
       const { data, error } = await supabase
         .from('prospect_activities')
@@ -41,58 +47,58 @@ export function useProspectActivities(prospectId) {
 
 // ─── Mutations ─────────────────────────────────────────────────────────────────
 
+export async function logActivity({ prospect_id, type, body, occurred_at, metadata }) {
+  const { workspaceUserId } = await resolveWorkspace()
+  const { data, error } = await supabase
+    .from('prospect_activities')
+    .insert({
+      prospect_id,
+      user_id:     workspaceUserId,
+      type:        type || 'note',
+      body:        body || null,
+      occurred_at: occurred_at || new Date().toISOString(),
+      metadata:    metadata || null,
+    })
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
 export function useLogActivity() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async ({ prospect_id, type, body, occurred_at, metadata }) => {
-      const { workspaceUserId } = await resolveWorkspace()
-      const { data, error } = await supabase
-        .from('prospect_activities')
-        .insert({
-          prospect_id,
-          user_id:     workspaceUserId,
-          type:        type || 'note',
-          body:        body || null,
-          occurred_at: occurred_at || new Date().toISOString(),
-          metadata:    metadata || null,
-        })
-        .select()
-        .single()
-      if (error) throw error
-      return data
-    },
+    mutationFn: logActivity,
     onSuccess: (data) => {
-      queryClient.invalidateQueries({
-        queryKey: ['prospect-activities', data.prospect_id],
-      })
+      queryClient.invalidateQueries({ queryKey: prospectActivityKeys.list(data.prospect_id) })
     },
   })
+}
+
+export async function deleteActivity({ id, prospect_id }) {
+  const { error } = await supabase
+    .from('prospect_activities')
+    .delete()
+    .eq('id', id)
+  if (error) throw error
+  return { prospect_id }
 }
 
 export function useDeleteActivity() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async ({ id, prospect_id }) => {
-      const { error } = await supabase
-        .from('prospect_activities')
-        .delete()
-        .eq('id', id)
-      if (error) throw error
-      return { prospect_id }
-    },
+    mutationFn: deleteActivity,
     onSuccess: ({ prospect_id }) => {
-      queryClient.invalidateQueries({
-        queryKey: ['prospect-activities', prospect_id],
-      })
+      queryClient.invalidateQueries({ queryKey: prospectActivityKeys.list(prospect_id) })
     },
   })
 }
 
-// ─── Helper used by useUpdateProspect ─────────────────────────────────────────
+// ─── Helper used by updateProspect and markProposalSent ───────────────────────
 
 /**
- * Insert a status_change activity entry.
- * Called directly from the useUpdateProspect mutation — not via a hook.
+ * Insert a status_change activity entry. Called from inside other mutations
+ * (their hooks invalidate prospectActivityKeys), so it has no hook of its own.
  */
 export async function logStatusChange({ prospect_id, from_status, to_status, workspaceUserId }) {
   const fromLabel = prospectStatusLabel(from_status)
