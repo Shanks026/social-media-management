@@ -1,9 +1,15 @@
+// Proposals API (ADR 0007): the key factory, a plain async function per
+// mutation (the unit-test surface, callable outside React), and a hook that
+// wraps each one and owns the cache invalidation.
 import { supabase } from '@/lib/supabase'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/context/AuthContext'
 import { resolveWorkspace } from '@/lib/workspace'
 import { logStatusChange } from '@/api/prospectActivities'
 import { STAGES_BEFORE_PROPOSAL_SENT } from '@/lib/domain/prospectStatus'
+import { proposalKeys, prospectKeys, prospectActivityKeys } from '@/api/salesKeys'
+
+export { proposalKeys }
 
 // Typed error thrown when the workspace has hit its proposal limit
 export class ProposalLimitError extends Error {
@@ -18,7 +24,7 @@ export class ProposalLimitError extends Error {
 export function useProposals({ clientId, prospectId } = {}) {
   const { workspaceUserId } = useAuth()
   return useQuery({
-    queryKey: ['proposals', 'list', { clientId: clientId ?? null, prospectId: prospectId ?? null }],
+    queryKey: proposalKeys.list(workspaceUserId, { clientId, prospectId }),
     queryFn: async () => {
       // When filtering by prospect, fetch all workspace proposals then filter client-side
       // (the RPC only supports client_id filtering natively)
@@ -39,7 +45,7 @@ export function useProposals({ clientId, prospectId } = {}) {
 
 export function useProposal(proposalId) {
   return useQuery({
-    queryKey: ['proposals', 'detail', proposalId],
+    queryKey: proposalKeys.detail(proposalId),
     queryFn: async () => {
       const { data: proposal, error: proposalError } = await supabase
         .from('proposals')
@@ -66,150 +72,158 @@ export function useProposal(proposalId) {
 
 // ─── Mutations ─────────────────────────────────────────────────────────────────
 
+export async function createProposal({ line_items = [], ...fields }) {
+  const { workspaceUserId } = await resolveWorkspace()
+
+  // Check proposal limit before inserting
+  const { data: sub, error: subError } = await supabase
+    .from('agency_subscriptions')
+    .select('proposals_limit')
+    .eq('user_id', workspaceUserId)
+    .single()
+  if (subError) throw subError
+
+  if (sub.proposals_limit !== null) {
+    const { count, error: countError } = await supabase
+      .from('proposals')
+      .select('*', { count: 'exact', head: true })
+      .eq('agency_user_id', workspaceUserId)
+      .neq('status', 'ARCHIVED')
+    if (countError) throw countError
+
+    if (count >= sub.proposals_limit) {
+      throw new ProposalLimitError()
+    }
+  }
+
+  // Insert proposal
+  const { data: proposal, error: insertError } = await supabase
+    .from('proposals')
+    .insert({ ...fields, agency_user_id: workspaceUserId })
+    .select()
+    .single()
+  if (insertError) throw insertError
+
+  // Insert line items
+  if (line_items.length > 0) {
+    const { error: itemsError } = await supabase
+      .from('proposal_line_items')
+      .insert(
+        line_items.map((item, idx) => ({
+          proposal_id: proposal.id,
+          description: item.description,
+          amount: item.amount,
+          sort_order: item.sort_order ?? idx,
+        })),
+      )
+    if (itemsError) throw itemsError
+  }
+
+  return proposal
+}
+
 export function useCreateProposal() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async ({ line_items = [], ...fields }) => {
-      const { workspaceUserId } = await resolveWorkspace()
+    mutationFn: createProposal,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: proposalKeys.lists() })
+    },
+  })
+}
 
-      // Check proposal limit before inserting
-      const { data: sub, error: subError } = await supabase
-        .from('agency_subscriptions')
-        .select('proposals_limit')
-        .eq('user_id', workspaceUserId)
-        .single()
-      if (subError) throw subError
+export async function updateProposal({ id, line_items, ...fields }) {
+  const { data: proposal, error: updateError } = await supabase
+    .from('proposals')
+    .update({ ...fields, updated_at: new Date().toISOString() })
+    .eq('id', id)
+    .select()
+    .single()
+  if (updateError) throw updateError
 
-      if (sub.proposals_limit !== null) {
-        const { count, error: countError } = await supabase
-          .from('proposals')
-          .select('*', { count: 'exact', head: true })
-          .eq('agency_user_id', workspaceUserId)
-          .neq('status', 'ARCHIVED')
-        if (countError) throw countError
+  // Replace line items: delete all then re-insert
+  // Fetch existing items first so we can roll back if re-insert fails
+  if (line_items !== undefined) {
+    const { data: existingItems } = await supabase
+      .from('proposal_line_items')
+      .select('description, amount, sort_order')
+      .eq('proposal_id', id)
+      .order('sort_order')
 
-        if (count >= sub.proposals_limit) {
-          throw new ProposalLimitError()
-        }
-      }
+    const { error: deleteError } = await supabase
+      .from('proposal_line_items')
+      .delete()
+      .eq('proposal_id', id)
+    if (deleteError) throw deleteError
 
-      // Insert proposal
-      const { data: proposal, error: insertError } = await supabase
-        .from('proposals')
-        .insert({ ...fields, agency_user_id: workspaceUserId })
-        .select()
-        .single()
-      if (insertError) throw insertError
-
-      // Insert line items
-      if (line_items.length > 0) {
-        const { error: itemsError } = await supabase
-          .from('proposal_line_items')
-          .insert(
-            line_items.map((item, idx) => ({
-              proposal_id: proposal.id,
+    if (line_items.length > 0) {
+      const { error: insertError } = await supabase
+        .from('proposal_line_items')
+        .insert(
+          line_items.map((item, idx) => ({
+            proposal_id: id,
+            description: item.description,
+            amount: item.amount,
+            sort_order: item.sort_order ?? idx,
+          })),
+        )
+      if (insertError) {
+        // Attempt to restore original items to avoid data loss
+        if (existingItems?.length > 0) {
+          await supabase.from('proposal_line_items').insert(
+            existingItems.map((item, idx) => ({
+              proposal_id: id,
               description: item.description,
               amount: item.amount,
               sort_order: item.sort_order ?? idx,
             })),
           )
-        if (itemsError) throw itemsError
+        }
+        throw insertError
       }
+    }
+  }
 
-      return proposal
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['proposals', 'list'] })
-    },
-  })
+  return proposal
 }
 
 export function useUpdateProposal() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async ({ id, line_items, ...fields }) => {
-      const { data: proposal, error: updateError } = await supabase
-        .from('proposals')
-        .update({ ...fields, updated_at: new Date().toISOString() })
-        .eq('id', id)
-        .select()
-        .single()
-      if (updateError) throw updateError
-
-      // Replace line items: delete all then re-insert
-      // Fetch existing items first so we can roll back if re-insert fails
-      if (line_items !== undefined) {
-        const { data: existingItems } = await supabase
-          .from('proposal_line_items')
-          .select('description, amount, sort_order')
-          .eq('proposal_id', id)
-          .order('sort_order')
-
-        const { error: deleteError } = await supabase
-          .from('proposal_line_items')
-          .delete()
-          .eq('proposal_id', id)
-        if (deleteError) throw deleteError
-
-        if (line_items.length > 0) {
-          const { error: insertError } = await supabase
-            .from('proposal_line_items')
-            .insert(
-              line_items.map((item, idx) => ({
-                proposal_id: id,
-                description: item.description,
-                amount: item.amount,
-                sort_order: item.sort_order ?? idx,
-              })),
-            )
-          if (insertError) {
-            // Attempt to restore original items to avoid data loss
-            if (existingItems?.length > 0) {
-              await supabase.from('proposal_line_items').insert(
-                existingItems.map((item, idx) => ({
-                  proposal_id: id,
-                  description: item.description,
-                  amount: item.amount,
-                  sort_order: item.sort_order ?? idx,
-                })),
-              )
-            }
-            throw insertError
-          }
-        }
-      }
-
-      return proposal
-    },
+    mutationFn: updateProposal,
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['proposals', 'list'] })
-      queryClient.invalidateQueries({ queryKey: ['proposals', 'detail', data.id] })
+      queryClient.invalidateQueries({ queryKey: proposalKeys.lists() })
+      queryClient.invalidateQueries({ queryKey: proposalKeys.detail(data.id) })
     },
   })
+}
+
+/** Drafts are hard-deleted (with their file); anything later is archived. */
+export async function deleteProposal({ id, status, file_url }) {
+  if (status === 'DRAFT') {
+    // Hard delete for drafts — also clean up uploaded file if present
+    if (file_url) {
+      await deleteProposalFile(file_url)
+    }
+    const { error } = await supabase.from('proposals').delete().eq('id', id)
+    if (error) throw error
+  } else {
+    // Soft archive for any other status
+    const { error } = await supabase
+      .from('proposals')
+      .update({ status: 'ARCHIVED', updated_at: new Date().toISOString() })
+      .eq('id', id)
+    if (error) throw error
+  }
 }
 
 export function useDeleteProposal() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async ({ id, status, file_url }) => {
-      if (status === 'DRAFT') {
-        // Hard delete for drafts — also clean up uploaded file if present
-        if (file_url) {
-          await deleteProposalFile(file_url)
-        }
-        const { error } = await supabase.from('proposals').delete().eq('id', id)
-        if (error) throw error
-      } else {
-        // Soft archive for any other status
-        const { error } = await supabase
-          .from('proposals')
-          .update({ status: 'ARCHIVED', updated_at: new Date().toISOString() })
-          .eq('id', id)
-        if (error) throw error
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['proposals', 'list'] })
+    mutationFn: deleteProposal,
+    onSuccess: (_, { id }) => {
+      queryClient.invalidateQueries({ queryKey: proposalKeys.lists() })
+      queryClient.invalidateQueries({ queryKey: proposalKeys.detail(id) })
     },
   })
 }
@@ -239,31 +253,33 @@ export async function uploadProposalFile(proposalId, workspaceUserId, file) {
  */
 export async function deleteProposalFile(fileUrl) {
   try {
-    const storagePath = fileUrl.split('/proposal-files/')[1]
-    if (!storagePath) return
+const storagePath = fileUrl.split('/proposal-files/')[1]
+if (!storagePath) return
 
-    const { error } = await supabase.storage.from('proposal-files').remove([storagePath])
-    if (error) console.warn('File deletion error:', error)
+const { error } = await supabase.storage.from('proposal-files').remove([storagePath])
+if (error) console.warn('File deletion error:', error)
   } catch (err) {
-    console.warn('deleteProposalFile error:', err)
+console.warn('deleteProposalFile error:', err)
   }
+}
+
+export async function generateProposalToken(proposalId) {
+  const { data: token, error } = await supabase.rpc('generate_proposal_token', {
+    p_proposal_id: proposalId,
+  })
+  if (error) throw error
+
+  const baseUrl = import.meta.env.VITE_APP_URL || window.location.origin
+  return { token, url: `${baseUrl}/proposal/${token}` }
 }
 
 export function useGenerateProposalToken() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async (proposalId) => {
-      const { data: token, error } = await supabase.rpc('generate_proposal_token', {
-        p_proposal_id: proposalId,
-      })
-      if (error) throw error
-
-      const baseUrl = import.meta.env.VITE_APP_URL || window.location.origin
-      return { token, url: `${baseUrl}/proposal/${token}` }
-    },
+    mutationFn: generateProposalToken,
     onSuccess: (_, proposalId) => {
-      queryClient.invalidateQueries({ queryKey: ['proposals', 'detail', proposalId] })
-      queryClient.invalidateQueries({ queryKey: ['proposals', 'list'] })
+      queryClient.invalidateQueries({ queryKey: proposalKeys.detail(proposalId) })
+      queryClient.invalidateQueries({ queryKey: proposalKeys.lists() })
     },
   })
 }
@@ -326,12 +342,12 @@ export function useMarkProposalSent() {
   return useMutation({
     mutationFn: markProposalSent,
     onSuccess: ({ prospectId, advanced }, proposalId) => {
-      queryClient.invalidateQueries({ queryKey: ['proposals', 'detail', proposalId] })
-      queryClient.invalidateQueries({ queryKey: ['proposals', 'list'] })
+      queryClient.invalidateQueries({ queryKey: proposalKeys.detail(proposalId) })
+      queryClient.invalidateQueries({ queryKey: proposalKeys.lists() })
       if (advanced) {
-        queryClient.invalidateQueries({ queryKey: ['prospects', 'list'] })
-        queryClient.invalidateQueries({ queryKey: ['prospects', 'detail', prospectId] })
-        queryClient.invalidateQueries({ queryKey: ['prospect-activities', prospectId] })
+        queryClient.invalidateQueries({ queryKey: prospectKeys.lists() })
+        queryClient.invalidateQueries({ queryKey: prospectKeys.detail(prospectId) })
+        queryClient.invalidateQueries({ queryKey: prospectActivityKeys.list(prospectId) })
       }
     },
   })

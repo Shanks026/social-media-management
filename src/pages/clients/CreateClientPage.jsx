@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createClient, updateClient, fetchClientById } from '@/api/clients'
+import { useMarkProspectConverted } from '@/api/prospects'
 import { supabase } from '@/lib/supabase'
 import { useNavigate, useParams, useOutletContext, useLocation } from 'react-router-dom'
 
@@ -99,6 +100,7 @@ export default function CreateClientPage({
   const location = useLocation()
   const { setHeader } = useHeader()
   const queryClient = useQueryClient()
+  const markProspectConverted = useMarkProspectConverted()
   const { user, workspaceUserId } = useAuth()
   const { refreshAgency } = useOutletContext() || {}
   const fileInputRef = useRef(null)
@@ -276,11 +278,11 @@ export default function CreateClientPage({
 
       // If converting from a prospect, mark it as converted
       if (fromProspect?.id && data?.id) {
-        await supabase
-          .from('prospects')
-          .update({ converted_client_id: data.id, updated_at: new Date().toISOString() })
-          .eq('id', fromProspect.id)
-        queryClient.invalidateQueries({ queryKey: ['prospects'] })
+        try {
+          await markProspectConverted.mutateAsync({ prospectId: fromProspect.id, clientId: data.id })
+        } catch (err) {
+          toast.error(`Client created, but the prospect wasn't marked converted: ${err.message}`)
+        }
       }
 
       toast.success(isEditMode ? 'Client updated' : 'Client onboarded')

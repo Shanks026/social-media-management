@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Search, Upload, X } from 'lucide-react'
 
-import { useDocuments, uploadDocument } from '@/api/documents'
+import { useDocuments, useUploadDocument } from '@/api/documents'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -26,8 +25,6 @@ import UploadMetaDialog, {
 } from '@/components/documents/UploadMetaDialog'
 
 export default function ProspectDocumentsTab({ prospectId }) {
-  const queryClient = useQueryClient()
-
   const { data: documents, isLoading, error } = useDocuments({ prospectId })
 
   // ── Filters ──────────────────────────────────────────────────────────────
@@ -53,12 +50,9 @@ export default function ProspectDocumentsTab({ prospectId }) {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(null)
 
-  const uploadMutation = useMutation({
-    mutationFn: ({ file, displayName, category, notes }) =>
-      uploadDocument({ prospectId, file, displayName, category, notes }),
-    onMutate: () => setUploadProgress(10),
+  const uploadMutation = useUploadDocument()
+  const uploadCallbacks = {
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['documents', 'list'] })
       setUploadProgress(100)
       setTimeout(() => {
         setUploadProgress(null)
@@ -71,7 +65,7 @@ export default function ProspectDocumentsTab({ prospectId }) {
       setUploadProgress(null)
       toast.error(err.message || 'Upload failed')
     },
-  })
+  }
 
   function handleOpenUpload() {
     setPendingFile(null)
@@ -84,8 +78,11 @@ export default function ProspectDocumentsTab({ prospectId }) {
 
   function handleConfirmUpload({ displayName, category, notes }) {
     if (!pendingFile) return
-    setUploadProgress(30)
-    uploadMutation.mutate({ file: pendingFile, displayName, category, notes })
+    setUploadProgress(10)
+    uploadMutation.mutate(
+      { prospectId, file: pendingFile, displayName, category, notes },
+      uploadCallbacks,
+    )
   }
 
   function handleDialogClose(open) {

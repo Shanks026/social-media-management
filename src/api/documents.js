@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/context/AuthContext'
 import { resolveWorkspace } from '@/lib/workspace'
@@ -6,6 +6,7 @@ import { resolveWorkspace } from '@/lib/workspace'
 // ─── Query Keys ────────────────────────────────────────────────────────────────
 
 export const documentKeys = {
+  all: ['documents'],
   list: (filters) => ['documents', 'list', filters ?? {}],
   detail: (id) => ['documents', 'detail', id],
   collections: (clientId) => ['document-collections', clientId],
@@ -132,6 +133,18 @@ export async function uploadDocument({ clientId, prospectId, file, displayName, 
   }
 
   return data
+}
+
+// Upload hook (ADR 0007). The other document callers still invalidate by hand
+// and move onto this in #157.
+export function useUploadDocument() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: uploadDocument,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: documentKeys.all })
+    },
+  })
 }
 
 /**
