@@ -46,7 +46,7 @@ Any status except DELIVERED / PUBLISHED / ARCHIVED ──► ARCHIVED
 - **ARCHIVED**: no longer active
 - **PARTIALLY_PUBLISHED** is a display state, never stored: `displayStatus(version)` derives it from `platform_schedules`.
 
-DRAFT and READY may also skip ahead to PENDING_APPROVAL, SCHEDULED or APPROVED.
+DRAFT and READY may also skip ahead to PENDING_APPROVAL, SCHEDULED or APPROVED. A Client's approval moves PENDING_APPROVAL to SCHEDULED for a Social deliverable, or to APPROVED for a non-social one.
 
 ## Creating a Post
 

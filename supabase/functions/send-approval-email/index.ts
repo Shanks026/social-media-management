@@ -154,15 +154,17 @@ serve(async (req) => {
       return new Response(JSON.stringify(data), { headers: corsHeaders })
     }
 
-    // --- SCENARIO 2: NOTIFY POST CREATOR (SCHEDULED or NEEDS_REVISION) ---
-    if (record.status === 'SCHEDULED' || record.status === 'NEEDS_REVISION') {
+    // --- SCENARIO 2: NOTIFY POST CREATOR (SCHEDULED, APPROVED or NEEDS_REVISION) ---
+    // APPROVED is a Client approval of a non-social Deliverable (#167).
+    const approved = record.status === 'SCHEDULED' || record.status === 'APPROVED'
+    if (approved || record.status === 'NEEDS_REVISION') {
       const { data: clientInfo } = await supabase
         .from('clients')
         .select('name, is_internal')
         .eq('id', record.client_id)
         .single()
 
-      if (record.status === 'SCHEDULED' && clientInfo?.is_internal === true) {
+      if (approved && clientInfo?.is_internal === true) {
         return new Response('Skipped: internal post self-scheduled, no notification needed.', { headers: corsHeaders })
       }
 
@@ -174,18 +176,24 @@ serve(async (req) => {
 
       const clientName = clientInfo?.name || 'Your client'
       const postTitle = record.title || 'Untitled Post'
-      const targetDate = record.target_date
+      // A non-social Deliverable isn't scheduled, so its date isn't shown.
+      const targetDate = record.status === 'SCHEDULED' && record.target_date
         ? new Date(record.target_date).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
         : null
 
       let subject = ''
       let bodyHtml = ''
 
-      if (record.status === 'SCHEDULED') {
-        subject = `Approved & Scheduled by ${clientName}: "${postTitle}"`
+      if (approved) {
+        const scheduled = record.status === 'SCHEDULED'
+        subject = scheduled
+          ? `Approved & Scheduled by ${clientName}: "${postTitle}"`
+          : `Approved by ${clientName}: "${postTitle}"`
         bodyHtml = `
-          <h1 style="font-size: 26px; font-weight: 700; line-height: 1.2; margin: 0 0 16px; color: #111827;">Your post was approved</h1>
-          <p style="font-size: 15px; color: #6B7280; line-height: 1.6; margin: 0 0 32px;">${clientName} has reviewed your content and given the green light for publication.</p>
+          <h1 style="font-size: 26px; font-weight: 700; line-height: 1.2; margin: 0 0 16px; color: #111827;">${scheduled ? 'Your post was approved' : 'Your deliverable was approved'}</h1>
+          <p style="font-size: 15px; color: #6B7280; line-height: 1.6; margin: 0 0 32px;">${scheduled
+            ? `${clientName} has reviewed your content and given the green light for publication.`
+            : `${clientName} has reviewed your work and approved it. Mark it delivered once it's handed over.`}</p>
 
           <div style="border-top: 1px solid #E5E7EB; padding: 24px 0;">
             <p style="font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #9CA3AF; margin: 0 0 6px;">Post</p>
@@ -201,7 +209,9 @@ serve(async (req) => {
             ` : ''}
           </div>
 
-          <p style="font-size: 14px; color: #6B7280; line-height: 1.6; margin: 0;">This version is now locked. No further action is required.</p>
+          <p style="font-size: 14px; color: #6B7280; line-height: 1.6; margin: 0;">${scheduled
+            ? 'This version is now locked. No further action is required.'
+            : 'This version is now locked.'}</p>
         `
       } else {
         const clientNotes = record.client_notes || 'No additional notes provided.'
