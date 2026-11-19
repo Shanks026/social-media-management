@@ -40,8 +40,33 @@ async function removeInChunks(storage: any, bucket: string, paths: string[]) {
   }
 }
 
+// Delete rows and stop on the first failure: deleting auth accounts after a
+// failed row delete would leave the workspace half-purged with no way back in.
+async function deleteRows(admin: any, table: string, column: string, value: string) {
+  const { error } = await admin.from(table).delete().eq(column, value)
+  if (error) throw new Error(`delete ${table} failed: ${error.message}`)
+}
+
 // Permanently purge a single workspace: storage files, all DB data, auth accounts.
 async function purgeWorkspace(admin: any, workspaceUserId: string) {
+  // Who the purge deletes, decided while membership rows still exist: the owner,
+  // plus members whose last workspace this is. Members who belong to another
+  // workspace keep their account and any uploads outside this workspace's folders.
+  const { data: members, error: membersErr } = await admin
+    .from('agency_members').select('member_user_id').eq('agency_user_id', workspaceUserId)
+  if (membersErr) throw membersErr
+  const memberIds = [...new Set((members || []).map((m: any) => m.member_user_id).filter(Boolean))]
+    .filter((id) => id !== workspaceUserId) as string[]
+  const staying = new Set<string>()
+  if (memberIds.length) {
+    const { data: elsewhere, error } = await admin
+      .from('agency_members').select('member_user_id')
+      .in('member_user_id', memberIds).neq('agency_user_id', workspaceUserId)
+    if (error) throw error
+    for (const m of elsewhere || []) staying.add(m.member_user_id)
+  }
+  const deletedMemberIds = memberIds.filter((id) => !staying.has(id))
+
   const { data: sub } = await admin
     .from('agency_subscriptions')
     .select('logo_url, logo_horizontal_url, signature_url')
@@ -52,13 +77,14 @@ async function purgeWorkspace(admin: any, workspaceUserId: string) {
     .from('clients').select('id, logo_url').eq('user_id', workspaceUserId)
   const clientIds = (clients || []).map((c: any) => c.id)
 
-  // Gather every storage path BEFORE deleting rows.
-  const postMediaPaths: string[] = []
-  const documentPaths: string[] = []
-  const proposalPaths: string[] = []
+  // Gather every storage path BEFORE deleting rows. Linked files first: they
+  // cover service-role uploads (no owner) and files outside the workspace's folders.
+  const paths: Record<string, string[]> = {
+    'post-media': [], 'client-documents': [], 'proposal-files': [], 'note-media': [],
+  }
 
   if (sub) {
-    postMediaPaths.push(
+    paths['post-media'].push(
       pathFromPublicUrl(sub.logo_url, 'post-media')!,
       pathFromPublicUrl(sub.logo_horizontal_url, 'post-media')!,
       pathFromPublicUrl(sub.signature_url, 'post-media')!,
@@ -66,7 +92,7 @@ async function purgeWorkspace(admin: any, workspaceUserId: string) {
   }
   for (const c of clients || []) {
     const p = pathFromPublicUrl(c.logo_url, 'post-media')
-    if (p) postMediaPaths.push(p)
+    if (p) paths['post-media'].push(p)
   }
   if (clientIds.length) {
     const { data: versions } = await admin
@@ -76,50 +102,57 @@ async function purgeWorkspace(admin: any, workspaceUserId: string) {
     for (const v of versions || []) {
       for (const url of v.media_urls || []) {
         const p = pathFromPublicUrl(url, 'post-media')
-        if (p) postMediaPaths.push(p)
+        if (p) paths['post-media'].push(p)
       }
     }
     const { data: docs } = await admin
       .from('client_documents').select('storage_path').in('client_id', clientIds)
-    for (const d of docs || []) if (d.storage_path) documentPaths.push(d.storage_path)
+    for (const d of docs || []) if (d.storage_path) paths['client-documents'].push(d.storage_path)
   }
   const { data: proposals } = await admin
     .from('proposals').select('file_url').eq('agency_user_id', workspaceUserId).not('file_url', 'is', null)
   for (const p of proposals || []) {
     const path = pathFromPublicUrl(p.file_url, 'proposal-files')
-    if (path) proposalPaths.push(path)
+    if (path) paths['proposal-files'].push(path)
   }
 
-  await removeInChunks(admin.storage, 'post-media', postMediaPaths)
-  await removeInChunks(admin.storage, 'client-documents', documentPaths)
-  await removeInChunks(admin.storage, 'proposal-files', proposalPaths)
+  // Then every file uploaded by a deleted user or stored under the workspace's
+  // folders, linked or not: avatars, replaced branding, note media, orphans (#68).
+  const { data: objects, error: objectsErr } = await admin.rpc('workspace_purge_storage_objects', {
+    p_workspace: workspaceUserId,
+    p_uids: [workspaceUserId, ...deletedMemberIds],
+  })
+  if (objectsErr) throw objectsErr
+  for (const o of objects || []) (paths[o.bucket_id] ??= []).push(o.name)
 
-  // Capture members before deleting membership rows.
-  const { data: members } = await admin
-    .from('agency_members').select('member_user_id').eq('agency_user_id', workspaceUserId)
-  const memberIds = [...new Set((members || []).map((m: any) => m.member_user_id).filter(Boolean))]
+  for (const [bucket, list] of Object.entries(paths)) await removeInChunks(admin.storage, bucket, list)
 
-  // Delete DB data (clients cascade to all client-scoped descendants).
-  if (clientIds.length) await admin.from('clients').delete().eq('user_id', workspaceUserId)
-  await admin.from('expenses').delete().eq('user_id', workspaceUserId)
-  await admin.from('transactions').delete().eq('user_id', workspaceUserId)
-  await admin.from('prospects').delete().eq('user_id', workspaceUserId)
-  await admin.from('agency_invites').delete().eq('agency_user_id', workspaceUserId)
-  await admin.from('user_feedback').delete().eq('workspace_user_id', workspaceUserId)
-  await admin.from('admin_feedback').delete().eq('user_id', workspaceUserId)
-  await admin.from('agency_members').delete().eq('agency_user_id', workspaceUserId)
-  await admin.from('agency_subscriptions').delete().eq('user_id', workspaceUserId)
+  // Delete DB data. Clients cascade to every client-scoped descendant (deliverables,
+  // invoices, documents, meetings, notes on a client). The rest is deleted by its
+  // workspace column, so nothing still points at a member when their account goes:
+  // tasks, notes and approval events reference users with NO ACTION.
+  if (clientIds.length) await deleteRows(admin, 'clients', 'user_id', workspaceUserId)
+  await deleteRows(admin, 'tasks', 'workspace_id', workspaceUserId) // cascades task_posts, task_activity
+  await deleteRows(admin, 'notes', 'user_id', workspaceUserId) // cascades note_shares
+  await deleteRows(admin, 'comments', 'workspace_id', workspaceUserId)
+  await deleteRows(admin, 'notifications', 'workspace_id', workspaceUserId)
+  await deleteRows(admin, 'approval_events', 'workspace_user_id', workspaceUserId)
+  await deleteRows(admin, 'invoices', 'user_id', workspaceUserId)
+  await deleteRows(admin, 'expenses', 'user_id', workspaceUserId)
+  await deleteRows(admin, 'transactions', 'user_id', workspaceUserId)
+  await deleteRows(admin, 'prospects', 'user_id', workspaceUserId)
+  await deleteRows(admin, 'agency_invites', 'agency_user_id', workspaceUserId)
+  await deleteRows(admin, 'user_feedback', 'workspace_user_id', workspaceUserId)
+  await deleteRows(admin, 'admin_feedback', 'user_id', workspaceUserId)
+  await deleteRows(admin, 'agency_member_job_roles', 'workspace_id', workspaceUserId)
+  await deleteRows(admin, 'agency_job_roles', 'workspace_id', workspaceUserId)
+  await deleteRows(admin, 'agency_members', 'agency_user_id', workspaceUserId)
+  await deleteRows(admin, 'agency_subscriptions', 'user_id', workspaceUserId)
 
-  // Delete auth accounts. A member is deleted only if this was their last workspace.
-  for (const memberId of memberIds as string[]) {
-    if (memberId === workspaceUserId) continue
-    const { count } = await admin
-      .from('agency_members').select('id', { count: 'exact', head: true })
-      .eq('member_user_id', memberId)
-    if ((count ?? 0) === 0) {
-      const { error } = await admin.auth.admin.deleteUser(memberId)
-      if (error) console.error(`Failed to delete member auth ${memberId}:`, error.message)
-    }
+  // Delete auth accounts (cascading chat, campaigns, proposals and the like).
+  for (const memberId of deletedMemberIds) {
+    const { error } = await admin.auth.admin.deleteUser(memberId)
+    if (error) console.error(`Failed to delete member auth ${memberId}:`, error.message)
   }
   const { error: ownerErr } = await admin.auth.admin.deleteUser(workspaceUserId)
   if (ownerErr) console.error(`Failed to delete owner auth ${workspaceUserId}:`, ownerErr.message)
