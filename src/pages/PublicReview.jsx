@@ -184,14 +184,16 @@ export default function PublicReview() {
           <Check size={32} strokeWidth={2.5} />
         </div>
         <h2 className="animate-in fade-in slide-in-from-bottom-3 duration-500 delay-150 fill-mode-both text-2xl font-bold tracking-tight text-foreground bricolage">
-          {statusUpdated === 'SCHEDULED'
-            ? 'Content Approved'
-            : 'Review Submitted'}
+          {statusUpdated === 'NEEDS_REVISION'
+            ? 'Review Submitted'
+            : 'Content Approved'}
         </h2>
         <p className="animate-in fade-in slide-in-from-bottom-3 duration-500 delay-300 fill-mode-both mt-2 max-w-md text-muted-foreground leading-relaxed">
           {statusUpdated === 'SCHEDULED'
             ? "Your approval has been recorded. You'll receive an email when your posts go live."
-            : "We've received your feedback and will prepare a new version shortly."}
+            : statusUpdated === 'APPROVED'
+              ? 'Your approval has been recorded. Your team will deliver the work to you.'
+              : "We've received your feedback and will prepare a new version shortly."}
         </p>
       </div>
     )
