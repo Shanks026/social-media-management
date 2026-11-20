@@ -1032,12 +1032,9 @@ export function useMarkPostDelivered(options) {
   )
 }
 
-/** Internal only: approve a non-social deliverable directly. */
+/** Owner/Admin: approve a non-social deliverable without Client approval. */
 export async function approveDeliverable(versionId) {
-  const { error } = await supabase
-    .from('post_versions')
-    .update({ status: 'APPROVED' })
-    .eq('id', versionId)
+  const { error } = await supabase.rpc('approve_deliverable', { p_version_id: versionId })
   if (error) throw error
 }
 
@@ -1046,17 +1043,15 @@ export function useApproveDeliverable(options) {
 }
 
 /**
- * Internal only: schedule without client approval. A per-platform deliverable
- * already carries its dates, so only the status moves; otherwise a publish
- * date is required.
+ * Owner/Admin: schedule a Social deliverable without Client approval. The
+ * database decides whether it needs `targetDate`: a per-platform deliverable
+ * already carries its dates, and a single-date one without a date is refused.
  */
-export async function scheduleDeliverable({ versionId, perPlatform, targetDate }) {
-  const patch = { status: 'SCHEDULED' }
-  if (!perPlatform) {
-    if (!targetDate) throw new Error('Please select a publish date.')
-    patch.target_date = targetDate.toISOString()
-  }
-  const { error } = await supabase.from('post_versions').update(patch).eq('id', versionId)
+export async function scheduleDeliverable({ versionId, targetDate }) {
+  const { error } = await supabase.rpc('schedule_deliverable', {
+    p_version_id: versionId,
+    p_target_date: targetDate ? targetDate.toISOString() : null,
+  })
   if (error) throw error
 }
 

@@ -30,6 +30,7 @@ import {
   postKeys,
   saveDeliverable,
   scheduleDeliverable,
+  approveDeliverable,
   markPlatformPublished,
   markPostDelivered,
   useApproveDeliverable,
@@ -91,14 +92,25 @@ describe('deliverable plain functions', () => {
     expect(sb.writes('posts', 'update')[0].args[0]).toEqual({ campaign_id: 'camp-1' })
   })
 
-  it('scheduleDeliverable needs a date unless the deliverable is per-platform', async () => {
-    await expect(scheduleDeliverable({ versionId: 'v1', perPlatform: false })).rejects.toThrow(
-      'Please select a publish date.',
-    )
+  it('scheduleDeliverable goes through schedule_deliverable, never a raw status write (#173)', async () => {
+    await scheduleDeliverable({ versionId: 'v1', targetDate: new Date('2026-12-24T10:00:00Z') })
+    await scheduleDeliverable({ versionId: 'v2' })
+    expect(sb.rpcs('schedule_deliverable').map((c) => c.args)).toEqual([
+      { p_version_id: 'v1', p_target_date: '2026-12-24T10:00:00.000Z' },
+      { p_version_id: 'v2', p_target_date: null },
+    ])
     expect(sb.writes('post_versions', 'update')).toEqual([])
+  })
 
-    await scheduleDeliverable({ versionId: 'v1', perPlatform: true })
-    expect(sb.writes('post_versions', 'update')[0].args[0]).toEqual({ status: 'SCHEDULED' })
+  it('scheduleDeliverable throws the database refusal (no date on a single-date deliverable)', async () => {
+    sb.answer('rpc.schedule_deliverable', { data: null, error: new Error('Please select a publish date.') })
+    await expect(scheduleDeliverable({ versionId: 'v1' })).rejects.toThrow('Please select a publish date.')
+  })
+
+  it('approveDeliverable goes through approve_deliverable, never a raw status write (#173)', async () => {
+    await approveDeliverable('v1')
+    expect(sb.rpcs('approve_deliverable').map((c) => c.args)).toEqual([{ p_version_id: 'v1' }])
+    expect(sb.writes('post_versions', 'update')).toEqual([])
   })
 
   it('markPlatformPublished publishes the whole deliverable on its last platform and reports the email', async () => {
