@@ -64,7 +64,7 @@ BEGIN
      OR has_function_privilege('anon', 'public.approve_deliverable(uuid)', 'EXECUTE') THEN
     RAISE EXCEPTION 'FAIL: anon can schedule or approve';
   END IF;
-  IF has_function_privilege('authenticated', 'public.assert_deliverable_admin(uuid, text)', 'EXECUTE') THEN
+  IF has_function_privilege('authenticated', 'public.assert_deliverable_admin(uuid, text, boolean)', 'EXECUTE') THEN
     RAISE EXCEPTION 'FAIL: users can execute the internal caller check';
   END IF;
 END $$;

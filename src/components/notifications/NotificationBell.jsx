@@ -20,6 +20,7 @@ import {
   ArrowRightLeft,
   AtSign,
   UserRoundPlus,
+  MailWarning,
 } from 'lucide-react'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Button } from '@/components/ui/button'
@@ -59,6 +60,8 @@ const TYPE_CONFIG = {
   campaign_reviewed:      { icon: CheckCircle2,    color: 'text-green-500',  bg: 'bg-green-100 dark:bg-green-950' },
   team_member_joined:     { icon: UserPlus,        color: 'text-teal-500',   bg: 'bg-teal-100 dark:bg-teal-950' },
   invoice_overdue:        { icon: AlertCircle,     color: 'text-destructive', bg: 'bg-red-100 dark:bg-red-950' },
+  // An email the database queued didn't reach the client (#174).
+  email_failed:           { icon: MailWarning,     color: 'text-destructive', bg: 'bg-red-100 dark:bg-red-950' },
   // Daily job drafted invoices from recurring templates (#112).
   recurring_invoices_drafted: { icon: Receipt,     color: 'text-emerald-500', bg: 'bg-emerald-100 dark:bg-emerald-950' },
   comment_added:          { icon: MessageCircle,   color: 'text-sky-500',    bg: 'bg-sky-100 dark:bg-sky-950' },
@@ -76,6 +79,7 @@ const TYPE_CONFIG = {
 // Label to show when a notification has no human actor (actor_user_id is null).
 const SYSTEM_ACTOR_LABEL = {
   invoice_overdue:    'System',
+  email_failed:       'System',
   recurring_invoices_drafted: 'System',
   campaign_reviewed:  'A client',
   // Nobody moved the task — its deliverables shipping did.
