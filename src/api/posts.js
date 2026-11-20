@@ -575,50 +575,22 @@ export async function requestInternalChanges(versionId, notes) {
 // ── Client approval ─────────────────────────────────────────────────────────
 
 /**
- * The approval email failed after any status change succeeded. Carries a
- * human-readable message instead of supabase-js's "Edge Function returned a
- * non-2xx status code" (B5).
- */
-export class ApprovalEmailError extends Error {
-  constructor(message, cause) {
-    super(message)
-    this.name = 'ApprovalEmailError'
-    this.cause = cause
-  }
-}
-
-async function sendApprovalEmail(version, failureMessage) {
-  const { error } = await supabase.functions.invoke('send-approval-email', {
-    body: { record: { ...version, status: 'PENDING_APPROVAL' } },
-  })
-  if (error) throw new ApprovalEmailError(failureMessage, error)
-}
-
-/**
- * Moves a version to PENDING_APPROVAL, then emails the client. The email goes
- * out only once the status change has succeeded (B10): a failed RPC throws
- * before the edge function is ever called. A version that is already pending
- * skips straight to the email.
+ * Moves a version to PENDING_APPROVAL. The database queues the client's
+ * approval email in the same step (#175), so a failed status change can't send
+ * one (B10), and a failed send reaches the Owner/Admins as an `email_failed`
+ * notification.
  */
 export async function sendPostForClientApproval(version) {
-  if (!version?.clients?.email) throw new Error('This client has no email address.')
-
-  if (version.status !== 'PENDING_APPROVAL') {
-    const { error } = await supabase.rpc('send_post_for_approval', {
-      p_post_version_id: version.id,
-    })
-    if (error) throw error
-  }
-
-  await sendApprovalEmail(
-    version,
-    "The deliverable is now pending approval, but the email to the client couldn't be sent. Use Resend Link to try again.",
-  )
+  const { error } = await supabase.rpc('send_post_for_approval', {
+    p_post_version_id: version.id,
+  })
+  if (error) throw error
 }
 
 /**
  * Invalidates the version's old share links and emails the client a fresh one
- * (the edge function mints the new token).
+ * (the edge function reads the Version and mints the new token). Not a status
+ * change, so it stays a direct edge-function call.
  */
 export async function resendApprovalLink(version) {
   if (!version?.clients?.email) throw new Error('This client has no email address.')
@@ -629,10 +601,13 @@ export async function resendApprovalLink(version) {
     .eq('post_version_id', version.id)
   if (error) throw error
 
-  await sendApprovalEmail(
-    version,
-    "The approval email couldn't be sent. Please try again in a moment.",
-  )
+  const { error: sendError } = await supabase.functions.invoke('send-approval-email', {
+    body: { record: { id: version.id, status: 'PENDING_APPROVAL' } },
+  })
+  // Plain words, not supabase-js's "Edge Function returned a non-2xx status code" (B5).
+  if (sendError) {
+    throw new Error("The approval email couldn't be sent. Please try again in a moment.", { cause: sendError })
+  }
 }
 
 export function usePendingApprovals() {
@@ -1089,13 +1064,8 @@ export function useMarkPublished(options) {
   return useApiMutation(markPublished, invalidateDeliverables, options)
 }
 
-// Status changes first, email second (B10): even when only the email fails,
-// the status moved, so refresh on settle.
 export function useSendPostForClientApproval(options) {
-  return useApiMutation(sendPostForClientApproval, invalidateDeliverables, {
-    invalidateOn: 'settled',
-    ...options,
-  })
+  return useApiMutation(sendPostForClientApproval, invalidateDeliverables, options)
 }
 
 export function useResendApprovalLink(options) {

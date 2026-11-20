@@ -17,7 +17,6 @@ import {
   useSubmitForInternalApproval,
   useApproveInternally,
   useRequestInternalChanges,
-  ApprovalEmailError,
 } from '@/api/posts'
 import { usePermissions } from '@/api/usePermissions'
 
@@ -98,18 +97,15 @@ export default function PostDetails() {
     },
   })
 
-  // Status change first, email second (B10) — see sendPostForClientApproval.
+  // The database moves the status and queues the email together (#175); a
+  // failed send reaches the Owner/Admins as an email_failed notification.
   const sendForApprovalMutation = useSendPostForClientApproval({
     onSuccess: () => {
       toast.success(`Sent for approval to ${post.clients.email}`)
+      setIsConfirmOpen(false)
     },
     onError: (err) => {
       toast.error(err.message || 'Failed to send for approval')
-    },
-    onSettled: (_data, err) => {
-      // Once the status has changed (full success, or only the email failed)
-      // the dialog has nothing left to confirm, so close it (B6).
-      if (!err || err instanceof ApprovalEmailError) setIsConfirmOpen(false)
     },
   })
 
