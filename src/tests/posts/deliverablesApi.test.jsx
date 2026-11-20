@@ -31,6 +31,7 @@ import {
   saveDeliverable,
   scheduleDeliverable,
   markPlatformPublished,
+  markPostDelivered,
   useApproveDeliverable,
   useSaveDeliverable,
 } from '@/api/posts'
@@ -115,6 +116,21 @@ describe('deliverable plain functions', () => {
     expect(sb.invocations('send-platform-published-email')[0].args.body).toMatchObject({
       post_version_id: 'v1', platform: 'instagram', all_published: true,
     })
+  })
+
+  it('markPostDelivered goes through mark_delivered, never a raw status write (#172)', async () => {
+    await markPostDelivered('v1', '  Sent via Drive  ')
+    await markPostDelivered('v2', '   ')
+    expect(sb.rpcs('mark_delivered').map((c) => c.args)).toEqual([
+      { p_version_id: 'v1', p_note: 'Sent via Drive' },
+      { p_version_id: 'v2', p_note: null },
+    ])
+    expect(sb.writes('post_versions', 'update')).toEqual([])
+  })
+
+  it('markPostDelivered throws the database refusal', async () => {
+    sb.answer('rpc.mark_delivered', { data: null, error: new Error('Only an Owner or Admin can mark a deliverable delivered') })
+    await expect(markPostDelivered('v1')).rejects.toThrow('Only an Owner or Admin')
   })
 })
 
