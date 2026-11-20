@@ -387,16 +387,14 @@ export async function updatePost(
   return data
 }
 
+// ADR 0004: the status changes only through the database function, which
+// checks the caller (Owner/Admin), the move (APPROVED → DELIVERED) and tells
+// the Deliverable's creator. An empty note leaves admin_notes as it was.
 export async function markPostDelivered(versionId, deliveryNote) {
-  const patch = { status: 'DELIVERED' }
-  if (deliveryNote?.trim()) patch.admin_notes = deliveryNote.trim()
-
-  const { error } = await supabase
-    .from('post_versions')
-    .update(patch)
-    .eq('id', versionId)
-    .eq('status', 'APPROVED')
-
+  const { error } = await supabase.rpc('mark_delivered', {
+    p_version_id: versionId,
+    p_note: deliveryNote?.trim() || null,
+  })
   if (error) throw error
 }
 
