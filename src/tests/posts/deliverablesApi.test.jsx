@@ -32,6 +32,7 @@ import {
   scheduleDeliverable,
   approveDeliverable,
   markPlatformPublished,
+  markPublished,
   markPostDelivered,
   useApproveDeliverable,
   useSaveDeliverable,
@@ -113,21 +114,28 @@ describe('deliverable plain functions', () => {
     expect(sb.writes('post_versions', 'update')).toEqual([])
   })
 
-  it('markPlatformPublished publishes the whole deliverable on its last platform and reports the email', async () => {
-    sb.answer('fn.send-platform-published-email', { data: null, error: new Error('smtp down') })
-    const result = await markPlatformPublished({
-      versionId: 'v1',
-      platform: 'instagram',
-      platformSchedules: {
-        instagram: { scheduled_at: '2026-12-01' },
-        linkedin: { scheduled_at: '2026-12-01', published_at: '2026-12-01' },
-      },
-    })
-    expect(result).toMatchObject({ allPublished: true, emailSent: false })
-    expect(sb.writes('post_versions', 'update')[0].args[0].status).toBe('PUBLISHED')
-    expect(sb.invocations('send-platform-published-email')[0].args.body).toMatchObject({
-      post_version_id: 'v1', platform: 'instagram', all_published: true,
-    })
+  it('markPlatformPublished goes through mark_platform_published and reports whether it was the last (#174)', async () => {
+    sb.answer('rpc.mark_platform_published', { data: true, error: null })
+    const result = await markPlatformPublished({ versionId: 'v1', platform: 'instagram' })
+    expect(result).toEqual({ versionId: 'v1', platform: 'instagram', allPublished: true })
+    expect(sb.rpcs('mark_platform_published').map((c) => c.args)).toEqual([
+      { p_version_id: 'v1', p_platform: 'instagram' },
+    ])
+    // The database queues the client's email; the browser neither writes nor sends.
+    expect(sb.writes('post_versions', 'update')).toEqual([])
+    expect(sb.invocations('send-platform-published-email')).toEqual([])
+  })
+
+  it('markPublished goes through mark_published and sends no email itself (#174)', async () => {
+    await markPublished('v1')
+    expect(sb.rpcs('mark_published').map((c) => c.args)).toEqual([{ p_version_id: 'v1' }])
+    expect(sb.writes('post_versions', 'update')).toEqual([])
+    expect(sb.invocations('send-platform-published-email')).toEqual([])
+  })
+
+  it('markPlatformPublished throws the database refusal', async () => {
+    sb.answer('rpc.mark_platform_published', { data: null, error: new Error('Only an Owner or Admin can publish a deliverable') })
+    await expect(markPlatformPublished({ versionId: 'v1', platform: 'instagram' })).rejects.toThrow('Only an Owner or Admin')
   })
 
   it('markPostDelivered goes through mark_delivered, never a raw status write (#172)', async () => {

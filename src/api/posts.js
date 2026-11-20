@@ -1059,53 +1059,30 @@ export function useScheduleDeliverable(options) {
   return useApiMutation(scheduleDeliverable, invalidateDeliverables, options)
 }
 
-/** Tell the client a platform (or the whole deliverable) went live. */
-async function sendPublishedEmail({ versionId, platform, allPublished }) {
-  const { error } = await supabase.functions.invoke('send-platform-published-email', {
-    body: { post_version_id: versionId, platform, all_published: allPublished },
-  })
-  if (error) console.error('[send-platform-published-email]', error)
-  return !error
-}
-
 /**
  * Mark one platform of a per-platform deliverable published; the last one
- * marks the whole deliverable PUBLISHED. Emails the client either way.
+ * marks the whole deliverable PUBLISHED. The database emails the client either
+ * way, and tells the Owner/Admins (`email_failed`) if that email fails.
  *
- * @returns {{ platform, allPublished, versionId, emailSent }}
+ * @returns {{ versionId, platform, allPublished }}
  */
-export async function markPlatformPublished({ versionId, platformSchedules, platform }) {
-  const now = new Date().toISOString()
-  const updated = {
-    ...platformSchedules,
-    [platform]: { ...platformSchedules[platform], published_at: now },
-  }
-  const allPublished = Object.values(updated).every((v) => v.published_at)
-  const patch = {
-    platform_schedules: updated,
-    ...(allPublished && { status: 'PUBLISHED', published_at: now }),
-  }
-  const { error } = await supabase.from('post_versions').update(patch).eq('id', versionId)
+export async function markPlatformPublished({ versionId, platform }) {
+  const { data, error } = await supabase.rpc('mark_platform_published', {
+    p_version_id: versionId,
+    p_platform: platform,
+  })
   if (error) throw error
-
-  const emailSent = await sendPublishedEmail({ versionId, platform, allPublished })
-  return { platform, allPublished, versionId, emailSent }
+  return { versionId, platform, allPublished: data === true }
 }
 
 export function useMarkPlatformPublished(options) {
   return useApiMutation(markPlatformPublished, invalidateDeliverables, options)
 }
 
-/** Mark a single-date deliverable PUBLISHED and email the client. */
+/** Mark a deliverable PUBLISHED; the database emails the client. */
 export async function markPublished(versionId) {
-  const { error } = await supabase
-    .from('post_versions')
-    .update({ status: 'PUBLISHED', published_at: new Date().toISOString() })
-    .eq('id', versionId)
+  const { error } = await supabase.rpc('mark_published', { p_version_id: versionId })
   if (error) throw error
-
-  const emailSent = await sendPublishedEmail({ versionId, platform: null, allPublished: true })
-  return { versionId, emailSent }
 }
 
 export function useMarkPublished(options) {

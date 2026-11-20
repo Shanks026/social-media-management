@@ -1,6 +1,11 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { sendEmail } from '../_shared/email.ts'
+import { reportEmailFailure } from '../_shared/emailFailure.ts'
+
+// Queued by the database (deliverable_event, ADR 0004) for every publish,
+// including a single platform, with the service-role key from Vault. Nothing
+// else may call it: it emails a Client about any Version id it is given.
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -77,19 +82,21 @@ serve(async (req) => {
     return new Response('ok', { headers: corsHeaders })
   }
   try {
+  const serviceKey = Deno.env.get('SERVICE_KEY') ?? Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+  if (serviceKey === '' || req.headers.get('Authorization') !== `Bearer ${serviceKey}`) {
+    return new Response(JSON.stringify({ error: 'Forbidden' }), { headers: corsHeaders, status: 403 })
+  }
+
   const body = await req.json()
   const { post_version_id, platform, all_published } = body
   console.log('[send-platform-published-email] invoked', { post_version_id, platform, all_published })
 
-  const supabase = createClient(
-    Deno.env.get('SUPABASE_URL') ?? '',
-    Deno.env.get('SERVICE_KEY') ?? Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
-  )
+  const supabase = createClient(Deno.env.get('SUPABASE_URL') ?? '', serviceKey)
 
   // Fetch post version
   const { data: version, error: vErr } = await supabase
     .from('post_versions')
-    .select('id, title, platform, platform_schedules, status, client_id')
+    .select('id, post_id, title, platform, platform_schedules, status, client_id')
     .eq('id', post_version_id)
     .single()
 
@@ -187,7 +194,7 @@ serve(async (req) => {
     `
   }
 
-  const { data, error } = await sendEmail('send-platform-published-email', 'platform-published', {
+  const { data, error, blocked } = await sendEmail('send-platform-published-email', 'platform-published', {
     from: `${branding.name} <notifications@tercerospace.com>`,
     to: [client.email],
     subject,
@@ -202,6 +209,16 @@ serve(async (req) => {
         ${renderEmailFooter(branding)}
       </div>
     `,
+  })
+
+  const outcome = { data, error, blocked }
+  await reportEmailFailure(supabase, outcome, {
+    workspaceId: client.user_id,
+    title: `The "published" email to ${client.name} failed to send`,
+    body: postTitle,
+    entityType: 'post',
+    entityId: version.post_id,
+    link: `/clients/${version.client_id}/deliverables/${version.post_id}`,
   })
 
   if (error) {

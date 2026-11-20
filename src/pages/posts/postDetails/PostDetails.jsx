@@ -129,7 +129,7 @@ export default function PostDetails() {
     onError: (err) => toast.error(err.message),
   })
   const markPlatformAsPublishedMutation = useMarkPlatformPublished({
-    onSuccess: ({ platform, allPublished, emailSent }) => {
+    onSuccess: ({ platform, allPublished }) => {
       setPublishingPlatformId(null)
       if (allPublished) {
         toast.success('All platforms published — post marked as Published')
@@ -137,7 +137,6 @@ export default function PostDetails() {
         const label = platform.replace('_', ' ').replace(/\b\w/g, (c) => c.toUpperCase())
         toast.success(`${label} marked as published`)
       }
-      if (!emailSent) toast.error("Marked as published, but the client's email failed to send")
     },
     onError: (err) => {
       setPublishingPlatformId(null)
@@ -145,10 +144,9 @@ export default function PostDetails() {
     },
   })
   const markAsPublishedMutation = useMarkPublished({
-    onSuccess: ({ emailSent }) => {
+    onSuccess: () => {
       toast.success('Post marked as published')
       setIsPublishConfirmOpen(false)
-      if (!emailSent) toast.error("Marked as published, but the client's email failed to send")
     },
     onError: (err) => toast.error(err.message),
   })
@@ -263,7 +261,6 @@ export default function PostDetails() {
           markPlatformAsPublishedMutation.mutate({
             versionId: post.id,
             platform,
-            platformSchedules: post.platform_schedules,
           })
         }}
         onCreateRevision={() => setIsRevisionConfirmOpen(true)}

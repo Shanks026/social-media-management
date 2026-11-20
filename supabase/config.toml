@@ -419,9 +419,9 @@ verify_jwt = false
 [functions.send-password-update-email]
 verify_jwt = false
 [functions.send-platform-published-email]
-# verify_jwt=false: invoked from the authenticated app via functions.invoke after
-# a post/platform is marked published; authenticates internally with the service
-# key and does not read the caller JWT. Matches the other send-* email functions.
+# verify_jwt=false: queued by the database (pg_net) after a Deliverable or one
+# of its platforms is marked published (#174); accepts only the service-role
+# key as a bearer and refuses every other caller.
 verify_jwt = false
 [functions.send-campaign-review-email]
 # verify_jwt=false: invoked from the authenticated app (campaign Share Review
