@@ -1,6 +1,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { sendEmail } from '../_shared/email.ts'
+import { reportEmailFailure } from '../_shared/emailFailure.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -65,35 +66,49 @@ serve(async (req) => {
   }
 
   try {
-    const { record } = await req.json()
+    const body = await req.json()
 
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SERVICE_KEY') ?? Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
-    )
-
-    // Auth: trusted server-side callers (e.g. the update_post_status_by_token RPC
-    // notifying the agency of a client decision) present the service-role key as a
-    // bearer. Everyone else (the authenticated agency app requesting approval) must
-    // present a valid user JWT.
-    const authHeader = req.headers.get('Authorization') || ''
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? ''
     const serviceKey = Deno.env.get('SERVICE_KEY') ?? Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    const supabase = createClient(supabaseUrl, serviceKey)
+
+    // The Version is read from the database; the body only names it. Callers:
+    //   - the database (service-role bearer, queued by deliverable_event or
+    //     update_post_status_by_token): any scenario below;
+    //   - Resend Link in the app (a user JWT): only a fresh review link for a
+    //     PENDING_APPROVAL Version, and only from an Owner/Admin of its workspace.
+    const authHeader = req.headers.get('Authorization') || ''
     const isServiceCall = serviceKey !== '' && authHeader === `Bearer ${serviceKey}`
+    const json = (status: number, payload: unknown) =>
+      new Response(JSON.stringify(payload), { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+
+    const versionId = body?.record?.id
+    if (!versionId) return json(400, { error: 'Missing record.id' })
+
+    const { data: record, error: recordError } = await supabase
+      .from('post_versions')
+      .select('id, post_id, client_id, created_by, title, status, target_date, client_notes')
+      .eq('id', versionId)
+      .maybeSingle()
+    if (recordError || !record) return json(404, { error: 'Post version not found' })
 
     if (!isServiceCall) {
-      if (!authHeader) {
-        return new Response(JSON.stringify({ error: 'Missing Authorization header' }), {
-          status: 401,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        })
-      }
+      if (!authHeader) return json(401, { error: 'Missing Authorization header' })
 
       const { data: { user }, error: userError } = await supabase.auth.getUser(authHeader.replace('Bearer ', ''))
-      if (userError || !user) {
-        return new Response(JSON.stringify({ error: 'Invalid JWT', details: userError }), {
-          status: 401,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        })
+      if (userError || !user) return json(401, { error: 'Invalid JWT' })
+
+      // As the caller: RLS shows only their workspace's Versions, and
+      // is_workspace_admin() reads their role.
+      const asCaller = createClient(supabaseUrl, Deno.env.get('SUPABASE_ANON_KEY') ?? '', {
+        global: { headers: { Authorization: authHeader } },
+      })
+      const [{ data: visible }, { data: isAdmin }] = await Promise.all([
+        asCaller.from('post_versions').select('id').eq('id', versionId).maybeSingle(),
+        asCaller.rpc('is_workspace_admin'),
+      ])
+      if (!visible || isAdmin !== true || record.status !== 'PENDING_APPROVAL') {
+        return json(403, { error: 'Only an Owner or Admin can resend the approval link of a deliverable awaiting approval' })
       }
     }
 
@@ -121,7 +136,7 @@ serve(async (req) => {
       const magicLink = `${Deno.env.get('FRONTEND_URL')}/review/${tokenData}`
       const postTitle = record.title || 'Untitled Post'
 
-      const { data, error } = await sendEmail('send-approval-email', 'approval-request', {
+      const { data, error, blocked } = await sendEmail('send-approval-email', 'approval-request', {
         from: `${branding.name} <notifications@tercerospace.com>`,
         to: [clientInfo.email],
         subject: `Action Required: Review "${postTitle}"`,
@@ -149,6 +164,19 @@ serve(async (req) => {
           </div>
         `,
       })
+
+      // Queued by the database, nobody is watching for the error: tell the
+      // Owner/Admins (#175). Resend Link gets the error back and shows it.
+      if (isServiceCall) {
+        await reportEmailFailure(supabase, { error, blocked }, {
+          workspaceId: clientOwner?.user_id,
+          title: `The approval email to ${clientInfo.name} failed to send`,
+          body: postTitle,
+          entityType: 'post',
+          entityId: record.post_id,
+          link: `/clients/${record.client_id}/deliverables/${record.post_id}`,
+        })
+      }
 
       if (error) return new Response(JSON.stringify(error), { status: 500, headers: corsHeaders })
       return new Response(JSON.stringify(data), { headers: corsHeaders })
