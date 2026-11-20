@@ -348,8 +348,7 @@ export default function PostDetails() {
         onConfirmApproveSchedule={() =>
           approveAndScheduleMutation.mutate({
             versionId: post.id,
-            perPlatform: !!post.platform_schedules,
-            targetDate: approveDate,
+            targetDate: post.platform_schedules ? null : approveDate,
           })
         }
         isApproveSchedulePending={approveAndScheduleMutation.isPending}
