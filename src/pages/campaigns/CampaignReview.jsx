@@ -422,9 +422,8 @@ export default function CampaignReview() {
     if (isSubmitting || !selectedPost?.review_token) return
     setIsSubmitting(true)
     try {
-      // get_campaign_by_review_token returns the version's platforms as `platform`.
-      const approvalStatus = (selectedPost.platform?.length ?? 0) > 0 ? 'SCHEDULED' : 'APPROVED'
-      await submitCampaignPostReview(selectedPost.review_token, approvalStatus, '')
+      // The database decides SCHEDULED (Social) or APPROVED (non-social).
+      await submitCampaignPostReview(selectedPost.review_token, 'APPROVE', '')
       setApprovedIds((prev) => new Set([...prev, selectedPost.post_id]))
       setFeedback('')
       advanceSelection(selectedPost.post_id)
@@ -440,7 +439,7 @@ export default function CampaignReview() {
     if (isSubmitting || !trimmed || !selectedPost?.review_token) return
     setIsSubmitting(true)
     try {
-      await submitCampaignPostReview(selectedPost.review_token, 'NEEDS_REVISION', trimmed)
+      await submitCampaignPostReview(selectedPost.review_token, 'REQUEST_REVISIONS', trimmed)
       setRevisedIds((prev) => new Set([...prev, selectedPost.post_id]))
       setFeedback('')
       advanceSelection(selectedPost.post_id)
