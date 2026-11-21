@@ -1103,14 +1103,16 @@ export function useDeleteApprovalEvents(options) {
 }
 
 /**
- * The client's verdict from a public review link (no auth): SCHEDULED or
- * APPROVED when accepted, NEEDS_REVISION with feedback otherwise.
+ * The client's decision from a public review link (no auth): `APPROVE` or
+ * `REQUEST_REVISIONS` (with feedback). The database picks the status and
+ * returns it: SCHEDULED (Social), APPROVED (non-social) or NEEDS_REVISION.
  */
-export async function respondToPostReview({ token, status, feedback }) {
-  const { error } = await supabase.rpc('update_post_status_by_token', {
+export async function respondToPostReview({ token, decision, feedback }) {
+  const { data, error } = await supabase.rpc('submit_review_decision', {
     p_token: token,
-    p_status: status,
+    p_decision: decision,
     p_feedback: feedback,
   })
   if (error) throw error
+  return data
 }

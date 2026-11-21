@@ -122,15 +122,12 @@ export default function PublicReview() {
     setIsPreviewOpen(true)
   }
 
-  const handleStatusUpdate = async (newStatus) => {
+  // The database decides the status (SCHEDULED, APPROVED or NEEDS_REVISION)
+  // from the decision, and the confirmation shows the one it chose.
+  const handleDecision = async (decision) => {
     setIsSubmitting(true)
-    const hasPlatforms = (post?.platform?.length ?? 0) > 0
-    const finalStatus = newStatus === 'APPROVED'
-      ? (hasPlatforms ? 'SCHEDULED' : 'APPROVED')
-      : newStatus
-
     try {
-      await respondToPostReview({ token, status: finalStatus, feedback })
+      const finalStatus = await respondToPostReview({ token, decision, feedback })
       setStatusUpdated(finalStatus)
     } catch {
       toast.error('Something went wrong. Please try again.')
@@ -425,7 +422,7 @@ export default function PublicReview() {
                 </div>
 
                 <DialogFooter className="mt-6">
-                  <Button onClick={() => handleStatusUpdate('APPROVED')} disabled={isSubmitting}>
+                  <Button onClick={() => handleDecision('APPROVE')} disabled={isSubmitting}>
                     {isSubmitting ? 'Processing...' : 'Confirm Approval'}
                   </Button>
                 </DialogFooter>
@@ -478,7 +475,7 @@ export default function PublicReview() {
                 <DialogFooter className="mt-6">
                   <Button
                     disabled={!feedback || isSubmitting}
-                    onClick={() => handleStatusUpdate('NEEDS_REVISION')}
+                    onClick={() => handleDecision('REQUEST_REVISIONS')}
                   >
                     {isSubmitting ? 'Sending Feedback...' : 'Submit Revision Request'}
                   </Button>

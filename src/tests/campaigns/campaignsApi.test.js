@@ -106,11 +106,11 @@ describe('campaign plain functions', () => {
     await expect(createCampaign({ name: 'x' })).rejects.toThrow('boom')
   })
 
-  it('submitCampaignPostReview calls the public RPC', async () => {
-    await submitCampaignPostReview('tok', 'NEEDS_REVISION', 'more punch')
+  it('submitCampaignPostReview sends a decision to the public RPC', async () => {
+    await submitCampaignPostReview('tok', 'REQUEST_REVISIONS', 'more punch')
     expect(calls[0]).toEqual({
-      rpc: 'update_post_status_by_token',
-      args: { p_token: 'tok', p_status: 'NEEDS_REVISION', p_feedback: 'more punch' },
+      rpc: 'submit_review_decision',
+      args: { p_token: 'tok', p_decision: 'REQUEST_REVISIONS', p_feedback: 'more punch' },
     })
   })
 })

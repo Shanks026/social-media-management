@@ -218,7 +218,7 @@ describe('Group B — Page states', () => {
 describe('Group C — Per-post actions', () => {
   beforeEach(() => vi.clearAllMocks())
 
-  it('approve calls submitCampaignPostReview with SCHEDULED and empty feedback', async () => {
+  it('approve calls submitCampaignPostReview with APPROVE and empty feedback', async () => {
     const { useCampaignReview, submitCampaignPostReview } = await import('@/api/campaigns')
     vi.mocked(useCampaignReview).mockReturnValue({
       isLoading: false,
@@ -232,10 +232,10 @@ describe('Group C — Per-post actions', () => {
     const approveBtn = screen.getByRole('button', { name: /approve this deliverable/i })
     await act(async () => fireEvent.click(approveBtn))
 
-    expect(submitCampaignPostReview).toHaveBeenCalledWith('token-post-1', 'SCHEDULED', '')
+    expect(submitCampaignPostReview).toHaveBeenCalledWith('token-post-1', 'APPROVE', '')
   })
 
-  it('request revisions calls submitCampaignPostReview with NEEDS_REVISION and trimmed feedback', async () => {
+  it('request revisions calls submitCampaignPostReview with REQUEST_REVISIONS and trimmed feedback', async () => {
     const { useCampaignReview, submitCampaignPostReview } = await import('@/api/campaigns')
     vi.mocked(useCampaignReview).mockReturnValue({
       isLoading: false,
@@ -254,7 +254,7 @@ describe('Group C — Per-post actions', () => {
 
     expect(submitCampaignPostReview).toHaveBeenCalledWith(
       'token-post-1',
-      'NEEDS_REVISION',
+      'REQUEST_REVISIONS',
       'needs fixing',
     )
   })

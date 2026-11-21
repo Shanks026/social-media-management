@@ -246,13 +246,16 @@ export async function sendCampaignReviewEmail({ clientEmail, clientName, campaig
   if (error) throw error
 }
 
-export async function submitCampaignPostReview(postReviewToken, status, feedback) {
-  const { error } = await supabase.rpc('update_post_status_by_token', {
+// decision is 'APPROVE' or 'REQUEST_REVISIONS'; the database picks the status
+// and returns it.
+export async function submitCampaignPostReview(postReviewToken, decision, feedback) {
+  const { data, error } = await supabase.rpc('submit_review_decision', {
     p_token: postReviewToken,
-    p_status: status,
+    p_decision: decision,
     p_feedback: feedback,
   })
   if (error) throw error
+  return data
 }
 
 // ─── Mutations: hooks that own invalidation ───────────────────────────────────
