@@ -64,10 +64,8 @@ describe('resendApprovalLink', () => {
     expect(err.message).toMatch(/couldn't be sent/)
   })
 
-  it('sends nothing when the old links cannot be deactivated', async () => {
-    eq.mockResolvedValue({ error: new Error('db down') })
-
-    await expect(resendApprovalLink(draft)).rejects.toThrow('db down')
-    expect(invoke).not.toHaveBeenCalled()
+  it('never writes review links from the browser; the edge function rotates them', async () => {
+    await resendApprovalLink(draft)
+    expect(eq).not.toHaveBeenCalled()
   })
 })
