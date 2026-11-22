@@ -52,10 +52,13 @@ BEGIN
   ASSERT (SELECT status FROM post_versions WHERE id = 'e1000000-0000-4000-8000-000000000003') = 'SCHEDULED',
     'review-link approval did not schedule';
 
-  -- Reads that used to return or cast the enum.
-  ASSERT (SELECT count(*) FROM get_global_calendar('11111111-1111-4111-8111-111111111111',
-          now() - interval '5 years', now() + interval '5 years')) > 0, 'calendar returned nothing';
-  PERFORM * FROM get_campaigns_with_post_summary('11111111-1111-4111-8111-111111111111');
+  -- Reads that used to return or cast the enum. They resolve the workspace
+  -- from the caller (#180): act as the Owner.
+  PERFORM set_config('request.jwt.claims',
+    json_build_object('sub', '11111111-1111-4111-8111-111111111111', 'role', 'authenticated')::text, true);
+  ASSERT (SELECT count(*) FROM get_global_calendar(p_start_date => now() - interval '5 years',
+          p_end_date => now() + interval '5 years')) > 0, 'calendar returned nothing';
+  PERFORM * FROM get_campaigns_with_post_summary(p_client_id => NULL);
   PERFORM * FROM client_pipeline_analytics;
   RAISE NOTICE 'PASS: Deliverable statuses';
 END $$;
@@ -135,10 +138,10 @@ BEGIN
   INSERT INTO proposals (agency_user_id, title, status, valid_until) VALUES
     (ws, 'Lapsed', 'SENT', CURRENT_DATE - 1),
     (ws, 'Old draft', 'DRAFT', CURRENT_DATE - 1);
-  -- The read resolves the workspace from the caller (#169): act as the Owner.
+  -- The read resolves the workspace from the caller (#169, #180): act as the Owner.
   PERFORM set_config('request.jwt.claims', json_build_object('sub', ws, 'role', 'authenticated')::text, true);
-  ASSERT (SELECT status FROM get_proposals_with_totals(ws) WHERE title = 'Lapsed') = 'EXPIRED', 'lapsed not EXPIRED';
-  ASSERT (SELECT status FROM get_proposals_with_totals(ws) WHERE title = 'Old draft') = 'DRAFT', 'draft expired';
+  ASSERT (SELECT status FROM get_proposals_with_totals(p_client_id => NULL) WHERE title = 'Lapsed') = 'EXPIRED', 'lapsed not EXPIRED';
+  ASSERT (SELECT status FROM get_proposals_with_totals(p_client_id => NULL) WHERE title = 'Old draft') = 'DRAFT', 'draft expired';
   RAISE NOTICE 'PASS: Proposal statuses';
 END $$;
 

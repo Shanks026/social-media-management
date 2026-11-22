@@ -28,8 +28,8 @@ export function useProposals({ clientId, prospectId } = {}) {
     queryFn: async () => {
       // When filtering by prospect, fetch all workspace proposals then filter client-side
       // (the RPC only supports client_id filtering natively)
+      // The caller's workspace, Owner/Admin only (ADR 0008).
       const { data, error } = await supabase.rpc('get_proposals_with_totals', {
-        p_user_id: workspaceUserId,
         p_client_id: prospectId ? null : (clientId ?? null),
       })
       if (error) throw error

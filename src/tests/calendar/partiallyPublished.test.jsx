@@ -52,7 +52,7 @@ describe('fetchGlobalCalendar', () => {
     select.mockClear()
   })
 
-  it('attaches each version’s platform_schedules so cells and filters can derive the publish state', async () => {
+  it('attaches each versionâ€™s platform_schedules so cells and filters can derive the publish state', async () => {
     rpc.mockResolvedValue({
       data: [
         { version_id: 'v-partial', status: 'SCHEDULED' },
@@ -68,7 +68,7 @@ describe('fetchGlobalCalendar', () => {
       error: null,
     })
 
-    const rows = await fetchGlobalCalendar({ userId: 'owner', currentMonth: new Date(2026, 10, 1) })
+    const rows = await fetchGlobalCalendar({ currentMonth: new Date(2026, 10, 1) })
 
     expect(inFn).toHaveBeenCalledWith('id', ['v-partial', 'v-sched'])
     expect(rows.filter((r) => matchesPublishStatus(r, 'PARTIALLY_PUBLISHED')).map((r) => r.version_id))
@@ -77,7 +77,7 @@ describe('fetchGlobalCalendar', () => {
 
   it('skips the extra query when the month is empty', async () => {
     rpc.mockResolvedValue({ data: [], error: null })
-    expect(await fetchGlobalCalendar({ userId: 'owner', currentMonth: new Date() })).toEqual([])
+    expect(await fetchGlobalCalendar({ currentMonth: new Date() })).toEqual([])
     expect(inFn).not.toHaveBeenCalled()
   })
 })

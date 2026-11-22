@@ -3,9 +3,9 @@ import { renderHook, waitFor } from '@testing-library/react'
 import { createWrapper } from '../test-utils'
 
 // Regression test for audit bug B2: the calendar passed user.id to
-// get_global_calendar, which filters clients by c.user_id = p_user_id. For an
-// invited member user.id is not the workspace owner's uid, so their calendar
-// came back empty.
+// get_global_calendar, so an invited member's calendar came back empty. Since
+// #180 (ADR 0008) the function resolves the caller's workspace itself, so the
+// browser sends no id at all; workspaceUserId only scopes the cache.
 
 const rpc = vi.fn()
 
@@ -27,16 +27,15 @@ describe('useGlobalCalendar', () => {
     rpc.mockReset().mockResolvedValue({ data: [], error: null })
   })
 
-  it('scopes the calendar to the workspace owner, not the signed-in member', async () => {
+  it('sends only the date range; the database resolves the workspace', async () => {
     renderHook(
       () => useGlobalCalendar({ currentMonth: new Date(2026, 10, 7) }),
       { wrapper: createWrapper() },
     )
 
     await waitFor(() => expect(rpc).toHaveBeenCalled())
-    expect(rpc).toHaveBeenCalledWith(
-      'get_global_calendar',
-      expect.objectContaining({ p_user_id: 'owner-uid' }),
-    )
+    const [name, args] = rpc.mock.calls[0]
+    expect(name).toBe('get_global_calendar')
+    expect(Object.keys(args).sort()).toEqual(['p_end_date', 'p_start_date'])
   })
 })

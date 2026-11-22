@@ -99,7 +99,7 @@ describe('Group A — API Layer', () => {
       await waitFor(() => expect(result.current.isSuccess).toBe(true))
       expect(supabase.rpc).toHaveBeenCalledWith(
         'get_campaigns_with_post_summary',
-        { p_user_id: 'user-123', p_client_id: null },
+        { p_client_id: null },
       )
     })
 
@@ -111,7 +111,7 @@ describe('Group A — API Layer', () => {
       await waitFor(() =>
         expect(supabase.rpc).toHaveBeenCalledWith(
           'get_campaigns_with_post_summary',
-          { p_user_id: 'user-123', p_client_id: 'client-abc' },
+          { p_client_id: 'client-abc' },
         ),
       )
     })

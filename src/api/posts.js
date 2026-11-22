@@ -483,12 +483,12 @@ export async function cleanupRemovedMedia(urlsToRemove) {
   }
 }
 
-export async function fetchGlobalCalendar({ userId, currentMonth }) {
+export async function fetchGlobalCalendar({ currentMonth }) {
   const startDate = startOfWeek(startOfMonth(currentMonth)).toISOString()
   const endDate = endOfWeek(endOfMonth(currentMonth)).toISOString()
 
+  // The function reads the caller's workspace itself (ADR 0008).
   const { data, error } = await supabase.rpc('get_global_calendar', {
-    p_user_id: userId,
     p_start_date: startDate,
     p_end_date: endDate,
   })
@@ -511,9 +511,9 @@ export async function fetchGlobalCalendar({ userId, currentMonth }) {
 }
 
 /**
- * Deliverables for the calendar grid around `currentMonth`, scoped to the
- * workspace. Always uses workspaceUserId: get_global_calendar filters
- * clients by owner uid, so an invited member's own user.id returns nothing.
+ * Deliverables for the calendar grid around `currentMonth`, in the caller's
+ * workspace (get_global_calendar resolves it). workspaceUserId only scopes the
+ * cache (ADR 0007).
  */
 export function useGlobalCalendar({ currentMonth, clientId = null, view } = {}) {
   const { workspaceUserId } = useAuth()
@@ -524,7 +524,7 @@ export function useGlobalCalendar({ currentMonth, clientId = null, view } = {}) 
       month: format(currentMonth, 'yyyy-MM-dd'),
     }),
     queryFn: () =>
-      fetchGlobalCalendar({ userId: workspaceUserId, currentMonth }),
+      fetchGlobalCalendar({ currentMonth }),
     enabled: !!workspaceUserId,
   })
 }
