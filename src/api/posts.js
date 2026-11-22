@@ -838,48 +838,54 @@ export function usePostVersions(postId) {
   })
 }
 
+/** The statuses the week timeline shows: committed work with a date. */
+export const WEEK_STATUSES = ['SCHEDULED', 'APPROVED']
+
 /**
- * One client's SCHEDULED or APPROVED Deliverables dated between `from` and
- * `to` (the client week timeline).
+ * The SCHEDULED or APPROVED Deliverables (by their current Version) dated
+ * between `from` and `to`, for one Client or, with no `clientId`, the whole
+ * workspace. The database applies the window, so the dashboard doesn't load
+ * every Deliverable to show seven days (#198).
  */
-export async function fetchClientWeekPosts(clientId, { from, to }) {
-  const { data, error } = await supabase
+export async function fetchWeekPosts({ clientId = null, workspaceUserId, from, to }) {
+  let query = supabase
     .from('posts')
     .select(`
       id,
-      post_versions!fk_current_version (
-        id,
-        title,
-        status,
-        platform,
-        target_date
-      )
+      client_id,
+      post_versions!fk_current_version!inner ( id, title, status, platform, target_date ),
+      clients!inner ( id, name, logo_url, is_internal, user_id )
     `)
-    .eq('client_id', clientId)
+    .in('post_versions.status', WEEK_STATUSES)
+    .gte('post_versions.target_date', from.toISOString())
+    .lte('post_versions.target_date', to.toISOString())
+  query = clientId
+    ? query.eq('client_id', clientId)
+    : query.eq('clients.user_id', workspaceUserId)
+
+  const { data, error } = await query
   if (error) throw error
 
-  return (data || [])
-    .map((p) => ({
-      id: p.id,
-      ...p.post_versions,
-      platforms: p.post_versions?.platform || [],
-    }))
-    .filter(
-      (p) =>
-        (p.status === 'SCHEDULED' || p.status === 'APPROVED') &&
-        p.target_date &&
-        new Date(p.target_date) >= from &&
-        new Date(p.target_date) <= to,
-    )
+  return (data || []).map((p) => ({
+    ...p.post_versions,
+    id: p.id,
+    version_id: p.post_versions.id,
+    client_id: p.client_id,
+    client_name: p.clients?.name,
+    client_logo: p.clients?.logo_url,
+    is_internal: p.clients?.is_internal,
+    platforms: p.post_versions.platform || [],
+  }))
 }
 
-export function useClientWeekPosts(clientId, { from, to }, options = {}) {
+/** {@link fetchWeekPosts} as a hook; `clientId` omitted means the workspace. */
+export function useWeekPosts({ clientId = null, from, to }, options = {}) {
   const { workspaceUserId } = useAuth()
   return useQuery({
     ...options,
     queryKey: postKeys.week(workspaceUserId, { clientId, from: from.toISOString() }),
-    queryFn: () => fetchClientWeekPosts(clientId, { from, to }),
-    enabled: !!clientId,
+    queryFn: () => fetchWeekPosts({ clientId, workspaceUserId, from, to }),
+    enabled: !!workspaceUserId && (options.enabled ?? true),
   })
 }
 

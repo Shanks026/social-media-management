@@ -63,7 +63,7 @@ import { useAuth } from '@/context/AuthContext'
 import CreateMeetingDialog from '@/components/CreateMeetingDialog'
 import CreateTaskDialog from '@/components/tasks/CreateTaskDialog'
 import TaskCard from '@/components/tasks/TaskCard'
-import ClientWeekTimeline from './ClientWeekTimeline'
+import WeekTimeline from '@/components/WeekTimeline'
 
 import {
   DELIVERABLE_CHART_CONFIG as chartConfig,
@@ -583,7 +583,7 @@ export default function OverviewTab({ client }) {
 
         {/* COLUMN 3: WEEK TIMELINE (external) or RECENT TRANSACTIONS (internal) */}
         {!client.is_internal ? (
-          <ClientWeekTimeline clientId={client.id} />
+          <WeekTimeline clientId={client.id} />
         ) : finance ? (
           <Card className="border-none shadow-sm ring-1 ring-border/50 bg-card/50 flex flex-col gap-2 h-full">
             <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
