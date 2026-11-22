@@ -1,5 +1,7 @@
--- #169 regression test: RPCs that take a workspace id must not act on a
--- workspace the caller doesn't belong to.
+-- #169 regression test: RPCs must not act on a workspace the caller doesn't
+-- belong to. Since #182 they take no workspace id at all (ADR 0008), so this
+-- checks the outsider, a Member and the Owner against the caller-resolved
+-- signatures.
 -- Self-checking and self-cleaning: runs in a transaction that is rolled back,
 -- and raises on the first failed assertion.
 --
@@ -46,16 +48,15 @@ BEGIN
   EXCEPTION WHEN insufficient_privilege THEN NULL;
   END;
 
-  IF (SELECT count(*) FROM public.get_proposals_with_totals('11111111-1111-4111-8111-111111111111', NULL)) <> 0 THEN
+  IF EXISTS (SELECT 1 FROM public.get_proposals_with_totals(p_client_id => NULL)
+             WHERE title = 'Secret retainer pitch') THEN
     RAISE EXCEPTION 'FAIL: outsider can read another workspace''s proposals';
   END IF;
 
   BEGIN
-    PERFORM public.generate_invoice_from_template(
-      (SELECT id FROM t_ids WHERE name = 'template'), '11111111-1111-4111-8111-111111111111');
+    PERFORM public.generate_invoice_from_template((SELECT id FROM t_ids WHERE name = 'template'));
     RAISE EXCEPTION 'FAIL: outsider drafted an invoice into another workspace';
-  EXCEPTION WHEN raise_exception THEN
-    IF SQLERRM LIKE 'FAIL:%' THEN RAISE; END IF;
+  EXCEPTION WHEN no_data_found THEN NULL;
   END;
 END $$;
 
@@ -66,7 +67,7 @@ SET LOCAL ROLE authenticated;
 
 DO $$
 BEGIN
-  IF (SELECT count(*) FROM public.get_proposals_with_totals('11111111-1111-4111-8111-111111111111', NULL)) <> 0 THEN
+  IF (SELECT count(*) FROM public.get_proposals_with_totals(p_client_id => NULL)) <> 0 THEN
     RAISE EXCEPTION 'FAIL: a Member can read proposals through the RPC';
   END IF;
 END $$;
@@ -78,11 +79,10 @@ SET LOCAL ROLE authenticated;
 
 DO $$
 BEGIN
-  IF (SELECT count(*) FROM public.get_proposals_with_totals('11111111-1111-4111-8111-111111111111', NULL)) <> 1 THEN
+  IF (SELECT count(*) FROM public.get_proposals_with_totals(p_client_id => NULL)) <> 1 THEN
     RAISE EXCEPTION 'FAIL: the Owner no longer sees their proposals';
   END IF;
-  IF public.generate_invoice_from_template(
-       (SELECT id FROM t_ids WHERE name = 'template'), '11111111-1111-4111-8111-111111111111') IS NULL THEN
+  IF public.generate_invoice_from_template((SELECT id FROM t_ids WHERE name = 'template')) IS NULL THEN
     RAISE EXCEPTION 'FAIL: the Owner can no longer generate an invoice';
   END IF;
 END $$;

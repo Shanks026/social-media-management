@@ -85,14 +85,8 @@ INSERT INTO allowed (fn, who, reason) VALUES
   ('get_team_members()',                       'authenticated', 'the caller''s workspace (get_my_agency_user_id); DEFINER to read auth.users; mobile numbers only for Owner/Admin or self'),
   ('get_removed_members()',                    'authenticated', 'the caller''s workspace (get_my_agency_user_id); DEFINER to read auth.users'),
   ('get_proposals_with_totals(uuid)',          'authenticated', 'Owner/Admin of the caller''s workspace only (get_my_agency_user_id), as RLS'),
-  -- The old signatures, until #182 drops them; each refuses an id that isn't
-  -- the caller's workspace (#169).
-  ('get_team_members(uuid)',                   'authenticated', 'checks the id is the caller''s workspace (#169); #180 drops the parameter'),
-  ('get_removed_members(uuid)',                'authenticated', 'checks the id is the caller''s workspace (#169); #180 drops the parameter'),
-  ('get_proposals_with_totals(uuid,uuid)',     'authenticated', 'Owner/Admin, and the id must be the caller''s workspace (#169); #180 drops the parameter'),
   ('get_campaign_analytics(uuid)',             'authenticated', 'only a campaign in the caller''s workspace (#179: had no check)'),
   ('generate_invoice_from_template(uuid)',     'authenticated', 'signed in, finance access, and a template of the caller''s workspace (#181)'),
-  ('generate_invoice_from_template(uuid,uuid)', 'authenticated', 'a signed-in caller needs finance access and its own workspace''s template (the cron calls it as postgres); #181 makes it use the real caller'),
   ('generate_proposal_token(uuid)',            'authenticated', 'only a proposal in the caller''s workspace'),
 
   -- Team.
@@ -117,11 +111,7 @@ INSERT INTO allowed (fn, who, reason) VALUES
   ('toggle_chat_reaction(uuid,text)',          'authenticated', 'the caller''s own reaction, in a channel they belong to'),
   ('soft_delete_chat_message(uuid)',           'authenticated', 'the caller''s own message in their workspace, or Owner/Admin in the workspace channel'),
   ('soft_delete_comment(uuid)',                'authenticated', 'the caller''s own comment in their workspace, or Owner/Admin'),
-  ('toggle_comment_reaction(uuid,text)',       'authenticated', 'the caller''s own reaction, on a comment in their workspace'),
-
-  -- Storage counters: no-ops since the storage.objects trigger took over; #182 drops them.
-  ('increment_storage_used(uuid,bigint)',      'authenticated', 'deprecated no-op (does nothing); dropped in #182'),
-  ('decrement_storage_used(uuid,bigint)',      'authenticated', 'deprecated no-op (does nothing); dropped in #182');
+  ('toggle_comment_reaction(uuid,text)',       'authenticated', 'the caller''s own reaction, on a comment in their workspace');
 
 -- Every user-callable DEFINER function that isn't allowed at that level, and
 -- every entry that no longer matches a callable function.
