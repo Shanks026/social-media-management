@@ -1,6 +1,6 @@
 import { formatDate, formatCurrency } from '@/lib/format'
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import {
   Plus,
   Search,
@@ -8,19 +8,28 @@ import {
   Trash2,
   Archive,
   MoreHorizontal,
-  ChevronRight,
   Upload,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
-import { useSubscription } from '@/api/useSubscription'
-import { useProposals, useDeleteProposal } from '@/api/proposals'
+import { useProposals, useProposalLimit, useDeleteProposal } from '@/api/proposals'
+import { useClients } from '@/api/clients'
+import { ClientAvatar } from '@/components/tasks/ClientAvatar'
 import { ProposalDialog } from '@/components/proposals/ProposalDialog'
 import { UploadProposalDialog } from '@/components/proposals/UploadProposalDialog'
 import { ProposalsUpgradePrompt } from '@/components/proposals/ProposalsUpgradePrompt'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Badge } from '@/components/ui/badge'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Skeleton } from '@/components/ui/skeleton'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -53,7 +62,6 @@ import {
   EmptyTitle,
   EmptyDescription,
 } from '@/components/ui/empty'
-import { cn } from '@/lib/utils'
 import StatusBadge from '@/components/StatusBadge'
 import {
   DISPLAY_STATUSES,
@@ -61,40 +69,86 @@ import {
 } from '@/lib/domain/proposalStatus'
 
 const STATUS_TABS = ['all', ...DISPLAY_STATUSES]
+const ALL_CLIENTS = 'all'
+const PROSPECTS_ONLY = '__prospect__'
 
 function ProposalRowSkeleton() {
   return (
     <TableRow>
       <TableCell className="px-4 py-3"><Skeleton className="h-4 w-48" /></TableCell>
-      <TableCell className="px-4 py-3"><Skeleton className="h-4 w-16 ml-auto" /></TableCell>
-      <TableCell className="px-4 py-3"><Skeleton className="h-5 w-20 rounded-full mx-auto" /></TableCell>
-      <TableCell className="px-4 py-3"><Skeleton className="h-4 w-20 ml-auto" /></TableCell>
-      <TableCell className="px-4 py-3" />
+      <TableCell className="w-[12%] px-4 py-3"><Skeleton className="h-4 w-16 ml-auto" /></TableCell>
+      <TableCell className="w-[14%] px-4 py-3"><Skeleton className="h-5 w-20 rounded-full" /></TableCell>
+      <TableCell className="w-[14%] px-4 py-3"><Skeleton className="h-4 w-20" /></TableCell>
+      <TableCell className="w-[14%] px-4 py-3"><Skeleton className="h-4 w-20" /></TableCell>
+      <TableCell className="w-[6%] px-4 py-3" />
     </TableRow>
+  )
+}
+
+// The workspace-wide list's Client filter: its own component so the Client
+// options are read only where it shows (not in a Client's or Prospect's list).
+function ClientFilter({ value, onChange }) {
+  const { data: clientsData } = useClients()
+  const realClients = clientsData?.realClients ?? []
+  return (
+    <Select value={value} onValueChange={onChange}>
+      <SelectTrigger
+        aria-label="Client"
+        className="w-[180px] bg-muted/20 border-border/40"
+      >
+        <SelectValue placeholder="All clients" />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value={ALL_CLIENTS}>All clients</SelectItem>
+        <SelectItem value={PROSPECTS_ONLY}>Prospects</SelectItem>
+        {realClients.map((c) => (
+          <SelectItem key={c.id} value={c.id}>
+            <div className="flex items-center gap-2">
+              <ClientAvatar client={c} size="sm" />
+              <span className="truncate">{c.name}</span>
+            </div>
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   )
 }
 
 // ── Tab component ─────────────────────────────────────────────────────────────
 
-export function ProposalTab({ clientId, prospectId, prospectName, prospectEmail }) {
+/**
+ * The one Proposals list. Its scope is a Client (`clientId`), a Prospect (the
+ * `prospect` record), or neither; giving both is a programming error.
+ */
+export function ProposalTab({ clientId, prospect }) {
+  if (clientId && prospect) {
+    throw new Error('ProposalTab is scoped to a Client or a Prospect, not both')
+  }
+  const prospectId = prospect?.id
+  const prospectName = prospect?.business_name ?? null
+  const prospectEmail = prospect?.email ?? null
   const navigate = useNavigate()
-  const { data: sub } = useSubscription()
-  const { data: proposals = [], isLoading } = useProposals({ clientId, prospectId })
-  const { data: allProposals = [] } = useProposals() // workspace-wide count for limit check
+  const {
+    used: activeCount,
+    limit: proposalsLimit,
+    atLimit,
+    isLoading: limitLoading,
+  } = useProposalLimit()
+  const { data: proposals = [], isLoading, error } = useProposals({ clientId, prospectId })
   const deleteProposal = useDeleteProposal()
+  // With no scope this is the workspace-wide list: each row names its Client
+  // or Prospect, and the Client filter narrows to one of them.
+  const unscoped = !clientId && !prospect
 
   const [activeTab, setActiveTab] = useState('all')
   const [search, setSearch] = useState('')
+  const [clientFilter, setClientFilter] = useState(ALL_CLIENTS)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false)
   const [editingProposal, setEditingProposal] = useState(null)
   const [deletingProposal, setDeletingProposal] = useState(null)
   const [upgradeOpen, setUpgradeOpen] = useState(false)
 
-  // Limit check is workspace-wide, not scoped to this client
-  const activeCount = allProposals.filter((p) => p.status !== 'ARCHIVED').length
-  const proposalsLimit = sub?.proposals_limit ?? null
-  const atLimit = proposalsLimit !== null && activeCount >= proposalsLimit
 
   function openUploadDialog() {
     if (atLimit) {
@@ -104,20 +158,34 @@ export function ProposalTab({ clientId, prospectId, prospectName, prospectEmail 
     }
   }
 
-  // Filter
-  const filtered = proposals.filter((p) => {
-    if (activeTab === 'all' && p.status === 'ARCHIVED') return false
-    if (activeTab !== 'all' && p.status !== activeTab) return false
+  const isFiltered = search !== '' || clientFilter !== ALL_CLIENTS
+  // A status tab narrows the list too: its empty state is "nothing matches".
+  const narrowed = isFiltered || activeTab !== 'all'
+
+  // The Client filter and search narrow the list; the status tabs count what
+  // they leave, and the chosen tab narrows it further.
+  const matching = proposals.filter((p) => {
+    if (clientFilter === PROSPECTS_ONLY && p.client_id) return false
+    if (
+      clientFilter !== ALL_CLIENTS &&
+      clientFilter !== PROSPECTS_ONLY &&
+      p.client_id !== clientFilter
+    )
+      return false
     if (search) {
       const q = search.toLowerCase()
       if (
         !p.title?.toLowerCase().includes(q) &&
+        !p.client_name?.toLowerCase().includes(q) &&
         !p.prospect_name?.toLowerCase().includes(q)
       )
         return false
     }
     return true
   })
+  const inTab = (p, tab) =>
+    tab === 'all' ? p.status !== 'ARCHIVED' : p.status === tab
+  const filtered = matching.filter((p) => inTab(p, activeTab))
 
   async function handleDelete() {
     if (!deletingProposal) return
@@ -152,13 +220,33 @@ export function ProposalTab({ clientId, prospectId, prospectName, prospectEmail 
             className="pl-9 bg-muted/20 border-border/40"
           />
         </div>
+        {unscoped && (
+          <ClientFilter value={clientFilter} onChange={setClientFilter} />
+        )}
+        {isFiltered && (
+          <Button
+            variant="ghost"
+            onClick={() => {
+              setSearch('')
+              setClientFilter(ALL_CLIENTS)
+            }}
+            className="text-muted-foreground h-9 px-3"
+          >
+            Reset
+          </Button>
+        )}
         <div className="ml-auto flex items-center gap-2">
-          {proposalsLimit !== null && (
+          {!limitLoading && proposalsLimit !== null && (
             <span className="text-xs text-muted-foreground tabular-nums">
               {activeCount} of {proposalsLimit} used
             </span>
           )}
-          <Button size="sm" className="gap-2 h-9" onClick={openUploadDialog}>
+          <Button
+            size="sm"
+            className="gap-2 h-9"
+            onClick={openUploadDialog}
+            disabled={limitLoading}
+          >
             <Plus className="size-4" />
             New Proposal
           </Button>
@@ -166,38 +254,31 @@ export function ProposalTab({ clientId, prospectId, prospectName, prospectEmail 
       </div>
 
       {/* ── Status tabs ── */}
-      <div className="flex gap-1 flex-wrap border-b border-border/50">
-        {STATUS_TABS.map((tab) => {
-          const count =
-            tab === 'all'
-              ? proposals.filter((p) => p.status !== 'ARCHIVED').length
-              : proposals.filter((p) => p.status === tab).length
-          return (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={cn(
-                'px-3 py-2 text-sm font-medium capitalize border-b-2 -mb-px transition-colors',
-                activeTab === tab
-                  ? 'border-primary text-foreground'
-                  : 'border-transparent text-muted-foreground hover:text-foreground',
-              )}
-            >
-              {tab === 'all' ? 'All' : proposalStatusLabel(tab)}
-              {count > 0 && (
-                <span className="ml-1.5 text-[10px] opacity-60 tabular-nums">
-                  {count}
-                </span>
-              )}
-            </button>
-          )
-        })}
-      </div>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList variant="underline">
+          {STATUS_TABS.map((tab) => {
+            const count = matching.filter((p) => inTab(p, tab)).length
+            return (
+              <TabsTrigger key={tab} value={tab}>
+                {tab === 'all' ? 'All' : proposalStatusLabel(tab)}
+                {count > 0 && (
+                  <Badge
+                    variant="secondary"
+                    className="text-xs px-1.5 py-0 min-w-5 text-center"
+                  >
+                    {count}
+                  </Badge>
+                )}
+              </TabsTrigger>
+            )
+          })}
+        </TabsList>
+      </Tabs>
 
       {/* ── Content ── */}
       {isLoading ? (
         <div className="rounded-xl border border-border/50 overflow-hidden bg-card">
-          <Table>
+          <Table className="table-fixed">
             <TableBody>
               {Array.from({ length: 3 }).map((_, i) => (
                 <ProposalRowSkeleton key={i} />
@@ -205,29 +286,33 @@ export function ProposalTab({ clientId, prospectId, prospectName, prospectEmail 
             </TableBody>
           </Table>
         </div>
+      ) : error ? (
+        <p className="py-16 text-center text-sm text-destructive">
+          Couldn't load proposals: {error.message || 'something went wrong'}
+        </p>
       ) : filtered.length === 0 ? (
         <Empty className="py-16 border border-dashed rounded-2xl bg-muted/5">
           <EmptyContent>
             <div className="text-4xl leading-none select-none mb-2">📋</div>
             <EmptyHeader>
-              <EmptyTitle className="font-bold text-lg">
+              <EmptyTitle className="font-bold text-xl">
                 No Proposals
               </EmptyTitle>
               <EmptyDescription className="font-normal">
-                {search || activeTab !== 'all'
-                  ? 'No proposals match your current filters.'
+                {narrowed
+                  ? 'No proposals match your filters.'
                   : prospectId
-                  ? 'No proposals for this prospect yet. Upload the first one.'
-                  : 'No proposals for this client yet. Upload the first one.'}
+                    ? 'No proposals for this prospect yet.'
+                    : clientId
+                      ? 'No proposals for this client yet.'
+                      : "You haven't created any proposals yet."}
               </EmptyDescription>
             </EmptyHeader>
-            {!search && activeTab === 'all' && (
-              <div className="flex items-center gap-2 mt-2">
-                <Button onClick={openUploadDialog}>
-                  <Upload className="size-4 mr-2" />
-                  Upload Existing File
-                </Button>
-              </div>
+            {!narrowed && (
+              <Button onClick={openUploadDialog} variant="outline" className="mt-2">
+                <Upload className="size-4 mr-2" />
+                Upload a proposal
+              </Button>
             )}
           </EmptyContent>
         </Empty>
@@ -241,34 +326,47 @@ export function ProposalTab({ clientId, prospectId, prospectName, prospectEmail 
                 <TableHead className="px-4 py-2.5 text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
                   Proposal
                 </TableHead>
-                <TableHead className="w-[15%] px-4 py-2.5 text-[11px] font-medium text-muted-foreground uppercase tracking-wider text-right">
+                <TableHead className="w-[12%] px-4 py-2.5 text-[11px] font-medium text-muted-foreground uppercase tracking-wider text-right">
                   Total
                 </TableHead>
-                <TableHead className="w-[16%] px-4 py-2.5 text-[11px] font-medium text-muted-foreground uppercase tracking-wider text-center">
+                <TableHead className="w-[14%] px-4 py-2.5 text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
                   Status
                 </TableHead>
-                <TableHead className="w-[16%] px-4 py-2.5 text-[11px] font-medium text-muted-foreground uppercase tracking-wider text-right">
+                <TableHead className="w-[14%] px-4 py-2.5 text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
                   Valid Until
                 </TableHead>
-                <TableHead className="w-[8%] px-4 py-2.5" />
+                <TableHead className="w-[14%] px-4 py-2.5 text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
+                  Created
+                </TableHead>
+                <TableHead className="w-[6%] px-4 py-2.5" />
               </TableRow>
             </TableHeader>
             <TableBody>
               {filtered.map((proposal) => (
-                <TableRow key={proposal.id} className="group hover:bg-muted/40 transition-colors">
-                  {/* Title */}
+                <TableRow
+                  key={proposal.id}
+                  onClick={() => navigate(`/proposals/${proposal.id}`)}
+                  className="group cursor-pointer hover:bg-muted/40 transition-colors"
+                >
+                  {/* Title: a real link, so the keyboard and new tabs work */}
                   <TableCell className="px-4 py-3">
-                    <button
-                      onClick={() => navigate(`/proposals/${proposal.id}`)}
-                      className="text-left min-w-0"
+                    <Link
+                      to={`/proposals/${proposal.id}`}
+                      onClick={(e) => e.stopPropagation()}
+                      className="block text-sm font-medium text-foreground truncate group-hover:text-primary transition-colors focus-visible:outline-none focus-visible:underline"
                     >
-                      <p className="text-sm font-medium text-foreground truncate group-hover:text-primary transition-colors">
-                        {proposal.title}
-                      </p>
+                      {proposal.title}
+                    </Link>
+                    {unscoped && (
                       <p className="text-xs text-muted-foreground truncate mt-0.5">
-                        {formatDate(proposal.created_at)}
+                        {proposal.client_name || proposal.prospect_name || '—'}
+                        {!proposal.client_id && proposal.prospect_name && (
+                          <span className="ml-1.5 text-[10px] opacity-60">
+                            (prospect)
+                          </span>
+                        )}
                       </p>
-                    </button>
+                    )}
                   </TableCell>
 
                   {/* Total */}
@@ -278,35 +376,33 @@ export function ProposalTab({ clientId, prospectId, prospectName, prospectEmail 
 
                   {/* Status */}
                   <TableCell className="px-4 py-3">
-                    <div className="flex justify-center">
-                      <StatusBadge entity="proposal" status={proposal.status} />
-                    </div>
+                    <StatusBadge entity="proposal" status={proposal.status} />
                   </TableCell>
 
                   {/* Valid Until */}
-                  <TableCell className="px-4 py-3 text-xs text-muted-foreground text-right tabular-nums">
+                  <TableCell className="px-4 py-3 text-xs text-muted-foreground">
                     {proposal.valid_until ? formatDate(proposal.valid_until) : '—'}
                   </TableCell>
 
+                  {/* Created */}
+                  <TableCell className="px-4 py-3 text-xs text-muted-foreground">
+                    {formatDate(proposal.created_at)}
+                  </TableCell>
+
                   {/* Actions */}
-                  <TableCell className="px-4 py-3">
+                  <TableCell className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="size-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                          aria-label="Actions"
+                          className="size-7 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100 transition-opacity"
                         >
                           <MoreHorizontal className="size-4" />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem
-                          onClick={() => navigate(`/proposals/${proposal.id}`)}
-                        >
-                          <ChevronRight className="size-4 mr-2" />
-                          View Details
-                        </DropdownMenuItem>
                         {proposal.status !== 'ARCHIVED' &&
                           proposal.proposal_type !== 'uploaded' && (
                             <DropdownMenuItem

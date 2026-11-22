@@ -44,7 +44,7 @@ import {
 import ProspectOverviewTab from './prospectSections/ProspectOverviewTab'
 import ProspectOutreachTab from './prospectSections/ProspectOutreachTab'
 import ProspectDocumentsTab from './prospectSections/ProspectDocumentsTab'
-import ProspectProposalsTab from './prospectSections/ProspectProposalsTab'
+import { ProposalTab } from '@/components/proposals/ProposalTab'
 import EditProspectDialog from '@/components/prospects/EditProspectDialog'
 import { ConvertToClientDialog } from '@/components/prospects/ConvertToClientDialog'
 
@@ -343,7 +343,7 @@ export default function ProspectDetailPage() {
             value="proposals"
             className="mt-2 focus-visible:ring-0 outline-none data-[state=active]:animate-in data-[state=active]:fade-in data-[state=active]:duration-300"
           >
-            <ProspectProposalsTab prospect={prospect} />
+            <ProposalTab prospect={prospect} />
           </TabsContent>
 
           <TabsContent
