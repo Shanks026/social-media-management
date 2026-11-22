@@ -198,7 +198,7 @@ describe('the Proposals page: empty state', () => {
     answerWorkspace([])
     renderPage()
 
-    expect(await screen.findByText('No proposals in this workspace yet.')).toBeInTheDocument()
+    expect(await screen.findByText("You haven't created any proposals yet.")).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Upload a proposal' }))
     expect(await screen.findByRole('dialog', { name: 'Upload Proposal' })).toBeInTheDocument()
   })

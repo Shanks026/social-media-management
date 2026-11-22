@@ -104,7 +104,7 @@ export function ProposalTab({ clientId, prospect }) {
   const deleteProposal = useDeleteProposal()
   // With no scope this is the workspace-wide list: each row names its Client
   // or Prospect, and the Client filter narrows to one of them.
-  const unscoped = !clientId && !prospectId
+  const unscoped = !clientId && !prospect
   const { data: clientsData } = useClients()
   const realClients = clientsData?.realClients ?? []
 
@@ -283,7 +283,7 @@ export function ProposalTab({ clientId, prospect }) {
                     ? 'No proposals for this prospect yet.'
                     : clientId
                       ? 'No proposals for this client yet.'
-                      : 'No proposals in this workspace yet.'}
+                      : "You haven't created any proposals yet."}
               </EmptyDescription>
             </EmptyHeader>
             {!narrowed && (
