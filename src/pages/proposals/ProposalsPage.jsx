@@ -13,8 +13,7 @@ import {
 import { toast } from 'sonner'
 
 import { useHeader } from '@/components/misc/header-context'
-import { useSubscription } from '@/api/useSubscription'
-import { useProposals, useDeleteProposal } from '@/api/proposals'
+import { useProposals, useProposalLimit, useDeleteProposal } from '@/api/proposals'
 import { useClients } from '@/api/clients'
 import { ClientAvatar } from '@/components/tasks/ClientAvatar'
 import { ProposalDialog } from '@/components/proposals/ProposalDialog'
@@ -98,7 +97,7 @@ export default function ProposalsPage() {
   }, [setHeader])
 
   const navigate = useNavigate()
-  const { data: sub } = useSubscription()
+  const { used: activeCount, limit: proposalsLimit, atLimit } = useProposalLimit()
   const { data: proposals = [], isLoading } = useProposals()
   const { data: clientsData } = useClients()
   const deleteProposal = useDeleteProposal()
@@ -114,10 +113,6 @@ export default function ProposalsPage() {
 
   const realClients = clientsData?.realClients ?? []
 
-  // Non-archived proposal count for limit check
-  const activeCount = proposals.filter((p) => p.status !== 'ARCHIVED').length
-  const proposalsLimit = sub?.proposals_limit ?? null
-  const atLimit = proposalsLimit !== null && activeCount >= proposalsLimit
 
   // Filtering
   const filtered = proposals.filter((p) => {
