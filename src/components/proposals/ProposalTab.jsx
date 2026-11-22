@@ -13,6 +13,8 @@ import {
 import { toast } from 'sonner'
 
 import { useProposals, useProposalLimit, useDeleteProposal } from '@/api/proposals'
+import { useClients } from '@/api/clients'
+import { ClientAvatar } from '@/components/tasks/ClientAvatar'
 import { ProposalDialog } from '@/components/proposals/ProposalDialog'
 import { UploadProposalDialog } from '@/components/proposals/UploadProposalDialog'
 import { ProposalsUpgradePrompt } from '@/components/proposals/ProposalsUpgradePrompt'
@@ -21,6 +23,13 @@ import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Skeleton } from '@/components/ui/skeleton'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -60,6 +69,8 @@ import {
 } from '@/lib/domain/proposalStatus'
 
 const STATUS_TABS = ['all', ...DISPLAY_STATUSES]
+const ALL_CLIENTS = 'all'
+const PROSPECTS_ONLY = '__prospect__'
 
 function ProposalRowSkeleton() {
   return (
@@ -81,9 +92,15 @@ export function ProposalTab({ clientId, prospectId, prospectName, prospectEmail 
   const { used: activeCount, limit: proposalsLimit, atLimit } = useProposalLimit()
   const { data: proposals = [], isLoading } = useProposals({ clientId, prospectId })
   const deleteProposal = useDeleteProposal()
+  // With no scope this is the workspace-wide list: each row names its Client
+  // or Prospect, and the Client filter narrows to one of them.
+  const unscoped = !clientId && !prospectId
+  const { data: clientsData } = useClients()
+  const realClients = clientsData?.realClients ?? []
 
   const [activeTab, setActiveTab] = useState('all')
   const [search, setSearch] = useState('')
+  const [clientFilter, setClientFilter] = useState(ALL_CLIENTS)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false)
   const [editingProposal, setEditingProposal] = useState(null)
@@ -99,13 +116,20 @@ export function ProposalTab({ clientId, prospectId, prospectName, prospectEmail 
     }
   }
 
-  const isFiltered = search !== ''
+  const isFiltered = search !== '' || clientFilter !== ALL_CLIENTS
   // A status tab narrows the list too: its empty state is "nothing matches".
   const narrowed = isFiltered || activeTab !== 'all'
 
   const filtered = proposals.filter((p) => {
     if (activeTab === 'all' && p.status === 'ARCHIVED') return false
     if (activeTab !== 'all' && p.status !== activeTab) return false
+    if (clientFilter === PROSPECTS_ONLY && p.client_id) return false
+    if (
+      clientFilter !== ALL_CLIENTS &&
+      clientFilter !== PROSPECTS_ONLY &&
+      p.client_id !== clientFilter
+    )
+      return false
     if (search) {
       const q = search.toLowerCase()
       if (
@@ -151,10 +175,35 @@ export function ProposalTab({ clientId, prospectId, prospectName, prospectEmail 
             className="pl-9 bg-muted/20 border-border/40"
           />
         </div>
+        {unscoped && (
+          <Select value={clientFilter} onValueChange={setClientFilter}>
+            <SelectTrigger
+              aria-label="Client"
+              className="w-[180px] bg-muted/20 border-border/40"
+            >
+              <SelectValue placeholder="All clients" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL_CLIENTS}>All clients</SelectItem>
+              <SelectItem value={PROSPECTS_ONLY}>Prospects</SelectItem>
+              {realClients.map((c) => (
+                <SelectItem key={c.id} value={c.id}>
+                  <div className="flex items-center gap-2">
+                    <ClientAvatar client={c} size="sm" />
+                    <span className="truncate">{c.name}</span>
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
         {isFiltered && (
           <Button
             variant="ghost"
-            onClick={() => setSearch('')}
+            onClick={() => {
+              setSearch('')
+              setClientFilter(ALL_CLIENTS)
+            }}
             className="text-muted-foreground h-9 px-3"
           >
             Reset
@@ -222,7 +271,9 @@ export function ProposalTab({ clientId, prospectId, prospectName, prospectEmail 
                   ? 'No proposals match your filters.'
                   : prospectId
                     ? 'No proposals for this prospect yet.'
-                    : 'No proposals for this client yet.'}
+                    : clientId
+                      ? 'No proposals for this client yet.'
+                      : 'No proposals in this workspace yet.'}
               </EmptyDescription>
             </EmptyHeader>
             {!narrowed && (
@@ -274,6 +325,16 @@ export function ProposalTab({ clientId, prospectId, prospectName, prospectEmail 
                     >
                       {proposal.title}
                     </Link>
+                    {unscoped && (
+                      <p className="text-xs text-muted-foreground truncate mt-0.5">
+                        {proposal.client_name || proposal.prospect_name || '—'}
+                        {!proposal.client_id && proposal.prospect_name && (
+                          <span className="ml-1.5 text-[10px] opacity-60">
+                            (prospect)
+                          </span>
+                        )}
+                      </p>
+                    )}
                   </TableCell>
 
                   {/* Total */}
