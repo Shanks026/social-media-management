@@ -13,8 +13,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 
-import { useSubscription } from '@/api/useSubscription'
-import { useProposals, useDeleteProposal } from '@/api/proposals'
+import { useProposals, useProposalLimit, useDeleteProposal } from '@/api/proposals'
 import { ProposalDialog } from '@/components/proposals/ProposalDialog'
 import { UploadProposalDialog } from '@/components/proposals/UploadProposalDialog'
 import { ProposalsUpgradePrompt } from '@/components/proposals/ProposalsUpgradePrompt'
@@ -78,9 +77,8 @@ function ProposalRowSkeleton() {
 
 export function ProposalTab({ clientId, prospectId, prospectName, prospectEmail }) {
   const navigate = useNavigate()
-  const { data: sub } = useSubscription()
+  const { used: activeCount, limit: proposalsLimit, atLimit } = useProposalLimit()
   const { data: proposals = [], isLoading } = useProposals({ clientId, prospectId })
-  const { data: allProposals = [] } = useProposals() // workspace-wide count for limit check
   const deleteProposal = useDeleteProposal()
 
   const [activeTab, setActiveTab] = useState('all')
@@ -91,10 +89,6 @@ export function ProposalTab({ clientId, prospectId, prospectName, prospectEmail 
   const [deletingProposal, setDeletingProposal] = useState(null)
   const [upgradeOpen, setUpgradeOpen] = useState(false)
 
-  // Limit check is workspace-wide, not scoped to this client
-  const activeCount = allProposals.filter((p) => p.status !== 'ARCHIVED').length
-  const proposalsLimit = sub?.proposals_limit ?? null
-  const atLimit = proposalsLimit !== null && activeCount >= proposalsLimit
 
   function openUploadDialog() {
     if (atLimit) {
