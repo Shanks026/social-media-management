@@ -59,6 +59,10 @@ VALUES
   ('c3333333-3333-4333-8333-333333333333', '11111111-1111-4111-8111-111111111111', 'Harbor Dental',      'delivered+harbor@resend.dev',     'PAUSED', 'VIP',   'Healthcare',      '{facebook,google_business}', false, 'monthly_retainer');
 
 -- ── Deliverables across the main statuses ──────────────────────────────────
+-- Versions start as DRAFT unless a transition function writes them (ADR 0004,
+-- #178); the seed stands in for that history, so it sets the same flag for
+-- this session and clears it after the Deliverables.
+SELECT set_config('tercero.deliverable_transition', 'on', false);
 
 WITH d(post_id, version_id, client_id, author, status, title, platform, days) AS (
   VALUES
@@ -109,6 +113,8 @@ VALUES
 UPDATE public.posts
 SET current_version_id = 'e1000000-0000-4000-8000-000000000009'
 WHERE id = 'd1000000-0000-4000-8000-000000000008';
+
+SELECT set_config('tercero.deliverable_transition', '', false);
 
 -- ── Vault: where database code finds the functions (#89) ────────────────────
 -- pg_net runs inside the db container, so the API is reached by its container

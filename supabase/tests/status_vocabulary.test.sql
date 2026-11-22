@@ -34,7 +34,9 @@ BEGIN
   EXCEPTION WHEN check_violation THEN NULL; END;
   ALTER TABLE post_versions ENABLE TRIGGER trg_post_version_status_transition;
 
-  -- The transition trigger still guards the flow.
+  -- The transition trigger still guards the flow (with the #178 flag on,
+  -- only the transition table stands in the way).
+  PERFORM set_config('tercero.deliverable_transition', 'on', true);
   BEGIN
     UPDATE post_versions SET status = 'PUBLISHED' WHERE id = 'e1000000-0000-4000-8000-000000000001';
     RAISE EXCEPTION 'DRAFT -> PUBLISHED accepted';
@@ -42,10 +44,11 @@ BEGIN
     IF SQLERRM NOT LIKE 'Invalid post status transition%' THEN RAISE; END IF;
   END;
   UPDATE post_versions SET status = 'SUBMITTED' WHERE id = 'e1000000-0000-4000-8000-000000000001';
+  PERFORM set_config('tercero.deliverable_transition', '', true);
 
   -- Client approval through a review link.
   INSERT INTO share_tokens (post_version_id, token) VALUES ('e1000000-0000-4000-8000-000000000003', 'test-tok');
-  PERFORM update_post_status_by_token('test-tok', 'SCHEDULED', 'looks good');
+  PERFORM submit_review_decision('test-tok', 'APPROVE', 'looks good');
   ASSERT (SELECT status FROM post_versions WHERE id = 'e1000000-0000-4000-8000-000000000003') = 'SCHEDULED',
     'review-link approval did not schedule';
 
@@ -132,6 +135,8 @@ BEGIN
   INSERT INTO proposals (agency_user_id, title, status, valid_until) VALUES
     (ws, 'Lapsed', 'SENT', CURRENT_DATE - 1),
     (ws, 'Old draft', 'DRAFT', CURRENT_DATE - 1);
+  -- The read resolves the workspace from the caller (#169): act as the Owner.
+  PERFORM set_config('request.jwt.claims', json_build_object('sub', ws, 'role', 'authenticated')::text, true);
   ASSERT (SELECT status FROM get_proposals_with_totals(ws) WHERE title = 'Lapsed') = 'EXPIRED', 'lapsed not EXPIRED';
   ASSERT (SELECT status FROM get_proposals_with_totals(ws) WHERE title = 'Old draft') = 'DRAFT', 'draft expired';
   RAISE NOTICE 'PASS: Proposal statuses';

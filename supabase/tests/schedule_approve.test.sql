@@ -181,7 +181,9 @@ END $$;
 -- ── Admin: per-platform schedule needs no date and keeps target_date ──────
 UPDATE post_versions SET target_date = '2026-12-20 09:00+00' WHERE id = 'e1000000-0000-4000-8000-000000000009';
 -- and a READY non-social Version to approve
+SELECT set_config('tercero.deliverable_transition', 'on', true);  -- fixtures stand in for history (#178)
 UPDATE post_versions SET status = 'READY', platform = '{}' WHERE id = 'e1000000-0000-4000-8000-000000000002';
+SELECT set_config('tercero.deliverable_transition', '', true);
 
 SELECT pg_temp.act_as('22222222-2222-4222-8222-222222222222');
 SET LOCAL ROLE authenticated;

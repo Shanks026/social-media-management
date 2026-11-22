@@ -23,8 +23,10 @@ INSERT INTO auth.users (id, instance_id, aud, role, email)
 VALUES ('99999999-9999-4999-8999-999999999999', '00000000-0000-0000-0000-000000000000',
         'authenticated', 'authenticated', 'delivered+outsider@resend.dev');
 
+SELECT set_config('tercero.deliverable_transition', 'on', true);  -- fixtures stand in for history (#178)
 UPDATE post_versions SET status = 'SUBMITTED' WHERE id = 'e1000000-0000-4000-8000-000000000007';
 UPDATE post_versions SET status = 'READY' WHERE id = 'e1000000-0000-4000-8000-000000000007';
+SELECT set_config('tercero.deliverable_transition', '', true);
 INSERT INTO share_tokens (post_version_id, token) VALUES ('e1000000-0000-4000-8000-000000000003', 'tok-177');
 
 CREATE TEMP TABLE t_flag_seen (version_id uuid, flag text);

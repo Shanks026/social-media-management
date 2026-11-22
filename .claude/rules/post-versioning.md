@@ -26,17 +26,34 @@ posts (parent record)
 
 ## Status Flow
 
-The stored list lives in `src/lib/domain/deliverableStatus.js` (`STATUSES`), which a drift test keeps equal to the `post_versions_status_check` constraint (ADR 0006). Allowed transitions are enforced by the `enforce_post_status_transition` trigger:
+The stored list lives in `src/lib/domain/deliverableStatus.js` (`STATUSES`), which a drift test keeps equal to the `post_versions_status_check` constraint (ADR 0006).
+
+**Statuses change only through database functions (ADR 0004).** The `enforce_post_status_transition` trigger refuses a change to `status`, `published_at` or a platform's `published_at` in `platform_schedules` unless a transition function set the transaction-local flag `tercero.deliverable_transition`, for every caller (browser, service role, cron, SQL editor). A new Version must start as an unpublished DRAFT. Dates, content and other fields stay editable with a plain update. The trigger also checks the transition table. Never write a status from `src/api`: call the function, or add one (a new event in `deliverable_event`).
 
 ```
-DRAFT ──► SUBMITTED ──► READY ──► PENDING_APPROVAL ──► SCHEDULED ──► PUBLISHED
-  │          │   ▲         │            │                  (social)
-  │          ▼   │         │            ▼
-  │   CHANGES_REQUESTED    │      NEEDS_REVISION  (revise → new Version)
-  │                        │
-  └────────────────────────┴──► APPROVED ──► DELIVERED   (non-social)
-Any status except DELIVERED / PUBLISHED / ARCHIVED ──► ARCHIVED
+DRAFT ─submit─► SUBMITTED ─approve_internally─► READY ─send_post_for_approval─► PENDING_APPROVAL
+  ▲               │    ▲                                                          │
+  │   request_internal_changes   submit                       submit_review_decision (review link)
+  │               ▼    │                                       │ APPROVE           │ REQUEST_REVISIONS
+  │        CHANGES_REQUESTED                                    ▼                   ▼
+  │                                     social:  SCHEDULED ─mark_published / ─► PUBLISHED
+  │                                              ▲          mark_platform_published
+  │                                  non-social: APPROVED ─mark_delivered─► DELIVERED
+  │                                              ▲
+  └ DRAFT / READY ─schedule_deliverable (social) / approve_deliverable (non-social)┘
+NEEDS_REVISION ─create_revision_version─► ARCHIVED, plus a new DRAFT Version
+Any status except DELIVERED / PUBLISHED / ARCHIVED ─archive_deliverable─► ARCHIVED
 ```
+
+| Function | Caller |
+|---|---|
+| `submit_for_internal_approval` | the Version's creator |
+| `approve_internally`, `request_internal_changes`, `send_post_for_approval`, `schedule_deliverable`, `approve_deliverable`, `mark_published`, `mark_platform_published`, `mark_delivered` | Owner/Admin of the workspace |
+| `submit_review_decision(token, APPROVE \| REQUEST_REVISIONS, feedback)` | the Client (anonymous), once per review link |
+| `create_revision_version` | any workspace user, on the current NEEDS_REVISION Version |
+| `archive_deliverable` | Owner/Admin; a Member only their own DRAFT/SUBMITTED Deliverable |
+
+In SQL tests, a fixture that needs a status sets the flag itself (`SELECT set_config('tercero.deliverable_transition', 'on', true)`) and clears it after. `supabase/seed.sql` does the same.
 
 - **DRAFT**: work in progress
 - **SUBMITTED** / **CHANGES_REQUESTED** / **READY**: internal review of a Member's work by an Owner or Admin
@@ -64,12 +81,12 @@ await supabase.rpc('create_post_draft_v3', {
 
 ## Creating a Revision
 
-Use `create_revision_version` when a revision is needed. This creates a new `post_versions` row and updates `posts.current_version_id`:
+Use `create_revision_version` when the Client asked for revisions. It archives the current NEEDS_REVISION Version, copies it into a new DRAFT Version created by the caller, and updates `posts.current_version_id` (`createRevision` in `src/api/posts.js`):
 ```js
 await supabase.rpc('create_revision_version', {
-  p_post_id: postId,
-  p_title: title,
-  // ... other fields
+  p_parent_version_id: versionId,
+  p_user_id: userId,        // ignored: created_by is auth.uid() (ADR 0008)
+  p_admin_notes: adminNotes,
 })
 ```
 
