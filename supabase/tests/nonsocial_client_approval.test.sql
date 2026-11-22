@@ -13,15 +13,17 @@ BEGIN;
 
 UPDATE post_versions SET platform = '{}'
 WHERE id = 'e1000000-0000-4000-8000-000000000001';
+SELECT set_config('tercero.deliverable_transition', 'on', true);  -- fixtures stand in for history (#178)
 UPDATE post_versions SET status = 'PENDING_APPROVAL'
 WHERE id = 'e1000000-0000-4000-8000-000000000001';
+SELECT set_config('tercero.deliverable_transition', '', true);
 
 INSERT INTO share_tokens (post_version_id, token)
 VALUES ('e1000000-0000-4000-8000-000000000001', 'test-token-167');
 
 -- ── The Client approves from the review link (anonymous) ─────────────────
 SET LOCAL ROLE anon;
-SELECT public.update_post_status_by_token('test-token-167', 'APPROVED', NULL);
+SELECT public.submit_review_decision('test-token-167', 'APPROVE', NULL);
 RESET ROLE;
 
 DO $$
@@ -49,6 +51,8 @@ END $$;
 -- ── The transition table still refuses skipping straight to DELIVERED ────
 DO $$
 BEGIN
+  -- With the flag on, only the transition table stands in the way.
+  PERFORM set_config('tercero.deliverable_transition', 'on', true);
   UPDATE post_versions SET status = 'PENDING_APPROVAL', platform = '{}'
   WHERE id = 'e1000000-0000-4000-8000-000000000009';
   BEGIN

@@ -1,7 +1,7 @@
 -- #176 test: a Client's answer on a review link is a decision (ADR 0004).
 -- The anonymous link holder sends APPROVE or REQUEST_REVISIONS, and the
--- database decides the status; through either signature it can reach no
--- status but SCHEDULED, APPROVED (non-social) or NEEDS_REVISION.
+-- database decides the status; it can reach no status but SCHEDULED,
+-- APPROVED (non-social) or NEEDS_REVISION.
 -- Self-checking and self-cleaning: runs in a transaction that is rolled back
 -- (so the queued requests are never sent), and raises on the first failure.
 --
@@ -18,9 +18,11 @@ BEGIN;
 
 -- Fixtures (raw writes, as postgres; the transition trigger still applies).
 UPDATE post_versions SET platform = '{}' WHERE id = 'e1000000-0000-4000-8000-000000000001';
+SELECT set_config('tercero.deliverable_transition', 'on', true);  -- fixtures stand in for history (#178)
 UPDATE post_versions SET status = 'PENDING_APPROVAL' WHERE id = 'e1000000-0000-4000-8000-000000000001';
 UPDATE post_versions SET status = 'READY' WHERE id = 'e1000000-0000-4000-8000-000000000002';
 UPDATE post_versions SET status = 'PENDING_APPROVAL' WHERE id = 'e1000000-0000-4000-8000-000000000002';
+SELECT set_config('tercero.deliverable_transition', '', true);
 
 INSERT INTO share_tokens (post_version_id, token) VALUES
   ('e1000000-0000-4000-8000-000000000003', 'tok-176-social'),
@@ -65,6 +67,10 @@ GRANT EXECUTE ON FUNCTION pg_temp.expect_refusal(text, text, text) TO anon;
 -- ── Privileges ────────────────────────────────────────────────────────────
 DO $$
 BEGIN
+  -- #178 dropped the old status-taking signature.
+  IF to_regprocedure('public.update_post_status_by_token(text, text, text)') IS NOT NULL THEN
+    RAISE EXCEPTION 'FAIL: the old review-link signature still exists';
+  END IF;
   IF NOT has_function_privilege('anon', 'public.submit_review_decision(text, text, text)', 'EXECUTE') THEN
     RAISE EXCEPTION 'FAIL: anon cannot send a review decision';
   END IF;
@@ -85,19 +91,11 @@ SELECT pg_temp.expect_refusal(
   $q$SELECT public.submit_review_decision('tok-176-revise', NULL, NULL)$q$,
   'APPROVE or REQUEST_REVISIONS', 'the new signature accepted no decision');
 
-SELECT pg_temp.expect_refusal(
-  format('SELECT public.update_post_status_by_token(%L, %L, NULL)', 'tok-176-revise', s),
-  'only approve or request revisions', format('the old signature set %s', s))
-FROM unnest(ARRAY['DRAFT', 'SUBMITTED', 'CHANGES_REQUESTED', 'READY', 'PENDING_APPROVAL',
-                  'PUBLISHED', 'DELIVERED', 'ARCHIVED', 'APPROVE', 'REQUEST_REVISIONS']) AS s;
 
 -- A link whose Version isn't awaiting approval decides nothing.
 SELECT pg_temp.expect_refusal(
   $q$SELECT public.submit_review_decision('tok-176-scheduled', 'REQUEST_REVISIONS', 'x')$q$,
   'SCHEDULED', 'a SCHEDULED Version was sent back for revisions');
-SELECT pg_temp.expect_refusal(
-  $q$SELECT public.update_post_status_by_token('tok-176-scheduled', 'NEEDS_REVISION', 'x')$q$,
-  'SCHEDULED', 'a SCHEDULED Version was sent back through the old signature');
 SELECT pg_temp.expect_refusal(
   $q$SELECT public.submit_review_decision('tok-176-expired', 'APPROVE', NULL)$q$,
   'Invalid or expired token', 'an expired link was used');
@@ -160,9 +158,9 @@ BEGIN
   END IF;
 END $$;
 
--- ── Non-social, old signature: even "SCHEDULED" ends APPROVED ─────────────
+-- ── Non-social: APPROVE ends APPROVED ─────────────────────────────────────
 SET LOCAL ROLE anon;
-SELECT public.update_post_status_by_token('tok-176-nonsocial', 'SCHEDULED', NULL);
+SELECT public.submit_review_decision('tok-176-nonsocial', 'APPROVE', NULL);
 RESET ROLE;
 
 DO $$

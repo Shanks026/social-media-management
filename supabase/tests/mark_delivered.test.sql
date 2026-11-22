@@ -21,8 +21,10 @@ VALUES ('99999999-9999-4999-8999-999999999999', '00000000-0000-0000-0000-0000000
 
 UPDATE post_versions SET platform = '{}'
 WHERE id IN ('e1000000-0000-4000-8000-000000000001', 'e1000000-0000-4000-8000-000000000003');
+SELECT set_config('tercero.deliverable_transition', 'on', true);  -- fixtures stand in for history (#178)
 UPDATE post_versions SET status = 'APPROVED'
 WHERE id IN ('e1000000-0000-4000-8000-000000000001', 'e1000000-0000-4000-8000-000000000003');
+SELECT set_config('tercero.deliverable_transition', '', true);
 
 -- Record the transition flag as the status trigger would see it.
 CREATE TEMP TABLE t_flag_seen (version_id uuid, flag text);

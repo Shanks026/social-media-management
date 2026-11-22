@@ -145,7 +145,9 @@ BEGIN
 END $$;
 
 -- ── Admin: sends a READY Version ──────────────────────────────────────────
+SELECT set_config('tercero.deliverable_transition', 'on', true);  -- fixtures stand in for history (#178)
 UPDATE post_versions SET status = 'READY' WHERE id = 'e1000000-0000-4000-8000-000000000002';
+SELECT set_config('tercero.deliverable_transition', '', true);
 DELETE FROM t_flag_seen WHERE version_id = 'e1000000-0000-4000-8000-000000000002';
 
 SELECT pg_temp.act_as('22222222-2222-4222-8222-222222222222');

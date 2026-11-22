@@ -21,6 +21,7 @@ INSERT INTO auth.users (id, instance_id, aud, role, email)
 VALUES ('99999999-9999-4999-8999-999999999999', '00000000-0000-0000-0000-000000000000',
         'authenticated', 'authenticated', 'delivered+outsider@resend.dev');
 
+SELECT set_config('tercero.deliverable_transition', 'on', true);  -- fixtures stand in for history (#178)
 UPDATE post_versions
 SET platform = '{instagram,facebook}',
     platform_schedules = jsonb_build_object(
@@ -28,6 +29,7 @@ SET platform = '{instagram,facebook}',
       'facebook',  jsonb_build_object('scheduled_at', '2026-12-21T09:00:00Z')),
     status = 'SCHEDULED'
 WHERE id = 'e1000000-0000-4000-8000-000000000001';
+SELECT set_config('tercero.deliverable_transition', '', true);
 
 -- Only requests queued by this test count.
 CREATE TEMP TABLE t_queue_start AS SELECT coalesce(max(id), 0) AS id FROM net.http_request_queue;
