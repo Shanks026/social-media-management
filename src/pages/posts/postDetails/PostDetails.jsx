@@ -26,7 +26,6 @@ import VersionSidebar from './VersionSidebar'
 import { CommentThread } from '@/components/comments/CommentThread'
 import PostActionDialogs from './PostActionDialogs'
 import DraftPostForm from '../DraftPostForm'
-import { useAuth } from '@/context/AuthContext'
 import {
   Dialog,
   DialogContent,
@@ -42,7 +41,6 @@ import { Loader2, X } from 'lucide-react'
 export default function PostDetails() {
   const { clientId, postId } = useParams()
   const [searchParams] = useSearchParams()
-  const { user } = useAuth()
   const navigate = useNavigate()
   const { setHeader } = useHeader()
 
@@ -329,7 +327,7 @@ export default function PostDetails() {
         isRevisionConfirmOpen={isRevisionConfirmOpen}
         setIsRevisionConfirmOpen={setIsRevisionConfirmOpen}
         onConfirmRevision={() =>
-          createRevisionMutation.mutate({ versionId: post.id, userId: user?.id, adminNotes })
+          createRevisionMutation.mutate({ versionId: post.id, adminNotes })
         }
         isRevisionPending={createRevisionMutation.isPending}
         adminNotes={adminNotes}

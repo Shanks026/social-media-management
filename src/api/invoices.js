@@ -436,15 +436,10 @@ export function useDeleteRecurringInvoice() {
 
 // --- 11. GENERATE INVOICE FROM RECURRING TEMPLATE ---
 export async function generateFromRecurring(templateId) {
-  const { workspaceUserId } = await resolveWorkspace()
-
-  // Call the atomic RPC to generate the invoice
+  // The atomic RPC checks finance access and the caller's workspace (ADR 0008).
   const { data: invoiceId, error: rpcError } = await supabase.rpc(
     'generate_invoice_from_template',
-    {
-      p_template_id: templateId,
-      p_user_id: workspaceUserId,
-    },
+    { p_template_id: templateId },
   )
 
   if (rpcError) throw rpcError

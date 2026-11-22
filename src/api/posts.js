@@ -272,18 +272,17 @@ export async function createDraftPost({
   title,
   target_date,
   adminNotes,
-  userId,
   platformSchedules,
   campaignId,
   deliverableType,
 }) {
+  // created_by is the signed-in caller, stamped by the database (ADR 0008).
   const { error } = await supabase.rpc('create_post_draft_v3', {
     p_client_id: clientId,
     p_title: title,
     p_content: content, // This maps to "content" in your response
     p_media_urls: mediaUrls || [],
     p_platform: platforms || [],
-    p_user_id: userId,
     p_target_date: target_date ?? null,
     p_admin_notes: adminNotes || null,
     p_platform_schedules: platformSchedules ?? null,
@@ -398,19 +397,18 @@ export async function markPostDelivered(versionId, deliveryNote) {
   if (error) throw error
 }
 
-export async function createRevision(versionId, userId, adminNotes) {
-  // Ensure we are passing exactly what the Postgres function expects
+/**
+ * A new DRAFT Version after the Client asked for revisions. The database
+ * archives the current one and stamps the caller as created_by (ADR 0008).
+ * @returns the new Version's id
+ */
+export async function createRevision(versionId, adminNotes) {
   const { data, error } = await supabase.rpc('create_revision_version', {
     p_parent_version_id: versionId,
-    p_user_id: userId,
-    p_admin_notes: adminNotes || '', // Fallback to empty string if null
+    p_admin_notes: adminNotes || '',
   })
-
-  if (error) {
-    console.error('RPC Error Details:', error)
-    throw error
-  }
-  return data // This should return the UUID of the new version
+  if (error) throw error
+  return data
 }
 // api/posts.js
 
@@ -951,7 +949,7 @@ export function useWorkspacePostCount() {
  * @param {string[]} [args.keptMediaUrls]  already-uploaded URLs to keep
  * @param {File[]} [args.newFiles]
  * @param {object} args.fields             title, content, platforms, target_date,
- *   userId, adminNotes, platformSchedules, campaignId, deliverableType
+ *   adminNotes, platformSchedules, campaignId, deliverableType
  */
 export async function saveDeliverable({
   versionId = null,
@@ -979,10 +977,7 @@ export function useSaveDeliverable(options) {
 
 export function useCreateRevision(options) {
   return useApiMutation(
-    ({ versionId, userId, adminNotes }) => {
-      if (!userId) throw new Error('You must be logged in to create a revision')
-      return createRevision(versionId, userId, adminNotes)
-    },
+    ({ versionId, adminNotes }) => createRevision(versionId, adminNotes),
     invalidateDeliverables,
     options,
   )

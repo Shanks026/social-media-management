@@ -63,7 +63,6 @@ import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { format, setHours, setMinutes } from 'date-fns'
-import { useAuth } from '@/context/AuthContext'
 import { useSubscription } from '@/api/useSubscription'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -185,7 +184,6 @@ export default function DraftPostForm({
   initialCampaignId = null,
   initialCampaignName = null,
 }) {
-  const { user } = useAuth()
   const { data: subscription } = useSubscription()
   const isEditMode = !!initialData
 
@@ -467,7 +465,6 @@ export default function DraftPostForm({
         content: values.content,
         platforms: values.platforms,
         target_date: values.target_date?.toISOString(),
-        userId: user?.id,
         adminNotes: values.admin_notes?.trim() || null,
         platformSchedules: perPlatformMode
           ? buildPlatformSchedulesPayload(platformSchedulesState)
