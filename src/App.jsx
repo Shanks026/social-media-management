@@ -47,8 +47,7 @@ const ProspectDetailPage = lazy(() => import('./pages/prospects/ProspectDetailPa
 const ProposalsPage = lazy(() => import('./pages/proposals/ProposalsPage'))
 const ProposalDetailPage = lazy(() => import('./pages/proposals/ProposalDetailPage'))
 const ProposalReview = lazy(() => import('./pages/proposals/ProposalReview'))
-const TrialExpired = lazy(() => import('./pages/TrialExpired'))
-const SubscriptionExpired = lazy(() => import('./pages/SubscriptionExpired'))
+const PlanExpired = lazy(() => import('./pages/PlanExpired'))
 const NoWorkspaceAccess = lazy(() => import('./pages/NoWorkspaceAccess'))
 const NotFound = lazy(() => import('./pages/NotFound'))
 const PublicNotFound = lazy(() => import('./pages/PublicNotFound'))
@@ -213,8 +212,8 @@ function AppRoutes() {
       {session ? (
         <>
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
-          <Route path="/trial-expired" element={<TrialExpired />} />
-          <Route path="/subscription-expired" element={<SubscriptionExpired />} />
+          <Route path="/trial-expired" element={<PlanExpired variant="trial" />} />
+          <Route path="/subscription-expired" element={<PlanExpired variant="subscription" />} />
           <Route path="/no-access" element={<NoWorkspaceAccess />} />
           {/* Post-setup feature showcase. Deliberately outside TrialGuardedShell
               so it renders full-page without the sidebar/header chrome. */}
