@@ -85,6 +85,35 @@ function ProposalRowSkeleton() {
   )
 }
 
+// The workspace-wide list's Client filter: its own component so the Client
+// options are read only where it shows (not in a Client's or Prospect's list).
+function ClientFilter({ value, onChange }) {
+  const { data: clientsData } = useClients()
+  const realClients = clientsData?.realClients ?? []
+  return (
+    <Select value={value} onValueChange={onChange}>
+      <SelectTrigger
+        aria-label="Client"
+        className="w-[180px] bg-muted/20 border-border/40"
+      >
+        <SelectValue placeholder="All clients" />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value={ALL_CLIENTS}>All clients</SelectItem>
+        <SelectItem value={PROSPECTS_ONLY}>Prospects</SelectItem>
+        {realClients.map((c) => (
+          <SelectItem key={c.id} value={c.id}>
+            <div className="flex items-center gap-2">
+              <ClientAvatar client={c} size="sm" />
+              <span className="truncate">{c.name}</span>
+            </div>
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  )
+}
+
 // ── Tab component ─────────────────────────────────────────────────────────────
 
 /**
@@ -99,14 +128,17 @@ export function ProposalTab({ clientId, prospect }) {
   const prospectName = prospect?.business_name ?? null
   const prospectEmail = prospect?.email ?? null
   const navigate = useNavigate()
-  const { used: activeCount, limit: proposalsLimit, atLimit } = useProposalLimit()
-  const { data: proposals = [], isLoading } = useProposals({ clientId, prospectId })
+  const {
+    used: activeCount,
+    limit: proposalsLimit,
+    atLimit,
+    isLoading: limitLoading,
+  } = useProposalLimit()
+  const { data: proposals = [], isLoading, error } = useProposals({ clientId, prospectId })
   const deleteProposal = useDeleteProposal()
   // With no scope this is the workspace-wide list: each row names its Client
   // or Prospect, and the Client filter narrows to one of them.
   const unscoped = !clientId && !prospect
-  const { data: clientsData } = useClients()
-  const realClients = clientsData?.realClients ?? []
 
   const [activeTab, setActiveTab] = useState('all')
   const [search, setSearch] = useState('')
@@ -130,9 +162,9 @@ export function ProposalTab({ clientId, prospect }) {
   // A status tab narrows the list too: its empty state is "nothing matches".
   const narrowed = isFiltered || activeTab !== 'all'
 
-  const filtered = proposals.filter((p) => {
-    if (activeTab === 'all' && p.status === 'ARCHIVED') return false
-    if (activeTab !== 'all' && p.status !== activeTab) return false
+  // The Client filter and search narrow the list; the status tabs count what
+  // they leave, and the chosen tab narrows it further.
+  const matching = proposals.filter((p) => {
     if (clientFilter === PROSPECTS_ONLY && p.client_id) return false
     if (
       clientFilter !== ALL_CLIENTS &&
@@ -151,6 +183,9 @@ export function ProposalTab({ clientId, prospect }) {
     }
     return true
   })
+  const inTab = (p, tab) =>
+    tab === 'all' ? p.status !== 'ARCHIVED' : p.status === tab
+  const filtered = matching.filter((p) => inTab(p, activeTab))
 
   async function handleDelete() {
     if (!deletingProposal) return
@@ -186,26 +221,7 @@ export function ProposalTab({ clientId, prospect }) {
           />
         </div>
         {unscoped && (
-          <Select value={clientFilter} onValueChange={setClientFilter}>
-            <SelectTrigger
-              aria-label="Client"
-              className="w-[180px] bg-muted/20 border-border/40"
-            >
-              <SelectValue placeholder="All clients" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL_CLIENTS}>All clients</SelectItem>
-              <SelectItem value={PROSPECTS_ONLY}>Prospects</SelectItem>
-              {realClients.map((c) => (
-                <SelectItem key={c.id} value={c.id}>
-                  <div className="flex items-center gap-2">
-                    <ClientAvatar client={c} size="sm" />
-                    <span className="truncate">{c.name}</span>
-                  </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <ClientFilter value={clientFilter} onChange={setClientFilter} />
         )}
         {isFiltered && (
           <Button
@@ -220,12 +236,17 @@ export function ProposalTab({ clientId, prospect }) {
           </Button>
         )}
         <div className="ml-auto flex items-center gap-2">
-          {proposalsLimit !== null && (
+          {!limitLoading && proposalsLimit !== null && (
             <span className="text-xs text-muted-foreground tabular-nums">
               {activeCount} of {proposalsLimit} used
             </span>
           )}
-          <Button size="sm" className="gap-2 h-9" onClick={openUploadDialog}>
+          <Button
+            size="sm"
+            className="gap-2 h-9"
+            onClick={openUploadDialog}
+            disabled={limitLoading}
+          >
             <Plus className="size-4" />
             New Proposal
           </Button>
@@ -236,10 +257,7 @@ export function ProposalTab({ clientId, prospect }) {
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList variant="underline">
           {STATUS_TABS.map((tab) => {
-            const count =
-              tab === 'all'
-                ? proposals.filter((p) => p.status !== 'ARCHIVED').length
-                : proposals.filter((p) => p.status === tab).length
+            const count = matching.filter((p) => inTab(p, tab)).length
             return (
               <TabsTrigger key={tab} value={tab}>
                 {tab === 'all' ? 'All' : proposalStatusLabel(tab)}
@@ -268,6 +286,10 @@ export function ProposalTab({ clientId, prospect }) {
             </TableBody>
           </Table>
         </div>
+      ) : error ? (
+        <p className="py-16 text-center text-sm text-destructive">
+          Couldn't load proposals: {error.message || 'something went wrong'}
+        </p>
       ) : filtered.length === 0 ? (
         <Empty className="py-16 border border-dashed rounded-2xl bg-muted/5">
           <EmptyContent>
