@@ -394,7 +394,7 @@ export function DeliverableCard({ post, client }) {
                     className="cursor-pointer font-medium text-foreground py-2"
                     onClick={(e) => {
                       e.stopPropagation()
-                      createRevisionMutation.mutate({ versionId: post.version_id, userId: user?.id })
+                      createRevisionMutation.mutate({ versionId: post.version_id })
                     }}
                   >
                     <Plus className="h-4 w-4 mr-2" /> Create New Version

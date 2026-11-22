@@ -74,7 +74,7 @@ INSERT INTO allowed (fn, who, reason) VALUES
   ('mark_platform_published(uuid,text)',       'authenticated', 'Owner/Admin of the Version''s workspace, or the service role'),
   ('mark_delivered(uuid,text)',                'authenticated', 'Owner/Admin of the Version''s workspace (assert_deliverable_admin)'),
   ('archive_deliverable(uuid)',                'authenticated', 'Owner/Admin, or a Member on their own DRAFT/SUBMITTED Deliverable, in the caller''s workspace'),
-  ('create_revision_version(uuid,uuid,text)',  'authenticated', 'the caller''s workspace, current NEEDS_REVISION Version only; created_by = auth.uid()'),
+  ('create_revision_version(uuid,text)',       'authenticated', 'the caller''s workspace, current NEEDS_REVISION Version only; created_by = auth.uid() (#181)'),
   ('delete_approval_events(uuid[])',           'authenticated', 'Owner/Admin; deletes only the caller''s workspace''s rows'),
   ('get_approval_log(text,integer,integer)',   'authenticated', 'reads only the caller''s workspace (get_my_agency_user_id)'),
   ('get_approval_log_count(text)',             'authenticated', 'reads only the caller''s workspace (get_my_agency_user_id)'),
@@ -91,6 +91,7 @@ INSERT INTO allowed (fn, who, reason) VALUES
   ('get_removed_members(uuid)',                'authenticated', 'checks the id is the caller''s workspace (#169); #180 drops the parameter'),
   ('get_proposals_with_totals(uuid,uuid)',     'authenticated', 'Owner/Admin, and the id must be the caller''s workspace (#169); #180 drops the parameter'),
   ('get_campaign_analytics(uuid)',             'authenticated', 'only a campaign in the caller''s workspace (#179: had no check)'),
+  ('generate_invoice_from_template(uuid)',     'authenticated', 'signed in, finance access, and a template of the caller''s workspace (#181)'),
   ('generate_invoice_from_template(uuid,uuid)', 'authenticated', 'a signed-in caller needs finance access and its own workspace''s template (the cron calls it as postgres); #181 makes it use the real caller'),
   ('generate_proposal_token(uuid)',            'authenticated', 'only a proposal in the caller''s workspace'),
 

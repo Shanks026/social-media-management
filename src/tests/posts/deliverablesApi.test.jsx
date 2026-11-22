@@ -71,7 +71,7 @@ describe('deliverable plain functions', () => {
       clientId: 'c1',
       keptMediaUrls: ['https://stub/public/post-media/old.png'],
       newFiles: [{ name: 'new.png' }],
-      fields: { title: 'Launch', userId: 'member-1' },
+      fields: { title: 'Launch' },
     })
     const [rpc] = sb.rpcs('create_post_draft_v3')
     expect(rpc.args).toMatchObject({
@@ -79,6 +79,8 @@ describe('deliverable plain functions', () => {
       p_title: 'Launch',
       p_media_urls: ['https://stub/public/post-media/old.png', 'https://stub/public/post-media/new.png'],
     })
+    // The database stamps created_by with the caller (ADR 0008, #181).
+    expect(rpc.args).not.toHaveProperty('p_user_id')
   })
 
   it('saveDeliverable edits an editable version and moves the campaign', async () => {
