@@ -46,9 +46,8 @@ export function useTeamMembers() {
   return useQuery({
     queryKey: teamKeys.members(workspaceUserId),
     queryFn: async () => {
-      const { data, error } = await supabase.rpc('get_team_members', {
-        p_agency_user_id: workspaceUserId,
-      })
+      // The caller's workspace (ADR 0008); workspaceUserId only scopes the cache.
+      const { data, error } = await supabase.rpc('get_team_members')
 
       if (error) throw error
       return data ?? []
@@ -307,9 +306,8 @@ export function useRemovedMembers() {
   return useQuery({
     queryKey: teamKeys.removed(workspaceUserId),
     queryFn: async () => {
-      const { data, error } = await supabase.rpc('get_removed_members', {
-        p_agency_user_id: workspaceUserId,
-      })
+      // The caller's workspace (ADR 0008); workspaceUserId only scopes the cache.
+      const { data, error } = await supabase.rpc('get_removed_members')
 
       if (error) throw error
       return data ?? []

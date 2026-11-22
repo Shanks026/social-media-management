@@ -20,7 +20,7 @@ export function useCampaigns({ clientId } = {}) {
     queryFn: async () => {
       const { data, error } = await supabase.rpc(
         'get_campaigns_with_post_summary',
-        { p_user_id: workspaceUserId, p_client_id: clientId ?? null },
+        { p_client_id: clientId ?? null }, // the caller's workspace (ADR 0008)
       )
       if (error) throw error
       return data ?? []

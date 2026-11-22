@@ -81,8 +81,12 @@ INSERT INTO allowed (fn, who, reason) VALUES
   ('get_my_submissions(text,integer,integer)', 'authenticated', 'reads only the caller''s own submissions'),
   ('get_my_submissions_count(text)',           'authenticated', 'reads only the caller''s own submissions'),
 
-  -- Workspace reads that still take a workspace id (#180 drops the parameter);
-  -- each refuses an id that isn't the caller's workspace (#169).
+  -- Workspace reads without a workspace id (#180): each reads the caller's.
+  ('get_team_members()',                       'authenticated', 'the caller''s workspace (get_my_agency_user_id); DEFINER to read auth.users; mobile numbers only for Owner/Admin or self'),
+  ('get_removed_members()',                    'authenticated', 'the caller''s workspace (get_my_agency_user_id); DEFINER to read auth.users'),
+  ('get_proposals_with_totals(uuid)',          'authenticated', 'Owner/Admin of the caller''s workspace only (get_my_agency_user_id), as RLS'),
+  -- The old signatures, until #182 drops them; each refuses an id that isn't
+  -- the caller's workspace (#169).
   ('get_team_members(uuid)',                   'authenticated', 'checks the id is the caller''s workspace (#169); #180 drops the parameter'),
   ('get_removed_members(uuid)',                'authenticated', 'checks the id is the caller''s workspace (#169); #180 drops the parameter'),
   ('get_proposals_with_totals(uuid,uuid)',     'authenticated', 'Owner/Admin, and the id must be the caller''s workspace (#169); #180 drops the parameter'),

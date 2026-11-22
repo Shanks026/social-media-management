@@ -78,10 +78,8 @@ export async function fetchClients(filters = {}) {
     status = 'ACTIVE',
   } = filters
 
-  const { workspaceUserId } = await resolveWorkspace()
-
+  // The function reads the caller's workspace itself (ADR 0008).
   const { data, error } = await supabase.rpc('get_clients_with_pipeline', {
-    p_user_id: workspaceUserId,
     p_search: search,
     p_industry: industry,
     p_tier: tier,
