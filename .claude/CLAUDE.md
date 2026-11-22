@@ -52,7 +52,7 @@ Pages/Components → API functions (src/api/) → Supabase client → PostgreSQL
 
 **Layout (AppShell.jsx):** Sidebar nav + header wrapper; feature content renders via React Router `<Outlet>`.
 
-**API layer (src/api/):** One module per domain (posts, tasks, clients, campaigns, invoices, expenses, transactions, proposals, prospects, meetings, notes, documents, team, agency, auth, chat, comments, notifications, …), owning every query, mutation and cache key (ADR 0007; rules in `.claude/rules/api-conventions.md`). Every key factory lives in `queryKeys.js`; every mutation hook is built with `useApiMutation` from `mutation.js`. `useGlobalPosts.js` handles cross-client post queries. Supabase RPC calls are used for complex aggregations:
+**API layer (src/api/):** One module per domain (posts, tasks, clients, campaigns, invoices, expenses, transactions, proposals, prospects, meetings, notes, documents, team, agency, auth, chat, comments, notifications, …), owning every query, mutation and cache key (ADR 0007; rules in `.claude/rules/api-conventions.md`). Every key factory lives in `queryKeys.js`; every mutation hook is built with `useApiMutation` from `mutation.js`. `useGlobalPosts.js` handles cross-client post queries. Supabase RPC calls are used for complex aggregations. They resolve the workspace and the caller themselves (ADR 0008): never pass a workspace or user id; query keys still take `workspaceUserId` for cache scoping:
 - `get_clients_with_pipeline()` — client analytics
 - `create_post_draft_v3()` — atomic post creation
 - `create_revision_version()` — post versioning
@@ -89,7 +89,7 @@ Posts support two publishing modes: (1) simple — single `target_date`, marked 
 
 **Public campaign review (`/campaign-review/:token`):** Fully unauthenticated two-panel UI — left panel lists all `PENDING_APPROVAL` posts, right panel shows the selected post with Approve / Request Revisions actions. Per-post tokens come from the `share_tokens` table via a LATERAL JOIN in the RPC (not from a column on `post_versions`). Branding flags (`branding_agency_sidebar`, `branding_powered_by`) are read from the RPC response.
 
-**Documents (`/documents`):** File storage per client using a private Supabase `client-documents` bucket (signed URLs). Documents have categories, belong to optional collections (`documents_collections` feature flag), and are scoped by `client_id`. The global page shows all documents with a client filter dropdown; the same `DocumentsTab` component is reused in the Client Detail page, filtering by `clientId` prop. Storage usage is tracked on `agency_subscriptions.current_storage_used` via `increment_storage_used` / `decrement_storage_used` RPCs.
+**Documents (`/documents`):** File storage per client using a private Supabase `client-documents` bucket (signed URLs). Documents have categories, belong to optional collections (`documents_collections` feature flag), and are scoped by `client_id`. The global page shows all documents with a client filter dropdown; the same `DocumentsTab` component is reused in the Client Detail page, filtering by `clientId` prop. Storage usage is tracked on `agency_subscriptions.current_storage_used` by a trigger on `storage.objects` (the old `increment_storage_used` / `decrement_storage_used` RPCs are gone, #182).
 
 **Finance (`/finance`):** Agency-side financial tracking — invoice generation with PDF export, expense tracking, transaction ledger, client subscription plan management. Nested routes: `overview`, `subscriptions`, `ledger`, `invoices`.
 

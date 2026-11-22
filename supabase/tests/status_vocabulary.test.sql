@@ -154,7 +154,8 @@ DECLARE
 BEGIN
   INSERT INTO campaigns (user_id, client_id, name) VALUES (ws, acme, 'Test campaign') RETURNING id INTO v_id;
   ASSERT (SELECT status FROM campaigns WHERE id = v_id) = 'ACTIVE', 'campaign default is not ACTIVE';
-  ASSERT (SELECT (e->>'active_campaigns')::int FROM jsonb_array_elements(get_clients_with_pipeline(ws)->'clients') e
+  -- The pipeline reads the caller's workspace (#180, #182): the Owner is still the caller here.
+  ASSERT (SELECT (e->>'active_campaigns')::int FROM jsonb_array_elements(get_clients_with_pipeline()->'clients') e
           WHERE (e->>'id')::uuid = acme) >= 1,
     'pipeline does not count the active Campaign';
   UPDATE campaigns SET status = 'COMPLETED' WHERE id = v_id;

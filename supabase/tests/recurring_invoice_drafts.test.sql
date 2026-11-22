@@ -116,20 +116,25 @@ BEGIN
   UPDATE agency_subscriptions SET finance_recurring_invoices = true
   WHERE user_id = '11111111-1111-4111-8111-111111111111';
 
-  -- The Generate button is unchanged: dated today, advances one cycle ---------
-  PERFORM public.generate_invoice_from_template(v_due_today, '11111111-1111-4111-8111-111111111111');
+  -- The Generate button, as the Owner: dated today, advances one cycle --------
+  PERFORM set_config('request.jwt.claims',
+    json_build_object('sub', '11111111-1111-4111-8111-111111111111', 'role', 'authenticated')::text, true);
+  PERFORM public.generate_invoice_from_template(v_due_today);
   IF (SELECT count(*) FROM invoices WHERE subtotal = 1000 AND issue_date = CURRENT_DATE) <> 2 THEN
     RAISE EXCEPTION 'generate_invoice_from_template did not draft today''s invoice';
   END IF;
   IF (SELECT next_invoice_date FROM recurring_invoices WHERE id = v_due_today) <> (CURRENT_DATE + INTERVAL '1 month')::date THEN
     RAISE EXCEPTION 'generate_invoice_from_template did not advance the template';
   END IF;
+  -- A Member without finance access can't (an outsider's refusal is in real_caller).
+  PERFORM set_config('request.jwt.claims',
+    json_build_object('sub', '33333333-3333-4333-8333-333333333333', 'role', 'authenticated')::text, true);
   BEGIN
-    PERFORM public.generate_invoice_from_template(v_due_today, '22222222-2222-4222-8222-222222222222');
-    RAISE EXCEPTION 'generate_invoice_from_template accepted a foreign workspace';
-  EXCEPTION WHEN OTHERS THEN
-    IF SQLERRM NOT LIKE 'Template not found or access denied%' THEN RAISE; END IF;
+    PERFORM public.generate_invoice_from_template(v_due_today);
+    RAISE EXCEPTION 'generate_invoice_from_template accepted a Member without finance access';
+  EXCEPTION WHEN insufficient_privilege THEN NULL;
   END;
+  PERFORM set_config('request.jwt.claims', '', true);
 
   RAISE NOTICE 'PASS: recurring invoice drafts (% checks)', 14;
 END
@@ -147,7 +152,7 @@ BEGIN
      OR has_function_privilege('authenticated', 'public.draft_invoice_from_template(uuid, date)', 'EXECUTE') THEN
     RAISE EXCEPTION 'job functions are executable by API roles';
   END IF;
-  IF NOT has_function_privilege('authenticated', 'public.generate_invoice_from_template(uuid, uuid)', 'EXECUTE') THEN
+  IF NOT has_function_privilege('authenticated', 'public.generate_invoice_from_template(uuid)', 'EXECUTE') THEN
     RAISE EXCEPTION 'Generate button lost its EXECUTE grant';
   END IF;
   RAISE NOTICE 'PASS: schedule and privileges';

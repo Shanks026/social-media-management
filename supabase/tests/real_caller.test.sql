@@ -1,5 +1,5 @@
 -- #181 test (ADR 0008): creating a Deliverable and a revision stamps the
--- real caller as created_by, whatever user id is passed, and generating an
+-- real caller as created_by (no user id can be passed since #182), and generating an
 -- invoice from a recurring template works only for finance users of that
 -- template's workspace. Self-checking and self-cleaning: runs in a
 -- transaction that is rolled back, and raises on the first failure.
@@ -37,34 +37,16 @@ GRANT EXECUTE ON FUNCTION pg_temp.expect_refusal(text, text, text) TO authentica
 CREATE TEMP TABLE t_ids (label text, id uuid);
 GRANT INSERT, SELECT ON t_ids TO authenticated;
 
--- ── The Member creates Deliverables through both signatures ───────────────
+-- ── The Member creates a Deliverable and a revision ───────────────────────
 SELECT pg_temp.act_as('33333333-3333-4333-8333-333333333333');
 SET LOCAL ROLE authenticated;
 INSERT INTO t_ids
 SELECT 'new', public.create_post_draft_v3(
   p_client_id => 'c1111111-1111-4111-8111-111111111111', p_title => 'Member draft', p_content => 'x',
   p_media_urls => '{}', p_platform => '{instagram}');
--- The old signature, passing the Owner's id: ignored.
-INSERT INTO t_ids
-SELECT 'old', public.create_post_draft_v3(
-  p_client_id => 'c1111111-1111-4111-8111-111111111111', p_title => 'Spoofed draft', p_content => 'x',
-  p_media_urls => '{}', p_platform => '{instagram}', p_user_id => '11111111-1111-4111-8111-111111111111');
--- A revision, through both signatures (each on its own NEEDS_REVISION Version).
 INSERT INTO t_ids
 SELECT 'rev_new', public.create_revision_version(
   p_parent_version_id => 'e1000000-0000-4000-8000-000000000004', p_admin_notes => 'Second pass');
-RESET ROLE;
-
--- A second NEEDS_REVISION Version for the old revision signature.
-SELECT set_config('tercero.deliverable_transition', 'on', true);
-UPDATE post_versions SET status = 'NEEDS_REVISION' WHERE id = 'e1000000-0000-4000-8000-000000000003';
-SELECT set_config('tercero.deliverable_transition', '', true);
-
-SET LOCAL ROLE authenticated;
-INSERT INTO t_ids
-SELECT 'rev_old', public.create_revision_version(
-  p_parent_version_id => 'e1000000-0000-4000-8000-000000000003',
-  p_user_id => '11111111-1111-4111-8111-111111111111', p_admin_notes => NULL);
 RESET ROLE;
 
 DO $$
@@ -77,12 +59,12 @@ BEGIN
     IF r.created_by IS DISTINCT FROM '33333333-3333-4333-8333-333333333333' THEN
       RAISE EXCEPTION 'FAIL: % stamped created_by % instead of the Member', r.label, r.created_by;
     END IF;
-    IF r.label IN ('new', 'old') AND r.post_creator IS DISTINCT FROM '33333333-3333-4333-8333-333333333333' THEN
+    IF r.label = 'new' AND r.post_creator IS DISTINCT FROM '33333333-3333-4333-8333-333333333333' THEN
       RAISE EXCEPTION 'FAIL: % made the Deliverable''s creator % instead of the Member', r.label, r.post_creator;
     END IF;
   END LOOP;
-  IF (SELECT count(*) FROM t_ids) <> 4 THEN
-    RAISE EXCEPTION 'FAIL: expected 4 created Versions';
+  IF (SELECT count(*) FROM t_ids) <> 2 THEN
+    RAISE EXCEPTION 'FAIL: expected 2 created Versions';
   END IF;
 END $$;
 

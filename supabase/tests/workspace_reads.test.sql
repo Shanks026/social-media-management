@@ -21,8 +21,8 @@ VALUES ('c9999999-9999-4999-8999-999999999999', '99999999-9999-4999-8999-9999999
         'delivered+outsiderco@resend.dev', 'ACTIVE');
 SELECT set_config('request.jwt.claims',
   json_build_object('sub', '99999999-9999-4999-8999-999999999999', 'role', 'authenticated')::text, true);
-SELECT public.create_post_draft_v3('c9999999-9999-4999-8999-999999999999', 'Outsider post', 'x', '{}', '{instagram}',
-  '99999999-9999-4999-8999-999999999999', now() + interval '1 day');
+SELECT public.create_post_draft_v3(p_client_id => 'c9999999-9999-4999-8999-999999999999', p_title => 'Outsider post',
+  p_content => 'x', p_media_urls => '{}', p_platform => '{instagram}', p_target_date => now() + interval '1 day');
 INSERT INTO campaigns (user_id, client_id, name)
 VALUES ('99999999-9999-4999-8999-999999999999', 'c9999999-9999-4999-8999-999999999999', 'Outsider campaign');
 INSERT INTO campaigns (user_id, client_id, name)

@@ -85,8 +85,7 @@ Use `create_revision_version` when the Client asked for revisions. It archives t
 ```js
 await supabase.rpc('create_revision_version', {
   p_parent_version_id: versionId,
-  p_user_id: userId,        // ignored: created_by is auth.uid() (ADR 0008)
-  p_admin_notes: adminNotes,
+  p_admin_notes: adminNotes, // created_by is auth.uid() (ADR 0008)
 })
 ```
 

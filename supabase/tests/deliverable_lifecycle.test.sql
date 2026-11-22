@@ -163,7 +163,7 @@ SELECT pg_temp.expect_status('e1000000-0000-4000-8000-000000000007', 'DELIVERED'
 -- ── Revision and archive ──────────────────────────────────────────────────
 SET LOCAL ROLE authenticated;
 CREATE TEMP TABLE t_v2 ON COMMIT DROP AS
-SELECT public.create_revision_version('e1000000-0000-4000-8000-000000000004', NULL, 'Second pass') AS id;
+SELECT public.create_revision_version('e1000000-0000-4000-8000-000000000004', 'Second pass') AS id;
 RESET ROLE;
 SELECT pg_temp.expect_status('e1000000-0000-4000-8000-000000000004', 'ARCHIVED', 'create a new version');
 SELECT pg_temp.expect_status((SELECT id FROM t_v2), 'DRAFT', 'the new version');

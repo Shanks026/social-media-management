@@ -67,7 +67,7 @@ BEGIN
   IF has_function_privilege('anon', 'public.archive_deliverable(uuid)', 'EXECUTE') THEN
     RAISE EXCEPTION 'FAIL: anon can archive a Deliverable';
   END IF;
-  IF has_function_privilege('anon', 'public.create_revision_version(uuid, uuid, text)', 'EXECUTE') THEN
+  IF has_function_privilege('anon', 'public.create_revision_version(uuid, text)', 'EXECUTE') THEN
     RAISE EXCEPTION 'FAIL: anon can create a revision';
   END IF;
 END $$;
@@ -79,7 +79,7 @@ SELECT pg_temp.expect_refusal(
   $q$SELECT public.archive_deliverable('e1000000-0000-4000-8000-000000000001')$q$,
   'not found', 'an outsider archived another workspace''s Deliverable');
 SELECT pg_temp.expect_refusal(
-  $q$SELECT public.create_revision_version('e1000000-0000-4000-8000-000000000004', NULL, NULL)$q$,
+  $q$SELECT public.create_revision_version('e1000000-0000-4000-8000-000000000004', NULL::text)$q$,
   'not found', 'an outsider revised another workspace''s Deliverable');
 RESET ROLE;
 
@@ -157,16 +157,15 @@ SELECT pg_temp.act_as('33333333-3333-4333-8333-333333333333');
 SET LOCAL ROLE authenticated;
 -- e1…0008 is v1 of a post whose current Version is e1…0009.
 SELECT pg_temp.expect_refusal(
-  $q$SELECT public.create_revision_version('e1000000-0000-4000-8000-000000000008', NULL, NULL)$q$,
+  $q$SELECT public.create_revision_version('e1000000-0000-4000-8000-000000000008', NULL::text)$q$,
   'current version', 'a superseded Version was revised');
 SELECT pg_temp.expect_refusal(
-  $q$SELECT public.create_revision_version('e1000000-0000-4000-8000-000000000009', NULL, NULL)$q$,
+  $q$SELECT public.create_revision_version('e1000000-0000-4000-8000-000000000009', NULL::text)$q$,
   'Cannot create a new version of a deliverable that is DRAFT', 'a DRAFT was revised');
 
 CREATE TEMP TABLE t_new ON COMMIT DROP AS
 SELECT public.create_revision_version(
   'e1000000-0000-4000-8000-000000000004',
-  '11111111-1111-4111-8111-111111111111',   -- a forged p_user_id is ignored
   'Tighten the hook') AS id;
 RESET ROLE;
 
