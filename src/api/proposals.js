@@ -2,6 +2,7 @@
 // mutation (the unit-test surface, callable outside React), and a hook that
 // wraps each one and owns the cache invalidation.
 import { supabase } from '@/lib/supabase'
+import { useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/context/AuthContext'
 import { useSubscription } from '@/api/useSubscription'
@@ -26,6 +27,16 @@ export class ProposalLimitError extends Error {
 // so a Client's or Prospect's tab and the Plan limit share a single query.
 export function useProposals({ clientId, prospectId } = {}) {
   const { workspaceUserId } = useAuth()
+  // Stable per scope, so React Query reruns it only when the rows change.
+  const select = useCallback(
+    (rows) =>
+      prospectId
+        ? rows.filter((p) => p.prospect_id === prospectId)
+        : clientId
+          ? rows.filter((p) => p.client_id === clientId)
+          : rows,
+    [clientId, prospectId],
+  )
   return useQuery({
     queryKey: proposalKeys.list(workspaceUserId),
     queryFn: async () => {
@@ -36,11 +47,7 @@ export function useProposals({ clientId, prospectId } = {}) {
       if (error) throw error
       return data ?? []
     },
-    select: prospectId
-      ? (rows) => rows.filter((p) => p.prospect_id === prospectId)
-      : clientId
-        ? (rows) => rows.filter((p) => p.client_id === clientId)
-        : undefined,
+    select,
     enabled: !!workspaceUserId,
     staleTime: 30000,
     retry: 1,
@@ -49,13 +56,19 @@ export function useProposals({ clientId, prospectId } = {}) {
 
 // The Plan's Proposal limit (spec #200): `used` is the workspace's non-archived
 // Proposals, `limit` is null on an unlimited Plan. The one place that decides
-// whether "New Proposal" is allowed.
+// whether "New Proposal" is allowed. While either read is loading, `used` and
+// `atLimit` are not yet known: `isLoading` says so.
 export function useProposalLimit() {
-  const { data: sub } = useSubscription()
-  const { data: proposals = [] } = useProposals()
+  const { data: sub, isLoading: subLoading } = useSubscription()
+  const { data: proposals = [], isLoading: proposalsLoading } = useProposals()
   const used = proposals.filter((p) => p.status !== 'ARCHIVED').length
   const limit = sub?.proposals_limit ?? null
-  return { used, limit, atLimit: limit !== null && used >= limit }
+  return {
+    used,
+    limit,
+    atLimit: limit !== null && used >= limit,
+    isLoading: subLoading || proposalsLoading,
+  }
 }
 
 export function useProposal(proposalId) {
