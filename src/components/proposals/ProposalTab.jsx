@@ -87,7 +87,17 @@ function ProposalRowSkeleton() {
 
 // ── Tab component ─────────────────────────────────────────────────────────────
 
-export function ProposalTab({ clientId, prospectId, prospectName, prospectEmail }) {
+/**
+ * The one Proposals list. Its scope is a Client (`clientId`), a Prospect (the
+ * `prospect` record), or neither; giving both is a programming error.
+ */
+export function ProposalTab({ clientId, prospect }) {
+  if (clientId && prospect) {
+    throw new Error('ProposalTab is scoped to a Client or a Prospect, not both')
+  }
+  const prospectId = prospect?.id
+  const prospectName = prospect?.business_name ?? null
+  const prospectEmail = prospect?.email ?? null
   const navigate = useNavigate()
   const { used: activeCount, limit: proposalsLimit, atLimit } = useProposalLimit()
   const { data: proposals = [], isLoading } = useProposals({ clientId, prospectId })
