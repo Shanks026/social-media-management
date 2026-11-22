@@ -10,7 +10,7 @@ import DashboardWelcomeMessage from './DashboardWelcomeMessage'
 import AgencyHealthBar from './AgencyHealthBar'
 import DashboardMeetingsNotes from './DashboardMeetingsNotes'
 import ContentPipelineBar from './ContentPipelineBar'
-import DashboardWeekTimeline from './DashboardWeekTimeline'
+import WeekTimeline from '@/components/WeekTimeline'
 import DashboardSocialMediaUsage from './DashboardSocialMediaUsage'
 import LifetimeRevenue from './LifetimeRevenue'
 import FinancialSnapshot from './FinancialSnapshot'
@@ -109,7 +109,7 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-stretch">
         <DashboardMeetingsNotes />
         <ContentPipelineBar />
-        <DashboardWeekTimeline />
+        <WeekTimeline />
       </div>
 
       {/* Row 4: Finance + Social Media (finance widgets hidden for members) */}
