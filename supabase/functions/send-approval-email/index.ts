@@ -129,9 +129,20 @@ serve(async (req) => {
         .eq('id', record.client_id)
         .single()
 
-      const { data: tokenData } = await supabase.rpc('generate_version_token', {
+      // One live link per Version: the old ones stop working, then a new one is
+      // minted. Review links are written only here (service role), never from
+      // the browser, since a link lets its holder decide as the Client.
+      const { error: deactivateError } = await supabase
+        .from('share_tokens')
+        .update({ is_active: false })
+        .eq('post_version_id', record.id)
+        .eq('is_active', true)
+      if (deactivateError) return json(500, { error: deactivateError.message })
+
+      const { data: tokenData, error: tokenError } = await supabase.rpc('generate_version_token', {
         p_version_id: record.id,
       })
+      if (tokenError || !tokenData) return json(500, { error: tokenError?.message ?? 'Could not create a review link' })
 
       const magicLink = `${Deno.env.get('FRONTEND_URL')}/review/${tokenData}`
       const postTitle = record.title || 'Untitled Post'

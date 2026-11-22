@@ -202,10 +202,7 @@ export async function fetchPostDetails(id) {
       campaign_id,
       campaigns!campaign_id ( name ),
       clients ( name, logo_url, email, social_links, industry, is_internal ),
-      post_versions!fk_current_version (
-        *,
-        share_tokens (token, is_active)
-      )
+      post_versions!fk_current_version ( * )
     `,
     )
     .eq('id', id)
@@ -232,7 +229,6 @@ export async function fetchPostDetails(id) {
     .select(
       `
       *,
-      share_tokens (token, is_active),
       posts!post_versions_post_id_fkey (
         id,
         client_id,
@@ -527,25 +523,6 @@ export function useGlobalCalendar({ currentMonth, clientId = null, view } = {}) 
   })
 }
 
-export async function regeneratePostShareToken(versionId) {
-  // 1. Invalidate old tokens
-  await supabase
-    .from('share_tokens')
-    .update({ is_active: false })
-    .eq('post_version_id', versionId)
-
-  // 2. Create new token
-  const token = Math.random().toString(36).substring(2, 15)
-  const { data, error } = await supabase
-    .from('share_tokens')
-    .insert([{ post_version_id: versionId, token, is_active: true }])
-    .select()
-    .single()
-
-  if (error) throw error
-  return data
-}
-
 // ── Phase 5: Internal approval workflow ──────────────────────────────────────
 
 export async function submitForInternalApproval(versionId) {
@@ -586,18 +563,12 @@ export async function sendPostForClientApproval(version) {
 }
 
 /**
- * Invalidates the version's old share links and emails the client a fresh one
- * (the edge function reads the Version and mints the new token). Not a status
- * change, so it stays a direct edge-function call.
+ * Emails the client a fresh review link. The edge function deactivates the
+ * Version's old links and mints the new one; review links are never written
+ * from the browser. Not a status change, so it stays a direct edge-function call.
  */
 export async function resendApprovalLink(version) {
   if (!version?.clients?.email) throw new Error('This client has no email address.')
-
-  const { error } = await supabase
-    .from('share_tokens')
-    .update({ is_active: false })
-    .eq('post_version_id', version.id)
-  if (error) throw error
 
   const { error: sendError } = await supabase.functions.invoke('send-approval-email', {
     body: { record: { id: version.id, status: 'PENDING_APPROVAL' } },
@@ -759,10 +730,6 @@ export function useMySubmissionsCount(status = null) {
       return Number(data ?? 0)
     },
   })
-}
-
-export function useRegeneratePostShareToken(options) {
-  return useApiMutation(regeneratePostShareToken, invalidateDeliverables, options)
 }
 
 // ─── Public review (unauthenticated, token from the URL) ───────────────────────
