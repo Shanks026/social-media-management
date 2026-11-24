@@ -553,7 +553,7 @@ export default function DocumentsTab({ clientId, prospectId }) {
                     <EmptyDescription className="font-normal">
                       {archivedCount > 0
                         ? `You have ${archivedCount} archived document${archivedCount !== 1 ? 's' : ''}.`
-                        : prospectId
+                        : targetProspectId
                           ? 'Upload a brief, one-pager, or any file related to this prospect.'
                           : 'Upload a contract, brief, or brand asset to get started.'}
                     </EmptyDescription>
