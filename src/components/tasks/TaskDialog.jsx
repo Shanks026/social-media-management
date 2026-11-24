@@ -224,6 +224,8 @@ export default function TaskDialog({
       })
       return
     }
+    // A locked Campaign (the prop) wins over the selector.
+    const resolvedCampaignId = campaignId || values.campaignId
     createMutation.mutate({
       client_id: values.clientId || null,
       title: values.title,
@@ -233,12 +235,11 @@ export default function TaskDialog({
       status: 'TODO',
       // Without the permission the form never sends an assignee at all.
       assigned_to: canAssignTasks ? values.assignedTo || null : null,
-      ...(campaignId || values.campaignId ? { campaign_id: campaignId || values.campaignId } : {}),
+      ...(resolvedCampaignId ? { campaign_id: resolvedCampaignId } : {}),
       post_ids: values.postIds,
     })
   }
 
-  const descRef = useRef(null)
   const autoResizeDesc = (e) => {
     e.target.style.height = 'auto'
     e.target.style.height = e.target.scrollHeight + 'px'
@@ -285,7 +286,6 @@ export default function TaskDialog({
                   name="description"
                   render={({ field }) => (
                     <textarea
-                      ref={descRef}
                       placeholder="Add a description..."
                       rows={2}
                       className="w-full text-sm bg-transparent border-none outline-none placeholder:text-muted-foreground/40 resize-none leading-relaxed text-muted-foreground focus:text-foreground transition-colors"
