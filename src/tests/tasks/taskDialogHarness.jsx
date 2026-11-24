@@ -1,5 +1,6 @@
 import { render } from '@testing-library/react'
 import { vi } from 'vitest'
+import { QueryClientProvider } from '@tanstack/react-query'
 import { createWrapper } from '../test-utils'
 
 // Shared by the Task dialog tests (spec #213): renders the real dialog on the
@@ -66,8 +67,35 @@ export function answerWorkspace(sb, { posts = [] } = {}) {
   sb.answer('tasks', 'insert', { data: { id: 'task-new' }, error: null })
 }
 
-export function renderDialog(ui) {
-  const Wrapper = createWrapper()
+// A saved Task, due at 09:30 local time on 1 Dec 2026, linked to one Deliverable.
+export const TASK = {
+  id: 'task-1',
+  title: 'Draft proposal',
+  description: 'First pass',
+  priority: 'HIGH',
+  status: 'TODO',
+  due_at: new Date(2026, 11, 1, 9, 30).toISOString(),
+  client_id: 'client-a',
+  campaign_id: 'camp-1',
+  assigned_to: 'member-uid',
+  created_by: 'owner-uid',
+}
+
+/** What the app reads for an existing Task: its links and the Client's lists. */
+export function answerTask(sb, { linked = ['p1'], posts } = {}) {
+  answerWorkspace(sb, {
+    posts: posts ?? [deliverable('p1', 'Launch teaser'), deliverable('p2', 'Reel')],
+  })
+  sb.answer('task_posts', 'select', { data: linked.map((post_id) => ({ post_id })), error: null })
+  sb.answer('campaigns', 'select', { data: [{ id: 'camp-1', name: 'Spring launch' }], error: null })
+  sb.answer('tasks', 'select', { data: { assigned_to: TASK.assigned_to }, error: null })
+  sb.answer('tasks', 'update', { data: null, error: null })
+}
+
+export function renderDialog(ui, { queryClient } = {}) {
+  const Wrapper = queryClient
+    ? ({ children }) => <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    : createWrapper()
   const view = render(<Wrapper>{ui}</Wrapper>)
   // Rerendering must keep the same query client, so re-wrap with the same one.
   return { ...view, rerender: (next) => view.rerender(<Wrapper>{next}</Wrapper>) }

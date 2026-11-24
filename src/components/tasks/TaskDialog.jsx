@@ -26,14 +26,14 @@ import { MemberAvatar } from '@/components/MemberAvatar'
 import { ClientAvatar } from '@/components/tasks/ClientAvatar'
 import { DeliverablePickerSection } from '@/components/tasks/DeliverablePickerSection'
 import { TASK_PRIORITY_OPTIONS } from '@/components/tasks/taskPresentation'
-import { useCreateTask } from '@/api/tasks'
+import { useCreateTask, useUpdateTask, useTaskPostIds } from '@/api/tasks'
 import { useClients } from '@/api/clients'
 import { useActiveCampaignsByClient } from '@/api/campaigns'
 import { useDeliverableOptions } from '@/api/posts'
 import { useTeamMembers } from '@/api/team'
 import { usePermissions } from '@/api/usePermissions'
 import { useAuth } from '@/context/AuthContext'
-import { fromDateTimeLocal } from '@/lib/format'
+import { fromDateTimeLocal, toDateTimeLocal } from '@/lib/format'
 import { SYSTEM_ROLE_PALETTE } from '@/lib/team-roles'
 import { cn } from '@/lib/utils'
 
@@ -75,19 +75,33 @@ function MetaRow({ label, children }) {
   )
 }
 
+// Local wall-clock time, so an untouched due date saves back unchanged (B11).
+const valuesFromTask = (task) => ({
+  title: task.title ?? '',
+  description: task.description ?? '',
+  clientId: task.client_id || '',
+  campaignId: task.campaign_id || '',
+  assignedTo: task.assigned_to || '',
+  priority: task.priority ?? 'NORMAL',
+  dueAt: toDateTimeLocal(task.due_at),
+  postIds: [],
+})
+
 /**
- * The one dialog for adding a Task.
+ * The one dialog for adding and editing a Task.
  *
  * Props:
- *  - clientId      string | null  — Pre-selects a client on open.
- *  - lockClient    boolean        — When true, shows a read-only client pill.
- *  - campaignId    string | null  — Locks the campaign (no selector shown).
- *  - campaignName  string | null  — Display name for the locked campaign pill.
+ *  - task          object | null  — The Task to edit; without it the dialog adds one.
+ *  - clientId      string | null  — Add only: pre-selects a client on open.
+ *  - lockClient    boolean        — Add only: shows a read-only client pill.
+ *  - campaignId    string | null  — Add only: locks the campaign (no selector shown).
+ *  - campaignName  string | null  — Add only: display name for the locked campaign pill.
  *  - children                     — Trigger element.
  *  - open / onOpenChange          — Controlled open state (optional).
  *  - onSuccess     () => void     — Called after a successful save (optional).
  */
 export default function TaskDialog({
+  task = null,
   clientId,
   lockClient = false,
   campaignId = null,
@@ -97,6 +111,7 @@ export default function TaskDialog({
   onOpenChange,
   onSuccess,
 }) {
+  const isEdit = !!task
   const [internalOpen, setInternalOpen] = useState(false)
   const isControlled = open !== undefined && onOpenChange !== undefined
   const isOpen = isControlled ? open : internalOpen
@@ -109,9 +124,35 @@ export default function TaskDialog({
   const selectedClientId = form.watch('clientId')
   const postIds = form.watch('postIds')
 
+  // Start from the Task (or empty) once per open. Keyed on the Task's id, not
+  // the object, so a background refetch of the Task never wipes edits.
+  const taskRef = useRef(task)
   useEffect(() => {
-    if (isOpen) form.reset(emptyValues(clientId))
-  }, [isOpen, clientId, form])
+    taskRef.current = task
+  })
+  const taskId = task?.id
+  useEffect(() => {
+    if (!isOpen) return
+    form.reset(taskRef.current ? valuesFromTask(taskRef.current) : emptyValues(clientId))
+  }, [isOpen, clientId, taskId, form])
+
+  // Linked Deliverables live in task_posts, not on the Task row. Seed them once
+  // per open, after the reset above, so a refetch never clobbers the user's
+  // choices either.
+  const { data: linkedPostIds, isSuccess: linkedIdsLoaded } = useTaskPostIds(taskId, {
+    enabled: isOpen,
+  })
+  const seededRef = useRef(false)
+  useEffect(() => {
+    if (!isOpen) {
+      seededRef.current = false
+      return
+    }
+    if (!seededRef.current && linkedIdsLoaded) {
+      form.setValue('postIds', linkedPostIds)
+      seededRef.current = true
+    }
+  }, [isOpen, linkedIdsLoaded, linkedPostIds, form])
 
   const { canAssignTasks } = usePermissions()
   const { user } = useAuth()
@@ -148,7 +189,7 @@ export default function TaskDialog({
     useDeliverableOptions(selectedClientId, { enabled: isOpen })
   const selectedPosts = availablePosts.filter((p) => postIds.includes(p.id))
 
-  const mutation = useCreateTask({
+  const createMutation = useCreateTask({
     onSuccess: () => {
       toast.success('Task added successfully')
       setIsOpen(false)
@@ -156,9 +197,34 @@ export default function TaskDialog({
     },
     onError: (err) => toast.error('Failed to add task: ' + err.message),
   })
+  const updateMutation = useUpdateTask({
+    onSuccess: () => {
+      toast.success('Task updated successfully')
+      setIsOpen(false)
+      onSuccess?.()
+    },
+    onError: (err) => toast.error('Failed to update task: ' + err.message),
+  })
+  const mutation = isEdit ? updateMutation : createMutation
 
   const onSubmit = (values) => {
-    mutation.mutate({
+    if (isEdit) {
+      updateMutation.mutate({
+        id: task.id,
+        client_id: values.clientId || null,
+        title: values.title,
+        description: values.description.trim() || null,
+        due_at: fromDateTimeLocal(values.dueAt),
+        priority: values.priority,
+        // Without the permission the assignee is left out entirely, so a save
+        // cannot change it.
+        ...(canAssignTasks ? { assigned_to: values.assignedTo || null } : {}),
+        campaign_id: values.campaignId || null,
+        post_ids: values.postIds,
+      })
+      return
+    }
+    createMutation.mutate({
       client_id: values.clientId || null,
       title: values.title,
       description: values.description.trim() || null,
@@ -183,7 +249,7 @@ export default function TaskDialog({
       {children && <DialogTrigger asChild>{children}</DialogTrigger>}
       <DialogContent className="sm:max-w-lg p-0 gap-0 overflow-hidden max-h-[85vh] flex flex-col">
         <DialogHeader className="px-6 pt-6 pb-4 border-b border-border/50 space-y-0.5 shrink-0">
-          <DialogTitle>Add Task</DialogTitle>
+          <DialogTitle>{isEdit ? 'Edit Task' : 'Add Task'}</DialogTitle>
           <DialogDescription>
             Track work, set deadlines, and stay on top of what needs to get done.
           </DialogDescription>
@@ -236,7 +302,7 @@ export default function TaskDialog({
               {/* ── Metadata rows ── */}
               <div className="border-t border-border/50 px-6 py-5 space-y-2">
                 <MetaRow label="Client">
-                  {lockClient && selectedClient ? (
+                  {!isEdit && lockClient && selectedClient ? (
                     <div className="flex items-center gap-2 text-sm">
                       <ClientAvatar client={selectedClient} size="sm" />
                       <span className="font-medium">{selectedClient.name}</span>
@@ -276,9 +342,27 @@ export default function TaskDialog({
                   )}
                 </MetaRow>
 
-                {/* tasks_insert RLS requires assigned_to IS NULL OR
-                    is_workspace_admin(), so only people who may assign Tasks
-                    get the row. */}
+                {/* One rule for both modes: only people who may assign Tasks can
+                    choose an assignee. (tasks_insert RLS requires assigned_to IS
+                    NULL OR is_workspace_admin(); tasks_update RLS is looser, so
+                    this is a UI rule only.) Editing without the permission shows
+                    who has the Task, read-only. */}
+                {!canAssignTasks && isEdit && (
+                  <MetaRow label="Assignee">
+                    <span className="px-2 text-sm">
+                      {(() => {
+                        const current = teamMembers.find(
+                          (m) => m.member_user_id === task.assigned_to,
+                        )
+                        return current
+                          ? current.full_name || current.email
+                          : task.assigned_to
+                            ? '…'
+                            : 'Unassigned'
+                      })()}
+                    </span>
+                  </MetaRow>
+                )}
                 {canAssignTasks && (
                   <MetaRow label="Assignee">
                     <FormField
@@ -375,7 +459,7 @@ export default function TaskDialog({
                 </MetaRow>
 
                 <MetaRow label="Campaign">
-                  {campaignId ? (
+                  {!isEdit && campaignId ? (
                     <div className="flex items-center gap-1.5 px-2 text-sm text-foreground">
                       <Megaphone className="size-3 text-muted-foreground shrink-0" />
                       <span className="font-medium truncate">{campaignName ?? 'Campaign'}</span>
@@ -446,7 +530,7 @@ export default function TaskDialog({
                 Cancel
               </Button>
               <Button type="submit" size="sm" disabled={mutation.isPending}>
-                {mutation.isPending ? 'Saving...' : 'Save Task'}
+                {mutation.isPending ? 'Saving...' : isEdit ? 'Save Changes' : 'Save Task'}
               </Button>
             </div>
           </form>

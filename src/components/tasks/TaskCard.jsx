@@ -46,7 +46,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { ClientAvatar } from '@/components/tasks/ClientAvatar'
-import EditTaskDialog from '@/components/tasks/EditTaskDialog'
+import TaskDialog from '@/components/tasks/TaskDialog'
 import { taskStatusCfg, taskPriorityCfg } from '@/components/tasks/taskPresentation'
 
 // ─── Shared constants ─────────────────────────────────────────────────────────
@@ -388,7 +388,7 @@ export default function TaskCard({ task, clientMap, campaignMap = {}, memberMap 
         </div>
       </div>
 
-      <EditTaskDialog task={task} open={editOpen} onOpenChange={setEditOpen} />
+      <TaskDialog task={task} open={editOpen} onOpenChange={setEditOpen} />
 
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <AlertDialogContent>
