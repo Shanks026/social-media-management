@@ -66,7 +66,7 @@ import { useCampaigns } from '@/api/campaigns'
 import { useTasks, useUpdateTaskStatus } from '@/api/tasks'
 import { useTeamMembers, useRemovedMembers } from '@/api/team'
 import { usePermissions } from '@/api/usePermissions'
-import CreateTaskDialog from '@/components/tasks/CreateTaskDialog'
+import TaskDialog from '@/components/tasks/TaskDialog'
 import { ClientAvatar } from '@/components/tasks/ClientAvatar'
 import TaskCard from '@/components/tasks/TaskCard'
 import { taskStatusCfg, taskPriorityCfg } from '@/components/tasks/taskPresentation'
@@ -600,7 +600,7 @@ export default function TasksAndReminders() {
   )
 
   // New tasks default to "General (no client)" rather than the internal
-  // account — CreateTaskDialog treats a null/empty clientId as General.
+  // account — TaskDialog treats a null/empty clientId as General.
   const defaultClientId = null
 
   const { data: teamMembers = [] } = useTeamMembers()
@@ -710,14 +710,14 @@ export default function TasksAndReminders() {
           </p>
         </div>
 
-        <CreateTaskDialog
+        <TaskDialog
           clientId={defaultClientId}
         >
           <Button className="gap-2 h-9">
             <Plus size={16} />
             New Task
           </Button>
-        </CreateTaskDialog>
+        </TaskDialog>
       </div>
 
       <Tabs value={statusTab} onValueChange={(v) => setParam('tab', v, 'ALL')}>
@@ -916,14 +916,14 @@ export default function TasksAndReminders() {
                   Clear all filters
                 </Button>
               ) : (
-                <CreateTaskDialog
+                <TaskDialog
                   clientId={defaultClientId}
                 >
                   <Button variant="outline" size="sm">
                     <Plus className="size-4 mr-2" />
                     New Task
                   </Button>
-                </CreateTaskDialog>
+                </TaskDialog>
               )}
             </EmptyContent>
           </Empty>

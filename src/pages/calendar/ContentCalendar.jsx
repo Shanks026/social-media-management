@@ -44,7 +44,7 @@ import { useMeetings } from '@/api/meetings'
 import { useClients } from '@/api/clients'
 import { ClientAvatar } from '@/components/tasks/ClientAvatar'
 import CreateMeetingDialog from '@/components/CreateMeetingDialog'
-import CreateTaskDialog from '@/components/tasks/CreateTaskDialog'
+import TaskDialog from '@/components/tasks/TaskDialog'
 import { useSubscription } from '@/api/useSubscription'
 import {
   DropdownMenu,
@@ -450,7 +450,7 @@ export default function ContentCalendar({
             defaultClientId={clientId}
             lockClient={!!clientId}
           />
-          <CreateTaskDialog
+          <TaskDialog
             open={noteOpen}
             onOpenChange={setNoteOpen}
             clientId={clientId}
