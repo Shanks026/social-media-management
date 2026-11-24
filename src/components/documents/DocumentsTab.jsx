@@ -34,8 +34,10 @@ import UploadMetaDialog from './UploadMetaDialog'
 import CollectionCard from './CollectionCard'
 import CreateCollectionDialog from './CreateCollectionDialog'
 
+const EMPTY_BOX = 'py-20 border border-dashed rounded-2xl bg-muted/5'
+
 /**
- * Documents tab for a specific client.
+ * The one Documents list (spec #208).
  *
  * Props:
  *   clientId — UUID of the client whose documents to show.
@@ -71,7 +73,7 @@ export default function DocumentsTab({ clientId }) {
   // ── Filters ────────────────────────────────────────────────────────────────
   const [searchRaw, setSearchRaw] = useState('')
   const [search, setSearch] = useState('')
-  const [selectedStatus, setSelectedStatus] = useState('all')
+  const [selectedStatus, setSelectedStatus] = useState('ACTIVE')
   const [selectedCategory, setSelectedCategory] = useState('all')
 
   // Debounce search 300ms
@@ -81,12 +83,14 @@ export default function DocumentsTab({ clientId }) {
   }, [searchRaw])
 
   const isFilterActive =
-    search !== '' || selectedStatus !== 'all' || selectedCategory !== 'all'
+    search !== '' || selectedStatus !== 'ACTIVE' || selectedCategory !== 'all'
+  const onlyArchivedFilter =
+    selectedStatus === 'ARCHIVED' && search === '' && selectedCategory === 'all'
 
   function clearFilters() {
     setSearchRaw('')
     setSearch('')
-    setSelectedStatus('all')
+    setSelectedStatus('ACTIVE')
     setSelectedCategory('all')
   }
 
@@ -180,11 +184,92 @@ export default function DocumentsTab({ clientId }) {
   const filteredCollections = collections ?? []
   const archivedCount = allDocs.filter((d) => d.status === 'ARCHIVED').length
 
+  const newCollectionButton = (variant = 'secondary', size = 'default') =>
+    collectionsUnlocked ? (
+      <Button
+        variant={variant}
+        size={size}
+        className="gap-2"
+        onClick={() => setCreateCollectionOpen(true)}
+      >
+        <FolderPlus className="size-4" />
+        New Collection
+      </Button>
+    ) : (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          {/* A disabled button swallows hover, so the span carries the tooltip. */}
+          <span tabIndex={0} className="inline-flex">
+            <Button
+              variant={variant}
+              size={size}
+              className="gap-2 opacity-50 cursor-not-allowed"
+              disabled
+            >
+              <FolderPlus className="size-4" />
+              New Collection
+              <Lock size={12} />
+            </Button>
+          </span>
+        </TooltipTrigger>
+        <TooltipContent>
+          Collections are available on Velocity and above
+        </TooltipContent>
+      </Tooltip>
+    )
+
+  const countChip = (n) => (
+    <span className="tabular-nums text-xs text-muted-foreground">{n}</span>
+  )
+
+  const clearFiltersLink = (
+    <EmptyContent className="mt-4">
+      <Button
+        variant="link"
+        onClick={clearFilters}
+        className="text-primary font-medium"
+      >
+        Clear filters
+      </Button>
+    </EmptyContent>
+  )
+
+  const sectionLabel = (text) => (
+    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+      {text}
+    </p>
+  )
+
+  const collectionCards = filteredCollections.map((col) => (
+    <CollectionCard
+      key={col.id}
+      collection={col}
+      documents={applyFilters(allDocs.filter((d) => d.collection_id === col.id))}
+      locked={!collectionsUnlocked}
+      canManage={canManage}
+    />
+  ))
+
+  const documentCards = (docs) =>
+    docs.map((doc) => (
+      <DocumentCard key={doc.id} doc={doc} canManage={canManage} />
+    ))
+
   return (
     <>
-      <Tabs value={activeTab} onValueChange={setTab} className="mt-4 space-y-4">
-        {/* ── Row 1: Filters + New Collection ── */}
-        <div className="flex items-center gap-2 flex-wrap">
+      <Tabs value={activeTab} onValueChange={setTab} className="mt-4">
+        <TabsList variant="underline">
+          <TabsTrigger value="all">All {countChip(filteredDocs.length)}</TabsTrigger>
+          <TabsTrigger value="collections">
+            Collections {countChip(filteredCollections.length)}
+          </TabsTrigger>
+          <TabsTrigger value="ungrouped">
+            Ungrouped {countChip(ungroupedDocs.length)}
+          </TabsTrigger>
+        </TabsList>
+
+        {/* ── Filters + actions ── */}
+        <div className="mt-4 flex items-center gap-2 flex-wrap">
           <div className="relative">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none" />
             <Input
@@ -196,7 +281,7 @@ export default function DocumentsTab({ clientId }) {
           </div>
 
           <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-            <SelectTrigger className="w-[130px] h-9 text-sm">
+            <SelectTrigger aria-label="Status" className="w-[130px] h-9 text-sm">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -207,7 +292,7 @@ export default function DocumentsTab({ clientId }) {
           </Select>
 
           <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-            <SelectTrigger className="w-[155px] h-9 text-sm">
+            <SelectTrigger aria-label="Category" className="w-[155px] h-9 text-sm">
               <SelectValue placeholder="All categories" />
             </SelectTrigger>
             <SelectContent>
@@ -227,46 +312,13 @@ export default function DocumentsTab({ clientId }) {
               className="h-9 gap-1.5 text-muted-foreground"
               onClick={clearFilters}
             >
-              <X className="size-3.5" /> Clear
+              <X className="size-3.5" /> Clear filters
             </Button>
           )}
 
-          <div className="ml-auto flex items-center gap-3 shrink-0">
-            <TabsList>
-              <TabsTrigger value="all">All</TabsTrigger>
-              <TabsTrigger value="collections">Collections</TabsTrigger>
-              <TabsTrigger value="ungrouped">Ungrouped</TabsTrigger>
-            </TabsList>
-
-            {canManage && (collectionsUnlocked ? (
-              <Button
-                variant="secondary"
-                className="gap-2"
-                onClick={() => setCreateCollectionOpen(true)}
-              >
-                <FolderPlus className="size-4" />
-                New Collection
-              </Button>
-            ) : (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="secondary"
-                    className="gap-2 opacity-50 cursor-not-allowed"
-                    disabled
-                  >
-                    <FolderPlus className="size-4" />
-                    New Collection
-                    <Lock size={12} />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  Collections are available on Velocity and above
-                </TooltipContent>
-              </Tooltip>
-            ))}
-
-            {canManage && (
+          {canManage && (
+            <div className="ml-auto flex items-center gap-2 shrink-0">
+              {newCollectionButton()}
               <Button
                 className="gap-2"
                 onClick={handleOpenUpload}
@@ -275,50 +327,39 @@ export default function DocumentsTab({ clientId }) {
                 <Upload className="size-4" />
                 Upload Document
               </Button>
-            )}
-          </div>
+            </div>
+          )}
         </div>
 
-        {/* ── Row 2: Content ── */}
         <div className="mt-4">
           {/* All */}
-          <TabsContent value="all" className="mt-4 space-y-4">
+          <TabsContent value="all" className="space-y-4">
             {filteredDocs.length === 0 ? (
               isFilterActive ? (
-                <Empty className="py-20 border border-dashed rounded-2xl bg-muted/5">
+                <Empty className={EMPTY_BOX}>
                   <EmptyHeader>
                     <div className="text-4xl leading-none select-none mb-2">
-                      {selectedStatus === 'ARCHIVED' ? '📁' : '🔍'}
+                      {onlyArchivedFilter ? '📁' : '🔍'}
                     </div>
                     <EmptyTitle className="font-bold text-xl">
-                      {selectedStatus === 'ARCHIVED'
+                      {onlyArchivedFilter
                         ? 'No archived documents'
-                        : 'No documents match your search'}
+                        : 'No documents match your filters'}
                     </EmptyTitle>
                     <EmptyDescription className="font-normal">
-                      {selectedStatus === 'ARCHIVED'
+                      {onlyArchivedFilter
                         ? 'No documents have been archived yet.'
                         : 'Try adjusting your filters or search terms.'}
                     </EmptyDescription>
                   </EmptyHeader>
-                  {selectedStatus !== 'ARCHIVED' && (
-                    <EmptyContent className="mt-4">
-                      <Button
-                        variant="link"
-                        onClick={clearFilters}
-                        className="text-primary font-medium"
-                      >
-                        Clear filters
-                      </Button>
-                    </EmptyContent>
-                  )}
+                  {!onlyArchivedFilter && clearFiltersLink}
                 </Empty>
               ) : (
-                <Empty className="py-20 border border-dashed rounded-2xl bg-muted/5">
+                <Empty className={EMPTY_BOX}>
                   <EmptyHeader>
                     <div className="text-4xl leading-none select-none mb-2">📁</div>
                     <EmptyTitle className="font-bold text-xl">
-                      No active documents
+                      {archivedCount > 0 ? 'No active documents' : 'No documents yet'}
                     </EmptyTitle>
                     <EmptyDescription className="font-normal">
                       {archivedCount > 0
@@ -343,34 +384,14 @@ export default function DocumentsTab({ clientId }) {
               <>
                 {filteredCollections.length > 0 && (
                   <div className="space-y-3">
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                      Collections
-                    </p>
-                    {filteredCollections.map((col) => (
-                      <CollectionCard
-                        key={col.id}
-                        collection={col}
-                        documents={applyFilters(
-                          allDocs.filter((d) => d.collection_id === col.id),
-                        )}
-                        locked={!collectionsUnlocked}
-                        canManage={canManage}
-                      />
-                    ))}
+                    {sectionLabel('Collections')}
+                    {collectionCards}
                   </div>
                 )}
                 {ungroupedDocs.length > 0 && (
                   <div className="space-y-3">
-                    {filteredCollections.length > 0 && (
-                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                        Ungrouped
-                      </p>
-                    )}
-                    <div className="space-y-2">
-                      {ungroupedDocs.map((doc) => (
-                        <DocumentCard key={doc.id} doc={doc} canManage={canManage} />
-                      ))}
-                    </div>
+                    {filteredCollections.length > 0 && sectionLabel('Ungrouped')}
+                    <div className="space-y-2">{documentCards(ungroupedDocs)}</div>
                   </div>
                 )}
               </>
@@ -378,9 +399,9 @@ export default function DocumentsTab({ clientId }) {
           </TabsContent>
 
           {/* Collections */}
-          <TabsContent value="collections" className="mt-4 space-y-3">
+          <TabsContent value="collections" className="space-y-3">
             {filteredCollections.length === 0 ? (
-              <Empty className="py-20 border border-dashed rounded-2xl bg-muted/5">
+              <Empty className={EMPTY_BOX}>
                 <EmptyHeader>
                   <div className="text-4xl leading-none select-none mb-2">📁</div>
                   <EmptyTitle className="font-bold text-xl">
@@ -390,73 +411,32 @@ export default function DocumentsTab({ clientId }) {
                     Create a collection to group related documents.
                   </EmptyDescription>
                 </EmptyHeader>
-                <EmptyContent className="mt-4">
-                  {collectionsUnlocked ? (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setCreateCollectionOpen(true)}
-                    >
-                      <FolderPlus className="size-4 mr-2" /> New Collection
-                    </Button>
-                  ) : (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="opacity-50 cursor-not-allowed"
-                          disabled
-                        >
-                          <FolderPlus className="size-4 mr-2" /> New Collection{' '}
-                          <Lock size={11} className="ml-1.5" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        Collections are available on Velocity and above
-                      </TooltipContent>
-                    </Tooltip>
-                  )}
-                </EmptyContent>
+                {canManage && (
+                  <EmptyContent className="mt-4">
+                    {newCollectionButton('outline', 'sm')}
+                  </EmptyContent>
+                )}
               </Empty>
             ) : (
-              filteredCollections.map((col) => (
-                <CollectionCard
-                  key={col.id}
-                  collection={col}
-                  documents={applyFilters(
-                    allDocs.filter((d) => d.collection_id === col.id),
-                  )}
-                  locked={!collectionsUnlocked}
-                  canManage={canManage}
-                />
-              ))
+              collectionCards
             )}
           </TabsContent>
 
           {/* Ungrouped */}
-          <TabsContent value="ungrouped" className="mt-4">
+          <TabsContent value="ungrouped">
             {ungroupedDocs.length === 0 ? (
               isFilterActive ? (
-                <Empty className="py-20 border border-dashed rounded-2xl bg-muted/5">
+                <Empty className={EMPTY_BOX}>
                   <EmptyHeader>
                     <div className="text-4xl leading-none select-none mb-2">🔍</div>
                     <EmptyTitle className="font-bold text-xl">
-                      No ungrouped documents match your search
+                      No ungrouped documents match your filters
                     </EmptyTitle>
                     <EmptyDescription className="font-normal">
                       Try adjusting your filters or search terms.
                     </EmptyDescription>
                   </EmptyHeader>
-                  <EmptyContent className="mt-4">
-                    <Button
-                      variant="link"
-                      onClick={clearFilters}
-                      className="text-primary font-medium"
-                    >
-                      Clear filters
-                    </Button>
-                  </EmptyContent>
+                  {clearFiltersLink}
                 </Empty>
               ) : (
                 <Empty className="py-12 border border-dashed rounded-2xl bg-muted/5">
@@ -466,17 +446,13 @@ export default function DocumentsTab({ clientId }) {
                       No ungrouped documents
                     </EmptyTitle>
                     <EmptyDescription className="font-normal">
-                      All your documents are organised into collections.
+                      All documents are organised into collections.
                     </EmptyDescription>
                   </EmptyHeader>
                 </Empty>
               )
             ) : (
-              <div className="space-y-2">
-                {ungroupedDocs.map((doc) => (
-                  <DocumentCard key={doc.id} doc={doc} canManage={canManage} />
-                ))}
-              </div>
+              <div className="space-y-2">{documentCards(ungroupedDocs)}</div>
             )}
           </TabsContent>
         </div>

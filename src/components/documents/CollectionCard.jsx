@@ -161,7 +161,7 @@ export default function CollectionCard({ collection, documents = [], locked = fa
               <DropdownMenuTrigger asChild onClick={(e) => {
                 e.stopPropagation()
               }}>
-                <Button variant="ghost" size="icon" className="size-7 shrink-0">
+                <Button variant="ghost" size="icon" className="size-7 shrink-0" aria-label="Collection actions">
                   <MoreHorizontal className="size-4" />
                 </Button>
               </DropdownMenuTrigger>
