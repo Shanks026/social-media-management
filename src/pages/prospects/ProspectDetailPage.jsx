@@ -43,7 +43,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import ProspectOverviewTab from './prospectSections/ProspectOverviewTab'
 import ProspectOutreachTab from './prospectSections/ProspectOutreachTab'
-import ProspectDocumentsTab from './prospectSections/ProspectDocumentsTab'
+import DocumentsTab from '@/components/documents/DocumentsTab'
 import { ProposalTab } from '@/components/proposals/ProposalTab'
 import EditProspectDialog from '@/components/prospects/EditProspectDialog'
 import { ConvertToClientDialog } from '@/components/prospects/ConvertToClientDialog'
@@ -350,7 +350,7 @@ export default function ProspectDetailPage() {
             value="documents"
             className="mt-2 focus-visible:ring-0 outline-none data-[state=active]:animate-in data-[state=active]:fade-in data-[state=active]:duration-300"
           >
-            <ProspectDocumentsTab prospectId={prospectId} />
+            <DocumentsTab prospectId={prospectId} />
           </TabsContent>
         </Tabs>
       </div>

@@ -28,7 +28,7 @@ import {
   EmptyDescription,
   EmptyContent,
 } from '@/components/ui/empty'
-import { DOCUMENT_CATEGORIES } from './UploadMetaDialog'
+import { DOCUMENT_CATEGORIES, PROSPECT_DOCUMENT_CATEGORIES } from './UploadMetaDialog'
 import DocumentCard from './DocumentCard'
 import UploadMetaDialog from './UploadMetaDialog'
 import CollectionCard from './CollectionCard'
@@ -39,16 +39,22 @@ const EMPTY_BOX = 'py-20 border border-dashed rounded-2xl bg-muted/5'
 /**
  * The one Documents list (spec #208).
  *
- * Props:
- *   clientId — UUID of the client whose documents to show.
+ * Scoped by a Client (`clientId`), a Prospect (`prospectId`) or neither (the
+ * whole workspace). Giving both is a programming error.
  */
-export default function DocumentsTab({ clientId }) {
+export default function DocumentsTab({ clientId, prospectId }) {
+  if (clientId && prospectId) {
+    throw new Error('DocumentsTab takes either a clientId or a prospectId, not both')
+  }
+  // Collections belong to Clients, so a Prospect's list has only "All".
+  const hasCollections = !prospectId
+  const categories = prospectId ? PROSPECT_DOCUMENT_CATEGORIES : DOCUMENT_CATEGORIES
   const { data: sub } = useSubscription()
   const collectionsUnlocked = sub?.documents_collections ?? false
   const { documents: docsLevel } = usePermissions()
   const canManage = docsLevel === 'manage'
   const [searchParams, setSearchParams] = useSearchParams()
-  const activeTab = searchParams.get('doc_tab') ?? 'all'
+  const activeTab = hasCollections ? (searchParams.get('doc_tab') ?? 'all') : 'all'
 
   function setTab(tab) {
     setSearchParams(
@@ -66,7 +72,7 @@ export default function DocumentsTab({ clientId }) {
     data: documents,
     isLoading: docsLoading,
     error,
-  } = useDocuments({ clientId })
+  } = useDocuments({ clientId, prospectId })
   const { data: collections, isLoading: collectionsLoading } =
     useCollections(clientId)
 
@@ -129,7 +135,7 @@ export default function DocumentsTab({ clientId }) {
   function handleConfirmUpload({ displayName, category, notes, isConfidential }) {
     if (!pendingFile) return
     setUploadProgress(30)
-    uploadMutation.mutate({ clientId, file: pendingFile, displayName, category, notes, isConfidential })
+    uploadMutation.mutate({ clientId, prospectId, file: pendingFile, displayName, category, notes, isConfidential })
   }
 
   function handleDialogClose(open) {
@@ -260,12 +266,16 @@ export default function DocumentsTab({ clientId }) {
       <Tabs value={activeTab} onValueChange={setTab} className="mt-4">
         <TabsList variant="underline">
           <TabsTrigger value="all">All {countChip(filteredDocs.length)}</TabsTrigger>
-          <TabsTrigger value="collections">
-            Collections {countChip(filteredCollections.length)}
-          </TabsTrigger>
-          <TabsTrigger value="ungrouped">
-            Ungrouped {countChip(ungroupedDocs.length)}
-          </TabsTrigger>
+          {hasCollections && (
+            <>
+              <TabsTrigger value="collections">
+                Collections {countChip(filteredCollections.length)}
+              </TabsTrigger>
+              <TabsTrigger value="ungrouped">
+                Ungrouped {countChip(ungroupedDocs.length)}
+              </TabsTrigger>
+            </>
+          )}
         </TabsList>
 
         {/* ── Filters + actions ── */}
@@ -297,7 +307,7 @@ export default function DocumentsTab({ clientId }) {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All categories</SelectItem>
-              {DOCUMENT_CATEGORIES.map((cat) => (
+              {categories.map((cat) => (
                 <SelectItem key={cat} value={cat}>
                   {cat}
                 </SelectItem>
@@ -318,7 +328,7 @@ export default function DocumentsTab({ clientId }) {
 
           {canManage && (
             <div className="ml-auto flex items-center gap-2 shrink-0">
-              {newCollectionButton()}
+              {hasCollections && newCollectionButton()}
               <Button
                 className="gap-2"
                 onClick={handleOpenUpload}
@@ -364,7 +374,9 @@ export default function DocumentsTab({ clientId }) {
                     <EmptyDescription className="font-normal">
                       {archivedCount > 0
                         ? `You have ${archivedCount} archived document${archivedCount !== 1 ? 's' : ''}.`
-                        : 'Upload a contract, brief, or brand asset to get started.'}
+                        : prospectId
+                          ? 'Upload a brief, one-pager, or any file related to this prospect.'
+                          : 'Upload a contract, brief, or brand asset to get started.'}
                     </EmptyDescription>
                   </EmptyHeader>
                   {archivedCount > 0 && (
@@ -398,6 +410,8 @@ export default function DocumentsTab({ clientId }) {
             )}
           </TabsContent>
 
+          {hasCollections && (
+          <>
           {/* Collections */}
           <TabsContent value="collections" className="space-y-3">
             {filteredCollections.length === 0 ? (
@@ -455,6 +469,8 @@ export default function DocumentsTab({ clientId }) {
               <div className="space-y-2">{documentCards(ungroupedDocs)}</div>
             )}
           </TabsContent>
+          </>
+          )}
         </div>
       </Tabs>
 
@@ -466,13 +482,16 @@ export default function DocumentsTab({ clientId }) {
         onFileSelected={handleFileSelected}
         onConfirm={handleConfirmUpload}
         uploadProgress={uploadProgress}
+        categories={categories}
       />
-      <CreateCollectionDialog
-        open={createCollectionOpen}
-        onOpenChange={setCreateCollectionOpen}
-        clientId={clientId}
-        onSuccess={() => setTab('collections')}
-      />
+      {hasCollections && (
+        <CreateCollectionDialog
+          open={createCollectionOpen}
+          onOpenChange={setCreateCollectionOpen}
+          clientId={clientId}
+          onSuccess={() => setTab('collections')}
+        />
+      )}
     </>
   )
 }
