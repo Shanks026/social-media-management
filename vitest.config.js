@@ -12,6 +12,9 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./src/tests/setup.js'],
     globals: true,
+    // Radix + jsdom tests take 1-2s alone and over 5s when the whole suite runs in
+    // parallel; a timeout there is load, not a failure.
+    testTimeout: 15000,
   },
   resolve: {
     alias: {
