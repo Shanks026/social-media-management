@@ -17,7 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import CreateTaskDialog from '@/components/tasks/CreateTaskDialog'
+import TaskDialog from '@/components/tasks/TaskDialog'
 import TaskCard from '@/components/tasks/TaskCard'
 import { taskPriorityCfg } from '@/components/tasks/taskPresentation'
 import { PRIORITIES } from '@/lib/domain/taskStatus'
@@ -239,7 +239,7 @@ export default function TasksTab({ clientId, campaignId, campaignName }) {
             </Select>
           )}
 
-          <CreateTaskDialog
+          <TaskDialog
             clientId={clientId}
             lockClient={true}
             campaignId={campaignId}
@@ -249,7 +249,7 @@ export default function TasksTab({ clientId, campaignId, campaignName }) {
               <Plus className="size-4" />
               New Task
             </Button>
-          </CreateTaskDialog>
+          </TaskDialog>
         </div>
       </div>
 

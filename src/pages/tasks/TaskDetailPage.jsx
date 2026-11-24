@@ -19,7 +19,7 @@ import { useHeader } from '@/components/misc/header-context'
 import { useTaskLookups } from '@/components/tasks/useTaskLookups'
 import { DeliverablePreviewRow } from '@/components/tasks/TaskCard'
 import { taskStatusCfg, taskPriorityCfg } from '@/components/tasks/taskPresentation'
-import EditTaskDialog from '@/components/tasks/EditTaskDialog'
+import TaskDialog from '@/components/tasks/TaskDialog'
 import { CommentThread } from '@/components/comments/CommentThread'
 import { useCommentCount } from '@/api/comments'
 import TaskMetaRail from './TaskMetaRail'
@@ -381,7 +381,7 @@ export default function TaskDetailPage() {
         />
       </div>
 
-      <EditTaskDialog task={task} open={editOpen} onOpenChange={setEditOpen} />
+      <TaskDialog task={task} open={editOpen} onOpenChange={setEditOpen} />
 
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <AlertDialogContent>

@@ -61,7 +61,7 @@ import { useTeamMembers } from '@/api/team'
 import { useAuth } from '@/context/AuthContext'
 
 import CreateMeetingDialog from '@/components/CreateMeetingDialog'
-import CreateTaskDialog from '@/components/tasks/CreateTaskDialog'
+import TaskDialog from '@/components/tasks/TaskDialog'
 import TaskCard from '@/components/tasks/TaskCard'
 import WeekTimeline from '@/components/WeekTimeline'
 
@@ -289,11 +289,11 @@ export default function OverviewTab({ client }) {
                     )}
                   </Tooltip>
                 ) : (
-                  <CreateTaskDialog clientId={client.id} lockClient={true}>
+                  <TaskDialog clientId={client.id} lockClient={true}>
                     <Button variant="ghost" size="icon" className="h-8 w-8">
                       <Plus className="h-4 w-4" />
                     </Button>
-                  </CreateTaskDialog>
+                  </TaskDialog>
                 )}
               </div>
             </CardHeader>

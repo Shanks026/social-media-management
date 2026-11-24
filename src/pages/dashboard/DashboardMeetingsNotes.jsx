@@ -16,7 +16,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 
 import MeetingRow from '@/components/MeetingRow'
 import CreateMeetingDialog from '@/components/CreateMeetingDialog'
-import CreateTaskDialog from '@/components/tasks/CreateTaskDialog'
+import TaskDialog from '@/components/tasks/TaskDialog'
 import TaskCard from '@/components/tasks/TaskCard'
 import { useMarkMeetingDone } from '@/hooks/useMarkMeetingDone'
 import { useMyTasks } from '@/api/tasks'
@@ -116,13 +116,13 @@ export default function DashboardMeetingsNotes() {
                 )}
               </Tooltip>
             ) : (
-              <CreateTaskDialog
+              <TaskDialog
                 lockClient={false}
               >
                 <Button variant="ghost" size="icon" className="h-8 w-8">
                   <Plus className="h-4 w-4" />
                 </Button>
-              </CreateTaskDialog>
+              </TaskDialog>
             )}
             <Button
               variant="ghost"

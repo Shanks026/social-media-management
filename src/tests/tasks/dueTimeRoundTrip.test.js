@@ -4,7 +4,7 @@ globalThis.process.env.TZ = 'Asia/Kolkata'
 import { toDateTimeLocal, fromDateTimeLocal } from '@/lib/format'
 import { describe, it, expect } from 'vitest'
 
-// Regression test for audit bug B11: EditTaskDialog seeded its
+// Regression test for audit bug B11: the Edit dialog (now TaskDialog) seeded its
 // <input type="datetime-local"> with the UTC wall time
 // (toISOString().slice(0, 16)), and on save new Date(value) read that back as
 // *local* time, so every save shifted due_at by the browser's UTC offset.

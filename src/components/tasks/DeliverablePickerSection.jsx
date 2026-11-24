@@ -31,7 +31,7 @@ function Thumb({ post, className }) {
 
 /**
  * Multi-select deliverable picker as an inline expandable section (not a
- * Popover) — used inside CreateTaskDialog/EditTaskDialog. A Popover here had
+ * Popover) — used inside TaskDialog. A Popover here had
  * scroll issues once its list content overflowed a portaled, unconstrained
  * PopoverContent; an inline section scrolls within the dialog's own layout
  * instead, no portal/positioning involved.
