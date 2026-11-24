@@ -245,13 +245,14 @@ export default function DocumentCard({ doc, canManage = true }) {
           variant="ghost"
           size="icon"
           className="size-8 shrink-0"
+          aria-label="Preview"
           onClick={() => setPreviewOpen(true)}
         >
           <Eye className="size-4" />
         </Button>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="size-8 shrink-0">
+            <Button variant="ghost" size="icon" className="size-8 shrink-0" aria-label="Document actions">
               <MoreHorizontal className="size-4" />
             </Button>
           </DropdownMenuTrigger>

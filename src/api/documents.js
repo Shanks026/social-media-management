@@ -217,7 +217,7 @@ export async function deleteDocument({ id, storagePath }) {
  * Fetch all collections across all clients for the current user.
  * Includes a clients join so callers can group by client name.
  */
-export function useAllCollections() {
+export function useAllCollections({ enabled = true } = {}) {
   const { workspaceUserId } = useAuth()
 
   return useQuery({
@@ -231,7 +231,7 @@ export function useAllCollections() {
       if (error) throw error
       return data
     },
-    enabled: !!workspaceUserId,
+    enabled: enabled && !!workspaceUserId,
   })
 }
 
